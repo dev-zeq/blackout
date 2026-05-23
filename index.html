@@ -145,8 +145,17 @@ const features = [
   const [tab, setTab] = _react.useState.call(void 0, 0);
   const cat = cats[tab];
 
-  const scrollTo = (id) => {
-    _optionalChain([document, 'access', _ => _.getElementById, 'call', _2 => _2(id), 'optionalAccess', _3 => _3.scrollIntoView, 'call', _4 => _4({ behavior: 'smooth' })]);
+const scrollTo = (id) => {
+    const elemento = document.getElementById(id);
+    if (elemento) {
+      const alturaMenu = 80; // Dá o desconto do tamanho do cabeçalho fixo
+      const posicaoTop = elemento.getBoundingClientRect().top + window.scrollY - alturaMenu;
+      
+      window.scrollTo({
+        top: posicaoTop,
+        behavior: 'smooth'
+      });
+    }
     setOpen(false);
   };
 
