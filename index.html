@@ -1,0 +1,681 @@
+<!DOCTYPE html><html><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;"><meta http-equiv="x-dns-prefetch-control" content="off"><script src="https://puc.poecdn.net/authenticated_preview_page/standard.3ef2c256959faf5a756d.js"></script>
+    <meta charset="utf-8">
+    <title>Poe</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://puc.poecdn.net/authenticated_preview_page/disableWebRTC.9710cebe07429a9e8e06.js"></script><meta name="x-poe-allow-downloads" content="true"><meta name="x-poe-datastore-behavior" content="disabled"><script src="https://puc.poecdn.net/authenticated_preview_page/tw.50ec1b0612bf5b0c30a5.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/deps.faccd16000d314dc16d5.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/exports.b0f0f482cdeb5302b0b9.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/renderer.75c73ae6b4235f62945a.js"></script><script>Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }var _react = require('react'); var _react2 = _interopRequireDefault(_react);
+var _framermotion = require('framer-motion');
+
+
+
+var _lucidereact = require('lucide-react');
+
+const WA = '5547999912755';
+const wa = (service = 'Geral') => {
+  const msg = encodeURIComponent(`Olá! Tenho interesse no serviço: *${service}*. Pode me ajudar?`);
+  window.open(`https://wa.me/${WA}?text=${msg}`, '_blank');
+};
+
+// Logo animada
+const BlackoutLogo = ({ size = 40, animate = false }) => (
+  _react2.default.createElement(_framermotion.motion.svg, {
+    width: size,
+    height: size,
+    viewBox: "0 0 100 100",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    animate: animate ? { rotate: 360 } : {},
+    transition: animate ? { duration: 20, repeat: Infinity, ease: "linear" } : {},}
+
+    , _react2.default.createElement('circle', { cx: "50", cy: "50", r: "48", fill: "#111", stroke: "#22C55E", strokeWidth: "3",})
+    , _react2.default.createElement(_framermotion.motion.path, {
+      d: "M50 18 A32 32 0 1 1 18 50",
+      stroke: "#22C55E",
+      strokeWidth: "5",
+      strokeLinecap: "round",
+      fill: "none",
+      animate: { rotate: 360 },
+      transition: { duration: 3, repeat: Infinity, ease: "linear" },}
+    )
+    , _react2.default.createElement('polygon', { points: "50,8 42,22 58,22", fill: "#22C55E",})
+    , _react2.default.createElement('text', { x: "50", y: "66", textAnchor: "middle", fontFamily: "Arial Black, sans-serif",
+      fontWeight: "900", fontSize: "40", fill: "white",}, "B")
+  )
+);
+
+// Partículas flutuantes
+const FloatingParticles = () => {
+  const particles = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 4 + 1,
+    duration: Math.random() * 10 + 10,
+    delay: Math.random() * 5,
+  }));
+
+  return (
+    _react2.default.createElement('div', { className: "absolute inset-0 overflow-hidden pointer-events-none",}
+      , particles.map((p) => (
+        _react2.default.createElement(_framermotion.motion.div, {
+          key: p.id,
+          className: "absolute rounded-full bg-green-400/20",
+          style: {
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: p.size,
+            height: p.size,
+          },
+          animate: {
+            y: [0, -100, 0],
+            opacity: [0, 0.8, 0],
+          },
+          transition: {
+            duration: p.duration,
+            repeat: Infinity,
+            delay: p.delay,
+            ease: "easeInOut",
+          },}
+        )
+      ))
+    )
+  );
+};
+
+const cats = [
+  {
+    label: 'Documentos', Icon: _lucidereact.FileText,
+    bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20',
+    items: [
+      { name: 'Currículo Profissional', desc: 'Elaboramos seu currículo de forma simples e rápida.', price: 'R$ 10,00' },
+      { name: 'Contrato de Compra e Venda', desc: 'Veículos e imóveis, elaboração completa.', price: 'R$ 49,90' },
+      { name: 'Contrato de Locação', desc: 'Elaboramos contrato completo para imóveis.', price: 'R$ 49,90' },
+      { name: 'Declaração de União Estável', desc: 'Emitimos sua declaração com validade jurídica.', price: 'R$ 15,00' },
+      { name: 'Procuração', desc: 'Elaboramos sua procuração de forma rápida.', price: 'R$ 15,00' },
+    ],
+  },
+  {
+    label: 'Gráfica', Icon: _lucidereact.Printer,
+    bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20',
+    items: [
+      { name: 'Kit Plus — Divulgação', desc: 'Combo ideal para quem quer mais alcance.', price: 'R$ 189,90' },
+      { name: 'Kit Master — Divulgação', desc: 'Combo completo para máximo resultado.', price: 'R$ 299,90' },
+      { name: 'Cartão de Visita', desc: 'Cartões produzidos em gráfica com qualidade premium.', price: 'Sob Consulta' },
+      { name: 'Painel Impresso', desc: 'Impressão de painel em grande formato.', price: 'R$ 100,00' },
+    ],
+  },
+  {
+    label: 'Fotos', Icon: _lucidereact.Camera,
+    bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20',
+    items: [
+      { name: 'Kit 3 Quadros', desc: 'Conjunto ideal para decorar seu ambiente.', price: 'R$ 119,90' },
+      { name: 'Foto Estilo Polaroide', desc: 'Transforme seus momentos em lembranças únicas.', price: 'R$ 15,00' },
+      { name: 'Foto 3x4 — 10 unidades', desc: 'Fotos com qualidade, rápidas e práticas.', price: 'R$ 10,00' },
+    ],
+  },
+  {
+    label: 'Detran', Icon: _lucidereact.Car,
+    bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20',
+    items: [
+      { name: 'Renovação de CNH', desc: 'Facilitamos todo o processo de renovação.', price: 'R$ 15,00' },
+      { name: 'Agendamento de RG', desc: 'Agendamos a emissão do seu novo RG.', price: 'R$ 15,00' },
+      { name: 'Emissão de CRLV', desc: 'Realizamos a emissão e impressão do documento.', price: 'R$ 15,00' },
+      { name: 'Consulta de Débitos', desc: 'Consulta completa de débitos veiculares.', price: 'R$ 5,00' },
+    ],
+  },
+  {
+    label: 'Personalizados', Icon: _lucidereact.Sparkles,
+    bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20',
+    items: [
+      { name: 'Figurinha Copa Personalizada', desc: 'Sua foto no estilo das figurinhas da Copa.', price: 'A partir de R$ 12,00' },
+      { name: 'Topo de Bolo c/ Caricatura', desc: 'Transforme fotos em um topo de bolo divertido.', price: 'R$ 15,00' },
+      { name: 'Impressão via WhatsApp', desc: 'Envie seu arquivo e imprima na hora.', price: 'R$ 1,00' },
+    ],
+  },
+];
+
+const features = [
+  { Icon: _lucidereact.Zap, title: 'Atendimento Rápido', desc: 'Seu pedido pronto no menor tempo possível.' },
+  { Icon: _lucidereact.Shield, title: 'Qualidade Garantida', desc: 'Materiais e acabamento de alto padrão.' },
+  { Icon: _lucidereact.MessageCircle, title: 'Pedido pelo WhatsApp', desc: 'Simples, rápido e sem complicações.' },
+  { Icon: _lucidereact.MapPin, title: 'Camboriú · SC', desc: 'Atendemos a cidade e toda a região.' },
+];
+
+ function BlackoutSite() {
+  const [open, setOpen] = _react.useState.call(void 0, false);
+  const [tab, setTab] = _react.useState.call(void 0, 0);
+  const cat = cats[tab];
+
+  const scrollTo = (id) => {
+    _optionalChain([document, 'access', _ => _.getElementById, 'call', _2 => _2(id), 'optionalAccess', _3 => _3.scrollIntoView, 'call', _4 => _4({ behavior: 'smooth' })]);
+    setOpen(false);
+  };
+
+  return (
+    _react2.default.createElement('div', { className: "min-h-screen bg-black text-white font-sans overflow-x-hidden",}
+
+      /* NAV */
+      , _react2.default.createElement('nav', { className: "fixed top-0 inset-x-0 z-50 bg-black/90 backdrop-blur-md border-b border-zinc-900",}
+        , _react2.default.createElement('div', { className: "max-w-6xl mx-auto px-4 h-16 flex items-center justify-between",}
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0, x: -20 },
+            animate: { opacity: 1, x: 0 },
+            transition: { duration: 0.5 },
+            className: "flex items-center gap-3",}
+
+            , _react2.default.createElement(BlackoutLogo, { size: 38,} )
+            , _react2.default.createElement('div', { className: "leading-none",}
+              , _react2.default.createElement('div', { className: "font-black tracking-widest text-base",}, "BLACK"
+                , _react2.default.createElement('span', { className: "text-green-400",}, "OUT")
+              )
+              , _react2.default.createElement('div', { className: "text-zinc-500 text-[9px] uppercase tracking-widest font-semibold",}, "Impressões & Gráfica"
+
+              )
+            )
+          )
+
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0, x: 20 },
+            animate: { opacity: 1, x: 0 },
+            transition: { duration: 0.5 },
+            className: "hidden md:flex items-center gap-6",}
+
+            , [['Serviços', 'servicos'], ['Sobre', 'sobre'], ['Contato', 'contato']].map(([label, id]) => (
+              _react2.default.createElement(_framermotion.motion.button, {
+                key: id,
+                onClick: () => scrollTo(id),
+                whileHover: { scale: 1.05, color: '#fff' },
+                whileTap: { scale: 0.95 },
+                className: "text-sm text-zinc-400 transition-colors font-medium",}
+                , label
+              )
+            ))
+            , _react2.default.createElement(_framermotion.motion.button, {
+              onClick: () => wa(),
+              whileHover: { scale: 1.05, boxShadow: '0 0 20px rgba(34, 197, 94, 0.5)' },
+              whileTap: { scale: 0.95 },
+              className: "ml-2 bg-green-500 hover:bg-green-400 text-black font-bold px-5 py-2 rounded-full text-sm transition-all shadow-md shadow-green-500/20",}, "Fazer Pedido"
+
+            )
+          )
+
+          , _react2.default.createElement('button', { className: "md:hidden text-zinc-300", onClick: () => setOpen(!open),}
+            , open ? _react2.default.createElement(_lucidereact.X, { size: 22,} ) : _react2.default.createElement(_lucidereact.Menu, { size: 22,} )
+          )
+        )
+
+        , _react2.default.createElement(_framermotion.AnimatePresence, null
+          , open && (
+            _react2.default.createElement(_framermotion.motion.div, {
+              initial: { height: 0, opacity: 0 },
+              animate: { height: 'auto', opacity: 1 },
+              exit: { height: 0, opacity: 0 },
+              transition: { duration: 0.2 },
+              className: "md:hidden overflow-hidden bg-zinc-950 border-t border-zinc-900 px-4 py-5 flex flex-col gap-4",}
+
+              , [['Serviços', 'servicos'], ['Sobre', 'sobre'], ['Contato', 'contato']].map(([label, id]) => (
+                _react2.default.createElement('button', { key: id, onClick: () => scrollTo(id),
+                  className: "text-zinc-300 text-sm font-medium text-left",}
+                  , label
+                )
+              ))
+              , _react2.default.createElement('button', { onClick: () => { wa(); setOpen(false); },
+                className: "bg-green-500 text-black font-bold py-2.5 rounded-full text-sm",}, "Fazer Pedido"
+
+              )
+            )
+          )
+        )
+      )
+
+      /* HERO */
+      , _react2.default.createElement('section', { className: "relative flex items-center justify-center min-h-screen pt-16 overflow-hidden",}
+
+        , _react2.default.createElement(FloatingParticles, null )
+
+        /* BG glows animados */
+        , _react2.default.createElement(_framermotion.motion.div, {
+          animate: {
+            scale: [1, 1.2, 1],
+            opacity: [0.08, 0.15, 0.08],
+          },
+          transition: { duration: 8, repeat: Infinity, ease: "easeInOut" },
+          className: "absolute top-1/3 left-1/4 w-80 h-80 bg-green-500/8 rounded-full blur-3xl pointer-events-none",}
+        )
+        , _react2.default.createElement(_framermotion.motion.div, {
+          animate: {
+            scale: [1, 1.3, 1],
+            opacity: [0.06, 0.12, 0.06],
+          },
+          transition: { duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 },
+          className: "absolute bottom-1/3 right-1/4 w-64 h-64 bg-green-600/6 rounded-full blur-3xl pointer-events-none",}
+        )
+
+        /* Grid */
+        , _react2.default.createElement('div', { className: "absolute inset-0 pointer-events-none opacity-20",
+          style: {
+            backgroundImage:
+              'linear-gradient(rgba(34,197,94,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.06) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          },}
+        )
+
+        /* Scanline */
+        , _react2.default.createElement('div', { className: "absolute inset-0 pointer-events-none",
+          style: {
+            background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)',
+          },}
+        )
+
+        , _react2.default.createElement('div', { className: "relative z-10 text-center px-4 max-w-4xl mx-auto",}
+
+          /* Badge */
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0, y: 20 },
+            animate: { opacity: 1, y: 0 },
+            transition: { duration: 0.6 },
+            whileHover: { scale: 1.05 },
+            className: "inline-flex items-center gap-2 border border-green-500/30 bg-green-500/5 rounded-full px-4 py-2 text-green-400 text-xs font-semibold uppercase tracking-widest mb-8",}
+
+            , _react2.default.createElement(_lucidereact.MapPin, { size: 11,} ), "Camboriú · SC e Região"
+
+          )
+
+          /* Logo grande com pulso */
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0, scale: 0.5 },
+            animate: { opacity: 1, scale: 1 },
+            transition: { duration: 0.8, type: "spring", stiffness: 100 },
+            className: "flex justify-center mb-7",}
+
+            , _react2.default.createElement('div', { className: "relative",}
+              , _react2.default.createElement(_framermotion.motion.div, {
+                animate: {
+                  scale: [1, 1.2, 1],
+                  opacity: [0.2, 0.4, 0.2],
+                },
+                transition: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                className: "absolute inset-0 bg-green-500/20 blur-2xl rounded-full",}
+              )
+              , _react2.default.createElement(BlackoutLogo, { size: 96, animate: true,} )
+            )
+          )
+
+          /* Headline */
+          , _react2.default.createElement(_framermotion.motion.h1, {
+            initial: { opacity: 0, y: 30 },
+            animate: { opacity: 1, y: 0 },
+            transition: { duration: 0.7, delay: 0.2 },
+            className: "text-5xl sm:text-6xl md:text-7xl font-black leading-tight tracking-tight mb-5",}
+
+            , _react2.default.createElement(_framermotion.motion.span, {
+              animate: { textShadow: ['0 0 0px #22C55E', '0 0 20px #22C55E', '0 0 0px #22C55E'] },
+              transition: { duration: 2, repeat: Infinity },
+              className: "text-white",}, "BLACK"
+            )
+            , _react2.default.createElement(_framermotion.motion.span, {
+              animate: { textShadow: ['0 0 10px #22C55E', '0 0 30px #22C55E', '0 0 10px #22C55E'] },
+              transition: { duration: 2, repeat: Infinity },
+              className: "text-green-400",}, "OUT"
+            )
+            , _react2.default.createElement('br', null )
+            , _react2.default.createElement('span', { className: "text-3xl sm:text-4xl md:text-5xl text-zinc-300 font-extrabold tracking-tight",}, "Impressões & Gráfica Rápida"
+
+            )
+          )
+
+          , _react2.default.createElement(_framermotion.motion.p, {
+            initial: { opacity: 0, y: 20 },
+            animate: { opacity: 1, y: 0 },
+            transition: { duration: 0.6, delay: 0.4 },
+            className: "text-zinc-400 text-lg max-w-xl mx-auto mb-10 leading-relaxed",}, "Envie seus arquivos pelo WhatsApp e nós cuidamos do resto. Documentos, gráfica, fotos e muito mais — rápido e com qualidade."
+
+
+          )
+
+          /* CTAs */
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0, y: 20 },
+            animate: { opacity: 1, y: 0 },
+            transition: { duration: 0.6, delay: 0.6 },
+            className: "flex flex-col sm:flex-row gap-3 justify-center",}
+
+            , _react2.default.createElement(_framermotion.motion.button, {
+              whileHover: { scale: 1.05, boxShadow: '0 0 30px rgba(34, 197, 94, 0.5)' },
+              whileTap: { scale: 0.95 },
+              onClick: () => wa(),
+              className: "flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black px-8 py-4 rounded-2xl text-base shadow-xl shadow-green-500/25 transition-all",}
+
+              , _react2.default.createElement(_framermotion.motion.div, {
+                animate: { rotate: [0, 10, -10, 0] },
+                transition: { duration: 2, repeat: Infinity },}
+                , _react2.default.createElement(_lucidereact.MessageCircle, { size: 19,} )
+              ), "Fazer Pedido Agora"
+
+            )
+            , _react2.default.createElement(_framermotion.motion.button, {
+              whileHover: { scale: 1.05, borderColor: 'rgba(34, 197, 94, 0.6)' },
+              whileTap: { scale: 0.95 },
+              onClick: () => scrollTo('servicos'),
+              className: "flex items-center justify-center gap-2 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-green-500/40 text-white font-semibold px-8 py-4 rounded-2xl text-base transition-all",}, "Ver Serviços"
+
+              , _react2.default.createElement(_framermotion.motion.div, {
+                animate: { x: [0, 5, 0] },
+                transition: { duration: 1.5, repeat: Infinity },}
+                , _react2.default.createElement(_lucidereact.ArrowRight, { size: 17,} )
+              )
+            )
+          )
+
+          /* Stats */
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0 },
+            animate: { opacity: 1 },
+            transition: { delay: 1 },
+            className: "mt-16 flex justify-center gap-12",}
+
+            , [
+              { val: '15+', label: 'Serviços' },
+              { val: 'Rápido', label: 'Atendimento' },
+              { val: '100%', label: 'Qualidade' },
+            ].map(({ val, label }, i) => (
+              _react2.default.createElement(_framermotion.motion.div, {
+                key: label,
+                initial: { opacity: 0, y: 20 },
+                animate: { opacity: 1, y: 0 },
+                transition: { delay: 1 + i * 0.1 },
+                whileHover: { scale: 1.1, y: -5 },
+                className: "text-center",}
+                , _react2.default.createElement('div', { className: "text-2xl font-black text-green-400",}, val)
+                , _react2.default.createElement('div', { className: "text-xs text-zinc-600 mt-1 uppercase tracking-widest",}, label)
+              )
+            ))
+          )
+        )
+
+        /* Scroll indicator */
+        , _react2.default.createElement(_framermotion.motion.div, {
+          animate: { y: [0, 10, 0] },
+          transition: { repeat: Infinity, duration: 2 },
+          className: "absolute bottom-10 left-1/2 -translate-x-1/2 w-6 h-9 border-2 border-zinc-800 rounded-full flex items-start justify-center pt-1.5",}
+
+          , _react2.default.createElement(_framermotion.motion.div, {
+            animate: { opacity: [0.3, 1, 0.3] },
+            transition: { repeat: Infinity, duration: 2 },
+            className: "w-1.5 h-2.5 bg-green-400 rounded-full",}
+          )
+        )
+      )
+
+      /* FEATURES */
+      , _react2.default.createElement('section', { id: "sobre", className: "py-16 px-4 border-y border-zinc-900",}
+        , _react2.default.createElement('div', { className: "max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4",}
+          , features.map(({ Icon, title, desc }, i) => (
+            _react2.default.createElement(_framermotion.motion.div, {
+              key: title,
+              initial: { opacity: 0, y: 30 },
+              whileInView: { opacity: 1, y: 0 },
+              transition: { delay: i * 0.1, duration: 0.5 },
+              viewport: { once: true },
+              whileHover: {
+                scale: 1.05,
+                y: -5,
+                boxShadow: '0 10px 40px rgba(34, 197, 94, 0.2)',
+              },
+              className: "bg-zinc-950 border border-zinc-900 hover:border-green-500/40 rounded-2xl p-5 transition-all group",}
+
+              , _react2.default.createElement(_framermotion.motion.div, {
+                whileHover: { rotate: 360, scale: 1.1 },
+                transition: { duration: 0.5 },
+                className: "w-10 h-10 bg-green-500/10 group-hover:bg-green-500/20 rounded-xl flex items-center justify-center mb-3 transition-colors",}
+                , _react2.default.createElement(Icon, { size: 19, className: "text-green-400",} )
+              )
+              , _react2.default.createElement('div', { className: "text-sm font-bold text-white mb-1",}, title)
+              , _react2.default.createElement('div', { className: "text-xs text-zinc-500 leading-relaxed",}, desc)
+            )
+          ))
+        )
+      )
+
+      /* SERVICES */
+      , _react2.default.createElement('section', { id: "servicos", className: "py-24 px-4",}
+        , _react2.default.createElement('div', { className: "max-w-6xl mx-auto",}
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0, y: 30 },
+            whileInView: { opacity: 1, y: 0 },
+            viewport: { once: true },
+            className: "text-center mb-12",}
+
+            , _react2.default.createElement(_framermotion.motion.p, {
+              animate: { opacity: [0.5, 1, 0.5] },
+              transition: { duration: 2, repeat: Infinity },
+              className: "text-green-400 text-xs font-bold uppercase tracking-widest mb-3",}, "O que oferecemos"  )
+            , _react2.default.createElement('h2', { className: "text-4xl md:text-5xl font-black",}, "Nossos Serviços" )
+            , _react2.default.createElement('p', { className: "text-zinc-400 mt-3 max-w-lg mx-auto text-base",}, "Tudo que você precisa, com qualidade e agilidade, direto pelo WhatsApp."
+
+            )
+          )
+
+          /* Tabs */
+          , _react2.default.createElement('div', { className: "flex overflow-x-auto gap-2 pb-4 mb-8 scrollbar-hide",}
+            , cats.map(({ label, Icon }, i) => (
+              _react2.default.createElement(_framermotion.motion.button, {
+                key: label,
+                onClick: () => setTab(i),
+                whileHover: { scale: 1.05 },
+                whileTap: { scale: 0.95 },
+                className: `flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all border ${
+                  tab === i
+                    ? 'bg-green-500 text-black border-green-500 shadow-lg shadow-green-500/30'
+                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-green-500/40 hover:text-white'
+                }`,}
+
+                , _react2.default.createElement(Icon, { size: 14,} )
+                , label
+              )
+            ))
+          )
+
+          /* Cards */
+          , _react2.default.createElement(_framermotion.AnimatePresence, { mode: "wait",}
+            , _react2.default.createElement(_framermotion.motion.div, {
+              key: tab,
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              exit: { opacity: 0, y: -20 },
+              transition: { duration: 0.3 },
+              className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",}
+
+              , cat.items.map((item, i) => (
+                _react2.default.createElement(_framermotion.motion.div, {
+                  key: item.name,
+                  initial: { opacity: 0, scale: 0.9 },
+                  animate: { opacity: 1, scale: 1 },
+                  transition: { delay: i * 0.08 },
+                  whileHover: {
+                    scale: 1.03,
+                    y: -8,
+                    boxShadow: '0 20px 40px rgba(34, 197, 94, 0.15)',
+                    borderColor: 'rgba(34, 197, 94, 0.5)',
+                  },
+                  className: "bg-zinc-950 border border-zinc-900 rounded-2xl p-6 flex flex-col transition-all group",}
+
+                  /* Tag */
+                  , _react2.default.createElement(_framermotion.motion.div, {
+                    whileHover: { scale: 1.05 },
+                    className: "inline-flex items-center gap-1.5 bg-green-500/10 text-green-400 rounded-full px-3 py-1 text-xs font-semibold self-start mb-4 border border-green-500/20",}
+                    , _react2.default.createElement(cat.Icon, { size: 11,} )
+                    , cat.label
+                  )
+
+                  , _react2.default.createElement('h3', { className: "text-white font-bold text-base mb-2 flex-1",}, item.name)
+                  , _react2.default.createElement('p', { className: "text-zinc-500 text-sm mb-5 leading-relaxed",}, item.desc)
+
+                  , _react2.default.createElement('div', { className: "flex items-center justify-between",}
+                    , _react2.default.createElement(_framermotion.motion.span, {
+                      animate: { scale: [1, 1.05, 1] },
+                      transition: { duration: 2, repeat: Infinity },
+                      className: "font-black text-lg text-green-400",}, item.price
+                    )
+                    , _react2.default.createElement(_framermotion.motion.button, {
+                      onClick: () => wa(item.name),
+                      whileHover: { scale: 1.1, backgroundColor: 'rgba(34, 197, 94, 0.2)' },
+                      whileTap: { scale: 0.95 },
+                      className: "flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 hover:border-green-500/40 text-zinc-300 hover:text-green-400 text-xs font-bold px-4 py-2 rounded-xl transition-all",}
+
+                      , _react2.default.createElement(_lucidereact.MessageCircle, { size: 12,} ), "Solicitar"
+
+                    )
+                  )
+                )
+              ))
+            )
+          )
+        )
+      )
+
+      /* CTA BANNER */
+      , _react2.default.createElement('section', { className: "py-6 px-4 bg-green-500 relative overflow-hidden",}
+        , _react2.default.createElement(_framermotion.motion.div, {
+          animate: { x: ['100%', '-100%'] },
+          transition: { duration: 20, repeat: Infinity, ease: "linear" },
+          className: "absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent",}
+        )
+        , _react2.default.createElement(_framermotion.motion.div, {
+          initial: { opacity: 0 },
+          whileInView: { opacity: 1 },
+          viewport: { once: true },
+          className: "relative max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4",}
+
+          , _react2.default.createElement(_framermotion.motion.div, {
+            animate: { scale: [1, 1.05, 1] },
+            transition: { duration: 2, repeat: Infinity },
+            className: "flex items-center gap-3",}
+            , _react2.default.createElement(_lucidereact.Phone, { size: 22, className: "text-black",} )
+            , _react2.default.createElement('div', null
+              , _react2.default.createElement('div', { className: "font-black text-black text-xl",}, "(47) 99991-2755" )
+              , _react2.default.createElement('div', { className: "text-black/70 text-xs font-semibold",}, "Envie seus arquivos agora mesmo!"    )
+            )
+          )
+          , _react2.default.createElement(_framermotion.motion.button, {
+            onClick: () => wa(),
+            whileHover: { scale: 1.05, boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)' },
+            whileTap: { scale: 0.95 },
+            className: "bg-black hover:bg-zinc-900 text-green-400 font-black px-8 py-3 rounded-2xl text-sm transition-all shadow-lg whitespace-nowrap",}, "Abrir WhatsApp →"
+
+          )
+        )
+      )
+
+      /* CTA FINAL */
+      , _react2.default.createElement('section', { id: "contato", className: "py-24 px-4",}
+        , _react2.default.createElement('div', { className: "max-w-2xl mx-auto",}
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0, scale: 0.9 },
+            whileInView: { opacity: 1, scale: 1 },
+            viewport: { once: true },
+            className: "relative bg-zinc-950 border border-zinc-900 rounded-3xl p-10 text-center overflow-hidden",}
+
+            /* Glow top animado */
+            , _react2.default.createElement(_framermotion.motion.div, {
+              animate: {
+                scale: [1, 1.5, 1],
+                opacity: [0.1, 0.2, 0.1],
+              },
+              transition: { duration: 5, repeat: Infinity },
+              className: "absolute top-0 left-1/2 -translate-x-1/2 w-60 h-32 bg-green-500/10 blur-3xl pointer-events-none",}
+            )
+
+            /* Faixa decorativa animada */
+            , _react2.default.createElement(_framermotion.motion.div, {
+              animate: { opacity: [0.3, 1, 0.3] },
+              transition: { duration: 3, repeat: Infinity },
+              className: "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent",}
+            )
+
+            , _react2.default.createElement('div', { className: "relative z-10",}
+              /* Logo pulsante */
+              , _react2.default.createElement(_framermotion.motion.div, {
+                animate: { scale: [1, 1.1, 1] },
+                transition: { duration: 3, repeat: Infinity },
+                className: "flex justify-center mb-6",}
+                , _react2.default.createElement(BlackoutLogo, { size: 72, animate: true,} )
+              )
+
+              , _react2.default.createElement('h2', { className: "text-3xl md:text-4xl font-black mb-1",}, "BLACK"
+                , _react2.default.createElement('span', { className: "text-green-400",}, "OUT")
+              )
+              , _react2.default.createElement('p', { className: "text-zinc-500 text-sm mb-2 uppercase tracking-widest font-semibold",}, "Impressões & Gráfica Rápida"
+
+              )
+              , _react2.default.createElement('p', { className: "text-zinc-400 mb-8 max-w-sm mx-auto leading-relaxed mt-4",}, "Envie seus arquivos pelo WhatsApp e receba seu pedido com qualidade e agilidade. Atendimento rápido e eficiente!"
+
+              )
+
+              , _react2.default.createElement(_framermotion.motion.button, {
+                whileHover: { scale: 1.05, boxShadow: '0 0 40px rgba(34, 197, 94, 0.5)' },
+                whileTap: { scale: 0.95 },
+                onClick: () => wa(),
+                className: "inline-flex items-center gap-3 bg-green-500 hover:bg-green-400 text-black font-black px-10 py-4 rounded-2xl text-lg shadow-xl shadow-green-500/20 transition-all",}
+
+                , _react2.default.createElement(_framermotion.motion.div, {
+                  animate: { rotate: [0, 15, -15, 0] },
+                  transition: { duration: 2, repeat: Infinity },}
+                  , _react2.default.createElement(_lucidereact.MessageCircle, { size: 22,} )
+                ), "(47) 99991-2755"
+
+              )
+
+              , _react2.default.createElement('p', { className: "text-zinc-700 text-xs mt-6",}, "Camboriú - SC e Região · Atendimento rápido e eficiente"
+
+              )
+            )
+          )
+        )
+      )
+
+      /* FOOTER */
+      , _react2.default.createElement('footer', { className: "border-t border-zinc-900 py-8 px-4 bg-zinc-950",}
+        , _react2.default.createElement('div', { className: "max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3",}
+          , _react2.default.createElement(_framermotion.motion.div, {
+            whileHover: { scale: 1.05 },
+            className: "flex items-center gap-3",}
+            , _react2.default.createElement(BlackoutLogo, { size: 32,} )
+            , _react2.default.createElement('div', null
+              , _react2.default.createElement('div', { className: "font-black tracking-widest text-sm",}, "BLACK"
+                , _react2.default.createElement('span', { className: "text-green-400",}, "OUT")
+              )
+              , _react2.default.createElement('div', { className: "text-zinc-600 text-[10px] uppercase tracking-widest",}, "Impressões & Gráfica Rápida"   )
+            )
+          )
+          , _react2.default.createElement('span', { className: "text-zinc-700 text-xs",}, "© 2026 Todos os direitos reservados · Camboriú - SC"         )
+        )
+      )
+
+      /* Floating WhatsApp */
+      , _react2.default.createElement(_framermotion.motion.button, {
+        initial: { scale: 0 },
+        animate: { scale: 1 },
+        transition: { delay: 1.5, type: 'spring', stiffness: 260 },
+        whileHover: { scale: 1.15, rotate: 360 },
+        whileTap: { scale: 0.9 },
+        onClick: () => wa(),
+        className: "fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 hover:bg-green-400 rounded-full flex items-center justify-center shadow-xl shadow-green-500/30 transition-colors",}
+
+        , _react2.default.createElement(_framermotion.motion.div, {
+          animate: {
+            scale: [1, 1.2, 1],
+            opacity: [0.5, 0.8, 0.5],
+          },
+          transition: { duration: 2, repeat: Infinity },
+          className: "absolute inset-0 bg-green-400 rounded-full",}
+        )
+        , _react2.default.createElement(_lucidereact.MessageCircle, { size: 25, className: "text-black relative z-10",} )
+      )
+    )
+  );
+} exports.default = BlackoutSite;
+</script></head>
+  <body>
+
+
+<div id="preview-app"></div></body></html>
