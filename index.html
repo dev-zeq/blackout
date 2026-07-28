@@ -6,8 +6,8 @@
 
   <!-- SEO básico -->
   <title>BlackOut Impressões & Gráfica Rápida — Camboriú, SC</title>
-  <meta name="description" content="Gráfica rápida em Camboriú, SC. Currículo, contratos, cartão de visita, fotos 3x4, CRLV, figurinha personalizada e muito mais. Peça pelo WhatsApp!">
-  <meta name="keywords" content="gráfica Camboriú, impressão rápida, cartão de visita, currículo, foto 3x4, CRLV, Camboriú SC">
+  <meta name="description" content="Gráfica rápida em Camboriú, SC. Currículo, contratos, cartão de visita, fotos 3x4, CRLV, decoração de festa infantil impressa e muito mais. Peça pelo WhatsApp!">
+  <meta name="keywords" content="gráfica Camboriú, impressão rápida, cartão de visita, currículo, foto 3x4, CRLV, decoração de festa infantil, kit festa impresso, Camboriú SC">
   <meta name="author" content="BlackOut Impressões">
   <link rel="canonical" href="https://blackoutimpressoes.com.br/">
 
@@ -167,6 +167,16 @@ const cats = [
       { name: 'Figurinha Copa Personalizada', desc: 'Sua foto no estilo das figurinhas da Copa.', price: 'A partir de R$ 12,00' },
       { name: 'Topo de Bolo c/ Caricatura', desc: 'Transforme fotos em um topo de bolo divertido.', price: 'R$ 15,00' },
       { name: 'Impressão via WhatsApp', desc: 'Envie seu arquivo e imprima na hora.', price: 'R$ 1,00' },
+    ],
+  },
+  {
+    label: 'Festas Infantis', Icon: _lucidereact.PartyPopper,
+    bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20',
+    items: [
+      { name: 'Kit Decoração Completo', desc: 'Material impresso e recortado para mesa, bolo e parede, no tema que você escolher.', price: 'Sob Consulta' },
+      { name: 'Painel de Parede Temático', desc: 'Painel personalizado no tema da festa, pronto para pendurar.', price: 'Sob Consulta' },
+      { name: 'Kit Mesa Temática', desc: 'Enfeites impressos para montar a mesa principal com capricho.', price: 'Sob Consulta' },
+      { name: 'Topo de Bolo Temático', desc: 'Deixe o bolo com a cara da festa, no tema desejado.', price: 'R$ 15,00' },
     ],
   },
 ];
@@ -478,6 +488,177 @@ const features = [
             transition: { repeat: Infinity, duration: 2 },
             className: "w-1.5 h-2.5 bg-green-400 rounded-full",}
           )
+        )
+      )
+
+      /* BANNER DECORAÇÃO DE FESTA INFANTIL */
+      , _react2.default.createElement(_framermotion.motion.section, {
+        initial: { opacity: 0, y: 40 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true },
+        transition: { duration: 0.7 },
+        className: "relative overflow-hidden border-y border-pink-900/30",
+        style: { background: 'linear-gradient(135deg, #0a0014 0%, #16001f 40%, #1a0a12 100%)' },}
+
+        /* Partículas de festa */
+        , _react2.default.createElement('div', { className: "absolute inset-0 pointer-events-none overflow-hidden",
+          style: { zIndex: 0 },}
+          , ['🎈','🎉','⭐','🎊','🎈','🎉','⭐','🎊'].map((h, i) => (
+            _react2.default.createElement(_framermotion.motion.span, {
+              key: i,
+              style: {
+                position: 'absolute',
+                left: `${10 + i * 12}%`,
+                top: `${20 + (i % 3) * 25}%`,
+                fontSize: `${10 + (i % 3) * 5}px`,
+                color: i % 2 === 0 ? 'rgba(244,114,182,0.25)' : 'rgba(129,140,248,0.25)',
+              },
+              animate: { y: [0, -18, 0], opacity: [0.4, 0.8, 0.4] },
+              transition: { duration: 3 + i * 0.4, repeat: Infinity, delay: i * 0.3 },}
+            , h)
+          ))
+        )
+
+        /* Glows de fundo */
+        , _react2.default.createElement('div', { className: "absolute inset-0 pointer-events-none", style: { zIndex: 0 },}
+          , _react2.default.createElement(_framermotion.motion.div, {
+            animate: { scale: [1, 1.2, 1], opacity: [0.12, 0.22, 0.12] },
+            transition: { duration: 5, repeat: Infinity },
+            style: { position: 'absolute', top: '-30%', left: '-10%', width: '400px', height: '400px',
+              background: 'radial-gradient(circle, rgba(244,114,182,0.25) 0%, transparent 70%)',
+              borderRadius: '50%', filter: 'blur(20px)' },}
+          )
+          , _react2.default.createElement(_framermotion.motion.div, {
+            animate: { scale: [1, 1.3, 1], opacity: [0.08, 0.18, 0.08] },
+            transition: { duration: 7, repeat: Infinity, delay: 1 },
+            style: { position: 'absolute', bottom: '-20%', right: '5%', width: '300px', height: '300px',
+              background: 'radial-gradient(circle, rgba(129,140,248,0.3) 0%, transparent 70%)',
+              borderRadius: '50%', filter: 'blur(20px)' },}
+          )
+        )
+
+        , _react2.default.createElement('div', {
+          className: "relative max-w-6xl mx-auto px-4 py-14 md:py-16 flex flex-col md:flex-row items-center justify-between gap-10",
+          style: { zIndex: 1 },}
+
+          /* Lado esquerdo: texto */
+          , _react2.default.createElement('div', { className: "flex-1 text-center md:text-left",}
+
+            , _react2.default.createElement(_framermotion.motion.p, {
+              animate: { opacity: [0.6, 1, 0.6] },
+              transition: { duration: 2, repeat: Infinity },
+              style: { fontSize: '11px', letterSpacing: '4px', textTransform: 'uppercase',
+                color: '#F472B6', marginBottom: '14px', fontWeight: '600' },}
+              , "✦ Novidade ✦"
+            )
+
+            , _react2.default.createElement(_framermotion.motion.h2, {
+              initial: { opacity: 0, x: -20 },
+              whileInView: { opacity: 1, x: 0 },
+              viewport: { once: true },
+              transition: { duration: 0.6, delay: 0.2 },
+              style: { fontFamily: 'Georgia, serif', fontWeight: '900', lineHeight: '1.05',
+                marginBottom: '16px' },
+              className: "text-4xl md:text-5xl lg:text-6xl",}
+
+              , _react2.default.createElement('span', { style: { color: '#faf8f3' },}, "Decoração de ")
+              , _react2.default.createElement('span', { style: { color: '#F472B6', fontStyle: 'italic' },}, "Festa Infantil")
+              , _react2.default.createElement('br', null)
+              , _react2.default.createElement('span', { style: { color: '#faf8f3', fontSize: '0.5em', fontWeight: '400',
+                letterSpacing: '1px', fontStyle: 'normal' },}, "Kits impressos, prontos para montar")
+            )
+
+            , _react2.default.createElement(_framermotion.motion.p, {
+              initial: { opacity: 0, x: -20 },
+              whileInView: { opacity: 1, x: 0 },
+              viewport: { once: true },
+              transition: { duration: 0.6, delay: 0.35 },
+              style: { color: '#d6d0c0', fontSize: '16px', lineHeight: '1.7',
+                maxWidth: '480px', marginBottom: '32px' },}
+              , "Enviamos tudo impresso e recortado, é só montar: mesa, bolo e até a parede, no tema que você escolher para a festa."
+            )
+
+            , _react2.default.createElement('div', { style: { display: 'flex', gap: '14px', flexWrap: 'wrap',
+              justifyContent: window.innerWidth < 768 ? 'center' : 'flex-start' },}
+
+              , _react2.default.createElement(_framermotion.motion.button, {
+                onClick: () => wa('Decoração de Festa Infantil'),
+                whileHover: { scale: 1.05, boxShadow: '0 12px 40px rgba(244,114,182,0.4)' },
+                whileTap: { scale: 0.97 },
+                style: { display: 'inline-flex', alignItems: 'center', gap: '10px',
+                  background: 'linear-gradient(135deg, #F472B6, #818CF8)',
+                  color: '#0a0a0a', padding: '14px 32px', borderRadius: '100px',
+                  fontSize: '14px', fontWeight: '700', border: 'none', cursor: 'pointer',
+                  letterSpacing: '0.5px', position: 'relative', overflow: 'hidden' },}
+                , "Pedir pelo WhatsApp"
+                , _react2.default.createElement(_framermotion.motion.span, {
+                  animate: { x: [0, 4, 0] },
+                  transition: { duration: 1.2, repeat: Infinity },}
+                  , " →"
+                )
+              )
+
+              , _react2.default.createElement(_framermotion.motion.button, {
+                onClick: () => scrollTo('Festas Infantis'),
+                whileHover: { scale: 1.05, background: 'rgba(244,114,182,0.12)' },
+                whileTap: { scale: 0.97 },
+                style: { display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  border: '1px solid rgba(244,114,182,0.45)', color: '#F472B6',
+                  padding: '14px 28px', borderRadius: '100px', fontSize: '14px',
+                  fontWeight: '500', background: 'transparent', cursor: 'pointer',
+                  transition: 'all 0.3s' },}
+                , "Ver Kits Disponíveis"
+              )
+            )
+          )
+
+          /* Lado direito: cards de produto */
+          , _react2.default.createElement(_framermotion.motion.div, {
+            initial: { opacity: 0, x: 30 },
+            whileInView: { opacity: 1, x: 0 },
+            viewport: { once: true },
+            transition: { duration: 0.7, delay: 0.3 },
+            style: { display: 'flex', gap: '14px', flexShrink: 0 },}
+
+            , [
+              { emoji: '🎈', name: 'Kit Mesa Temática', price: 'Sob Consulta', badge: 'Novidade', badgeColor: '#F472B6', badgeText: '#000' },
+              { emoji: '🎉', name: 'Painel de Parede', price: 'Sob Consulta', badge: 'Exclusivo', badgeColor: '#818CF8' },
+              { emoji: '🎂', name: 'Topo de Bolo', price: 'R$ 15,00', badge: 'Popular', badgeColor: '#22C55E', badgeText: '#000' },
+            ].map(({ emoji, name, price, badge, badgeColor, badgeText }, i) => (
+              _react2.default.createElement(_framermotion.motion.button, {
+                key: name,
+                onClick: () => scrollTo('Festas Infantis'),
+                initial: { opacity: 0, y: 20 },
+                whileInView: { opacity: 1, y: 0 },
+                viewport: { once: true },
+                transition: { delay: 0.4 + i * 0.1 },
+                whileHover: { y: -6, boxShadow: '0 16px 40px rgba(244,114,182,0.2)' },
+                style: { display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  background: '#161616', border: '1px solid rgba(244,114,182,0.2)',
+                  borderRadius: '18px', padding: '20px 16px', width: '110px',
+                  position: 'relative', cursor: 'pointer',
+                  transition: 'border-color 0.3s' },}
+
+                , _react2.default.createElement('span', {
+                  style: { position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)',
+                    background: badgeColor, color: badgeText || '#fff', fontSize: '9px',
+                    fontWeight: '600', padding: '3px 10px', borderRadius: '100px',
+                    whiteSpace: 'nowrap', letterSpacing: '0.5px' },}
+                  , badge
+                )
+                , _react2.default.createElement('span', { style: { fontSize: '32px', marginBottom: '10px', marginTop: '6px' },}, emoji)
+                , _react2.default.createElement('span', { style: { fontSize: '12px', fontWeight: '600', color: '#faf8f3',
+                  textAlign: 'center', marginBottom: '6px', lineHeight: '1.3' },}, name)
+                , _react2.default.createElement('span', { style: { fontSize: '13px', fontWeight: '700', color: '#F472B6' },}, price)
+              )
+            ))
+          )
+        )
+
+        /* Linha separadora inferior com gradiente */
+        , _react2.default.createElement('div', {
+          style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '1px',
+            background: 'linear-gradient(90deg, transparent, rgba(244,114,182,0.3), transparent)' },}
         )
       )
 
