@@ -66,6 +66,8 @@
         .badge-card { background: rgba(255,255,255,0.06); color: #d4d4d8; border-color: var(--border-strong); }
         .badge-cash { background: rgba(255,255,255,0.06); color: #d4d4d8; border-color: var(--border-strong); }
         .amount { font-weight: 700; color: var(--accent-bright); }
+        .btn-delete { background: none; border: none; cursor: pointer; font-size: 15px; padding: 6px; border-radius: 8px; opacity: 0.6; }
+        .btn-delete:hover { opacity: 1; background: rgba(239,68,68,0.12); }
         .actions { display: flex; gap: 12px; flex-wrap: wrap; }
         .btn-primary { flex: 2; padding: 16px; border: none; border-radius: 16px; font-size: 16px; font-weight: 700; cursor: pointer; color: #05170c; background: linear-gradient(135deg, var(--accent-bright), var(--accent)); box-shadow: 0 4px 20px rgba(34,197,94,0.35); min-width: 200px; }
         .btn-primary:active { transform: scale(0.98); }
@@ -162,11 +164,12 @@
                             <th>📝 Descrição</th>
                             <th>💳 Forma</th>
                             <th>💰 Valor</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody id="rows">
                         <tr>
-                            <td colspan="4">
+                            <td colspan="5">
                                 <div class="empty-state">
                                     <div class="empty-icon">📭</div>
                                     <div>Carregando...</div>
@@ -419,15 +422,16 @@
                 const rows = document.getElementById('rows');
 
                 if (!entries || entries.length === 0) {
-                    rows.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📭</div><div>Nenhuma entrada ainda</div></div></td></tr>';
+                    rows.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📭</div><div>Nenhuma entrada ainda</div></div></td></tr>';
                 } else {
                     rows.innerHTML = entries.map(e => {
                         const badgeClass = 'badge-' + (e.method === 'Pix' ? 'pix' : e.method === 'Cartão' ? 'card' : 'cash');
                         return `<tr>
                             <td>${e.entry_date || '-'}</td>
-                            <td>${e.description || '-'}</td>
+                            <td>${escapeHtml(e.description) || '-'}</td>
                             <td><span class="badge ${badgeClass}">${e.method || '-'}</span></td>
                             <td class="amount">${fmt(e.amount)}</td>
+                            <td><button class="btn-delete" onclick="deleteEntry('${e.id}')" title="Excluir">🗑️</button></td>
                         </tr>`;
                     }).join('');
                 }
@@ -439,7 +443,25 @@
                 console.error('❌ Erro:', error);
                 updateStatus(false, '❌ ' + error.message);
 
-                document.getElementById('rows').innerHTML = `<tr><td colspan="4"><div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}<br><small style="font-size:12px;color:#666;">Verifique o console (F12) para detalhes</small></div></td></tr>`;
+                document.getElementById('rows').innerHTML = `<tr><td colspan="5"><div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}<br><small style="font-size:12px;color:#666;">Verifique o console (F12) para detalhes</small></div></td></tr>`;
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str ?? '';
+            return div.innerHTML;
+        }
+
+        async function deleteEntry(id) {
+            if (!confirm('Excluir esta entrada? Essa ação não pode ser desfeita.')) return;
+            try {
+                const { error } = await supabase.from('entries').delete().eq('id', id);
+                if (error) throw new Error(error.message);
+                await loadData();
+            } catch (error) {
+                console.error('❌ Erro ao excluir:', error);
+                alert('Erro ao excluir: ' + error.message);
             }
         }
 
@@ -484,6 +506,7 @@
         window.loadData = loadData;
         window.openModal = openModal;
         window.closeModal = closeModal;
+        window.deleteEntry = deleteEntry;
 
         function openModal() {
             document.getElementById('modal').classList.add('active');
