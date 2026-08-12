@@ -153,6 +153,15 @@
             .menu-tile .menu-icon svg { width: 23px; height: 23px; }
             .menu-tile .menu-label { font-size: 9.5px; }
         }
+        @media (min-width: 900px) {
+            .container { max-width: 1200px; }
+            .menu-grid { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+            .menu-tile { padding: 32px 16px; border-radius: 24px; }
+            .menu-tile .menu-icon { margin-bottom: 14px; }
+            .menu-tile .menu-icon svg { width: 42px; height: 42px; }
+            .menu-tile .menu-label { font-size: 14px; }
+            .menu-title { font-size: 16px; margin-bottom: 24px; }
+        }
         #printArea { display: none; }
         @media print {
             body * { visibility: hidden; }
