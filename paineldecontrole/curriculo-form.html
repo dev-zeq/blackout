@@ -44,6 +44,8 @@
     textarea { resize: vertical; min-height: 70px; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
     .radio-group, .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .date-row { display: flex; gap: 8px; }
+    .date-row select { flex: 1; min-width: 0; }
     .radio-pill { flex: 1 1 auto; min-width: 90px; }
     .radio-pill input { position: absolute; opacity: 0; pointer-events: none; }
     .radio-pill .pill-label {
@@ -129,6 +131,25 @@ function estadoOptions(selected) {
     return ESTADOS_BR.map(u => `<option value="${u}" ${selected === u ? 'selected' : ''}>${u}</option>`).join('');
 }
 
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function dataNascimentoFields() {
+    const [ay, am, ad] = (s.nascimento || '').split('-');
+    const anoAtual = new Date().getFullYear();
+    let anoOpts = '<option value="">Ano</option>';
+    for (let y = anoAtual; y >= anoAtual - 90; y--) anoOpts += `<option value="${y}" ${String(y) === ay ? 'selected' : ''}>${y}</option>`;
+    let mesOpts = '<option value="">Mês</option>' + MESES.map((m, i) => { const mm = String(i + 1).padStart(2, '0'); return `<option value="${mm}" ${mm === am ? 'selected' : ''}>${m}</option>`; }).join('');
+    let diaOpts = '<option value="">Dia</option>';
+    for (let d = 1; d <= 31; d++) { const dd = String(d).padStart(2, '0'); diaOpts += `<option value="${dd}" ${dd === ad ? 'selected' : ''}>${d}</option>`; }
+    return `
+    <div class="field"><label>Data de nascimento *</label>
+        <div class="date-row">
+            <select id="f_nasc_dia">${diaOpts}</select>
+            <select id="f_nasc_mes">${mesOpts}</select>
+            <select id="f_nasc_ano">${anoOpts}</select>
+        </div>
+    </div>`;
+}
+
 let stepIndex = 0;
 let steps = [];
 
@@ -172,7 +193,7 @@ function stepDadosPessoais() {
     <div class="field"><label>Qual foi o sexo atribuído no seu nascimento? *</label>
         <div class="radio-group">${pill('f_sexo', 'Masculino', s.sexo === 'Masculino')}${pill('f_sexo', 'Feminino', s.sexo === 'Feminino')}</div>
     </div>
-    <div class="field"><label>Data de nascimento *</label><input type="date" id="f_nascimento" value="${esc(s.nascimento)}"></div>
+    ${dataNascimentoFields()}
     <div class="field"><label>Nacionalidade *</label>
         <div class="radio-group">
             ${pill('f_nacionalidade', 'Brasileiro(a)', s.nacionalidade === 'Brasileiro(a)')}
@@ -523,7 +544,8 @@ function saveCurrentStep() {
     switch (stepIndex) {
         case 0:
             s.nome = val('f_nome'); s.sobrenome = val('f_sobrenome');
-            s.sexo = checkedVal('f_sexo'); s.nascimento = val('f_nascimento');
+            s.sexo = checkedVal('f_sexo');
+            { const dd = val('f_nasc_dia'), mm = val('f_nasc_mes'), yy = val('f_nasc_ano'); s.nascimento = (dd && mm && yy) ? `${yy}-${mm}-${dd}` : ''; }
             s.nacionalidade = checkedVal('f_nacionalidade');
             s.nacionalidade_outra = val('f_nac_outra'); s.naturalidade = val('f_naturalidade');
             s.estado_nascimento = val('f_estado_nasc');
