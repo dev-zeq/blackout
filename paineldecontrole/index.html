@@ -161,6 +161,11 @@
             .menu-tile .menu-icon svg { width: 42px; height: 42px; }
             .menu-tile .menu-label { font-size: 14px; }
             .menu-title { font-size: 16px; margin-bottom: 24px; }
+            /* Telas grandes (LAN): modais centralizados e mais largos em vez do
+               bottom-sheet mobile, já que o mouse alcança a tela inteira. */
+            .modal { align-items: center; }
+            .modal-content { max-width: 560px; border-radius: 22px; animation: none; }
+            .modal-content.wide { max-width: 820px; }
         }
         #printArea { display: none; }
         @media print {
