@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Currículo — Blackout</title>
+<style>
+    :root {
+        --bg: #05170c;
+        --surface: #0c1f14;
+        --surface-2: #0f2818;
+        --border: rgba(255,255,255,0.08);
+        --text: #eafff1;
+        --text-dim: #8fa89a;
+        --text-faint: #5c7568;
+        --accent: #22c55e;
+        --accent-bright: #4ade80;
+        --accent-dim: rgba(34,197,94,0.12);
+        --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #0a2415 0%, var(--bg) 55%); color: var(--text);
+        padding: 24px 16px 60px;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 22px; }
+    .header .logo { width: 52px; height: 52px; margin: 0 auto 10px; }
+    .header h1 { font-size: 19px; margin: 0 0 4px; }
+    .header p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+    .progress-track { height: 5px; background: var(--surface); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); border-radius: 10px; transition: width .25s ease; }
+    .step-label { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-bright); margin-bottom: 18px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 22px 18px; }
+    .card h2 { font-size: 15px; margin: 0 0 16px; color: var(--text); }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+    .field .hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+    input[type=text], input[type=tel], input[type=email], input[type=date], input[type=number], select, textarea {
+        width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); color: var(--text); font-size: 14.5px; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .radio-group, .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-pill { flex: 1 1 auto; min-width: 90px; }
+    .radio-pill input { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-pill .pill-label {
+        display: block; text-align: center; padding: 11px 10px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .12s;
+    }
+    .radio-pill input:checked + .pill-label { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+    .repeat-block { border: 1px dashed var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; position: relative; }
+    .repeat-block .repeat-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-bright); margin-bottom: 10px; }
+    .btn-remove { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--danger); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .btn-add { width: 100%; padding: 12px; border-radius: 12px; border: 1px dashed rgba(34,197,94,0.4); background: none; color: var(--accent-bright); font-size: 13px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+    .nav-row { display: flex; gap: 10px; margin-top: 22px; }
+    .btn { flex: 1; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn-next { background: linear-gradient(135deg, var(--accent-bright), var(--accent)); color: #05170c; box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
+    .btn-back { background: var(--surface-2); color: var(--text-dim); flex: 0 0 90px; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .error-msg { color: var(--danger); font-size: 12px; margin-top: 10px; display: none; }
+    .review-item { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+    .review-item .rk { color: var(--text-dim); }
+    .review-item .rv { color: var(--text); text-align: right; font-weight: 600; }
+    .success-box { text-align: center; padding: 40px 10px; }
+    .success-box .check { width: 64px; height: 64px; margin: 0 auto 18px; }
+    .success-box h2 { font-size: 18px; margin-bottom: 8px; }
+    .success-box p { color: var(--text-dim); font-size: 13.5px; }
+    @media (max-width: 380px) { .card { padding: 18px 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="46" fill="#05170c" stroke="#22C55E" stroke-width="4"/>
+            <g fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round">
+                <path d="M 50 10 A 40 40 0 1 1 12 60"/>
+            </g>
+            <polygon points="50,8 42,22 58,22" fill="#22C55E"/>
+            <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
+        </svg>
+        <h1>Formulário de Currículo</h1>
+        <p>Preencha com calma — leva uns minutos, e é só isso que a gente precisa pra montar seu currículo.</p>
+    </div>
+
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="step-label" id="stepLabel"></div>
+
+    <div class="card" id="cardArea"></div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Estado bruto do formulário. Chaves curtas internas — convertidas pro texto
+// original das perguntas (o mesmo usado pelo Apps Script/planilha) só na hora
+// de montar o payload final, pra manter compatibilidade com os registros
+// que já existem no Supabase.
+const s = {
+    nome: '', sobrenome: '', sexo: '', nascimento: '', nacionalidade: '', nacionalidade_outra: '',
+    naturalidade: '', estado_nascimento: '', estado_civil: '', tem_filhos: '', qtd_filhos: '', idade_filho_cacula: '',
+    ddd47: '', ddd_custom: '', telefone_numero: '', whatsapp_mesmo: '', ddd_whatsapp: '', whatsapp_numero: '',
+    contato_recado_nome: '', contato_recado_ddd: '', contato_recado_numero: '',
+    tem_email: '', email: '',
+    endereco: '', bairro: '', cidade: '', estado_residencia: '',
+    tem_superior: '', area_formacao: '', periodo_formacao: '', grau_escolar: '', processo_estudo: '', horario_estudo: '',
+    fez_curso: '', cursos: [],
+    informatica: '', outros_idiomas: '', quais_idiomas: '',
+    tem_experiencia: '', empresas: [],
+    referencias: [],
+    fumante: '', disponibilidade: [], destacar_cargo: '', qual_cargo: '', tipo_cargo_busca: '',
+    tem_cnh: '', categoria_cnh: '', tem_ear: '',
+};
+
+const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pill(name, value, checked, label) {
+    const id = name + '_' + value.replace(/\W/g, '');
+    return `<label class="radio-pill"><input type="radio" name="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''}><span class="pill-label" for="${id}">${esc(label || value)}</span></label>`;
+}
+function estadoOptions(selected) {
+    return ESTADOS_BR.map(u => `<option value="${u}" ${selected === u ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+let stepIndex = 0;
+let steps = [];
+
+function buildSteps() {
+    steps = [
+        stepDadosPessoais, stepFamilia, stepContato, stepEmailEndereco,
+        stepFormacao, stepCursos, stepInformaticaIdiomas, stepExperiencia,
+        stepReferencias, stepPreferencias, stepCnh, stepRevisao,
+    ];
+}
+
+function render() {
+    const total = steps.length;
+    document.getElementById('progressFill').style.width = Math.round((stepIndex / (total - 1)) * 100) + '%';
+    document.getElementById('stepLabel').textContent = `Etapa ${stepIndex + 1} de ${total}`;
+    const card = document.getElementById('cardArea');
+    card.innerHTML = steps[stepIndex]();
+    bindStepEvents();
+}
+
+function goNext() {
+    saveCurrentStep();
+    const err = validateCurrentStep();
+    if (err) { showError(err); return; }
+    if (stepIndex < steps.length - 1) { stepIndex++; render(); window.scrollTo(0, 0); }
+}
+function goBack() {
+    if (stepIndex > 0) { stepIndex--; render(); window.scrollTo(0, 0); }
+}
+function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+// ---------- Etapa 1: Dados Pessoais ----------
+function stepDadosPessoais() {
+    return `
+    <h2>Dados Pessoais</h2>
+    <div class="field"><label>Somente o primeiro nome *</label><input type="text" id="f_nome" value="${esc(s.nome)}"></div>
+    <div class="field"><label>Restante do seu nome (sobrenome) *</label><input type="text" id="f_sobrenome" value="${esc(s.sobrenome)}"></div>
+    <div class="field"><label>Qual foi o sexo atribuído no seu nascimento? *</label>
+        <div class="radio-group">${pill('f_sexo', 'Masculino', s.sexo === 'Masculino')}${pill('f_sexo', 'Feminino', s.sexo === 'Feminino')}</div>
+    </div>
+    <div class="field"><label>Data de nascimento *</label><input type="date" id="f_nascimento" value="${esc(s.nascimento)}"></div>
+    <div class="field"><label>Nacionalidade *</label>
+        <div class="radio-group">
+            ${pill('f_nacionalidade', 'Brasileiro(a)', s.nacionalidade === 'Brasileiro(a)')}
+            ${pill('f_nacionalidade', 'Venezuelano(a)', s.nacionalidade === 'Venezuelano(a)')}
+            ${pill('f_nacionalidade', 'Haitiano(a)', s.nacionalidade === 'Haitiano(a)')}
+            ${pill('f_nacionalidade', 'Outra Nacionalidade', s.nacionalidade === 'Outra Nacionalidade')}
+        </div>
+    </div>
+    <div id="condNacionalidade"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondNacionalidade() {
+    const el = document.getElementById('condNacionalidade');
+    if (!el) return;
+    let html = '';
+    if (s.nacionalidade === 'Outra Nacionalidade') {
+        html += `<div class="field"><label>Qual sua nacionalidade? (seu país de origem) *</label><input type="text" id="f_nac_outra" value="${esc(s.nacionalidade_outra)}"></div>`;
+    }
+    if (s.nacionalidade && s.nacionalidade !== 'Brasileiro(a)') {
+        html += `<div class="field"><label>Naturalidade (cidade onde você nasceu) *</label><input type="text" id="f_naturalidade" value="${esc(s.naturalidade)}"></div>`;
+    }
+    if (s.nacionalidade === 'Brasileiro(a)') {
+        html += `<div class="field"><label>Em qual estado você nasceu? *</label><select id="f_estado_nasc"><option value="">Selecione</option>${estadoOptions(s.estado_nascimento)}</select></div>`;
+    }
+    el.innerHTML = html;
+}
+
+// ---------- Etapa 2: Família / estado civil ----------
+function stepFamilia() {
+    return `
+    <h2>Estado Civil e Família</h2>
+    <div class="field"><label>Seu estado civil? *</label>
+        <select id="f_estado_civil">
+            <option value="">Selecione</option>
+            ${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+    </div>
+    <div class="field"><label>Você tem filhos? *</label>
+        <div class="radio-group">${pill('f_tem_filhos', 'Sim', s.tem_filhos === 'Sim')}${pill('f_tem_filhos', 'Não', s.tem_filhos === 'Não')}</div>
+    </div>
+    <div id="condFilhos"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondFilhos() {
+    const el = document.getElementById('condFilhos');
+    if (!el) return;
+    el.innerHTML = s.tem_filhos === 'Sim' ? `
+        <div class="field"><label>Quantos filhos?</label><input type="number" min="1" id="f_qtd_filhos" value="${esc(s.qtd_filhos)}"></div>
+        <div class="field"><label>Sobre a idade do seu filho caçula</label><input type="text" id="f_idade_cacula" value="${esc(s.idade_filho_cacula)}"></div>` : '';
+}
+
+// ---------- Etapa 3: Contato ----------
+function stepContato() {
+    return `
+    <h2>Contato</h2>
+    <div class="field"><label>Seu telefone pra ligação possui o DDD 47? *</label>
+        <div class="radio-group">${pill('f_ddd47', 'Sim', s.ddd47 === 'Sim')}${pill('f_ddd47', 'Não', s.ddd47 === 'Não')}</div>
+    </div>
+    <div id="condDdd"></div>
+    <div class="field"><label>Número do seu telefone pra ligação (sem o DDD) *</label><input type="tel" id="f_telefone_numero" value="${esc(s.telefone_numero)}"></div>
+    <div class="field"><label>Esse número é o mesmo que você utiliza pro WhatsApp? *</label>
+        <div class="radio-group">${pill('f_whatsapp_mesmo', 'Sim', s.whatsapp_mesmo === 'Sim')}${pill('f_whatsapp_mesmo', 'Não', s.whatsapp_mesmo === 'Não')}</div>
+    </div>
+    <div id="condWhatsapp"></div>
+    <div class="field"><label>Nome de alguém que você tem contato frequente (contato de recado)</label><input type="text" id="f_recado_nome" value="${esc(s.contato_recado_nome)}"></div>
+    <div class="field"><label>DDD do telefone desse contato de recado</label><input type="text" id="f_recado_ddd" value="${esc(s.contato_recado_ddd)}" maxlength="3"></div>
+    <div class="field"><label>Número do telefone desse contato de recado (sem DDD)</label><input type="tel" id="f_recado_numero" value="${esc(s.contato_recado_numero)}"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondDdd() {
+    const el = document.getElementById('condDdd');
+    if (!el) return;
+    el.innerHTML = s.ddd47 === 'Não' ? `<div class="field"><label>Qual o código de DDD do seu telefone?</label><input type="text" id="f_ddd_custom" value="${esc(s.ddd_custom)}" maxlength="3"></div>` : '';
+}
+function renderCondWhatsapp() {
+    const el = document.getElementById('condWhatsapp');
+    if (!el) return;
+    el.innerHTML = s.whatsapp_mesmo === 'Não' ? `
+        <div class="field"><label>DDD do WhatsApp</label><input type="text" id="f_ddd_whatsapp" value="${esc(s.ddd_whatsapp)}" maxlength="3"></div>
+        <div class="field"><label>Número do WhatsApp (sem DDD)</label><input type="tel" id="f_whatsapp_numero" value="${esc(s.whatsapp_numero)}"></div>` : '';
+}
+
+// ---------- Etapa 4: Email / Endereço ----------
+function stepEmailEndereco() {
+    return `
+    <h2>Email e Endereço</h2>
+    <div class="field"><label>Você tem e-mail?</label>
+        <div class="radio-group">${pill('f_tem_email', 'Sim', s.tem_email === 'Sim')}${pill('f_tem_email', 'Não', s.tem_email === 'Não')}</div>
+    </div>
+    <div id="condEmail"></div>
+    <div class="field"><label>Endereço atual (rua e número) *</label><input type="text" id="f_endereco" value="${esc(s.endereco)}"></div>
+    <div class="field"><label>Bairro *</label><input type="text" id="f_bairro" value="${esc(s.bairro)}"></div>
+    <div class="field"><label>Cidade *</label><input type="text" id="f_cidade" value="${esc(s.cidade)}"></div>
+    <div class="field"><label>Estado *</label><select id="f_estado_res"><option value="">Selecione</option>${estadoOptions(s.estado_residencia)}</select></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondEmail() {
+    const el = document.getElementById('condEmail');
+    if (!el) return;
+    el.innerHTML = s.tem_email === 'Sim' ? `<div class="field"><label>Qual o seu email?</label><input type="email" id="f_email" value="${esc(s.email)}"></div>` : '';
+}
+
+// ---------- Etapa 5: Formação ----------
+function stepFormacao() {
+    return `
+    <h2>Formação</h2>
+    <div class="field"><label>Você possui formação técnica ou de ensino superior?</label>
+        <div class="radio-group">${pill('f_tem_superior', 'Sim', s.tem_superior === 'Sim')}${pill('f_tem_superior', 'Não', s.tem_superior === 'Não')}</div>
+    </div>
+    <div id="condSuperior"></div>
+    <div class="field"><label>Qual seria o seu grau escolar? *</label>
+        <select id="f_grau_escolar">
+            <option value="">Selecione</option>
+            ${['Ensino Fundamental Incompleto','Ensino Fundamental Completo','Ensino Médio Incompleto','Ensino Médio Completo','Ensino Superior Incompleto','Ensino Superior Completo','Pós-graduação'].map(o => `<option value="${o}" ${s.grau_escolar === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+    </div>
+    <div class="field"><label>Referente ao seu estudo, em que processo você está atualmente?</label>
+        <select id="f_processo_estudo">
+            <option value="">Selecione</option>
+            ${['Concluído','Cursando','Trancado','Não estou estudando'].map(o => `<option value="${o}" ${s.processo_estudo === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+    </div>
+    <div class="field"><label>Em qual horário você estuda?</label>
+        <select id="f_horario_estudo">
+            <option value="">Selecione</option>
+            ${['Manhã','Tarde','Noite','Não estudo'].map(o => `<option value="${o}" ${s.horario_estudo === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+    </div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondSuperior() {
+    const el = document.getElementById('condSuperior');
+    if (!el) return;
+    el.innerHTML = s.tem_superior === 'Sim' ? `
+        <div class="field"><label>Qual sua área de formação superior?</label><input type="text" id="f_area_formacao" value="${esc(s.area_formacao)}"></div>
+        <div class="field"><label>Qual período de formação você está atualmente?</label><input type="text" id="f_periodo_formacao" value="${esc(s.periodo_formacao)}"></div>` : '';
+}
+
+// ---------- Etapa 6: Cursos ----------
+function stepCursos() {
+    return `
+    <h2>Cursos Profissionalizantes</h2>
+    <div class="field"><label>Você já fez algum tipo de curso profissionalizante?</label>
+        <div class="radio-group">${pill('f_fez_curso', 'Sim', s.fez_curso === 'Sim')}${pill('f_fez_curso', 'Não', s.fez_curso === 'Não')}</div>
+    </div>
+    <div id="cursosArea"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCursosArea() {
+    const el = document.getElementById('cursosArea');
+    if (!el) return;
+    if (s.fez_curso !== 'Sim') { el.innerHTML = ''; return; }
+    if (s.cursos.length === 0) s.cursos.push({ curso: '', instituicao: '', carga: '' });
+    el.innerHTML = s.cursos.map((c, i) => `
+        <div class="repeat-block">
+            ${s.cursos.length > 1 ? `<button type="button" class="btn-remove" data-remove-curso="${i}">remover</button>` : ''}
+            <div class="repeat-title">Curso ${i + 1}</div>
+            <div class="field"><label>Informe o curso que você concluiu</label><input type="text" data-curso="${i}" data-field="curso" value="${esc(c.curso)}"></div>
+            <div class="field"><label>Em qual instituição? (se não lembrar, deixe em branco)</label><input type="text" data-curso="${i}" data-field="instituicao" value="${esc(c.instituicao)}"></div>
+            <div class="field"><label>Total da carga horária? (se não lembrar, deixe em branco)</label><input type="text" data-curso="${i}" data-field="carga" value="${esc(c.carga)}"></div>
+        </div>`).join('') + (s.cursos.length < 5 ? `<button type="button" class="btn-add" id="btnAddCurso">+ Adicionar outro curso</button>` : '');
+    const btnAdd = document.getElementById('btnAddCurso');
+    if (btnAdd) btnAdd.addEventListener('click', () => { saveCurso(); s.cursos.push({ curso: '', instituicao: '', carga: '' }); renderCursosArea(); });
+    el.querySelectorAll('[data-remove-curso]').forEach(b => b.addEventListener('click', () => { saveCurso(); s.cursos.splice(+b.dataset.removeCurso, 1); renderCursosArea(); }));
+}
+
+// ---------- Etapa 7: Informática / Idiomas ----------
+function stepInformaticaIdiomas() {
+    return `
+    <h2>Informática e Idiomas</h2>
+    <div class="field"><label>Mesmo sem curso, você teria algum conhecimento em informática (computadores)?</label>
+        <select id="f_informatica">
+            <option value="">Selecione</option>
+            ${['Nenhum','Básico','Intermediário','Avançado'].map(o => `<option value="${o}" ${s.informatica === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+    </div>
+    <div class="field"><label>Além do seu idioma nativo, você possui conhecimento de outros idiomas?</label>
+        <div class="radio-group">${pill('f_outros_idiomas', 'Sim', s.outros_idiomas === 'Sim')}${pill('f_outros_idiomas', 'Não', s.outros_idiomas === 'Não')}</div>
+    </div>
+    <div id="condIdiomas"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondIdiomas() {
+    const el = document.getElementById('condIdiomas');
+    if (!el) return;
+    el.innerHTML = s.outros_idiomas === 'Sim' ? `<div class="field"><label>Escreva aqui os demais idiomas que você tem conhecimento</label><input type="text" id="f_quais_idiomas" value="${esc(s.quais_idiomas)}"></div>` : '';
+}
+
+// ---------- Etapa 8: Experiência ----------
+function stepExperiencia() {
+    return `
+    <h2>Experiência Profissional</h2>
+    <div class="field"><label>Você tem alguma experiência profissional ou está buscando seu primeiro emprego?</label>
+        <div class="radio-group">
+            ${pill('f_tem_experiencia', 'Tenho experiência', s.tem_experiencia === 'Tenho experiência')}
+            ${pill('f_tem_experiencia', 'Primeiro emprego', s.tem_experiencia === 'Primeiro emprego')}
+        </div>
+    </div>
+    <div id="empresasArea"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderEmpresasArea() {
+    const el = document.getElementById('empresasArea');
+    if (!el) return;
+    if (s.tem_experiencia !== 'Tenho experiência') { el.innerHTML = ''; return; }
+    if (s.empresas.length === 0) s.empresas.push({ nome: '', cargo: '', periodo: '' });
+    el.innerHTML = s.empresas.map((emp, i) => `
+        <div class="repeat-block">
+            ${s.empresas.length > 1 ? `<button type="button" class="btn-remove" data-remove-empresa="${i}">remover</button>` : ''}
+            <div class="repeat-title">Empresa ${i + 1}</div>
+            <div class="field"><label>Nome da empresa que você já prestou serviço</label><input type="text" data-empresa="${i}" data-field="nome" value="${esc(emp.nome)}"></div>
+            <div class="field"><label>Qual era o seu cargo nessa empresa?</label><input type="text" data-empresa="${i}" data-field="cargo" value="${esc(emp.cargo)}"></div>
+            <div class="field"><label>Qual foi o período que você trabalhou nessa empresa?</label><input type="text" data-empresa="${i}" data-field="periodo" value="${esc(emp.periodo)}" placeholder="ex: 2020 a 2022"></div>
+        </div>`).join('') + (s.empresas.length < 4 ? `<button type="button" class="btn-add" id="btnAddEmpresa">+ Adicionar outra empresa</button>` : '');
+    const btnAdd = document.getElementById('btnAddEmpresa');
+    if (btnAdd) btnAdd.addEventListener('click', () => { saveEmpresa(); s.empresas.push({ nome: '', cargo: '', periodo: '' }); renderEmpresasArea(); });
+    el.querySelectorAll('[data-remove-empresa]').forEach(b => b.addEventListener('click', () => { saveEmpresa(); s.empresas.splice(+b.dataset.removeEmpresa, 1); renderEmpresasArea(); }));
+}
+
+// ---------- Etapa 9: Referências ----------
+function stepReferencias() {
+    if (s.referencias.length === 0) s.referencias.push({ nome: '', ddd: '', numero: '' });
+    return `
+    <h2>Referências Pessoais</h2>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-top:-8px;">Nome e telefone de alguém que possa servir de referência (amigo, ex-colega de trabalho ou ex-patrão). Opcional, mas ajuda bastante.</p>
+    <div id="referenciasArea"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderReferenciasArea() {
+    const el = document.getElementById('referenciasArea');
+    if (!el) return;
+    el.innerHTML = s.referencias.map((r, i) => `
+        <div class="repeat-block">
+            ${s.referencias.length > 1 ? `<button type="button" class="btn-remove" data-remove-ref="${i}">remover</button>` : ''}
+            <div class="repeat-title">Referência ${i + 1}</div>
+            <div class="field"><label>Nome dessa pessoa</label><input type="text" data-ref="${i}" data-field="nome" value="${esc(r.nome)}"></div>
+            <div class="field"><label>DDD do telefone</label><input type="text" data-ref="${i}" data-field="ddd" value="${esc(r.ddd)}" maxlength="3"></div>
+            <div class="field"><label>Número do telefone (sem DDD)</label><input type="tel" data-ref="${i}" data-field="numero" value="${esc(r.numero)}"></div>
+        </div>`).join('') + (s.referencias.length < 2 ? `<button type="button" class="btn-add" id="btnAddRef">+ Adicionar outra referência</button>` : '');
+    const btnAdd = document.getElementById('btnAddRef');
+    if (btnAdd) btnAdd.addEventListener('click', () => { saveRef(); s.referencias.push({ nome: '', ddd: '', numero: '' }); renderReferenciasArea(); });
+    el.querySelectorAll('[data-remove-ref]').forEach(b => b.addEventListener('click', () => { saveRef(); s.referencias.splice(+b.dataset.removeRef, 1); renderReferenciasArea(); }));
+}
+
+// ---------- Etapa 10: Preferências ----------
+const DISPONIBILIDADE_OPTS = ['Período Integral', 'Meio Período - Manhã', 'Meio Período - Tarde', 'Meio Período - Noite', 'Fins de Semana', 'Qualquer Horário'];
+function stepPreferencias() {
+    return `
+    <h2>Preferências de Trabalho</h2>
+    <div class="field"><label>Você é fumante?</label>
+        <div class="radio-group">${pill('f_fumante', 'Sim', s.fumante === 'Sim')}${pill('f_fumante', 'Não', s.fumante === 'Não')}</div>
+    </div>
+    <div class="field"><label>Mediante sua disponibilidade de horário, quais dessas opções podemos deixar em seu currículo?</label>
+        <div class="check-group">
+            ${DISPONIBILIDADE_OPTS.map(o => `<label class="radio-pill"><input type="checkbox" id="disp_${o.replace(/\W/g,'')}" value="${esc(o)}" ${s.disponibilidade.includes(o) ? 'checked' : ''} data-disp><span class="pill-label">${o}</span></label>`).join('')}
+        </div>
+    </div>
+    <div class="field"><label>Gostaria de destacar em seu currículo algum cargo de preferência?</label>
+        <div class="radio-group">${pill('f_destacar_cargo', 'Sim', s.destacar_cargo === 'Sim')}${pill('f_destacar_cargo', 'Não', s.destacar_cargo === 'Não')}</div>
+    </div>
+    <div id="condCargo"></div>
+    <div class="field"><label>Qual tipo de cargo você busca no mercado de trabalho?</label><input type="text" id="f_tipo_cargo" value="${esc(s.tipo_cargo_busca)}"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondCargo() {
+    const el = document.getElementById('condCargo');
+    if (!el) return;
+    el.innerHTML = s.destacar_cargo === 'Sim' ? `<div class="field"><label>Qual cargo?</label><input type="text" id="f_qual_cargo" value="${esc(s.qual_cargo)}"></div>` : '';
+}
+
+// ---------- Etapa 11: CNH ----------
+function stepCnh() {
+    return `
+    <h2>Habilitação</h2>
+    <div class="field"><label>Você possui carteira de habilitação?</label>
+        <div class="radio-group">${pill('f_tem_cnh', 'Sim', s.tem_cnh === 'Sim')}${pill('f_tem_cnh', 'Não', s.tem_cnh === 'Não')}</div>
+    </div>
+    <div id="condCnh"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Revisar e enviar</button></div>`;
+}
+function renderCondCnh() {
+    const el = document.getElementById('condCnh');
+    if (!el) return;
+    el.innerHTML = s.tem_cnh === 'Sim' ? `
+        <div class="field"><label>Qual categoria da sua CNH?</label>
+            <select id="f_categoria_cnh"><option value="">Selecione</option>${['A','B','AB','C','D','E'].map(o => `<option value="${o}" ${s.categoria_cnh === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Sua habilitação possui extensão pra EAR? (autorização pra serviços de motorista com remuneração, tipo Uber)</label>
+            <div class="radio-group">${pill('f_tem_ear', 'Sim', s.tem_ear === 'Sim')}${pill('f_tem_ear', 'Não', s.tem_ear === 'Não')}</div>
+        </div>` : '';
+}
+
+// ---------- Etapa 12: Revisão ----------
+function stepRevisao() {
+    const rows = [
+        ['Nome', `${s.nome} ${s.sobrenome}`.trim()],
+        ['Nascimento', s.nascimento], ['Nacionalidade', s.nacionalidade],
+        ['Estado civil', s.estado_civil], ['Telefone', s.telefone_numero],
+        ['Email', s.tem_email === 'Sim' ? s.email : '—'],
+        ['Endereço', `${s.endereco}, ${s.bairro}, ${s.cidade}/${s.estado_residencia}`],
+        ['Cursos', s.fez_curso === 'Sim' ? s.cursos.filter(c => c.curso).map(c => c.curso).join(', ') || '—' : '—'],
+        ['Experiência', s.tem_experiencia === 'Tenho experiência' ? s.empresas.filter(e => e.nome).map(e => e.nome).join(', ') || '—' : 'Primeiro emprego'],
+        ['CNH', s.tem_cnh === 'Sim' ? `Categoria ${s.categoria_cnh}` : 'Não possui'],
+    ];
+    return `
+    <h2>Confira e envie</h2>
+    ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">Enviar currículo</button></div>`;
+}
+
+// ---------- Validação e coleta por etapa ----------
+function validateCurrentStep() {
+    switch (stepIndex) {
+        case 0:
+            if (!s.nome || !s.sobrenome || !s.sexo || !s.nascimento || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
+            if (s.nacionalidade === 'Outra Nacionalidade' && !s.nacionalidade_outra) return 'Informe sua nacionalidade.';
+            if (s.nacionalidade !== 'Brasileiro(a)' && s.nacionalidade && !s.naturalidade) return 'Informe sua naturalidade.';
+            if (s.nacionalidade === 'Brasileiro(a)' && !s.estado_nascimento) return 'Selecione o estado de nascimento.';
+            return null;
+        case 1:
+            if (!s.estado_civil || !s.tem_filhos) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 2:
+            if (!s.ddd47 || !s.telefone_numero || !s.whatsapp_mesmo) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 3:
+            if (!s.endereco || !s.bairro || !s.cidade || !s.estado_residencia) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 4:
+            if (!s.grau_escolar) return 'Selecione seu grau escolar.';
+            return null;
+        default: return null;
+    }
+}
+function saveCurrentStep() {
+    switch (stepIndex) {
+        case 0:
+            s.nome = val('f_nome'); s.sobrenome = val('f_sobrenome');
+            s.sexo = checkedVal('f_sexo'); s.nascimento = val('f_nascimento');
+            s.nacionalidade = checkedVal('f_nacionalidade');
+            s.nacionalidade_outra = val('f_nac_outra'); s.naturalidade = val('f_naturalidade');
+            s.estado_nascimento = val('f_estado_nasc');
+            break;
+        case 1:
+            s.estado_civil = val('f_estado_civil'); s.tem_filhos = checkedVal('f_tem_filhos');
+            s.qtd_filhos = val('f_qtd_filhos'); s.idade_filho_cacula = val('f_idade_cacula');
+            break;
+        case 2:
+            s.ddd47 = checkedVal('f_ddd47'); s.ddd_custom = val('f_ddd_custom');
+            s.telefone_numero = val('f_telefone_numero'); s.whatsapp_mesmo = checkedVal('f_whatsapp_mesmo');
+            s.ddd_whatsapp = val('f_ddd_whatsapp'); s.whatsapp_numero = val('f_whatsapp_numero');
+            s.contato_recado_nome = val('f_recado_nome'); s.contato_recado_ddd = val('f_recado_ddd');
+            s.contato_recado_numero = val('f_recado_numero');
+            break;
+        case 3:
+            s.tem_email = checkedVal('f_tem_email'); s.email = val('f_email');
+            s.endereco = val('f_endereco'); s.bairro = val('f_bairro'); s.cidade = val('f_cidade');
+            s.estado_residencia = val('f_estado_res');
+            break;
+        case 4:
+            s.tem_superior = checkedVal('f_tem_superior'); s.area_formacao = val('f_area_formacao');
+            s.periodo_formacao = val('f_periodo_formacao'); s.grau_escolar = val('f_grau_escolar');
+            s.processo_estudo = val('f_processo_estudo'); s.horario_estudo = val('f_horario_estudo');
+            break;
+        case 5:
+            s.fez_curso = checkedVal('f_fez_curso');
+            document.querySelectorAll('[data-curso]').forEach(inp => {
+                const i = +inp.dataset.curso, f = inp.dataset.field;
+                if (s.cursos[i]) s.cursos[i][f] = inp.value;
+            });
+            break;
+        case 6:
+            s.informatica = val('f_informatica'); s.outros_idiomas = checkedVal('f_outros_idiomas');
+            s.quais_idiomas = val('f_quais_idiomas');
+            break;
+        case 7:
+            s.tem_experiencia = checkedVal('f_tem_experiencia');
+            document.querySelectorAll('[data-empresa]').forEach(inp => {
+                const i = +inp.dataset.empresa, f = inp.dataset.field;
+                if (s.empresas[i]) s.empresas[i][f] = inp.value;
+            });
+            break;
+        case 8:
+            document.querySelectorAll('[data-ref]').forEach(inp => {
+                const i = +inp.dataset.ref, f = inp.dataset.field;
+                if (s.referencias[i]) s.referencias[i][f] = inp.value;
+            });
+            break;
+        case 9:
+            s.fumante = checkedVal('f_fumante');
+            s.disponibilidade = Array.from(document.querySelectorAll('[data-disp]:checked')).map(c => c.value);
+            s.destacar_cargo = checkedVal('f_destacar_cargo'); s.qual_cargo = val('f_qual_cargo');
+            s.tipo_cargo_busca = val('f_tipo_cargo');
+            break;
+        case 10:
+            s.tem_cnh = checkedVal('f_tem_cnh'); s.categoria_cnh = val('f_categoria_cnh'); s.tem_ear = checkedVal('f_tem_ear');
+            break;
+    }
+}
+function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+function checkedVal(name) { const e = document.querySelector(`input[name="${name}"]:checked`); return e ? e.value : ''; }
+
+function bindStepEvents() {
+    // re-render blocos condicionais quando o rádio pai muda
+    document.querySelectorAll('input[name="f_nacionalidade"]').forEach(r => r.addEventListener('change', () => { s.nacionalidade = checkedVal('f_nacionalidade'); renderCondNacionalidade(); }));
+    document.querySelectorAll('input[name="f_tem_filhos"]').forEach(r => r.addEventListener('change', () => { s.tem_filhos = checkedVal('f_tem_filhos'); renderCondFilhos(); }));
+    document.querySelectorAll('input[name="f_ddd47"]').forEach(r => r.addEventListener('change', () => { s.ddd47 = checkedVal('f_ddd47'); renderCondDdd(); }));
+    document.querySelectorAll('input[name="f_whatsapp_mesmo"]').forEach(r => r.addEventListener('change', () => { s.whatsapp_mesmo = checkedVal('f_whatsapp_mesmo'); renderCondWhatsapp(); }));
+    document.querySelectorAll('input[name="f_tem_email"]').forEach(r => r.addEventListener('change', () => { s.tem_email = checkedVal('f_tem_email'); renderCondEmail(); }));
+    document.querySelectorAll('input[name="f_tem_superior"]').forEach(r => r.addEventListener('change', () => { s.tem_superior = checkedVal('f_tem_superior'); renderCondSuperior(); }));
+    document.querySelectorAll('input[name="f_fez_curso"]').forEach(r => r.addEventListener('change', () => { s.fez_curso = checkedVal('f_fez_curso'); renderCursosArea(); }));
+    document.querySelectorAll('input[name="f_outros_idiomas"]').forEach(r => r.addEventListener('change', () => { s.outros_idiomas = checkedVal('f_outros_idiomas'); renderCondIdiomas(); }));
+    document.querySelectorAll('input[name="f_tem_experiencia"]').forEach(r => r.addEventListener('change', () => { s.tem_experiencia = checkedVal('f_tem_experiencia'); renderEmpresasArea(); }));
+    document.querySelectorAll('input[name="f_destacar_cargo"]').forEach(r => r.addEventListener('change', () => { s.destacar_cargo = checkedVal('f_destacar_cargo'); renderCondCargo(); }));
+    document.querySelectorAll('input[name="f_tem_cnh"]').forEach(r => r.addEventListener('change', () => { s.tem_cnh = checkedVal('f_tem_cnh'); renderCondCnh(); }));
+
+    const btnSubmit = document.getElementById('btnSubmit');
+    if (btnSubmit) btnSubmit.addEventListener('click', submitForm);
+
+    // renders iniciais dos blocos condicionais/repetíveis da etapa atual
+    renderCondNacionalidade(); renderCondFilhos(); renderCondDdd(); renderCondWhatsapp();
+    renderCondEmail(); renderCondSuperior(); renderCursosArea(); renderCondIdiomas();
+    renderEmpresasArea(); renderReferenciasArea(); renderCondCargo(); renderCondCnh();
+}
+function saveCurso() { document.querySelectorAll('[data-curso]').forEach(inp => { const i = +inp.dataset.curso, f = inp.dataset.field; if (s.cursos[i]) s.cursos[i][f] = inp.value; }); }
+function saveEmpresa() { document.querySelectorAll('[data-empresa]').forEach(inp => { const i = +inp.dataset.empresa, f = inp.dataset.field; if (s.empresas[i]) s.empresas[i][f] = inp.value; }); }
+function saveRef() { document.querySelectorAll('[data-ref]').forEach(inp => { const i = +inp.dataset.ref, f = inp.dataset.field; if (s.referencias[i]) s.referencias[i][f] = inp.value; }); }
+
+// ---------- Envio ----------
+async function submitForm() {
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+
+    const telefone = s.telefone_numero ? (s.ddd47 === 'Sim' ? '47' : s.ddd_custom) + s.telefone_numero : null;
+    const whatsapp = s.whatsapp_mesmo === 'Sim' ? telefone : (s.whatsapp_numero ? (s.ddd_whatsapp || '') + s.whatsapp_numero : null);
+
+    const dados = {};
+    const put = (k, v) => { if (v !== '' && v != null) dados[k] = v; };
+    put('QUAL FOI O SEXO ATRIBUÍDO NO SEU NASCIMENTO?', s.sexo);
+    put('QUAL SUA NACIONALIDADE? (Seu País de Origem)', s.nacionalidade_outra);
+    put('NATURALIDADE? (Apenas o nome da da cidade onde você nasceu)', s.naturalidade);
+    put('EM QUAL ESTADO?', s.estado_nascimento);
+    put('VOCÊ TEM FILHOS?', s.tem_filhos);
+    put('QUANTOS FILHOS?', s.qtd_filhos);
+    put('SOBRE A IDADE DO SEU FILHO CAÇULA', s.idade_filho_cacula);
+    put('ESCREVA O NOME DE ALGUEM QUE VOCÊ TEM CONTATO FREQUENTIMENTE! (essa pessoa vai servir como seu contato de recado)', s.contato_recado_nome);
+    put('E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO DE RECADO?', s.contato_recado_ddd);
+    put('AGORA O NUMERO DO SEU TELEFONE DO SEU CONTATO DE RECADO? (sem o DDD)', s.contato_recado_numero);
+    put('VOCÊ POSSUI ALGUMA FORMAÇÃO TÉCNICA DE ENSINO SUPERIOR?', s.tem_superior);
+    put('QUAL SUA ÁREA DE FORMAÇÃO SUPERIOR?', s.area_formacao);
+    put('E QUAL PERÍODO DE FORMAÇÃO VOCÊ ESTÁ ATUALMENTE?', s.periodo_formacao);
+    put('E QUAL SERIA O SEU GRAU ESCOLAR?', s.grau_escolar);
+    put('REFERENTE AO SEU ESTUDO EM QUE PROCESSO VOCÊ ESTÁ ATUALMENTE?', s.processo_estudo);
+    put('EM QUAL HORÁRIO VOCÊ ESTUDA?', s.horario_estudo);
+    put('VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?', s.fez_curso);
+    if (s.fez_curso === 'Sim') {
+        s.cursos.forEach((c, i) => {
+            const n = i + 1;
+            put(`INFORME O CURSO VOCÊ CONCLUIU? (${n})`, c.curso);
+            put(`EM QUAL INSTITUIÇÃO? (${n})`, c.instituicao);
+            put(`TOTAL DA CARGA HORÁRIA? (${n})`, c.carga);
+        });
+    }
+    put('MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)', s.informatica);
+    put('ALÉM DO SEU IDIOMA NATIVO (natural da sua Região) VOCÊ POSSSUI CONHECIMENTO DE OUTROS IDIOMAS?', s.outros_idiomas);
+    put('ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO!', s.quais_idiomas);
+    put('VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?', s.tem_experiencia);
+    if (s.tem_experiencia === 'Tenho experiência') {
+        s.empresas.forEach((e, i) => {
+            const n = i + 1;
+            put(`NOME DA EMPRESA QUE VOCÊ JA PRESTOU SERVIÇO (${n})`, e.nome);
+            put(`QUAL ERA O SEU CARGO NESSA EMPRESA? (${n})`, e.cargo);
+            put(`QUAL FOI O PERÍODO QUE VOCÊ TRABALHOU NESSA EMPRESA? (${n})`, e.periodo);
+        });
+    }
+    s.referencias.forEach((r, i) => {
+        if (!r.nome) return;
+        const n = i + 1;
+        put(`QUAL SERIA O NOME DA REFERÊNCIA (${n})`, r.nome);
+        put(`E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO (${n})`, r.ddd);
+        put(`AGORA O NUMERO DO SEU TELEFONE DA REFERÊNCIA (${n})? (sem DDD)`, r.numero);
+    });
+    put('VOCÊ FUMANTE?', s.fumante);
+    put('MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?', s.disponibilidade.join(', '));
+    put('GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?', s.destacar_cargo);
+    put('QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?', s.qual_cargo || s.tipo_cargo_busca);
+    put('VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?', s.tem_cnh);
+    put('QUAL CATEGORIA DA SUA CNH?', s.categoria_cnh);
+    put('SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)', s.tem_ear);
+
+    const registro = {
+        nome: s.nome, sobrenome: s.sobrenome || null,
+        data_nascimento: s.nascimento || null,
+        genero: s.sexo || null,
+        nacionalidade: s.nacionalidade || null,
+        estado_civil: s.estado_civil || null,
+        telefone, whatsapp,
+        email: s.tem_email === 'Sim' ? (s.email || null) : null,
+        endereco: s.endereco || null, bairro: s.bairro || null,
+        cidade: s.cidade || null, estado: s.estado_residencia || null,
+        status: 'PENDENTE', dados,
+        data_pedido: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('curriculos').insert(registro);
+    if (error) {
+        showError('Não deu pra enviar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        btn.disabled = false; btn.textContent = 'Enviar currículo';
+        return;
+    }
+    document.getElementById('cardArea').innerHTML = `
+        <div class="success-box">
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+            <h2>Currículo enviado!</h2>
+            <p>Recebemos suas informações. A equipe da Blackout vai entrar em contato quando o currículo estiver pronto.</p>
+        </div>`;
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('stepLabel').textContent = 'Concluído';
+}
+
+window.__goNext = goNext;
+window.__goBack = goBack;
+
+buildSteps();
+render();
+</script>
+</body>
+</html>
