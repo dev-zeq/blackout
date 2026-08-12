@@ -432,6 +432,7 @@
             <div id="formatadoConteudo" style="font-size:14px; color:var(--text-dim); line-height:1.6;"></div>
             <div class="modal-buttons">
                 <button type="button" class="btn-cancel" onclick="closeFormatadoModal()">Fechar</button>
+                <button type="button" class="btn-secondary" id="formatadoBtnRegerar" style="display:none;" onclick="regerarComIA()">🔄 Gerar de novo</button>
                 <button type="button" class="btn-save" id="formatadoBtnImprimir" onclick="imprimirFormatado()">🖨️ Imprimir</button>
             </div>
         </div>
@@ -2110,26 +2111,50 @@
             return html;
         }
 
+        let formatadoAtualId = null;
+
         async function abrirFormatado(id, useIA) {
             const c = curriculosCache.find(x => x.id === id);
             if (!c) return;
+            formatadoAtualId = id;
             const modal = document.getElementById('formatadoModal');
             const conteudo = document.getElementById('formatadoConteudo');
             const titulo = document.getElementById('formatadoTitulo');
             const btnImprimir = document.getElementById('formatadoBtnImprimir');
+            const btnRegerar = document.getElementById('formatadoBtnRegerar');
             titulo.textContent = useIA ? `🤖 ${c.nome} ${c.sobrenome || ''} — gerado com IA` : `📄 ${c.nome} ${c.sobrenome || ''} — formatado`;
             modal.classList.add('active');
             modal.dataset.nome = `${c.nome} ${c.sobrenome || ''}`;
+            modal.dataset.useIA = useIA ? '1' : '';
 
             const header = cvHeaderHtml(c);
 
             if (!useIA) {
+                btnRegerar.style.display = 'none';
                 conteudo.innerHTML = header + formatarCurriculoTemplate(c);
                 btnImprimir.style.display = '';
                 return;
             }
 
+            // Já foi gerado antes pra esse currículo? Reaproveita — evita gastar
+            // token de novo toda vez que só quer imprimir depois.
+            if (c.ia_texto) {
+                conteudo.innerHTML = header + markdownSimplesParaHtml(c.ia_texto);
+                btnImprimir.style.display = '';
+                btnRegerar.style.display = '';
+                return;
+            }
+
+            await gerarComIA(c, header);
+        }
+        window.abrirFormatado = abrirFormatado;
+
+        async function gerarComIA(c, header) {
+            const conteudo = document.getElementById('formatadoConteudo');
+            const btnImprimir = document.getElementById('formatadoBtnImprimir');
+            const btnRegerar = document.getElementById('formatadoBtnRegerar');
             btnImprimir.style.display = 'none';
+            btnRegerar.style.display = 'none';
             conteudo.innerHTML = header + '<p>⏳ Gerando com IA, alguns segundos...</p>';
             try {
                 const { data, error } = await supabase.functions.invoke('curriculo-ia', {
@@ -2141,13 +2166,27 @@
                 });
                 if (error) throw new Error(error.message || 'Falha ao gerar com IA');
                 if (!data || !data.texto) throw new Error(data && data.error ? data.error : 'IA não retornou conteúdo');
+
+                c.ia_texto = data.texto;
+                c.ia_gerado_em = new Date().toISOString();
+                supabase.from('curriculos').update({ ia_texto: c.ia_texto, ia_gerado_em: c.ia_gerado_em }).eq('id', c.id)
+                    .then(({ error: saveError }) => { if (saveError) console.warn('Não salvou o texto da IA:', saveError.message); });
+
                 conteudo.innerHTML = header + markdownSimplesParaHtml(data.texto);
                 btnImprimir.style.display = '';
+                btnRegerar.style.display = '';
             } catch (err) {
                 conteudo.innerHTML = header + `<p style="color:var(--danger);">⚠️ ${escapeHtml(err.message)}</p><p>Confere se a chave OPENAI_API_KEY foi configurada nos Secrets da Edge Function no Supabase.</p>`;
             }
         }
-        window.abrirFormatado = abrirFormatado;
+
+        async function regerarComIA() {
+            const c = curriculosCache.find(x => x.id === formatadoAtualId);
+            if (!c) return;
+            if (!confirm('Gerar de novo consome tokens da IA outra vez. Continuar?')) return;
+            await gerarComIA(c, cvHeaderHtml(c));
+        }
+        window.regerarComIA = regerarComIA;
 
         function closeFormatadoModal() {
             document.getElementById('formatadoModal').classList.remove('active');
