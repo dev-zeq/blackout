@@ -410,6 +410,17 @@
         </div>
     </div>
 
+    <div class="modal" id="formatadoModal">
+        <div class="modal-content wide">
+            <h2 id="formatadoTitulo">📄 Currículo Formatado</h2>
+            <div id="formatadoConteudo" style="font-size:14px; color:var(--text-dim); line-height:1.6;"></div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeFormatadoModal()">Fechar</button>
+                <button type="button" class="btn-save" id="formatadoBtnImprimir" onclick="imprimirFormatado()">🖨️ Imprimir</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="modal">
         <div class="modal-content">
             <h2>✨ Registrar Entrada</h2>
@@ -1835,7 +1846,9 @@
                             <span class="subtext">${feito ? '✅ Feito' : '⏳ Pendente'}</span>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir">🖨️</button>
+                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir (bruto)">🖨️</button>
+                            <button class="btn-delete" onclick="abrirFormatado('${c.id}', false)" title="Formatado">📄</button>
+                            <button class="btn-delete" onclick="abrirFormatado('${c.id}', true)" title="Formatado com IA">🤖</button>
                             <button class="btn-delete" onclick="toggleCurriculoStatus('${c.id}', '${feito ? 'PENDENTE' : 'FEITO'}')" title="${feito ? 'Marcar como pendente' : 'Marcar como feito'}">${feito ? '↩️' : '✅'}</button>
                             <button class="btn-delete" onclick="deleteCurriculo('${c.id}')" title="Excluir">🗑️</button>
                         </div>
@@ -1880,6 +1893,148 @@
         }
         window.printCurriculo = printCurriculo;
 
+        // Agrupa as respostas cruas de `dados` em seções de currículo de verdade.
+        // As chaves batem com o texto original das perguntas (mesmo padrão usado
+        // pelo Apps Script antigo e pelo formulário novo em curriculo-form.html),
+        // com sufixo " (N)" nos blocos repetíveis (cursos/empresas/referências).
+        const CAMPOS_POR_SECAO = {
+            'Formação': [
+                'VOCÊ POSSUI ALGUMA FORMAÇÃO TÉCNICA DE ENSINO SUPERIOR?', 'QUAL SUA ÁREA DE FORMAÇÃO SUPERIOR?',
+                'E QUAL PERÍODO DE FORMAÇÃO VOCÊ ESTÁ ATUALMENTE?', 'E QUAL SERIA O SEU GRAU ESCOLAR?',
+                'REFERENTE AO SEU ESTUDO EM QUE PROCESSO VOCÊ ESTÁ ATUALMENTE?', 'EM QUAL HORÁRIO VOCÊ ESTUDA?',
+            ],
+            'Cursos': [
+                'VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?', 'INFORME O CURSO VOCÊ CONCLUIU?',
+                'EM QUAL INSTITUIÇÃO? (Caso você não se lembrar, deixe a resposta em branco)', 'EM QUAL INSTITUIÇÃO?',
+                'TOTAL DA CARGA HORÁRIA? (Caso você não se lembrar, deixe a resposta em branco)', 'TOTAL DA CARGA HORÁRIA?',
+            ],
+            'Habilidades': [
+                'MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)',
+                'ALÉM DO SEU IDIOMA NATIVO (natural da sua Região) VOCÊ POSSSUI CONHECIMENTO DE OUTROS IDIOMAS?',
+                'ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO!', 'ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO\\!',
+            ],
+            'Experiência Profissional': [
+                'VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?',
+                'NOME DA EMPRESA QUE VOCÊ JA PRESTOU SERVIÇO', 'QUAL ERA O SEU CARGO NESSA EMPRESA?',
+                'QUAL FOI O PERÍODO QUE VOCÊ TRABALHOU NESSA EMPRESA?',
+                'GOSTARIA DE ADICIONAR INFORMAÇÃO DE MAIS EMPRESA QUE VOCÊ TRABALHOU?',
+            ],
+            'Referências Pessoais': [
+                'QUAL SERIA O NOME DA REFERÊNCIA', 'QUAL SERIA O NOME DESSA PESSOA?', 'QUAL SERIA O NOME DA OUTRA PESSOA?',
+                'E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO', 'AGORA O NUMERO DO SEU TELEFONE DA REFERÊNCIA',
+                'AGORA O NUMERO DO SEU TELEFONE? (sem DDD)',
+                'GOSTARIA DE ADICIONAR O NOME E O TELEFONE DE ALGUÉM PRA SERVIR COMO UMA REFERÊNCIA PESSOAL? (Um amigo, ex-colega de trabalho ou seu Ex-Patrão)',
+                'GOSTARIA DE ADICIONAR O NOME DE UMA OUTRA PESSOA PRA REFERENCIA PESSOAL? (Um outro amigo, ex-colega de trabalho ou seu Ex-Patrão)',
+            ],
+            'Preferências e Habilitação': [
+                'VOCÊ FUMANTE?', 'VOCÊ  FUMANTE?',
+                'MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?',
+                'GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?', 'QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?',
+                'VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?', 'QUAL CATEGORIA DA SUA CNH?',
+                'SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)',
+            ],
+        };
+        function baseKey(k) { return k.replace(/\s*\(\d+\)\s*$/, '').trim(); }
+        function secaoDaChave(k) {
+            const base = baseKey(k);
+            for (const [secao, chaves] of Object.entries(CAMPOS_POR_SECAO)) {
+                if (chaves.some(c => base === c || base.startsWith(c))) return secao;
+            }
+            return 'Outras Informações';
+        }
+        function formatarCurriculoTemplate(c) {
+            const dados = c.dados || {};
+            const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+            const contato = [
+                c.telefone ? `Tel: ${c.telefone}` : null,
+                c.whatsapp && c.whatsapp !== c.telefone ? `WhatsApp: ${c.whatsapp}` : null,
+                c.email ? c.email : null,
+            ].filter(Boolean).join(' · ');
+            const endereco = [c.endereco, c.bairro, c.cidade, c.estado].filter(Boolean).join(', ');
+
+            const secoes = {};
+            Object.entries(dados).forEach(([k, v]) => {
+                if (!k.trim() || !v) return;
+                const secao = secaoDaChave(k);
+                (secoes[secao] = secoes[secao] || []).push([k, v]);
+            });
+
+            const ordem = ['Formação', 'Cursos', 'Habilidades', 'Experiência Profissional', 'Referências Pessoais', 'Preferências e Habilitação', 'Outras Informações'];
+            const blocos = ordem.filter(s => secoes[s]).map(s => `
+                <h2>${escapeHtml(s)}</h2>
+                ${secoes[s].map(([k, v]) => `<p><b>${escapeHtml(baseKey(k))}:</b> ${escapeHtml(String(v))}</p>`).join('')}
+            `).join('');
+
+            return `
+                <h1>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</h1>
+                <p>Nascimento: ${nascimento} · ${escapeHtml(c.nacionalidade) || '-'} · ${escapeHtml(c.estado_civil) || '-'}</p>
+                <p>${escapeHtml(contato) || '-'}</p>
+                <p>${escapeHtml(endereco) || '-'}</p>
+                ${blocos || '<p>Sem informações adicionais.</p>'}
+            `;
+        }
+
+        // Converte o markdown simples que a IA devolve (## títulos, texto corrido)
+        // em HTML compatível com o mesmo estilo de impressão do resto do app.
+        function markdownSimplesParaHtml(texto) {
+            return texto.split('\n').map(linha => {
+                const l = linha.trim();
+                if (!l) return '';
+                if (l.startsWith('## ')) return `<h2>${escapeHtml(l.slice(3))}</h2>`;
+                if (l.startsWith('# ')) return `<h1>${escapeHtml(l.slice(2))}</h1>`;
+                if (l.startsWith('- ') || l.startsWith('* ')) return `<p>• ${escapeHtml(l.slice(2))}</p>`;
+                return `<p>${escapeHtml(l)}</p>`;
+            }).join('');
+        }
+
+        async function abrirFormatado(id, useIA) {
+            const c = curriculosCache.find(x => x.id === id);
+            if (!c) return;
+            const modal = document.getElementById('formatadoModal');
+            const conteudo = document.getElementById('formatadoConteudo');
+            const titulo = document.getElementById('formatadoTitulo');
+            const btnImprimir = document.getElementById('formatadoBtnImprimir');
+            titulo.textContent = useIA ? `🤖 ${c.nome} ${c.sobrenome || ''} — gerado com IA` : `📄 ${c.nome} ${c.sobrenome || ''} — formatado`;
+            modal.classList.add('active');
+            modal.dataset.nome = `${c.nome} ${c.sobrenome || ''}`;
+
+            if (!useIA) {
+                conteudo.innerHTML = formatarCurriculoTemplate(c);
+                btnImprimir.style.display = '';
+                return;
+            }
+
+            btnImprimir.style.display = 'none';
+            conteudo.innerHTML = '<p>⏳ Gerando com IA, alguns segundos...</p>';
+            try {
+                const { data, error } = await supabase.functions.invoke('curriculo-ia', {
+                    body: {
+                        nome: c.nome, sobrenome: c.sobrenome, telefone: c.telefone, whatsapp: c.whatsapp,
+                        email: c.email, endereco: c.endereco, bairro: c.bairro, cidade: c.cidade,
+                        estado: c.estado, dados: c.dados,
+                    },
+                });
+                if (error) throw new Error(error.message || 'Falha ao gerar com IA');
+                if (!data || !data.texto) throw new Error(data && data.error ? data.error : 'IA não retornou conteúdo');
+                conteudo.innerHTML = markdownSimplesParaHtml(data.texto);
+                btnImprimir.style.display = '';
+            } catch (err) {
+                conteudo.innerHTML = `<p style="color:var(--danger);">⚠️ ${escapeHtml(err.message)}</p><p>Confere se a chave OPENAI_API_KEY foi configurada nos Secrets da Edge Function no Supabase.</p>`;
+            }
+        }
+        window.abrirFormatado = abrirFormatado;
+
+        function closeFormatadoModal() {
+            document.getElementById('formatadoModal').classList.remove('active');
+        }
+        window.closeFormatadoModal = closeFormatadoModal;
+
+        function imprimirFormatado() {
+            document.getElementById('printArea').innerHTML = document.getElementById('formatadoConteudo').innerHTML;
+            setTimeout(() => window.print(), 100);
+        }
+        window.imprimirFormatado = imprimirFormatado;
+
         function openModal() {
             document.getElementById('modal').classList.add('active');
             document.getElementById('desc').focus();
@@ -1892,7 +2047,7 @@
 
         // Fecha modal com ESC
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { closeModal(); closeTermoModal(); closePixModal(); closeSaidaModal(); closeDespesaFixaModal(); closeFichaModal(); }
+            if (e.key === 'Escape') { closeModal(); closeTermoModal(); closePixModal(); closeSaidaModal(); closeDespesaFixaModal(); closeFichaModal(); closeFormatadoModal(); }
         });
 
         // Fecha modal clicando fora
@@ -1913,6 +2068,9 @@
         });
         document.getElementById('fichaCurriculoModal').addEventListener('click', (e) => {
             if (e.target.id === 'fichaCurriculoModal') closeFichaModal();
+        });
+        document.getElementById('formatadoModal').addEventListener('click', (e) => {
+            if (e.target.id === 'formatadoModal') closeFormatadoModal();
         });
 
         // Inicia o dashboard (após desbloqueio)
