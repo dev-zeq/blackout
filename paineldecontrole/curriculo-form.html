@@ -119,6 +119,8 @@ const s = {
     fumante: '', disponibilidade: [], destacar_cargo: '', qual_cargo: '', tipo_cargo_busca: '',
     tem_cnh: '', categoria_cnh: '', tem_ear: '',
 };
+let fotoFile = null; // File object, fica fora de `s` (não é serializável do mesmo jeito)
+let fotoPreviewUrl = null;
 
 const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -157,7 +159,7 @@ function buildSteps() {
     steps = [
         stepDadosPessoais, stepFamilia, stepContato, stepEmailEndereco,
         stepFormacao, stepCursos, stepInformaticaIdiomas, stepExperiencia,
-        stepReferencias, stepPreferencias, stepCnh, stepRevisao,
+        stepReferencias, stepPreferencias, stepCnh, stepFoto, stepRevisao,
     ];
 }
 
@@ -483,7 +485,7 @@ function stepCnh() {
     </div>
     <div id="condCnh"></div>
     <div id="errorMsg" class="error-msg"></div>
-    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Revisar e enviar</button></div>`;
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 function renderCondCnh() {
     const el = document.getElementById('condCnh');
@@ -497,7 +499,36 @@ function renderCondCnh() {
         </div>` : '';
 }
 
-// ---------- Etapa 12: Revisão ----------
+// ---------- Etapa 12: Foto (opcional) ----------
+function stepFoto() {
+    return `
+    <h2>Foto (opcional)</h2>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-top:-8px;">Se quiser, mande uma foto sua pro currículo. Não é obrigatório — pode pular sem problema.</p>
+    <div class="field">
+        <input type="file" id="f_foto" accept="image/*" capture="environment">
+    </div>
+    <div id="fotoPreviewArea"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Revisar e enviar</button></div>`;
+}
+function renderFotoPreview() {
+    const el = document.getElementById('fotoPreviewArea');
+    if (!el) return;
+    if (!fotoPreviewUrl) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+        <div style="display:flex; align-items:center; gap:12px; margin-top:8px;">
+            <img src="${fotoPreviewUrl}" alt="Prévia" style="width:72px; height:72px; border-radius:12px; object-fit:cover; border:1px solid var(--border);">
+            <button type="button" class="btn-remove" id="btnRemoverFoto" style="position:static;">remover foto</button>
+        </div>`;
+    const btnRemover = document.getElementById('btnRemoverFoto');
+    if (btnRemover) btnRemover.addEventListener('click', () => {
+        fotoFile = null; fotoPreviewUrl = null;
+        const inp = document.getElementById('f_foto'); if (inp) inp.value = '';
+        renderFotoPreview();
+    });
+}
+
+// ---------- Etapa 13: Revisão ----------
 function stepRevisao() {
     const rows = [
         ['Nome', `${s.nome} ${s.sobrenome}`.trim()],
@@ -623,6 +654,15 @@ function bindStepEvents() {
     document.querySelectorAll('input[name="f_destacar_cargo"]').forEach(r => r.addEventListener('change', () => { s.destacar_cargo = checkedVal('f_destacar_cargo'); renderCondCargo(); }));
     document.querySelectorAll('input[name="f_tem_cnh"]').forEach(r => r.addEventListener('change', () => { s.tem_cnh = checkedVal('f_tem_cnh'); renderCondCnh(); }));
 
+    const fotoInput = document.getElementById('f_foto');
+    if (fotoInput) fotoInput.addEventListener('change', () => {
+        const file = fotoInput.files && fotoInput.files[0];
+        if (!file) return;
+        fotoFile = file;
+        fotoPreviewUrl = URL.createObjectURL(file);
+        renderFotoPreview();
+    });
+
     const btnSubmit = document.getElementById('btnSubmit');
     if (btnSubmit) btnSubmit.addEventListener('click', submitForm);
 
@@ -630,6 +670,7 @@ function bindStepEvents() {
     renderCondNacionalidade(); renderCondFilhos(); renderCondDdd(); renderCondWhatsapp();
     renderCondEmail(); renderCondSuperior(); renderCursosArea(); renderCondIdiomas();
     renderEmpresasArea(); renderReferenciasArea(); renderCondCargo(); renderCondCnh();
+    renderFotoPreview();
 }
 function saveCurso() { document.querySelectorAll('[data-curso]').forEach(inp => { const i = +inp.dataset.curso, f = inp.dataset.field; if (s.cursos[i]) s.cursos[i][f] = inp.value; }); }
 function saveEmpresa() { document.querySelectorAll('[data-empresa]').forEach(inp => { const i = +inp.dataset.empresa, f = inp.dataset.field; if (s.empresas[i]) s.empresas[i][f] = inp.value; }); }
@@ -697,6 +738,19 @@ async function submitForm() {
     put('QUAL CATEGORIA DA SUA CNH?', s.categoria_cnh);
     put('SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)', s.tem_ear);
 
+    let foto_url = null;
+    if (fotoFile) {
+        const ext = (fotoFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${crypto.randomUUID()}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('curriculo-fotos').upload(path, fotoFile, { contentType: fotoFile.type || 'image/jpeg' });
+        if (uploadError) {
+            showError('Não deu pra enviar a foto. Você pode voltar e tentar de novo, ou pular a foto e enviar sem ela.');
+            btn.disabled = false; btn.textContent = 'Enviar currículo';
+            return;
+        }
+        foto_url = supabase.storage.from('curriculo-fotos').getPublicUrl(path).data.publicUrl;
+    }
+
     const registro = {
         nome: s.nome, sobrenome: s.sobrenome || null,
         data_nascimento: s.nascimento || null,
@@ -707,7 +761,7 @@ async function submitForm() {
         email: s.tem_email === 'Sim' ? (s.email || null) : null,
         endereco: s.endereco || null, bairro: s.bairro || null,
         cidade: s.cidade || null, estado: s.estado_residencia || null,
-        status: 'PENDENTE', dados,
+        status: 'PENDENTE', dados, foto_url,
         data_pedido: new Date().toISOString(),
     };
 

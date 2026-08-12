@@ -162,7 +162,23 @@
             #printArea h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #000; padding-bottom: 4px; margin: 18px 0 8px; }
             #printArea p { font-size: 13px; margin: 3px 0; line-height: 1.4; }
             #printArea .print-item { margin-bottom: 10px; }
+            #printArea .cv-header { border-bottom-color: #000; }
+            #printArea .cv-sub, #printArea .cv-contact { color: #333; }
+            #printArea ul { margin: 4px 0; padding-left: 18px; }
+            #printArea li { font-size: 13px; margin: 2px 0; }
         }
+        /* Currículo formatado (template e IA) — cabeçalho com foto + seções */
+        .cv-header { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 2px solid var(--accent); }
+        .cv-header img.cv-photo { width: 76px; height: 76px; border-radius: 14px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--border); }
+        .cv-header .cv-id { flex: 1; min-width: 0; }
+        .cv-header h1 { font-size: 19px; margin: 0 0 4px; color: var(--text); }
+        .cv-header .cv-sub { font-size: 12px; color: var(--text-dim); margin: 0 0 2px; }
+        .cv-header .cv-contact { font-size: 12px; color: var(--accent-bright); margin: 0; }
+        #formatadoConteudo h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-bright); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin: 18px 0 8px; }
+        #formatadoConteudo h1 { font-size: 18px; color: var(--text); margin: 0 0 4px; }
+        #formatadoConteudo p { font-size: 13px; margin: 4px 0; line-height: 1.5; }
+        #formatadoConteudo ul { margin: 4px 0; padding-left: 18px; }
+        #formatadoConteudo li { font-size: 13px; margin: 3px 0; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -1812,10 +1828,44 @@
                 .filter(([k, v]) => k.trim() && v !== null && v !== '')
                 .map(([k, v]) => `<p><b>${escapeHtml(k)}</b><br>${escapeHtml(String(v))}</p>`)
                 .join('');
-            document.getElementById('fichaConteudo').innerHTML = linhas || '<p>Sem detalhes adicionais.</p>';
+            const fotoBlock = `
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+                    <img id="fichaFotoPreview" src="${c.foto_url ? escapeHtml(c.foto_url) : ''}" style="width:64px; height:64px; border-radius:12px; object-fit:cover; border:1px solid var(--border); ${c.foto_url ? '' : 'display:none;'}">
+                    <div style="flex:1;">
+                        <label style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-dim); margin-bottom:6px;">Foto do currículo</label>
+                        <input type="file" id="fichaFotoInput" accept="image/*" style="font-size:12px;">
+                    </div>
+                </div>`;
+            document.getElementById('fichaConteudo').innerHTML = fotoBlock + (linhas || '<p>Sem detalhes adicionais.</p>');
             document.getElementById('fichaCurriculoModal').classList.add('active');
+            document.getElementById('fichaFotoInput').addEventListener('change', (e) => salvarFotoCurriculo(id, e.target.files[0]));
         }
         window.openFichaModal = openFichaModal;
+
+        async function salvarFotoCurriculo(id, file) {
+            if (!file) return;
+            const input = document.getElementById('fichaFotoInput');
+            if (input) input.disabled = true;
+            try {
+                const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+                const path = `${id}-${Date.now()}.${ext}`;
+                const { error: uploadError } = await supabase.storage.from('curriculo-fotos').upload(path, file, { contentType: file.type || 'image/jpeg' });
+                if (uploadError) throw new Error(uploadError.message);
+                const foto_url = supabase.storage.from('curriculo-fotos').getPublicUrl(path).data.publicUrl;
+                const { error: updateError } = await supabase.from('curriculos').update({ foto_url }).eq('id', id);
+                if (updateError) throw new Error(updateError.message);
+
+                const c = curriculosCache.find(x => x.id === id);
+                if (c) c.foto_url = foto_url;
+                const preview = document.getElementById('fichaFotoPreview');
+                if (preview) { preview.src = foto_url; preview.style.display = ''; }
+            } catch (err) {
+                alert('Não deu pra salvar a foto: ' + err.message);
+            } finally {
+                if (input) input.disabled = false;
+            }
+        }
+        window.salvarFotoCurriculo = salvarFotoCurriculo;
 
         function closeFichaModal() {
             document.getElementById('fichaCurriculoModal').classList.remove('active');
@@ -1934,7 +1984,38 @@
                 'SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)',
             ],
         };
+        // Rótulos curtos pras perguntas mais comuns — evita mostrar a pergunta
+        // inteira do formulário como se fosse o texto do currículo.
+        const LABEL_AMIGAVEL = {
+            'VOCÊ POSSUI ALGUMA FORMAÇÃO TÉCNICA DE ENSINO SUPERIOR?': 'Formação superior',
+            'QUAL SUA ÁREA DE FORMAÇÃO SUPERIOR?': 'Área de formação',
+            'E QUAL PERÍODO DE FORMAÇÃO VOCÊ ESTÁ ATUALMENTE?': 'Período atual',
+            'E QUAL SERIA O SEU GRAU ESCOLAR?': 'Grau escolar',
+            'REFERENTE AO SEU ESTUDO EM QUE PROCESSO VOCÊ ESTÁ ATUALMENTE?': 'Situação dos estudos',
+            'EM QUAL HORÁRIO VOCÊ ESTUDA?': 'Horário de estudo',
+            'VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?': 'Fez curso profissionalizante',
+            'MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)': 'Informática',
+            'ALÉM DO SEU IDIOMA NATIVO (natural da sua Região) VOCÊ POSSSUI CONHECIMENTO DE OUTROS IDIOMAS?': 'Outros idiomas',
+            'ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO!': 'Idiomas',
+            'VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?': 'Situação profissional',
+            'VOCÊ FUMANTE?': 'Fumante', 'VOCÊ  FUMANTE?': 'Fumante',
+            'MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?': 'Disponibilidade',
+            'GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?': 'Cargo de destaque',
+            'QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?': 'Cargo desejado',
+            'VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?': 'Possui CNH',
+            'QUAL CATEGORIA DA SUA CNH?': 'Categoria CNH',
+            'SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)': 'CNH com EAR',
+        };
+        // Perguntas de controle/branching que não agregam nada pro currículo final.
+        const CAMPOS_IGNORAR = /^GOSTARIA DE ADICIONAR/;
+
         function baseKey(k) { return k.replace(/\s*\(\d+\)\s*$/, '').trim(); }
+        function indiceKey(k) { const m = k.match(/\((\d+)\)\s*$/); return m ? m[1] : '1'; }
+        function labelAmigavel(k) {
+            const base = baseKey(k);
+            if (LABEL_AMIGAVEL[base]) return LABEL_AMIGAVEL[base];
+            return base.replace(/\?$/, '').replace(/^./, ch => ch.toUpperCase());
+        }
         function secaoDaChave(k) {
             const base = baseKey(k);
             for (const [secao, chaves] of Object.entries(CAMPOS_POR_SECAO)) {
@@ -1942,49 +2023,91 @@
             }
             return 'Outras Informações';
         }
-        function formatarCurriculoTemplate(c) {
-            const dados = c.dados || {};
-            const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+
+        function cvHeaderHtml(c) {
+            const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : null;
+            const sub = [nascimento ? `Nascimento: ${nascimento}` : null, c.nacionalidade, c.estado_civil].filter(Boolean).join(' · ');
             const contato = [
-                c.telefone ? `Tel: ${c.telefone}` : null,
-                c.whatsapp && c.whatsapp !== c.telefone ? `WhatsApp: ${c.whatsapp}` : null,
-                c.email ? c.email : null,
-            ].filter(Boolean).join(' · ');
+                c.telefone ? `📞 ${c.telefone}` : null,
+                c.whatsapp && c.whatsapp !== c.telefone ? `💬 ${c.whatsapp}` : null,
+                c.email ? `✉️ ${c.email}` : null,
+            ].filter(Boolean).join('   ');
             const endereco = [c.endereco, c.bairro, c.cidade, c.estado].filter(Boolean).join(', ');
-
-            const secoes = {};
-            Object.entries(dados).forEach(([k, v]) => {
-                if (!k.trim() || !v) return;
-                const secao = secaoDaChave(k);
-                (secoes[secao] = secoes[secao] || []).push([k, v]);
-            });
-
-            const ordem = ['Formação', 'Cursos', 'Habilidades', 'Experiência Profissional', 'Referências Pessoais', 'Preferências e Habilitação', 'Outras Informações'];
-            const blocos = ordem.filter(s => secoes[s]).map(s => `
-                <h2>${escapeHtml(s)}</h2>
-                ${secoes[s].map(([k, v]) => `<p><b>${escapeHtml(baseKey(k))}:</b> ${escapeHtml(String(v))}</p>`).join('')}
-            `).join('');
-
+            const foto = c.foto_url ? `<img class="cv-photo" src="${escapeHtml(c.foto_url)}" alt="Foto">` : '';
             return `
-                <h1>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</h1>
-                <p>Nascimento: ${nascimento} · ${escapeHtml(c.nacionalidade) || '-'} · ${escapeHtml(c.estado_civil) || '-'}</p>
-                <p>${escapeHtml(contato) || '-'}</p>
-                <p>${escapeHtml(endereco) || '-'}</p>
-                ${blocos || '<p>Sem informações adicionais.</p>'}
-            `;
+                <div class="cv-header">
+                    ${foto}
+                    <div class="cv-id">
+                        <h1>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</h1>
+                        ${sub ? `<p class="cv-sub">${escapeHtml(sub)}</p>` : ''}
+                        ${contato ? `<p class="cv-contact">${contato}</p>` : ''}
+                        ${endereco ? `<p class="cv-sub">${escapeHtml(endereco)}</p>` : ''}
+                    </div>
+                </div>`;
         }
 
-        // Converte o markdown simples que a IA devolve (## títulos, texto corrido)
-        // em HTML compatível com o mesmo estilo de impressão do resto do app.
+        function formatarCurriculoTemplate(c) {
+            const dados = c.dados || {};
+            const cursos = {}, empresas = {}, referencias = {};
+            const secoes = {};
+
+            Object.entries(dados).forEach(([k, v]) => {
+                if (!k.trim() || !v) return;
+                const base = baseKey(k);
+                if (CAMPOS_IGNORAR.test(base)) return;
+                const i = indiceKey(k);
+                if (base.startsWith('INFORME O CURSO')) { (cursos[i] = cursos[i] || {}).curso = v; return; }
+                if (base.startsWith('EM QUAL INSTITUIÇÃO')) { (cursos[i] = cursos[i] || {}).instituicao = v; return; }
+                if (base.startsWith('TOTAL DA CARGA HORÁRIA')) { (cursos[i] = cursos[i] || {}).carga = v; return; }
+                if (base.startsWith('NOME DA EMPRESA')) { (empresas[i] = empresas[i] || {}).nome = v; return; }
+                if (base.startsWith('QUAL ERA O SEU CARGO')) { (empresas[i] = empresas[i] || {}).cargo = v; return; }
+                if (base.startsWith('QUAL FOI O PERÍODO QUE VOCÊ TRABALHOU')) { (empresas[i] = empresas[i] || {}).periodo = v; return; }
+                if (base.startsWith('QUAL SERIA O NOME DA REFERÊNCIA') || base === 'QUAL SERIA O NOME DESSA PESSOA?' || base === 'QUAL SERIA O NOME DA OUTRA PESSOA?') { (referencias[i] = referencias[i] || {}).nome = v; return; }
+                if (base.startsWith('E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO')) { (referencias[i] = referencias[i] || {}).ddd = v; return; }
+                if (base.startsWith('AGORA O NUMERO DO SEU TELEFONE')) { (referencias[i] = referencias[i] || {}).numero = v; return; }
+
+                const secao = secaoDaChave(k);
+                (secoes[secao] = secoes[secao] || []).push(`<p><b>${escapeHtml(labelAmigavel(k))}:</b> ${escapeHtml(String(v))}</p>`);
+            });
+
+            const cursosItens = Object.values(cursos).filter(x => x.curso).map(x =>
+                `<li>${escapeHtml(x.curso)}${x.instituicao ? ' — ' + escapeHtml(x.instituicao) : ''}${x.carga ? ` (${escapeHtml(x.carga)})` : ''}</li>`);
+            if (cursosItens.length) (secoes['Cursos'] = secoes['Cursos'] || []).unshift(`<ul>${cursosItens.join('')}</ul>`);
+
+            const empresasItens = Object.values(empresas).filter(x => x.nome || x.cargo).map(x =>
+                `<li>${escapeHtml(x.cargo || 'Colaborador(a)')} — ${escapeHtml(x.nome || '')}${x.periodo ? ` (${escapeHtml(x.periodo)})` : ''}</li>`);
+            if (empresasItens.length) (secoes['Experiência Profissional'] = secoes['Experiência Profissional'] || []).unshift(`<ul>${empresasItens.join('')}</ul>`);
+
+            const referenciasItens = Object.values(referencias).filter(x => x.nome).map(x =>
+                `<li>${escapeHtml(x.nome)}${(x.ddd || x.numero) ? ` — (${escapeHtml(x.ddd || '')}) ${escapeHtml(x.numero || '')}` : ''}</li>`);
+            if (referenciasItens.length) (secoes['Referências Pessoais'] = secoes['Referências Pessoais'] || []).unshift(`<ul>${referenciasItens.join('')}</ul>`);
+
+            const ordem = ['Formação', 'Cursos', 'Habilidades', 'Experiência Profissional', 'Referências Pessoais', 'Preferências e Habilitação', 'Outras Informações'];
+            const blocos = ordem.filter(s => secoes[s] && secoes[s].length).map(s => `<h2>${escapeHtml(s)}</h2>${secoes[s].join('')}`).join('');
+
+            return blocos || '<p>Sem informações adicionais.</p>';
+        }
+
+        // Converte o markdown simples que a IA devolve (## títulos, listas com "-",
+        // texto corrido) em HTML — junta bullets consecutivos num <ul> só, e ignora
+        // um eventual "# Título" solto no topo (o cabeçalho já vem do cvHeaderHtml).
         function markdownSimplesParaHtml(texto) {
-            return texto.split('\n').map(linha => {
-                const l = linha.trim();
-                if (!l) return '';
-                if (l.startsWith('## ')) return `<h2>${escapeHtml(l.slice(3))}</h2>`;
-                if (l.startsWith('# ')) return `<h1>${escapeHtml(l.slice(2))}</h1>`;
-                if (l.startsWith('- ') || l.startsWith('* ')) return `<p>• ${escapeHtml(l.slice(2))}</p>`;
-                return `<p>${escapeHtml(l)}</p>`;
-            }).join('');
+            const linhas = texto.split('\n');
+            let html = '', dentroLista = false, primeiraLinhaVista = false;
+            for (const linhaCrua of linhas) {
+                const l = linhaCrua.trim();
+                if (!l) continue;
+                const ehBullet = l.startsWith('- ') || l.startsWith('* ');
+                if (ehBullet && !dentroLista) { html += '<ul>'; dentroLista = true; }
+                if (!ehBullet && dentroLista) { html += '</ul>'; dentroLista = false; }
+
+                if (ehBullet) { html += `<li>${escapeHtml(l.slice(2))}</li>`; continue; }
+                if (l.startsWith('## ')) { html += `<h2>${escapeHtml(l.slice(3))}</h2>`; continue; }
+                if (l.startsWith('# ')) { if (!primeiraLinhaVista) { primeiraLinhaVista = true; continue; } html += `<h2>${escapeHtml(l.slice(2))}</h2>`; continue; }
+                html += `<p>${escapeHtml(l)}</p>`;
+            }
+            if (dentroLista) html += '</ul>';
+            return html;
         }
 
         async function abrirFormatado(id, useIA) {
@@ -1998,14 +2121,16 @@
             modal.classList.add('active');
             modal.dataset.nome = `${c.nome} ${c.sobrenome || ''}`;
 
+            const header = cvHeaderHtml(c);
+
             if (!useIA) {
-                conteudo.innerHTML = formatarCurriculoTemplate(c);
+                conteudo.innerHTML = header + formatarCurriculoTemplate(c);
                 btnImprimir.style.display = '';
                 return;
             }
 
             btnImprimir.style.display = 'none';
-            conteudo.innerHTML = '<p>⏳ Gerando com IA, alguns segundos...</p>';
+            conteudo.innerHTML = header + '<p>⏳ Gerando com IA, alguns segundos...</p>';
             try {
                 const { data, error } = await supabase.functions.invoke('curriculo-ia', {
                     body: {
@@ -2016,10 +2141,10 @@
                 });
                 if (error) throw new Error(error.message || 'Falha ao gerar com IA');
                 if (!data || !data.texto) throw new Error(data && data.error ? data.error : 'IA não retornou conteúdo');
-                conteudo.innerHTML = markdownSimplesParaHtml(data.texto);
+                conteudo.innerHTML = header + markdownSimplesParaHtml(data.texto);
                 btnImprimir.style.display = '';
             } catch (err) {
-                conteudo.innerHTML = `<p style="color:var(--danger);">⚠️ ${escapeHtml(err.message)}</p><p>Confere se a chave OPENAI_API_KEY foi configurada nos Secrets da Edge Function no Supabase.</p>`;
+                conteudo.innerHTML = header + `<p style="color:var(--danger);">⚠️ ${escapeHtml(err.message)}</p><p>Confere se a chave OPENAI_API_KEY foi configurada nos Secrets da Edge Function no Supabase.</p>`;
             }
         }
         window.abrirFormatado = abrirFormatado;
