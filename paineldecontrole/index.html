@@ -1906,7 +1906,7 @@
                             <span class="subtext">${feito ? '✅ Feito' : '⏳ Pendente'}</span>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir (bruto)">🖨️</button>
+                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir (usa a versão com IA se já tiver, senão o formatado)">🖨️</button>
                             <button class="btn-delete" onclick="abrirFormatado('${c.id}', false)" title="Formatado">📄</button>
                             <button class="btn-delete" onclick="abrirFormatado('${c.id}', true)" title="Formatado com IA">🤖</button>
                             <button class="btn-delete" onclick="toggleCurriculoStatus('${c.id}', '${feito ? 'PENDENTE' : 'FEITO'}')" title="${feito ? 'Marcar como pendente' : 'Marcar como feito'}">${feito ? '↩️' : '✅'}</button>
@@ -1920,35 +1920,15 @@
         }
         window.loadCurriculos = loadCurriculos;
 
+        // Imprime sempre a melhor versão disponível: se já gerou com IA antes
+        // (salvo em ia_texto), usa ela; senão usa o Formatado por template —
+        // nunca a lista crua de pergunta:resposta.
         function printCurriculo(id) {
             const c = curriculosCache.find(x => x.id === id);
             if (!c) return;
-            const dados = c.dados || {};
-            const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
-
-            const contato = [
-                c.telefone ? `Telefone: ${c.telefone}` : null,
-                c.whatsapp && c.whatsapp !== c.telefone ? `WhatsApp: ${c.whatsapp}` : null,
-                c.email ? `Email: ${c.email}` : null,
-            ].filter(Boolean).map(p => `<p>${escapeHtml(p)}</p>`).join('');
-
-            const endereco = [c.endereco, c.bairro, c.cidade, c.estado].filter(Boolean).join(', ');
-
-            const outrasInfo = Object.entries(dados)
-                .filter(([k, v]) => k.trim() && v)
-                .map(([k, v]) => `<p><b>${escapeHtml(k)}:</b> ${escapeHtml(String(v))}</p>`)
-                .join('');
-
-            document.getElementById('printArea').innerHTML = `
-                <h1>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</h1>
-                <p>Nascimento: ${nascimento} · ${escapeHtml(c.nacionalidade) || '-'} · ${escapeHtml(c.estado_civil) || '-'}</p>
-                <h2>Contato</h2>
-                ${contato || '<p>-</p>'}
-                <h2>Endereço</h2>
-                <p>${escapeHtml(endereco) || '-'}</p>
-                <h2>Informações do Formulário</h2>
-                ${outrasInfo || '<p>-</p>'}
-            `;
+            const header = cvHeaderHtml(c);
+            const corpo = c.ia_texto ? markdownSimplesParaHtml(c.ia_texto) : formatarCurriculoTemplate(c);
+            document.getElementById('printArea').innerHTML = header + corpo;
             setTimeout(() => window.print(), 100);
         }
         window.printCurriculo = printCurriculo;
