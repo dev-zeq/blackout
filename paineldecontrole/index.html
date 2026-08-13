@@ -423,6 +423,32 @@
                 <button class="btn-primary" onclick="openTermoModal()">＋ Novo Termo</button>
                 <button class="btn-secondary" onclick="loadContratos()">🔄 Atualizar</button>
             </div>
+
+            <div class="table-container" style="margin-top:16px;">
+                <div class="table-header">
+                    <h3>📝 Declarações pendentes</h3>
+                    <span class="table-count" id="declPendCount">0 registros</span>
+                </div>
+                <div class="link-row" style="cursor:pointer;" onclick="window.open('declaracao-autonomo-form.html', '_blank', 'noopener')">
+                    <span>📝 Link — Declaração de Autônomo</span>
+                    <span class="arrow">↗</span>
+                </div>
+                <div class="link-row" style="cursor:pointer;" onclick="window.open('declaracao-trabalho-form.html', '_blank', 'noopener')">
+                    <span>📝 Link — Declaração de Trabalho</span>
+                    <span class="arrow">↗</span>
+                </div>
+                <div class="link-row" style="cursor:pointer;" onclick="window.open('declaracao-residencia-form.html', '_blank', 'noopener')">
+                    <span>🏠 Link — Declaração de Residência</span>
+                    <span class="arrow">↗</span>
+                </div>
+                <div class="link-row" style="cursor:pointer;" onclick="window.open('declaracao-uniao-estavel-form.html', '_blank', 'noopener')">
+                    <span>💍 Link — Declaração de União Estável</span>
+                    <span class="arrow">↗</span>
+                </div>
+                <div id="declPendRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                </div>
+            </div>
         </div>
 
         <div class="view" id="viewPlanejamento">
@@ -1324,7 +1350,7 @@
             if (!viewsInitialized[view]) {
                 viewsInitialized[view] = true;
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
-                else if (view === 'termos') loadContratos();
+                else if (view === 'termos') { loadContratos(); loadDeclaracoesPendentes(); }
                 else if (view === 'curriculo') loadCurriculos();
                 else if (view === 'planejamento') loadPlanejamento();
             }
@@ -1581,6 +1607,93 @@
             }
         }
         window.loadContratos = loadContratos;
+
+        // ===== Declarações pendentes (enviadas pelos formulários públicos do cliente) =====
+        let declaracoesPendentesCache = [];
+
+        function renderDeclDadosSecao(titulo, obj) {
+            if (!obj || typeof obj !== 'object') return '';
+            const linhas = Object.entries(obj)
+                .filter(([, v]) => v !== null && v !== '')
+                .map(([k, v]) => `<p><b>${escapeHtml(k)}</b><br>${escapeHtml(String(v))}</p>`)
+                .join('');
+            return linhas ? `<h3 style="margin:14px 0 4px; font-size:13px; color:#8fa89a;">${escapeHtml(titulo)}</h3>${linhas}` : '';
+        }
+
+        function openDeclaracaoFicha(id) {
+            const d = declaracoesPendentesCache.find(x => x.id === id);
+            if (!d) return;
+            document.getElementById('fichaTitulo').textContent = (TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato) + ' (pendente)';
+            const dados = d.dados || {};
+            let html = '';
+            html += renderDeclDadosSecao('Pessoa A', dados.pessoa_a);
+            html += renderDeclDadosSecao('Pessoa B', dados.pessoa_b);
+            html += renderDeclDadosSecao('Detalhes', dados.especifico);
+            document.getElementById('fichaConteudo').innerHTML = html || '<p>Sem detalhes.</p>';
+            document.getElementById('fichaCurriculoModal').classList.add('active');
+        }
+        window.openDeclaracaoFicha = openDeclaracaoFicha;
+
+        async function marcarDeclaracaoProcessada(id) {
+            try {
+                await dbUpdate('declaracoes_pendentes', { status: 'PROCESSADO', processado_em: new Date().toISOString() }, { id });
+                await loadDeclaracoesPendentes();
+            } catch (error) {
+                alert('Erro: ' + error.message);
+            }
+        }
+        window.marcarDeclaracaoProcessada = marcarDeclaracaoProcessada;
+
+        async function deleteDeclaracaoPendente(id) {
+            if (!confirm('Excluir esta declaração pendente? Essa ação não pode ser desfeita.')) return;
+            try {
+                await dbDelete('declaracoes_pendentes', { id });
+                await loadDeclaracoesPendentes();
+            } catch (error) {
+                alert('Erro ao excluir: ' + error.message);
+            }
+        }
+        window.deleteDeclaracaoPendente = deleteDeclaracaoPendente;
+
+        async function loadDeclaracoesPendentes() {
+            const container = document.getElementById('declPendRows');
+            try {
+                const { data, error } = await supabase
+                    .from('declaracoes_pendentes')
+                    .select('id, tipo_contrato, dados, status, data_pedido')
+                    .eq('status', 'PENDENTE')
+                    .order('data_pedido', { ascending: false });
+
+                if (error) throw new Error(error.message);
+                declaracoesPendentesCache = data || [];
+
+                document.getElementById('declPendCount').textContent = declaracoesPendentesCache.length + ' registro' + (declaracoesPendentesCache.length !== 1 ? 's' : '');
+
+                if (declaracoesPendentesCache.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhuma declaração pendente</div></div>';
+                    return;
+                }
+
+                container.innerHTML = declaracoesPendentesCache.map(d => {
+                    const dataFmt = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : '-';
+                    const tipoLabel = TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato;
+                    const nomeA = d.dados?.pessoa_a?.nome || '-';
+                    return `<div class="contrato-card">
+                        <div class="contrato-info" style="cursor:pointer;" onclick="openDeclaracaoFicha('${d.id}')">
+                            <b>${tipoLabel}</b>
+                            <span class="subtext">👤 ${escapeHtml(nomeA)}</span>
+                            <span class="subtext">📅 ${dataFmt}</span>
+                        </div>
+                        <button class="btn-secondary" style="padding:6px 10px;" onclick="marcarDeclaracaoProcessada('${d.id}')" title="Marcar como processada">✅</button>
+                        <button class="btn-delete" onclick="deleteDeclaracaoPendente('${d.id}')" title="Excluir">🗑️</button>
+                    </div>`;
+                }).join('');
+            } catch (error) {
+                console.error('❌ Erro ao carregar declarações pendentes:', error);
+                container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}</div>`;
+            }
+        }
+        window.loadDeclaracoesPendentes = loadDeclaracoesPendentes;
 
         // ===== Pix (com taxa) e Saídas do Caixa (Retirada / Sangria / Gráfica) =====
         function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -2465,7 +2578,7 @@
         setInterval(() => {
             if (document.getElementById('appContainer').style.display === 'none') return;
             if (document.getElementById('viewCaixa').classList.contains('active')) { loadData(); loadPix(); loadSaidas(); loadResumo(); }
-            else if (document.getElementById('viewTermos').classList.contains('active')) loadContratos();
+            else if (document.getElementById('viewTermos').classList.contains('active')) { loadContratos(); loadDeclaracoesPendentes(); }
             else if (document.getElementById('viewPlanejamento').classList.contains('active')) loadPlanejamento();
         }, 30000);
     </script>
