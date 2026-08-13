@@ -146,6 +146,12 @@
         .menu-tile.enabled { border-color: rgba(34,197,94,0.3); }
         .menu-tile.enabled:hover { border-color: var(--accent); }
         .menu-tile.disabled { opacity: 0.42; cursor: default; }
+        .menu-tile { position: relative; }
+        .menu-badge {
+            position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+            border-radius: 10px; background: var(--danger, #ef4444); color: #fff; font-size: 11px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px var(--bg);
+        }
         .menu-tile .menu-icon { margin-bottom: 8px; display: flex; align-items: center; justify-content: center; }
         .menu-tile .menu-icon svg { width: 27px; height: 27px; color: var(--text-dim); }
         .menu-tile.enabled .menu-icon svg { color: var(--accent-bright); }
@@ -900,6 +906,7 @@
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('appContainer').style.display = '';
             renderMenu();
+            loadPendingCounts();
         }
 
         async function registerBiometric() {
@@ -1230,10 +1237,10 @@
         // Só os módulos já migrados pro Supabase (financeiro, contratos) e os links
         // externos reais têm ação; o resto fica marcado "em breve" até serem migrados.
         const MENU_ITEMS = [
-            { icon: 'curriculo', label: 'Currículo', action: { type: 'view', view: 'curriculo' } },
+            { icon: 'curriculo', label: 'Currículo', action: { type: 'view', view: 'curriculo' }, badgeKey: 'curriculo' },
             { icon: 'declaracao', label: 'Declaração', action: { type: 'sub', key: 'declaracao' } },
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
-            { icon: 'contratos', label: 'Contratos', action: { type: 'view', view: 'termos' } },
+            { icon: 'contratos', label: 'Contratos', action: { type: 'view', view: 'termos' }, badgeKey: 'termos' },
             { icon: 'exames', label: 'Exames', action: { type: 'sub', key: 'exames' } },
             { icon: 'boletos', label: 'Boletos', action: { type: 'sub', key: 'boletos' } },
             { icon: 'detran', label: 'Detran', action: { type: 'sub', key: 'detran' } },
@@ -1356,16 +1363,36 @@
 
         let viewsInitialized = { caixa: false, termos: false };
 
+        // Contagem de itens pendentes pra mostrar como bolinha vermelha nos cards
+        // do menu (Currículo, Contratos) — atualizada em loadPendingCounts().
+        let pendingCounts = { curriculo: 0, termos: 0 };
+
         function renderMenu() {
             const grid = document.getElementById('menuGrid');
             grid.innerHTML = MENU_ITEMS.map((item, i) => {
                 const enabled = !!item.action;
+                const count = item.badgeKey ? (pendingCounts[item.badgeKey] || 0) : 0;
                 return `<div class="menu-tile ${enabled ? 'enabled' : 'disabled'}" onclick="handleMenuClick(${i})">
+                    ${count > 0 ? `<span class="menu-badge">${count > 99 ? '99+' : count}</span>` : ''}
                     <div class="menu-icon">${ICONS[item.icon] || ''}</div>
                     <div class="menu-label">${item.label}${enabled ? '' : '<span class="menu-soon">Em breve</span>'}</div>
                 </div>`;
             }).join('');
         }
+
+        async function loadPendingCounts() {
+            try {
+                const [curriculosRes, declRes] = await Promise.all([
+                    supabase.from('curriculos').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
+                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
+                ]);
+                pendingCounts = { curriculo: curriculosRes.count || 0, termos: declRes.count || 0 };
+                renderMenu();
+            } catch (error) {
+                console.error('❌ Erro ao carregar contagem de pendentes:', error);
+            }
+        }
+        window.loadPendingCounts = loadPendingCounts;
 
         function handleMenuClick(index) {
             const item = MENU_ITEMS[index];
@@ -1440,6 +1467,7 @@
             document.getElementById('viewCurriculo').classList.remove('active');
             document.getElementById('viewPlanejamento').classList.remove('active');
             document.getElementById('viewHome').classList.add('active');
+            loadPendingCounts();
         }
         window.goHome = goHome;
 
@@ -1696,6 +1724,7 @@
             try {
                 await dbUpdate('declaracoes_pendentes', { status: 'PROCESSADO', processado_em: new Date().toISOString() }, { id });
                 await loadDeclaracoesPendentes();
+                loadPendingCounts();
             } catch (error) {
                 alert('Erro: ' + error.message);
             }
@@ -1707,6 +1736,7 @@
             try {
                 await dbDelete('declaracoes_pendentes', { id });
                 await loadDeclaracoesPendentes();
+                loadPendingCounts();
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
             }
@@ -2222,6 +2252,7 @@
         async function toggleCurriculoStatus(id, novoStatus) {
             try { await dbUpdate('curriculos', { status: novoStatus }, { id }); } catch (error) { alert('Erro: ' + error.message); return; }
             await loadCurriculos();
+            loadPendingCounts();
         }
         window.toggleCurriculoStatus = toggleCurriculoStatus;
 
@@ -2229,6 +2260,7 @@
             if (!confirm('Excluir este pedido de currículo?')) return;
             try { await dbDelete('curriculos', { id }); } catch (error) { alert('Erro ao excluir: ' + error.message); return; }
             await loadCurriculos();
+            loadPendingCounts();
         }
         window.deleteCurriculo = deleteCurriculo;
 
@@ -2638,6 +2670,7 @@
             if (document.getElementById('viewCaixa').classList.contains('active')) { loadData(); loadPix(); loadSaidas(); loadResumo(); }
             else if (document.getElementById('viewTermos').classList.contains('active')) { loadContratos(); loadDeclaracoesPendentes(); }
             else if (document.getElementById('viewPlanejamento').classList.contains('active')) loadPlanejamento();
+            loadPendingCounts();
         }, 30000);
     </script>
 </body>
