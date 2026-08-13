@@ -59,6 +59,18 @@
         .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .table-header h3 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); }
         .table-count { font-size: 11px; font-weight: 600; color: var(--accent-bright); background: var(--accent-dim); padding: 4px 12px; border-radius: 20px; }
+        /* Modo sanfona (Financeiro): cada bloco abre/fecha, só um resumo fica visível por padrão */
+        details.acc { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
+        details.acc > summary.acc-summary { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; user-select: none; }
+        details.acc > summary.acc-summary::-webkit-details-marker { display: none; }
+        details.acc > summary.acc-summary::marker { content: ''; }
+        details.acc > summary.acc-summary:hover { background: rgba(255,255,255,0.03); }
+        .acc-summary-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .acc-chevron { color: var(--text-faint); font-size: 11px; transition: transform 0.15s; flex-shrink: 0; }
+        details.acc[open] .acc-chevron { transform: rotate(90deg); }
+        details.acc > summary.acc-summary { border-bottom: 1px solid var(--border); }
+        details.acc:not([open]) > summary.acc-summary { border-bottom: none; }
+        details.acc > .acc-body { }
         .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: collapse; min-width: 500px; }
         th { text-align: left; padding: 12px 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); border-bottom: 1px solid var(--border); }
@@ -154,13 +166,14 @@
             .menu-tile .menu-label { font-size: 9.5px; }
         }
         @media (min-width: 900px) {
-            .container { max-width: 1200px; }
-            .menu-grid { grid-template-columns: repeat(4, 1fr); gap: 20px; }
-            .menu-tile { padding: 32px 16px; border-radius: 24px; }
-            .menu-tile .menu-icon { margin-bottom: 14px; }
-            .menu-tile .menu-icon svg { width: 42px; height: 42px; }
-            .menu-tile .menu-label { font-size: 14px; }
-            .menu-title { font-size: 16px; margin-bottom: 24px; }
+            .container { max-width: 1320px; }
+            .menu-grid { grid-template-columns: repeat(4, 1fr); gap: 24px; }
+            .menu-tile { padding: 44px 18px; border-radius: 28px; }
+            .menu-tile .menu-icon { margin-bottom: 18px; }
+            .menu-tile .menu-icon svg { width: 56px; height: 56px; }
+            .menu-tile .menu-label { font-size: 16px; }
+            .menu-soon { font-size: 10.5px; margin-top: 6px; }
+            .menu-title { font-size: 17px; margin-bottom: 28px; }
             /* Telas grandes (LAN): modais centralizados e mais largos em vez do
                bottom-sheet mobile, já que o mouse alcança a tela inteira. */
             .modal { align-items: center; }
@@ -249,116 +262,123 @@
                 </div>
             </div>
 
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>📋 Histórico de Entradas</h3>
+            <details class="acc" open>
+                <summary class="acc-summary">
+                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>📋 Histórico de Entradas</h3></div>
                     <span class="table-count" id="entryCount">0 registros</span>
+                </summary>
+                <div class="acc-body">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>📅 Data</th>
+                                    <th>📝 Descrição</th>
+                                    <th>💳 Forma</th>
+                                    <th>💰 Valor</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="rows">
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty-state">
+                                            <div class="empty-icon">📭</div>
+                                            <div>Carregando...</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-primary" onclick="openModal()">＋ Nova Entrada</button>
+                        <button class="btn-secondary" onclick="loadData()">🔄 Atualizar</button>
+                    </div>
                 </div>
-                <div class="table-scroll">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>📅 Data</th>
-                                <th>📝 Descrição</th>
-                                <th>💳 Forma</th>
-                                <th>💰 Valor</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="rows">
-                            <tr>
-                                <td colspan="5">
-                                    <div class="empty-state">
-                                        <div class="empty-icon">📭</div>
-                                        <div>Carregando...</div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            </details>
 
-            <div class="actions">
-                <button class="btn-primary" onclick="openModal()">＋ Nova Entrada</button>
-                <button class="btn-secondary" onclick="loadData()">🔄 Atualizar</button>
-            </div>
-
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>📲 Pix Recebidos (com taxa)</h3>
+            <details class="acc">
+                <summary class="acc-summary">
+                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>📲 Pix Recebidos (com taxa)</h3></div>
                     <span class="table-count" id="pixCount">0 registros</span>
+                </summary>
+                <div class="acc-body">
+                    <div id="pixRows">
+                        <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-primary" onclick="openPixModal()">＋ Novo Pix</button>
+                    </div>
                 </div>
-                <div id="pixRows">
-                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
-                </div>
-            </div>
-            <div class="actions">
-                <button class="btn-primary" onclick="openPixModal()">＋ Novo Pix</button>
-            </div>
+            </details>
 
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>🧾 Saídas do Caixa</h3>
+            <details class="acc">
+                <summary class="acc-summary">
+                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>🧾 Saídas do Caixa</h3></div>
                     <span class="table-count" id="saidaCount">0 registros</span>
-                </div>
-                <div class="cards" style="padding: 16px 20px 0;">
-                    <div class="card">
-                        <div class="card-label">🏪 Loja</div>
-                        <div class="card-value" id="saidaLoja">R$ 0,00</div>
+                </summary>
+                <div class="acc-body">
+                    <div class="cards" style="padding: 16px 20px 0;">
+                        <div class="card">
+                            <div class="card-label">🏪 Loja</div>
+                            <div class="card-value" id="saidaLoja">R$ 0,00</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">🏠 Família</div>
+                            <div class="card-value" id="saidaFamilia">R$ 0,00</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">➗ Misto</div>
+                            <div class="card-value" id="saidaMisto">R$ 0,00</div>
+                        </div>
                     </div>
-                    <div class="card">
-                        <div class="card-label">🏠 Família</div>
-                        <div class="card-value" id="saidaFamilia">R$ 0,00</div>
+                    <div id="saidaRows">
+                        <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                     </div>
-                    <div class="card">
-                        <div class="card-label">➗ Misto</div>
-                        <div class="card-value" id="saidaMisto">R$ 0,00</div>
+                    <div class="actions">
+                        <button class="btn-primary" onclick="openSaidaModal()">＋ Nova Saída</button>
                     </div>
                 </div>
-                <div id="saidaRows">
-                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
-                </div>
-            </div>
-            <div class="actions">
-                <button class="btn-primary" onclick="openSaidaModal()">＋ Nova Saída</button>
-            </div>
+            </details>
 
-            <div class="table-container">
-                <div class="table-header">
-                    <h3>📊 Resumo Loja x Família</h3>
-                </div>
-                <div class="cards" style="padding: 16px 20px 0;">
-                    <div class="card">
-                        <div class="card-label">🏪 Saldo Loja</div>
-                        <div class="card-value" id="resumoSaldoLoja">R$ 0,00</div>
+            <details class="acc">
+                <summary class="acc-summary">
+                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>📊 Resumo Loja x Família</h3></div>
+                </summary>
+                <div class="acc-body">
+                    <div class="cards" style="padding: 16px 20px 0;">
+                        <div class="card">
+                            <div class="card-label">🏪 Saldo Loja</div>
+                            <div class="card-value" id="resumoSaldoLoja">R$ 0,00</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">🏠 Total Família</div>
+                            <div class="card-value" id="resumoSaldoFamilia">R$ 0,00</div>
+                        </div>
                     </div>
-                    <div class="card">
-                        <div class="card-label">🏠 Total Família</div>
-                        <div class="card-value" id="resumoSaldoFamilia">R$ 0,00</div>
+                    <div style="padding: 4px 20px 16px;">
+                        <span class="subtext" id="resumoDetalheLoja"></span><br>
+                        <span class="subtext" id="resumoDetalheFamilia"></span>
+                    </div>
+                    <div class="table-header" style="border-top: 1px solid var(--border);">
+                        <h3 style="font-size:12px;">📌 Despesas Fixas Mensais</h3>
+                    </div>
+                    <div id="despesaFixaRows">
+                        <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-primary" onclick="openDespesaFixaModal()">＋ Nova Despesa Fixa</button>
+                        <button class="btn-secondary" onclick="loadResumo()">🔄 Atualizar</button>
                     </div>
                 </div>
-                <div style="padding: 4px 20px 16px;">
-                    <span class="subtext" id="resumoDetalheLoja"></span><br>
-                    <span class="subtext" id="resumoDetalheFamilia"></span>
-                </div>
-                <div class="table-header" style="border-top: 1px solid var(--border);">
-                    <h3 style="font-size:12px;">📌 Despesas Fixas Mensais</h3>
-                </div>
-                <div id="despesaFixaRows">
-                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
-                </div>
-            </div>
-            <div class="actions">
-                <button class="btn-primary" onclick="openDespesaFixaModal()">＋ Nova Despesa Fixa</button>
-                <button class="btn-secondary" onclick="loadResumo()">🔄 Atualizar</button>
-            </div>
+            </details>
 
-            <div class="table-container" id="fechamentoSection">
-                <div class="table-header">
-                    <h3>🔒 Fechamento de Caixa</h3>
-                </div>
-                <div style="padding: 16px 20px;">
+            <details class="acc" id="fechamentoSection">
+                <summary class="acc-summary">
+                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>🔒 Fechamento de Caixa</h3></div>
+                </summary>
+                <div class="acc-body" style="padding: 16px 20px;">
                     <div class="form-group">
                         <label>📅 Data</label>
                         <input type="date" id="fech_data" onchange="loadFechamento()">
@@ -375,7 +395,7 @@
                     <div class="form-group"><label>Observações</label><input type="text" id="fech_obs" placeholder="Opcional"></div>
                     <button class="btn-save" style="width:100%;" onclick="saveFechamento()">💾 Salvar Fechamento do Dia</button>
                 </div>
-            </div>
+            </details>
         </div>
 
         <div class="view" id="viewTermos">
@@ -674,16 +694,46 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ===== Bloqueio de acesso (senha + Face ID / Digital via WebAuthn) =====
-        // Proteção local no dispositivo: não é autenticação de servidor, apenas
-        // uma trava de acesso rápido no navegador (a chave do Supabase já é pública).
-        const PWD_KEY = 'fc_pwd_hash';
-        const BIO_KEY = 'fc_bio_credential_id';
+        // ===== Escrita no banco via Edge Function (db-write) =====
+        // Todo INSERT/UPDATE/DELETE passa por aqui em vez de ir direto pro
+        // supabase-js: a Edge Function confere a senha da equipe (secret
+        // APP_PASSWORD no projeto) e só então grava com service_role. As
+        // tabelas sensíveis não têm mais policy de escrita pro anon — sem a
+        // senha certa, a anon key sozinha não grava mais nada.
+        const DB_WRITE_URL = SUPABASE_URL + '/functions/v1/db-write';
 
-        async function sha256(text) {
-            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-            return btoa(String.fromCharCode(...new Uint8Array(buf)));
+        async function callDbWrite(body) {
+            const password = localStorage.getItem(WPWD_KEY);
+            const res = await fetch(DB_WRITE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, apikey: SUPABASE_ANON_KEY },
+                body: JSON.stringify({ password, ...body }),
+            });
+            const out = await res.json();
+            if (!res.ok) throw new Error(out.error || 'Erro ao salvar');
+            return out.data;
         }
+        async function verifyWritePassword(password) {
+            const res = await fetch(DB_WRITE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, apikey: SUPABASE_ANON_KEY },
+                body: JSON.stringify({ password, action: 'verify' }),
+            });
+            return res.ok;
+        }
+        const dbInsert = (table, payload) => callDbWrite({ table, action: 'insert', payload });
+        const dbUpsert = (table, payload) => callDbWrite({ table, action: 'upsert', payload });
+        const dbUpdate = (table, payload, match) => callDbWrite({ table, action: 'update', payload, match });
+        const dbDelete = (table, match) => callDbWrite({ table, action: 'delete', match });
+
+        // ===== Bloqueio de acesso (senha única da equipe + Face ID / Digital) =====
+        // A senha é a mesma pra todo mundo (validada pela Edge Function acima),
+        // não é mais "criada" por aparelho. Fica salva em texto puro só neste
+        // localStorage pra poder ser reenviada em cada chamada de escrita sem
+        // pedir de novo — mesmo nível de confiança que já existia no aparelho
+        // (Face ID/Digital também não protege além disso).
+        const WPWD_KEY = 'fc_write_pwd';
+        const BIO_KEY = 'fc_bio_credential_id';
 
         function b64uToBuf(b64u) {
             const b64 = b64u.replace(/-/g, '+').replace(/_/g, '/').padEnd(b64u.length + (4 - b64u.length % 4) % 4, '=');
@@ -746,32 +796,6 @@
             }
         }
 
-        function renderSetupScreen() {
-            const box = document.getElementById('lockBox');
-            box.innerHTML = `
-                ${LOGO_SVG}
-                <h2>Criar senha de acesso</h2>
-                <div class="lock-sub">Defina uma senha para proteger o fluxo de caixa neste aparelho</div>
-                <input type="password" id="newPwd" placeholder="Nova senha" inputmode="numeric" autocomplete="new-password">
-                <input type="password" id="newPwd2" placeholder="Confirmar senha" inputmode="numeric" autocomplete="new-password">
-                <div class="lock-error" id="lockErr"></div>
-                <button class="btn-save" id="setupBtn">💾 Salvar senha</button>
-            `;
-            document.getElementById('setupBtn').onclick = async () => {
-                const p1 = document.getElementById('newPwd').value;
-                const p2 = document.getElementById('newPwd2').value;
-                const err = document.getElementById('lockErr');
-                if (!p1 || p1.length < 4) { err.textContent = 'Use pelo menos 4 caracteres'; return; }
-                if (p1 !== p2) { err.textContent = 'As senhas não coincidem'; return; }
-                localStorage.setItem(PWD_KEY, await sha256(p1));
-                if (bioSupported) {
-                    renderOfferBiometricScreen();
-                } else {
-                    unlockApp();
-                }
-            };
-        }
-
         function renderOfferBiometricScreen() {
             const box = document.getElementById('lockBox');
             box.innerHTML = `
@@ -800,20 +824,37 @@
             box.innerHTML = `
                 ${LOGO_SVG}
                 <h2>Painel de Controle</h2>
-                <div class="lock-sub">Digite a senha para continuar</div>
+                <div class="lock-sub">Digite a senha da equipe para continuar</div>
                 ${hasBio ? '<button class="btn-bio" id="bioBtn">🆔 Desbloquear com Face ID / Digital</button>' : ''}
-                <input type="password" id="loginPwd" placeholder="Senha" inputmode="numeric" autocomplete="current-password">
+                <input type="password" id="loginPwd" placeholder="Senha" autocomplete="current-password">
                 <div class="lock-error" id="lockErr"></div>
                 <button class="btn-primary" id="loginBtn">Entrar</button>
                 ${hasBio ? '<button class="lock-link" id="forgetBioBtn">Não usar biometria neste aparelho</button>' : ''}
             `;
             const tryPassword = async () => {
                 const p = document.getElementById('loginPwd').value;
-                const hash = localStorage.getItem(PWD_KEY);
-                if (await sha256(p) === hash) {
-                    unlockApp();
-                } else {
-                    document.getElementById('lockErr').textContent = 'Senha incorreta';
+                const err = document.getElementById('lockErr');
+                const btn = document.getElementById('loginBtn');
+                const known = localStorage.getItem(WPWD_KEY);
+                if (known && p === known) { unlockApp(); return; }
+                if (!p) { err.textContent = 'Digite a senha'; return; }
+                const wasFirstTime = !known;
+                btn.textContent = '⏳ Verificando...';
+                btn.disabled = true;
+                try {
+                    const ok = await verifyWritePassword(p);
+                    if (!ok) { err.textContent = 'Senha incorreta'; return; }
+                    localStorage.setItem(WPWD_KEY, p);
+                    if (wasFirstTime && bioSupported && !localStorage.getItem(BIO_KEY)) {
+                        renderOfferBiometricScreen();
+                    } else {
+                        unlockApp();
+                    }
+                } catch (e) {
+                    err.textContent = 'Não deu pra verificar agora (sem conexão?)';
+                } finally {
+                    btn.textContent = 'Entrar';
+                    btn.disabled = false;
                 }
             };
             document.getElementById('loginBtn').onclick = tryPassword;
@@ -833,8 +874,11 @@
         }
 
         function initLock() {
-            if (!localStorage.getItem(PWD_KEY)) {
-                renderSetupScreen();
+            // Aparelho já desbloqueou uma vez (senha já confirmada no servidor
+            // e guardada aqui) — entra direto, sem pedir de novo a cada refresh.
+            // É a mesma confiança que já existia antes (device fica "lembrado").
+            if (localStorage.getItem(WPWD_KEY)) {
+                unlockApp();
             } else {
                 renderLoginScreen();
             }
@@ -917,8 +961,7 @@
         async function deleteEntry(id) {
             if (!confirm('Excluir esta entrada? Essa ação não pode ser desfeita.')) return;
             try {
-                const { error } = await supabase.from('entries').delete().eq('id', id);
-                if (error) throw new Error(error.message);
+                await dbDelete('entries', { id });
                 await loadData();
             } catch (error) {
                 console.error('❌ Erro ao excluir:', error);
@@ -944,11 +987,7 @@
             btn.disabled = true;
 
             try {
-                const { error } = await supabase
-                    .from('entries')
-                    .insert({ description: desc, method: method, amount: amount });
-
-                if (error) throw new Error(error.message);
+                await dbInsert('entries', { description: desc, method: method, amount: amount });
 
                 closeModal();
                 await loadData();
@@ -1179,7 +1218,10 @@
             let tentativas = 0;
             const tentar = () => {
                 const el = document.getElementById(scrollTo);
-                if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                if (el) {
+                    if (el.tagName === 'DETAILS') el.open = true;
+                    el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                }
                 tentativas++;
                 if (tentativas < 4) setTimeout(tentar, 350);
             };
@@ -1239,12 +1281,10 @@
                 if (data && data.length) existing = data[0];
             }
             if (existing) {
-                const { error } = await supabase.from('pessoas').update(pessoaData).eq('id', existing.id);
-                if (error) throw new Error(error.message);
+                await dbUpdate('pessoas', pessoaData, { id: existing.id });
                 return existing.id;
             }
-            const { data, error } = await supabase.from('pessoas').insert(pessoaData).select('id').single();
-            if (error) throw new Error(error.message);
+            const [data] = await dbInsert('pessoas', pessoaData);
             return data.id;
         }
 
@@ -1259,12 +1299,10 @@
                 if (data && data.length) existing = data[0];
             }
             if (existing) {
-                const { error } = await supabase.from('ativos').update(ativoData).eq('id', existing.id);
-                if (error) throw new Error(error.message);
+                await dbUpdate('ativos', ativoData, { id: existing.id });
                 return existing.id;
             }
-            const { data, error } = await supabase.from('ativos').insert(ativoData).select('id').single();
-            if (error) throw new Error(error.message);
+            const [data] = await dbInsert('ativos', ativoData);
             return data.id;
         }
 
@@ -1344,14 +1382,13 @@
                     renavam: cleanDigits(document.getElementById('t_renavam').value),
                 });
 
-                const { error: contratoError } = await supabase.from('contratos').insert({
+                await dbInsert('contratos', {
                     tipo_contrato: 'TERMO_DE_RESPONSABILIDADE',
                     proprietario_id: proprietarioId,
                     responsavel_id: responsavelId,
                     ativo_id: ativoId,
                     data_registro: new Date().toISOString(),
                 });
-                if (contratoError) throw new Error(contratoError.message);
 
                 closeTermoModal();
                 await loadContratos();
@@ -1369,8 +1406,7 @@
         async function deleteContrato(id) {
             if (!confirm('Excluir este termo? Essa ação não pode ser desfeita.')) return;
             try {
-                const { error } = await supabase.from('contratos').delete().eq('id', id);
-                if (error) throw new Error(error.message);
+                await dbDelete('contratos', { id });
                 await loadContratos();
             } catch (error) {
                 console.error('❌ Erro ao excluir termo:', error);
@@ -1477,12 +1513,11 @@
             btn.textContent = '⏳ Salvando...';
             btn.disabled = true;
             try {
-                const { error } = await supabase.from('pix_recebidos').insert({
+                await dbInsert('pix_recebidos', {
                     data: document.getElementById('pix_data').value,
                     valor: parseFloat(document.getElementById('pix_valor').value),
                     taxa: parseFloat(document.getElementById('pix_taxa').value) || 0,
                 });
-                if (error) throw new Error(error.message);
                 closePixModal();
                 await loadPix();
             } catch (error) {
@@ -1496,8 +1531,7 @@
 
         async function deletePix(id) {
             if (!confirm('Excluir este Pix?')) return;
-            const { error } = await supabase.from('pix_recebidos').delete().eq('id', id);
-            if (error) { alert('Erro ao excluir: ' + error.message); return; }
+            try { await dbDelete('pix_recebidos', { id }); } catch (error) { alert('Erro ao excluir: ' + error.message); return; }
             await loadPix();
         }
         window.deletePix = deletePix;
@@ -1553,27 +1587,25 @@
                 const tipo = document.getElementById('saida_tipo').value;
                 const data = document.getElementById('saida_data').value;
                 const valor = parseFloat(document.getElementById('saida_valor').value);
-                let error;
                 if (tipo === 'retirada') {
-                    ({ error } = await supabase.from('retiradas').insert({
+                    await dbInsert('retiradas', {
                         data, valor,
                         origem: document.getElementById('saida_origem').value,
                         destino: cleanStr(document.getElementById('saida_destino').value) || 'OUTROS',
                         categoria: document.getElementById('saida_categoria').value,
                         descricao: cleanStr(document.getElementById('saida_descricao').value),
-                    }));
+                    });
                 } else if (tipo === 'sangria') {
-                    ({ error } = await supabase.from('sangria').insert({
+                    await dbInsert('sangria', {
                         data, valor,
                         destino: cleanStr(document.getElementById('saida_sangria_destino').value) || 'OUTROS',
-                    }));
+                    });
                 } else {
-                    ({ error } = await supabase.from('grafica_despesas').insert({
+                    await dbInsert('grafica_despesas', {
                         data, valor,
                         forma_pagamento: document.getElementById('saida_grafica_forma').value,
-                    }));
+                    });
                 }
-                if (error) throw new Error(error.message);
                 closeSaidaModal();
                 await loadSaidas();
             } catch (error) {
@@ -1588,8 +1620,7 @@
         async function deleteSaida(tipo, id) {
             if (!confirm('Excluir esta saída?')) return;
             const table = tipo === 'retirada' ? 'retiradas' : tipo === 'sangria' ? 'sangria' : 'grafica_despesas';
-            const { error } = await supabase.from(table).delete().eq('id', id);
-            if (error) { alert('Erro ao excluir: ' + error.message); return; }
+            try { await dbDelete(table, { id }); } catch (error) { alert('Erro ao excluir: ' + error.message); return; }
             await loadSaidas();
         }
         window.deleteSaida = deleteSaida;
@@ -1661,12 +1692,11 @@
             btn.textContent = '⏳ Salvando...';
             btn.disabled = true;
             try {
-                const { error } = await supabase.from('despesas_fixas').insert({
+                await dbInsert('despesas_fixas', {
                     nome: cleanStr(document.getElementById('df_nome').value),
                     valor: parseFloat(document.getElementById('df_valor').value),
                     categoria: document.getElementById('df_categoria').value,
                 });
-                if (error) throw new Error(error.message);
                 closeDespesaFixaModal();
                 await loadResumo();
             } catch (error) {
@@ -1679,16 +1709,14 @@
         window.saveDespesaFixa = saveDespesaFixa;
 
         async function toggleDespesaFixaAtiva(id, ativa) {
-            const { error } = await supabase.from('despesas_fixas').update({ ativa }).eq('id', id);
-            if (error) { alert('Erro: ' + error.message); return; }
+            try { await dbUpdate('despesas_fixas', { ativa }, { id }); } catch (error) { alert('Erro: ' + error.message); return; }
             await loadResumo();
         }
         window.toggleDespesaFixaAtiva = toggleDespesaFixaAtiva;
 
         async function deleteDespesaFixa(id) {
             if (!confirm('Excluir esta despesa fixa?')) return;
-            const { error } = await supabase.from('despesas_fixas').delete().eq('id', id);
-            if (error) { alert('Erro ao excluir: ' + error.message); return; }
+            try { await dbDelete('despesas_fixas', { id }); } catch (error) { alert('Erro ao excluir: ' + error.message); return; }
             await loadResumo();
         }
         window.deleteDespesaFixa = deleteDespesaFixa;
@@ -1796,16 +1824,18 @@
             btn.textContent = '⏳ Salvando...';
             btn.disabled = true;
             try {
-                const { error } = await supabase.from('fechamentos_caixa').upsert({
-                    data,
-                    abertura_caixa: parseFloat(document.getElementById('fech_abertura').value) || 0,
-                    fundo_caixa: parseFloat(document.getElementById('fech_fundo').value) || 0,
-                    notas: parseFloat(document.getElementById('fech_notas').value) || 0,
-                    moedas: parseFloat(document.getElementById('fech_moedas').value) || 0,
-                    observacoes: cleanStr(document.getElementById('fech_obs').value),
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: 'data' });
-                if (error) throw new Error(error.message);
+                await callDbWrite({
+                    table: 'fechamentos_caixa', action: 'upsert', onConflict: 'data',
+                    payload: {
+                        data,
+                        abertura_caixa: parseFloat(document.getElementById('fech_abertura').value) || 0,
+                        fundo_caixa: parseFloat(document.getElementById('fech_fundo').value) || 0,
+                        notas: parseFloat(document.getElementById('fech_notas').value) || 0,
+                        moedas: parseFloat(document.getElementById('fech_moedas').value) || 0,
+                        observacoes: cleanStr(document.getElementById('fech_obs').value),
+                        updated_at: new Date().toISOString(),
+                    },
+                });
                 alert('✅ Fechamento salvo!');
             } catch (error) {
                 alert('Erro: ' + error.message);
@@ -1820,16 +1850,14 @@
         let curriculosCache = [];
 
         async function toggleCurriculoStatus(id, novoStatus) {
-            const { error } = await supabase.from('curriculos').update({ status: novoStatus }).eq('id', id);
-            if (error) { alert('Erro: ' + error.message); return; }
+            try { await dbUpdate('curriculos', { status: novoStatus }, { id }); } catch (error) { alert('Erro: ' + error.message); return; }
             await loadCurriculos();
         }
         window.toggleCurriculoStatus = toggleCurriculoStatus;
 
         async function deleteCurriculo(id) {
             if (!confirm('Excluir este pedido de currículo?')) return;
-            const { error } = await supabase.from('curriculos').delete().eq('id', id);
-            if (error) { alert('Erro ao excluir: ' + error.message); return; }
+            try { await dbDelete('curriculos', { id }); } catch (error) { alert('Erro ao excluir: ' + error.message); return; }
             await loadCurriculos();
         }
         window.deleteCurriculo = deleteCurriculo;
@@ -1867,8 +1895,7 @@
                 const { error: uploadError } = await supabase.storage.from('curriculo-fotos').upload(path, file, { contentType: file.type || 'image/jpeg' });
                 if (uploadError) throw new Error(uploadError.message);
                 const foto_url = supabase.storage.from('curriculo-fotos').getPublicUrl(path).data.publicUrl;
-                const { error: updateError } = await supabase.from('curriculos').update({ foto_url }).eq('id', id);
-                if (updateError) throw new Error(updateError.message);
+                await dbUpdate('curriculos', { foto_url }, { id });
 
                 const c = curriculosCache.find(x => x.id === id);
                 if (c) c.foto_url = foto_url;
@@ -2163,8 +2190,8 @@
 
                 c.ia_texto = data.texto;
                 c.ia_gerado_em = new Date().toISOString();
-                supabase.from('curriculos').update({ ia_texto: c.ia_texto, ia_gerado_em: c.ia_gerado_em }).eq('id', c.id)
-                    .then(({ error: saveError }) => { if (saveError) console.warn('Não salvou o texto da IA:', saveError.message); });
+                dbUpdate('curriculos', { ia_texto: c.ia_texto, ia_gerado_em: c.ia_gerado_em }, { id: c.id })
+                    .catch((saveError) => console.warn('Não salvou o texto da IA:', saveError.message));
 
                 conteudo.innerHTML = header + markdownSimplesParaHtml(data.texto);
                 btnImprimir.style.display = '';
@@ -2200,7 +2227,7 @@
 
         function closeModal() {
             document.getElementById('modal').classList.remove('active');
-            document.querySelector('form').reset();
+            document.querySelector('#modal form').reset();
         }
 
         // Fecha modal com ESC
