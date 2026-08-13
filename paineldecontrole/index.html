@@ -356,10 +356,15 @@
                             <div class="card-label">🏠 Total Família</div>
                             <div class="card-value" id="resumoSaldoFamilia">R$ 0,00</div>
                         </div>
+                        <div class="card">
+                            <div class="card-label">➗ Misto</div>
+                            <div class="card-value" id="resumoTotalMisto">R$ 0,00</div>
+                        </div>
                     </div>
                     <div style="padding: 4px 20px 16px;">
                         <span class="subtext" id="resumoDetalheLoja"></span><br>
-                        <span class="subtext" id="resumoDetalheFamilia"></span>
+                        <span class="subtext" id="resumoDetalheFamilia"></span><br>
+                        <span class="subtext" id="resumoDetalheMisto"></span>
                     </div>
                     <div class="table-header" style="border-top: 1px solid var(--border);">
                         <h3 style="font-size:12px;">📌 Despesas Fixas Mensais</h3>
@@ -1837,14 +1842,18 @@
                 const despesasLoja = (retiradasPorCategoria.LOJA || 0) + grafica + (fixasAtivasPorCategoria.LOJA || 0);
                 const saldoLoja = entrada - despesasLoja;
                 const totalFamilia = (retiradasPorCategoria.FAMILIA || 0) + (fixasAtivasPorCategoria.FAMILIA || 0);
+                const totalMisto = retiradasPorCategoria.MISTO || 0;
 
                 document.getElementById('resumoSaldoLoja').textContent = fmt(saldoLoja);
                 document.getElementById('resumoSaldoLoja').style.color = saldoLoja >= 0 ? 'var(--accent-bright)' : 'var(--danger)';
                 document.getElementById('resumoSaldoFamilia').textContent = fmt(totalFamilia);
+                document.getElementById('resumoTotalMisto').textContent = fmt(totalMisto);
                 document.getElementById('resumoDetalheLoja').textContent =
                     `Entrada ${fmt(entrada)} − Despesas ${fmt(despesasLoja)} (retiradas + gráfica + fixas)`;
                 document.getElementById('resumoDetalheFamilia').textContent =
                     `Retiradas ${fmt(retiradasPorCategoria.FAMILIA || 0)} + Fixas ${fmt(fixasAtivasPorCategoria.FAMILIA || 0)}`;
+                document.getElementById('resumoDetalheMisto').textContent =
+                    `Retiradas categoria Misto (ex: juros de cartão, cheque especial) — sai do caixa mas não entra no Saldo Loja nem no Total Família acima`;
 
                 if (fixas.length === 0) {
                     container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhuma despesa fixa cadastrada</div></div>';
