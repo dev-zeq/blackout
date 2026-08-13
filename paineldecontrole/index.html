@@ -419,6 +419,84 @@
             </div>
         </div>
 
+        <div class="view" id="viewPlanejamento">
+            <button class="back-btn" onclick="goHome()">← Menu</button>
+
+            <div class="cards">
+                <div class="card">
+                    <div class="card-label">🧔 Márcio</div>
+                    <div class="card-value" id="plMarcio">R$ 0,00</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">👩 Renata</div>
+                    <div class="card-value" id="plRenata">R$ 0,00</div>
+                </div>
+            </div>
+            <div style="padding: 0 20px 16px;">
+                <span class="subtext">Teto mensal de <b id="plSalarioBase">R$ 0,00</b> por pessoa, menos as retiradas de cada um, menos metade do estouro dos budgets (mercado/almoço/gasolina) e metade da Despesa Casa.</span>
+            </div>
+
+            <details class="acc">
+                <summary class="acc-summary">
+                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>🛒 Budgets compartilhados</h3></div>
+                </summary>
+                <div class="acc-body">
+                    <div class="cards" style="padding: 16px 20px 0;">
+                        <div class="card">
+                            <div class="card-label">🛒 Mercado</div>
+                            <div class="card-value" id="plMercado">R$ 0,00</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">🍽️ Almoço</div>
+                            <div class="card-value" id="plAlmoco">R$ 0,00</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">⛽ Gasolina</div>
+                            <div class="card-value" id="plGasolina">R$ 0,00</div>
+                        </div>
+                    </div>
+                    <div style="padding: 4px 20px 16px;">
+                        <span class="subtext">Restante do budget do mês. Quando fica negativo, o estouro (somado dos 3) é dividido 50/50 e descontado de cada um.</span><br>
+                        <span class="subtext">📛 V. Excedente atual: <b id="plExcedente">R$ 0,00</b> (R$ <span id="plExcedenteMetade">0,00</span> pra cada um) · 🏠 Despesa Casa: <b id="plDespesaCasa">R$ 0,00</b> (R$ <span id="plDespesaCasaMetade">0,00</span> pra cada um)</span>
+                    </div>
+                </div>
+            </details>
+
+            <details class="acc">
+                <summary class="acc-summary">
+                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>💰 Saldo da Família</h3></div>
+                </summary>
+                <div class="acc-body">
+                    <div style="padding: 16px 20px;">
+                        <div class="card-label">Pool de <span id="plPoolBase">R$ 0,00</span>, menos despesas fixas ativas (Aluguel/Água/Luz/Internet) e menos Casa+Mercado+Gasolina+Almoço</div>
+                        <div class="card-value" id="plSaldoPool" style="margin-top:8px;">R$ 0,00</div>
+                    </div>
+                </div>
+            </details>
+
+            <details class="acc">
+                <summary class="acc-summary">
+                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>⚙️ Configuração</h3></div>
+                </summary>
+                <div class="acc-body" style="padding: 16px 20px;">
+                    <div class="form-row">
+                        <div class="form-group"><label>Salário base (cada)</label><input type="number" id="pl_salario_base" step="0.01" min="0" inputmode="decimal"></div>
+                        <div class="form-group"><label>Pool da família</label><input type="number" id="pl_saldo_pool_base" step="0.01" min="0" inputmode="decimal"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Budget Mercado</label><input type="number" id="pl_budget_mercado" step="0.01" min="0" inputmode="decimal"></div>
+                        <div class="form-group"><label>Budget Almoço</label><input type="number" id="pl_budget_almoco" step="0.01" min="0" inputmode="decimal"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Budget Gasolina</label><input type="number" id="pl_budget_gasolina" step="0.01" min="0" inputmode="decimal"></div>
+                        <div class="form-group"><label>Somar retiradas a partir de</label><input type="date" id="pl_periodo_inicio"></div>
+                    </div>
+                    <span class="subtext">"Somar a partir de" é opcional — deixe em branco pra somar tudo desde sempre (igual a planilha). Preencher equivale a "limpar a aba" sem apagar o histórico de verdade.</span>
+                    <button class="btn-save" style="width:100%; margin-top:12px;" onclick="salvarPlanejamentoConfig()">💾 Salvar Configuração</button>
+                </div>
+            </details>
+        </div>
+
         <div class="view" id="viewSub">
             <button class="back-btn" onclick="goHome()">← Menu</button>
             <div class="table-container">
@@ -1056,6 +1134,7 @@
             whatsapp: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.7-1.2A9 9 0 1 0 12 3z"/><circle cx="9" cy="12" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg>`,
             financeiro: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M3 7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="17" cy="13" r="1.3" fill="currentColor" stroke="none"/></svg>`,
             fechamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+            planejamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M4 21h16"/><path d="M5 21V10l7-5 7 5v11"/><circle cx="9.5" cy="14.5" r="1.6"/><circle cx="14.5" cy="14.5" r="1.6"/></svg>`,
         };
 
         // Espelha o grid de atalhos da planilha "PAINEL DE CONTROLE" usada na loja.
@@ -1079,6 +1158,7 @@
             { icon: 'whatsapp', label: 'WhatsApp', action: { type: 'link', url: 'https://web.whatsapp.com/' } },
             { icon: 'financeiro', label: 'Financeiro', action: { type: 'view', view: 'caixa' } },
             { icon: 'fechamento', label: 'Fechamento', action: { type: 'view', view: 'caixa', scrollTo: 'fechamentoSection' } },
+            { icon: 'planejamento', label: 'Planejamento Familiar', action: { type: 'view', view: 'planejamento' } },
         ];
 
         // Sub-painéis extraídos das abas "PAINEL X" da planilha original — cada um é
@@ -1234,11 +1314,13 @@
             document.getElementById('viewCaixa').classList.toggle('active', view === 'caixa');
             document.getElementById('viewTermos').classList.toggle('active', view === 'termos');
             document.getElementById('viewCurriculo').classList.toggle('active', view === 'curriculo');
+            document.getElementById('viewPlanejamento').classList.toggle('active', view === 'planejamento');
             if (!viewsInitialized[view]) {
                 viewsInitialized[view] = true;
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
                 else if (view === 'termos') loadContratos();
                 else if (view === 'curriculo') loadCurriculos();
+                else if (view === 'planejamento') loadPlanejamento();
             }
             scrollToSection(scrollTo);
         }
@@ -1249,6 +1331,7 @@
             document.getElementById('viewHome').classList.remove('active');
             document.getElementById('viewCaixa').classList.remove('active');
             document.getElementById('viewTermos').classList.remove('active');
+            document.getElementById('viewPlanejamento').classList.remove('active');
             document.getElementById('subTitle').textContent = panel.title;
             document.getElementById('subLinks').innerHTML = panel.items.map(item =>
                 `<div class="menu-tile enabled" onclick="window.open('${item.url}', '_blank', 'noopener')">
@@ -1265,6 +1348,7 @@
             document.getElementById('viewTermos').classList.remove('active');
             document.getElementById('viewSub').classList.remove('active');
             document.getElementById('viewCurriculo').classList.remove('active');
+            document.getElementById('viewPlanejamento').classList.remove('active');
             document.getElementById('viewHome').classList.add('active');
         }
         window.goHome = goHome;
@@ -1846,6 +1930,111 @@
         }
         window.saveFechamento = saveFechamento;
 
+        // ===== Planejamento Familiar =====
+        // Replica a lógica real da aba "PLANEJAMENTO FAMILIAR" da planilha
+        // (fórmulas extraídas do .xlsx — o texto renderizado não mostra fórmula).
+        // Cada pessoa tem um teto mensal (salario_base) do qual se descontam:
+        // as retiradas próprias dela, metade do estouro combinado dos budgets
+        // de mercado/almoço/gasolina (v. excedente) e metade da Despesa Casa.
+        let planejamentoConfigCache = null;
+
+        async function loadPlanejamento() {
+            try {
+                const [{ data: config, error: cfgErr }, { data: retiradas, error: retErr }, { data: fixas, error: fixasErr }] = await Promise.all([
+                    supabase.from('planejamento_config').select('*').limit(1).single(),
+                    supabase.from('retiradas').select('valor, destino, data'),
+                    supabase.from('despesas_fixas').select('valor').eq('categoria', 'FAMILIA').eq('ativa', true),
+                ]);
+                if (cfgErr) throw new Error(cfgErr.message);
+                if (retErr) throw new Error(retErr.message);
+                if (fixasErr) throw new Error(fixasErr.message);
+
+                planejamentoConfigCache = config;
+
+                const rows = (retiradas || []).filter(r => !config.periodo_inicio || r.data >= config.periodo_inicio);
+                const somaPor = (destino) => rows.filter(r => r.destino === destino).reduce((s, r) => s + Number(r.valor), 0);
+
+                const mercadoGasto = somaPor('MERCADO');
+                const almocoGasto = somaPor('ALMOÇO');
+                const gasolinaGasto = somaPor('GASOLINA');
+                const despesaCasaGasto = somaPor('DESPESA CASA');
+                const marcioRetirada = somaPor('RETIRADA MÁRCIO');
+                const renataRetirada = somaPor('RETIRADA RENATA');
+
+                const mercadoRestante = config.budget_mercado - mercadoGasto;
+                const almocoRestante = config.budget_almoco - almocoGasto;
+                const gasolinaRestante = config.budget_gasolina - gasolinaGasto;
+
+                const excedente = -(Math.min(mercadoRestante, 0) + Math.min(almocoRestante, 0) + Math.min(gasolinaRestante, 0));
+                const penalidade = (excedente / 2) + (despesaCasaGasto * 0.5);
+
+                const marcioSaldo = config.salario_base - marcioRetirada - penalidade;
+                const renataSaldo = config.salario_base - renataRetirada - penalidade;
+
+                const setValor = (id, valor) => {
+                    const el = document.getElementById(id);
+                    el.textContent = fmt(valor);
+                    el.style.color = valor < 0 ? 'var(--danger)' : '';
+                };
+
+                setValor('plMarcio', marcioSaldo);
+                setValor('plRenata', renataSaldo);
+                document.getElementById('plSalarioBase').textContent = fmt(config.salario_base);
+
+                setValor('plMercado', mercadoRestante);
+                setValor('plAlmoco', almocoRestante);
+                setValor('plGasolina', gasolinaRestante);
+
+                document.getElementById('plExcedente').textContent = fmt(excedente);
+                document.getElementById('plExcedenteMetade').textContent = fmt(excedente / 2).replace('R$', '').trim();
+                document.getElementById('plDespesaCasa').textContent = fmt(despesaCasaGasto);
+                document.getElementById('plDespesaCasaMetade').textContent = fmt(despesaCasaGasto * 0.5).replace('R$', '').trim();
+
+                const fixasTotal = (fixas || []).reduce((s, f) => s + Number(f.valor), 0);
+                const saldoPool = config.saldo_pool_base - fixasTotal - (despesaCasaGasto + mercadoGasto + gasolinaGasto + almocoGasto);
+                document.getElementById('plPoolBase').textContent = fmt(config.saldo_pool_base);
+                setValor('plSaldoPool', saldoPool);
+
+                document.getElementById('pl_salario_base').value = config.salario_base;
+                document.getElementById('pl_saldo_pool_base').value = config.saldo_pool_base;
+                document.getElementById('pl_budget_mercado').value = config.budget_mercado;
+                document.getElementById('pl_budget_almoco').value = config.budget_almoco;
+                document.getElementById('pl_budget_gasolina').value = config.budget_gasolina;
+                document.getElementById('pl_periodo_inicio').value = config.periodo_inicio || '';
+            } catch (error) {
+                console.error('❌ Erro no Planejamento Familiar:', error);
+                alert('Erro ao carregar Planejamento Familiar: ' + error.message);
+            }
+        }
+        window.loadPlanejamento = loadPlanejamento;
+
+        async function salvarPlanejamentoConfig() {
+            if (!planejamentoConfigCache) return;
+            const btn = document.querySelector('#viewPlanejamento button[onclick="salvarPlanejamentoConfig()"]');
+            const original = btn.textContent;
+            btn.textContent = '⏳ Salvando...';
+            btn.disabled = true;
+            try {
+                await dbUpdate('planejamento_config', {
+                    salario_base: parseFloat(document.getElementById('pl_salario_base').value) || 0,
+                    saldo_pool_base: parseFloat(document.getElementById('pl_saldo_pool_base').value) || 0,
+                    budget_mercado: parseFloat(document.getElementById('pl_budget_mercado').value) || 0,
+                    budget_almoco: parseFloat(document.getElementById('pl_budget_almoco').value) || 0,
+                    budget_gasolina: parseFloat(document.getElementById('pl_budget_gasolina').value) || 0,
+                    periodo_inicio: document.getElementById('pl_periodo_inicio').value || null,
+                    updated_at: new Date().toISOString(),
+                }, { id: planejamentoConfigCache.id });
+                await loadPlanejamento();
+                alert('✅ Configuração salva!');
+            } catch (error) {
+                alert('Erro: ' + error.message);
+            } finally {
+                btn.textContent = original;
+                btn.disabled = false;
+            }
+        }
+        window.salvarPlanejamentoConfig = salvarPlanejamentoConfig;
+
         // ===== Currículo (pedidos de cliente) =====
         let curriculosCache = [];
 
@@ -2267,6 +2456,7 @@
             if (document.getElementById('appContainer').style.display === 'none') return;
             if (document.getElementById('viewCaixa').classList.contains('active')) { loadData(); loadPix(); loadSaidas(); loadResumo(); }
             else if (document.getElementById('viewTermos').classList.contains('active')) loadContratos();
+            else if (document.getElementById('viewPlanejamento').classList.contains('active')) loadPlanejamento();
         }, 30000);
     </script>
 </body>
