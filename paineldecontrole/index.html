@@ -160,6 +160,16 @@
         .link-row:last-child { border-bottom: none; }
         .link-row:hover { background: rgba(255,255,255,0.03); }
         .link-row .arrow { color: var(--accent-bright); font-size: 15px; }
+        .link-row-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .btn-copy-link {
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+            padding: 7px 10px; font-size: 14px; cursor: pointer; line-height: 1; color: var(--text);
+        }
+        .btn-copy-link:active { transform: scale(0.94); }
+        .menu-tile-copy {
+            position: absolute; top: 6px; right: 6px; background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 8px; padding: 4px 6px; font-size: 12px; line-height: 1; cursor: pointer; color: var(--text);
+        }
         @media (max-width: 420px) {
             .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
             .menu-tile { padding: 14px 4px; border-radius: 14px; }
@@ -429,21 +439,33 @@
                     <h3>📝 Declarações pendentes</h3>
                     <span class="table-count" id="declPendCount">0 registros</span>
                 </div>
-                <div class="link-row" style="cursor:pointer;" onclick="window.open('declaracao-autonomo-form.html', '_blank', 'noopener')">
-                    <span>📝 Link — Declaração de Autônomo</span>
-                    <span class="arrow">↗</span>
+                <div class="link-row">
+                    <span style="cursor:pointer;" onclick="window.open('declaracao-autonomo-form.html', '_blank', 'noopener')">📝 Link — Declaração de Autônomo</span>
+                    <span class="link-row-actions">
+                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('declaracao-autonomo-form.html', this)" title="Copiar link">📋</button>
+                        <span class="arrow" style="cursor:pointer;" onclick="window.open('declaracao-autonomo-form.html', '_blank', 'noopener')">↗</span>
+                    </span>
                 </div>
-                <div class="link-row" style="cursor:pointer;" onclick="window.open('declaracao-trabalho-form.html', '_blank', 'noopener')">
-                    <span>📝 Link — Declaração de Trabalho</span>
-                    <span class="arrow">↗</span>
+                <div class="link-row">
+                    <span style="cursor:pointer;" onclick="window.open('declaracao-trabalho-form.html', '_blank', 'noopener')">📝 Link — Declaração de Trabalho</span>
+                    <span class="link-row-actions">
+                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('declaracao-trabalho-form.html', this)" title="Copiar link">📋</button>
+                        <span class="arrow" style="cursor:pointer;" onclick="window.open('declaracao-trabalho-form.html', '_blank', 'noopener')">↗</span>
+                    </span>
                 </div>
-                <div class="link-row" style="cursor:pointer;" onclick="window.open('declaracao-residencia-form.html', '_blank', 'noopener')">
-                    <span>🏠 Link — Declaração de Residência</span>
-                    <span class="arrow">↗</span>
+                <div class="link-row">
+                    <span style="cursor:pointer;" onclick="window.open('declaracao-residencia-form.html', '_blank', 'noopener')">🏠 Link — Declaração de Residência</span>
+                    <span class="link-row-actions">
+                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('declaracao-residencia-form.html', this)" title="Copiar link">📋</button>
+                        <span class="arrow" style="cursor:pointer;" onclick="window.open('declaracao-residencia-form.html', '_blank', 'noopener')">↗</span>
+                    </span>
                 </div>
-                <div class="link-row" style="cursor:pointer;" onclick="window.open('declaracao-uniao-estavel-form.html', '_blank', 'noopener')">
-                    <span>💍 Link — Declaração de União Estável</span>
-                    <span class="arrow">↗</span>
+                <div class="link-row">
+                    <span style="cursor:pointer;" onclick="window.open('declaracao-uniao-estavel-form.html', '_blank', 'noopener')">💍 Link — Declaração de União Estável</span>
+                    <span class="link-row-actions">
+                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('declaracao-uniao-estavel-form.html', this)" title="Copiar link">📋</button>
+                        <span class="arrow" style="cursor:pointer;" onclick="window.open('declaracao-uniao-estavel-form.html', '_blank', 'noopener')">↗</span>
+                    </span>
                 </div>
                 <div id="declPendRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
@@ -546,13 +568,19 @@
                     <h3>📄 Pedidos de Currículo</h3>
                     <span class="table-count" id="curriculoCount">0 registros</span>
                 </div>
-                <div class="link-row" style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">
-                    <span>📝 Link — Formulário próprio (novo)</span>
-                    <span class="arrow">↗</span>
+                <div class="link-row">
+                    <span style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">📝 Link — Formulário próprio (novo)</span>
+                    <span class="link-row-actions">
+                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('curriculo-form.html', this)" title="Copiar link">📋</button>
+                        <span class="arrow" style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">↗</span>
+                    </span>
                 </div>
-                <div class="link-row" style="cursor:pointer;" onclick="window.open('https://forms.gle/davEvSQfJrXt7jxL6', '_blank', 'noopener')">
-                    <span>📝 Link do formulário pro cliente preencher (Google Forms)</span>
-                    <span class="arrow">↗</span>
+                <div class="link-row">
+                    <span style="cursor:pointer;" onclick="window.open('https://forms.gle/davEvSQfJrXt7jxL6', '_blank', 'noopener')">📝 Link do formulário pro cliente preencher (Google Forms)</span>
+                    <span class="link-row-actions">
+                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('https://forms.gle/davEvSQfJrXt7jxL6', this)" title="Copiar link">📋</button>
+                        <span class="arrow" style="cursor:pointer;" onclick="window.open('https://forms.gle/davEvSQfJrXt7jxL6', '_blank', 'noopener')">↗</span>
+                    </span>
                 </div>
                 <div id="curriculoRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
@@ -1072,6 +1100,31 @@
             return div.innerHTML;
         }
 
+        // Copia um link (relativo vira absoluto) pra área de transferência —
+        // usado nos botões 📋 ao lado dos links de formulário, pra facilitar
+        // mandar pro cliente por WhatsApp sem precisar abrir a página.
+        async function copyLinkToClipboard(url, btnEl) {
+            const absUrl = new URL(url, window.location.href).href;
+            try {
+                await navigator.clipboard.writeText(absUrl);
+            } catch (error) {
+                const ta = document.createElement('textarea');
+                ta.value = absUrl;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+            if (!btnEl) return;
+            const original = btnEl.textContent;
+            btnEl.textContent = '✅';
+            btnEl.disabled = true;
+            setTimeout(() => { btnEl.textContent = original; btnEl.disabled = false; }, 1500);
+        }
+        window.copyLinkToClipboard = copyLinkToClipboard;
+
         async function deleteEntry(id) {
             if (!confirm('Excluir esta entrada? Essa ação não pode ser desfeita.')) return;
             try {
@@ -1370,7 +1423,8 @@
             document.getElementById('viewPlanejamento').classList.remove('active');
             document.getElementById('subTitle').textContent = panel.title;
             document.getElementById('subLinks').innerHTML = panel.items.map(item =>
-                `<div class="menu-tile enabled" onclick="window.open('${item.url}', '_blank', 'noopener')">
+                `<div class="menu-tile enabled" style="position:relative;" onclick="window.open('${item.url}', '_blank', 'noopener')">
+                    <button class="menu-tile-copy" onclick="event.stopPropagation(); copyLinkToClipboard('${item.url}', this)" title="Copiar link">📋</button>
                     <div class="menu-icon">🔗</div>
                     <div class="menu-label">${escapeHtml(item.label)}</div>
                 </div>`
