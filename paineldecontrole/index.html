@@ -422,25 +422,8 @@
 
         <div class="view" id="viewTermos">
             <button class="back-btn" onclick="goHome()">← Menu</button>
+
             <div class="table-container">
-                <div class="table-header">
-                    <h3>📑 Contratos e Documentos</h3>
-                    <span class="table-count" id="termoCount">0 registros</span>
-                </div>
-                <div id="termoRows">
-                    <div class="empty-state">
-                        <div class="empty-icon">📭</div>
-                        <div>Carregando...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="actions">
-                <button class="btn-primary" onclick="openTermoModal()">＋ Novo Termo</button>
-                <button class="btn-secondary" onclick="loadContratos()">🔄 Atualizar</button>
-            </div>
-
-            <div class="table-container" style="margin-top:16px;">
                 <div class="table-header">
                     <h3>📝 Declarações pendentes</h3>
                     <span class="table-count" id="declPendCount">0 registros</span>
@@ -476,6 +459,24 @@
                 <div id="declPendRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                 </div>
+            </div>
+
+            <div class="table-container" style="margin-top:16px;">
+                <div class="table-header">
+                    <h3>📑 Histórico de Contratos e Documentos</h3>
+                    <span class="table-count" id="termoCount">0 registros</span>
+                </div>
+                <div id="termoRows">
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div>Carregando...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn-primary" onclick="openTermoModal()">＋ Novo Termo</button>
+                <button class="btn-secondary" onclick="loadContratos()">🔄 Atualizar</button>
             </div>
         </div>
 
@@ -616,6 +617,17 @@
                 <button type="button" class="btn-cancel" onclick="closeFormatadoModal()">Fechar</button>
                 <button type="button" class="btn-secondary" id="formatadoBtnRegerar" style="display:none;" onclick="regerarComIA()">🔄 Gerar de novo</button>
                 <button type="button" class="btn-save" id="formatadoBtnImprimir" onclick="imprimirFormatado()">🖨️ Imprimir</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="declFormatadoModal">
+        <div class="modal-content wide">
+            <h2 id="declFormatadoTitulo">📄 Declaração Formatada</h2>
+            <div id="declFormatadoConteudo" style="font-size:14px; color:var(--text-dim); line-height:1.6;"></div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeDeclFormatadoModal()">Fechar</button>
+                <button type="button" class="btn-save" onclick="imprimirDeclFormatada()">🖨️ Imprimir</button>
             </div>
         </div>
     </div>
@@ -1772,6 +1784,7 @@
                             <span class="subtext">👤 ${escapeHtml(nomeA)}</span>
                             <span class="subtext">📅 ${dataFmt}</span>
                         </div>
+                        <button class="btn-secondary" style="padding:6px 10px;" onclick="abrirDeclFormatado('${d.id}')" title="Formatar declaração">📄</button>
                         <button class="btn-secondary" style="padding:6px 10px;" onclick="marcarDeclaracaoProcessada('${d.id}')" title="Marcar como processada">✅</button>
                         <button class="btn-delete" onclick="deleteDeclaracaoPendente('${d.id}')" title="Excluir">🗑️</button>
                     </div>`;
@@ -1782,6 +1795,98 @@
             }
         }
         window.loadDeclaracoesPendentes = loadDeclaracoesPendentes;
+
+        // ===== Declaração formatada (texto pronto pra assinar/imprimir, por tipo) =====
+        function g(genero, masc, fem) { return genero === 'Feminino' ? fem : masc; }
+        function dataExtenso() {
+            const d = new Date();
+            return `Camboriú/SC, ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
+        }
+        function qualificacao(p) {
+            if (!p) return '';
+            const partes = [
+                escapeHtml(p.nome),
+                p.nacionalidade ? escapeHtml(p.nacionalidade) : null,
+                p.estado_civil ? escapeHtml(p.estado_civil) : null,
+                p.profissao ? escapeHtml(p.profissao) : null,
+                `portador${g(p.genero, '', 'a')} do CPF nº ${escapeHtml(p.cpf)}` + (p.rg ? `, RG nº ${escapeHtml(p.rg)}` : ''),
+            ].filter(Boolean);
+            let texto = partes.join(', ');
+            if (p.endereco) {
+                texto += `, residente e domiciliad${g(p.genero, 'o', 'a')} na ${escapeHtml(p.endereco)}, bairro ${escapeHtml(p.bairro || '')}, ${escapeHtml(p.cidade || '')}/${escapeHtml(p.estado || '')}`;
+            }
+            return texto;
+        }
+        function assinatura(p) {
+            return `<p style="margin-top:36px;">_________________________________________<br>${escapeHtml(p.nome)}<br>CPF: ${escapeHtml(p.cpf)}</p>`;
+        }
+
+        function formatarDeclaracaoTexto(d) {
+            const dados = d.dados || {};
+            const a = dados.pessoa_a || {};
+            const b = dados.pessoa_b || {};
+            const e = dados.especifico || {};
+            let corpo = '';
+
+            if (d.tipo_contrato === 'DECLARACAO_AUTONOMO') {
+                corpo += `<p>Eu, ${qualificacao(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(e.funcao || '')}</b>, de forma autônoma, ${escapeHtml(e.periodo || '')}, no horário das ${escapeHtml(e.horario_inicio || '')} às ${escapeHtml(e.horario_fim || '')} horas.</p>`;
+                if (e.informar_renda === 'SIM' && e.renda_mensal) {
+                    corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                }
+                corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                corpo += `<p>${dataExtenso()}.</p>`;
+                corpo += assinatura(a);
+            } else if (d.tipo_contrato === 'DECLARACAO_TRABALHO') {
+                corpo += `<p>Eu, ${qualificacao(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(a.profissao || '')}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(e.dias_semana || '')}, no horário das ${escapeHtml(e.horario_entrada || '')} às ${escapeHtml(e.horario_saida || '')} horas.</p>`;
+                if (e.informar_renda === 'SIM' && e.renda_mensal) {
+                    corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                }
+                corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                corpo += `<p>${dataExtenso()}.</p>`;
+                corpo += assinatura(a);
+            } else if (d.tipo_contrato === 'DECLARACAO_RESIDENCIA') {
+                corpo += `<p>Eu, ${qualificacao(a)}, DECLARO, para os devidos fins e a quem possa interessar, que resido no endereço acima qualificado.</p>`;
+                if (b && b.nome) {
+                    corpo += `<p>Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(b.nome)}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
+                }
+                corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                corpo += `<p>${dataExtenso()}.</p>`;
+                corpo += assinatura(a);
+                if (b && b.nome) corpo += assinatura(b);
+            } else if (d.tipo_contrato === 'DECLARACAO_UNIAO_ESTAVEL') {
+                const filiacaoA = `filh${g(a.genero, 'o', 'a')} de ${escapeHtml(e.filiacao_pai_a || '—')} e ${escapeHtml(e.filiacao_mae_a || '—')}`;
+                const filiacaoB = `filh${g(b.genero, 'o', 'a')} de ${escapeHtml(e.filiacao_pai_b || '—')} e ${escapeHtml(e.filiacao_mae_b || '—')}`;
+                corpo += `<p>Nós, ${qualificacao(a)}, ${filiacaoA}, e ${qualificacao(b)}, ${filiacaoB}, DECLARAMOS, para os devidos fins e a quem possa interessar, que vivemos em união estável há ${escapeHtml(e.tempo_uniao || '')}, residindo no mesmo endereço acima qualificado.</p>`;
+                corpo += `<p>Por ser expressão da verdade, firmamos a presente declaração para que produza os efeitos legais.</p>`;
+                corpo += `<p>${dataExtenso()}.</p>`;
+                corpo += assinatura(a);
+                corpo += assinatura(b);
+            } else {
+                corpo = '<p>Tipo de declaração sem template de formatação ainda.</p>';
+            }
+
+            return `<h1 style="text-align:center; font-size:16px; letter-spacing:1px; margin-bottom:22px;">DECLARAÇÃO</h1>${corpo}`;
+        }
+
+        function abrirDeclFormatado(id) {
+            const d = declaracoesPendentesCache.find(x => x.id === id);
+            if (!d) return;
+            document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato) + ' — formatada';
+            document.getElementById('declFormatadoConteudo').innerHTML = formatarDeclaracaoTexto(d);
+            document.getElementById('declFormatadoModal').classList.add('active');
+        }
+        window.abrirDeclFormatado = abrirDeclFormatado;
+
+        function closeDeclFormatadoModal() {
+            document.getElementById('declFormatadoModal').classList.remove('active');
+        }
+        window.closeDeclFormatadoModal = closeDeclFormatadoModal;
+
+        function imprimirDeclFormatada() {
+            document.getElementById('printArea').innerHTML = document.getElementById('declFormatadoConteudo').innerHTML;
+            setTimeout(() => window.print(), 100);
+        }
+        window.imprimirDeclFormatada = imprimirDeclFormatada;
 
         // ===== Pix (com taxa) e Saídas do Caixa (Retirada / Sangria / Gráfica) =====
         function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -2634,7 +2739,7 @@
 
         // Fecha modal com ESC
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { closeModal(); closeTermoModal(); closePixModal(); closeSaidaModal(); closeDespesaFixaModal(); closeFichaModal(); closeFormatadoModal(); }
+            if (e.key === 'Escape') { closeModal(); closeTermoModal(); closePixModal(); closeSaidaModal(); closeDespesaFixaModal(); closeFichaModal(); closeFormatadoModal(); closeDeclFormatadoModal(); }
         });
 
         // Fecha modal clicando fora
@@ -2658,6 +2763,9 @@
         });
         document.getElementById('formatadoModal').addEventListener('click', (e) => {
             if (e.target.id === 'formatadoModal') closeFormatadoModal();
+        });
+        document.getElementById('declFormatadoModal').addEventListener('click', (e) => {
+            if (e.target.id === 'declFormatadoModal') closeDeclFormatadoModal();
         });
 
         // Inicia o dashboard (após desbloqueio)
