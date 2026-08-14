@@ -476,6 +476,7 @@
 
             <div class="actions">
                 <button class="btn-primary" onclick="openTermoModal()">＋ Novo Termo</button>
+                <button class="btn-primary" onclick="openCVModal()">＋ Novo Compra e Venda</button>
                 <button class="btn-secondary" onclick="loadContratos()">🔄 Atualizar</button>
             </div>
         </div>
@@ -765,21 +766,257 @@
 
                 <div class="fieldset-title">🚗 Veículo</div>
                 <div class="form-row">
+                    <div class="form-group"><label>Tipo de veículo</label><input type="text" id="t_tipo_veiculo" value="Automóvel" placeholder="Automóvel, Motocicleta..."></div>
                     <div class="form-group"><label>Fabricante</label><input type="text" id="t_fabricante"></div>
+                </div>
+                <div class="form-row">
                     <div class="form-group"><label>Modelo</label><input type="text" id="t_modelo"></div>
-                </div>
-                <div class="form-row">
                     <div class="form-group"><label>Ano fab./modelo</label><input type="text" id="t_ano" placeholder="2014/2014"></div>
-                    <div class="form-group"><label>Cor</label><input type="text" id="t_cor"></div>
                 </div>
                 <div class="form-row">
+                    <div class="form-group"><label>Cor</label><input type="text" id="t_cor"></div>
                     <div class="form-group"><label>Placa</label><input type="text" id="t_placa" required></div>
-                    <div class="form-group"><label>Renavam</label><input type="text" id="t_renavam" inputmode="numeric"></div>
                 </div>
-                <div class="form-group"><label>Chassi</label><input type="text" id="t_chassi"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Renavam</label><input type="text" id="t_renavam" inputmode="numeric"></div>
+                    <div class="form-group"><label>Chassi</label><input type="text" id="t_chassi"></div>
+                </div>
+
+                <div class="fieldset-title">⚖️ Foro</div>
+                <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">Por padrão usa a cidade do Proprietário (Lei 14.879/2024 exige vínculo com o domicílio de uma das partes). Só preencha abaixo se precisar de um foro diferente.</p>
+                <div class="form-row">
+                    <div class="form-group"><label>Cidade do foro (opcional)</label>
+                        <select id="t_foro_cidade" onchange="onTermoForoCidadeChange()">
+                            <option value="">Mesma do Proprietário</option>
+                            <option value="Camboriú">Camboriú</option>
+                            <option value="Balneário Camboriú">Balneário Camboriú</option>
+                            <option value="Itapema">Itapema</option>
+                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Outra">Outra</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Estado</label>
+                        <select id="t_foro_estado">
+                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
+                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="t_foro_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="t_foro_cidade_outra"></div>
+
+                <div class="fieldset-title">🖋️ Testemunhas (opcional)</div>
+                <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">Sem testemunhas o documento perde força de título executivo (art. 784, III do CPC). Se não souber agora, deixe em branco — sai linha pra assinar à mão.</p>
+                <div class="form-row">
+                    <div class="form-group"><label>Testemunha 1 — nome</label><input type="text" id="t_test1_nome"></div>
+                    <div class="form-group"><label>Testemunha 1 — CPF</label><input type="text" id="t_test1_cpf" inputmode="numeric"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Testemunha 2 — nome</label><input type="text" id="t_test2_nome"></div>
+                    <div class="form-group"><label>Testemunha 2 — CPF</label><input type="text" id="t_test2_cpf" inputmode="numeric"></div>
+                </div>
 
                 <div class="modal-buttons">
                     <button type="button" class="btn-cancel" onclick="closeTermoModal()">Cancelar</button>
+                    <button type="submit" class="btn-save">💾 Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="cvModal">
+        <div class="modal-content wide">
+            <h2>🚗 Novo Contrato de Compra e Venda de Veículo</h2>
+            <form onsubmit="saveCV(event)">
+                <div class="form-group"><label>Variante</label>
+                    <select id="cv_variante" onchange="toggleCVPagamento()">
+                        <option value="CV_VEICULO_VISTA">À vista</option>
+                        <option value="CV_VEICULO_PRAZO_ENTRADA">A prazo, com entrada</option>
+                        <option value="CV_VEICULO_PRAZO_SEM_ENTRADA">A prazo, sem entrada</option>
+                    </select>
+                </div>
+
+                <div class="fieldset-title">🧔 Vendedor</div>
+                <div class="form-group"><label>Nome completo</label><input type="text" id="cv_vend_nome" required></div>
+                <div class="form-row">
+                    <div class="form-group"><label>CPF</label><input type="text" id="cv_vend_cpf" inputmode="numeric"></div>
+                    <div class="form-group"><label>RG</label><input type="text" id="cv_vend_rg"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Gênero</label><input type="text" id="cv_vend_genero"></div>
+                    <div class="form-group"><label>Estado civil</label><input type="text" id="cv_vend_estado_civil"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Nacionalidade</label><input type="text" id="cv_vend_nacionalidade" value="Brasileiro(a)"></div>
+                    <div class="form-group"><label>Profissão</label><input type="text" id="cv_vend_profissao"></div>
+                </div>
+                <div class="form-group"><label>Endereço</label><input type="text" id="cv_vend_endereco"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Cidade</label>
+                        <select id="cv_vend_cidade" onchange="onCVCidadeChange('vend')">
+                            <option value="">Selecione</option>
+                            <option value="Camboriú">Camboriú</option>
+                            <option value="Balneário Camboriú">Balneário Camboriú</option>
+                            <option value="Itapema">Itapema</option>
+                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Outra">Outra</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Estado</label>
+                        <select id="cv_vend_estado">
+                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
+                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="cv_vend_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="cv_vend_cidade_outra"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Bairro</label>
+                        <select id="cv_vend_bairro" onchange="onCVBairroChange('vend')" disabled><option value="">Selecione a cidade primeiro</option></select>
+                    </div>
+                    <div class="form-group" id="cv_vend_bairro_outro_wrap" style="display:none;"><label>Qual bairro?</label><input type="text" id="cv_vend_bairro_outro"></div>
+                </div>
+
+                <div class="fieldset-title">🧾 Comprador</div>
+                <div class="form-group"><label>Nome completo</label><input type="text" id="cv_comp_nome" required></div>
+                <div class="form-row">
+                    <div class="form-group"><label>CPF</label><input type="text" id="cv_comp_cpf" inputmode="numeric"></div>
+                    <div class="form-group"><label>RG</label><input type="text" id="cv_comp_rg"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Gênero</label><input type="text" id="cv_comp_genero"></div>
+                    <div class="form-group"><label>Estado civil</label><input type="text" id="cv_comp_estado_civil"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Nacionalidade</label><input type="text" id="cv_comp_nacionalidade" value="Brasileiro(a)"></div>
+                    <div class="form-group"><label>Profissão</label><input type="text" id="cv_comp_profissao"></div>
+                </div>
+                <div class="form-group"><label>Endereço</label><input type="text" id="cv_comp_endereco"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Cidade</label>
+                        <select id="cv_comp_cidade" onchange="onCVCidadeChange('comp')">
+                            <option value="">Selecione</option>
+                            <option value="Camboriú">Camboriú</option>
+                            <option value="Balneário Camboriú">Balneário Camboriú</option>
+                            <option value="Itapema">Itapema</option>
+                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Outra">Outra</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Estado</label>
+                        <select id="cv_comp_estado">
+                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
+                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="cv_comp_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="cv_comp_cidade_outra"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Bairro</label>
+                        <select id="cv_comp_bairro" onchange="onCVBairroChange('comp')" disabled><option value="">Selecione a cidade primeiro</option></select>
+                    </div>
+                    <div class="form-group" id="cv_comp_bairro_outro_wrap" style="display:none;"><label>Qual bairro?</label><input type="text" id="cv_comp_bairro_outro"></div>
+                </div>
+
+                <div class="fieldset-title">🚗 Veículo</div>
+                <div class="form-row">
+                    <div class="form-group"><label>Tipo de veículo</label><input type="text" id="cv_tipo_veiculo" value="Carro" placeholder="Carro, Moto..."></div>
+                    <div class="form-group"><label>Fabricante</label><input type="text" id="cv_fabricante"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Modelo</label><input type="text" id="cv_modelo"></div>
+                    <div class="form-group"><label>Ano fab./modelo</label><input type="text" id="cv_ano" placeholder="2014/2014"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Cor</label><input type="text" id="cv_cor"></div>
+                    <div class="form-group"><label>Placa</label><input type="text" id="cv_placa" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Renavam</label><input type="text" id="cv_renavam" inputmode="numeric"></div>
+                    <div class="form-group"><label>Chassi</label><input type="text" id="cv_chassi"></div>
+                </div>
+
+                <div class="fieldset-title">💰 Pagamento</div>
+
+                <div id="cv_pag_vista">
+                    <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="cv_valor_total_vista"></div>
+                </div>
+
+                <div id="cv_pag_prazo_entrada" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="cv_valor_total_pe"></div>
+                        <div class="form-group"><label>Valor da entrada (dinheiro)</label><input type="number" step="0.01" id="cv_valor_entrada_pe"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_pe"></div>
+                        <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_pe"></div>
+                    </div>
+                    <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">O dia do vencimento das parcelas seguintes é sempre o mesmo dia da 1ª parcela — não precisa informar separado.</p>
+                </div>
+
+                <div id="cv_pag_prazo_sem_entrada" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="cv_valor_total_se"></div>
+                        <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_se"></div>
+                    </div>
+                    <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_se"></div>
+                    <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">O dia do vencimento das parcelas seguintes é sempre o mesmo dia da 1ª parcela — não precisa informar separado.</p>
+                </div>
+
+                <div class="fieldset-title">⚖️ Foro</div>
+                <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">Por padrão usa a cidade do Vendedor (Lei 14.879/2024 exige vínculo com o domicílio de uma das partes). Só preencha abaixo se precisar de um foro diferente.</p>
+                <div class="form-row">
+                    <div class="form-group"><label>Cidade do foro (opcional)</label>
+                        <select id="cv_foro_cidade" onchange="onCVForoCidadeChange()">
+                            <option value="">Mesma do Vendedor</option>
+                            <option value="Camboriú">Camboriú</option>
+                            <option value="Balneário Camboriú">Balneário Camboriú</option>
+                            <option value="Itapema">Itapema</option>
+                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Outra">Outra</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Estado</label>
+                        <select id="cv_foro_estado">
+                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
+                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="cv_foro_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="cv_foro_cidade_outra"></div>
+
+                <div class="fieldset-title">🖋️ Testemunhas (opcional)</div>
+                <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">Sem testemunhas o documento perde força de título executivo (art. 784, III do CPC). Se não souber agora, deixe em branco — sai linha pra assinar à mão.</p>
+                <div class="form-row">
+                    <div class="form-group"><label>Testemunha 1 — nome</label><input type="text" id="cv_test1_nome"></div>
+                    <div class="form-group"><label>Testemunha 1 — CPF</label><input type="text" id="cv_test1_cpf" inputmode="numeric"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Testemunha 2 — nome</label><input type="text" id="cv_test2_nome"></div>
+                    <div class="form-group"><label>Testemunha 2 — CPF</label><input type="text" id="cv_test2_cpf" inputmode="numeric"></div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeCVModal()">Cancelar</button>
                     <button type="submit" class="btn-save">💾 Salvar</button>
                 </div>
             </form>
@@ -901,6 +1138,21 @@
 
     <script type="module">
         import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+        import extenso from 'https://esm.sh/extenso@2';
+
+        // Valor por extenso em reais — usado nas cláusulas de pagamento dos
+        // contratos de compra e venda. A fórmula da planilha era feita à mão e
+        // errou 6 valores em contratos já emitidos (ex: R$30.000 virou "trinta
+        // reais", omitindo a escala "mil" — ver extenso.fixtures.js pro
+        // gabarito completo, validado contra os 41 casos antes de trocar).
+        function extensoReais(valor) {
+            return extenso(valor, { mode: 'currency', currency: { type: 'BRL' } });
+        }
+        // Cardinal simples ("dezessete", "trinta") — usado pro dia do mês e
+        // pra quantidade de parcelas por extenso nas cláusulas de pagamento.
+        function numExtenso(n) {
+            return extenso(n);
+        }
 
         const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
@@ -1314,6 +1566,207 @@
             return bairro || null;
         }
 
+        // Foro não tem bairro (é a comarca, não o endereço) — por isso não reusa
+        // onTermoCidadeChange/termoCidadeFinal acima, que dependem de um <select>
+        // de bairro que o foro não tem. Vazio = deriva da cidade do Proprietário
+        // na hora de formatar (ver resolverForo/cfg.foro); só grava algo em
+        // `dados` quando a equipe escolhe um foro diferente manualmente.
+        function onTermoForoCidadeChange() {
+            const cidade = document.getElementById('t_foro_cidade').value;
+            document.getElementById('t_foro_cidade_outra_wrap').style.display = cidade === 'Outra' ? '' : 'none';
+        }
+        window.onTermoForoCidadeChange = onTermoForoCidadeChange;
+        function termoForoManualFinal() {
+            const cidade = document.getElementById('t_foro_cidade').value;
+            if (!cidade) return null;
+            const cidadeFinal = cidade === 'Outra' ? cleanStr(document.getElementById('t_foro_cidade_outra').value) : cidade;
+            if (!cidadeFinal) return null;
+            return { cidade: cidadeFinal, estado: document.getElementById('t_foro_estado').value || null };
+        }
+
+        // ===== Compra e Venda de Veículo — formulário de criação =====
+        // Mesma lógica de cidade/bairro/foro do Termo acima, só que com
+        // prefixo `cv_` nos ids em vez de `t_` (as funções onTermoCidadeChange
+        // etc. têm o prefixo `t_` fixo no código, não dá pra reaproveitar direto).
+        function toggleCVPagamento() {
+            const tipo = document.getElementById('cv_variante').value;
+            document.getElementById('cv_pag_vista').style.display = tipo === 'CV_VEICULO_VISTA' ? '' : 'none';
+            document.getElementById('cv_pag_prazo_entrada').style.display = tipo === 'CV_VEICULO_PRAZO_ENTRADA' ? '' : 'none';
+            document.getElementById('cv_pag_prazo_sem_entrada').style.display = tipo === 'CV_VEICULO_PRAZO_SEM_ENTRADA' ? '' : 'none';
+        }
+        window.toggleCVPagamento = toggleCVPagamento;
+
+        function onCVCidadeChange(prefixo) {
+            const cidade = document.getElementById(`cv_${prefixo}_cidade`).value;
+            const outraWrap = document.getElementById(`cv_${prefixo}_cidade_outra_wrap`);
+            const bairroSel = document.getElementById(`cv_${prefixo}_bairro`);
+            const bairroOutroWrap = document.getElementById(`cv_${prefixo}_bairro_outro_wrap`);
+            if (cidade === 'Outra') {
+                outraWrap.style.display = '';
+                bairroSel.innerHTML = '<option value="">Selecione a cidade primeiro</option>';
+                bairroSel.disabled = true;
+                bairroOutroWrap.style.display = '';
+            } else if (cidade) {
+                outraWrap.style.display = 'none';
+                bairroSel.disabled = false;
+                bairroSel.innerHTML = bairroSelectOptions(cidade, '');
+                bairroOutroWrap.style.display = 'none';
+            } else {
+                outraWrap.style.display = 'none';
+                bairroSel.innerHTML = '<option value="">Selecione a cidade primeiro</option>';
+                bairroSel.disabled = true;
+                bairroOutroWrap.style.display = 'none';
+            }
+        }
+        window.onCVCidadeChange = onCVCidadeChange;
+        function onCVBairroChange(prefixo) {
+            const bairro = document.getElementById(`cv_${prefixo}_bairro`).value;
+            document.getElementById(`cv_${prefixo}_bairro_outro_wrap`).style.display = bairro === '__outro__' ? '' : 'none';
+        }
+        window.onCVBairroChange = onCVBairroChange;
+        function cvCidadeFinal(prefixo) {
+            const cidade = document.getElementById(`cv_${prefixo}_cidade`).value;
+            return cidade === 'Outra' ? cleanStr(document.getElementById(`cv_${prefixo}_cidade_outra`).value) : (cidade || null);
+        }
+        function cvBairroFinal(prefixo) {
+            const cidade = document.getElementById(`cv_${prefixo}_cidade`).value;
+            const bairro = document.getElementById(`cv_${prefixo}_bairro`).value;
+            if (cidade === 'Outra' || bairro === '__outro__') return cleanStr(document.getElementById(`cv_${prefixo}_bairro_outro`).value);
+            return bairro || null;
+        }
+        function onCVForoCidadeChange() {
+            const cidade = document.getElementById('cv_foro_cidade').value;
+            document.getElementById('cv_foro_cidade_outra_wrap').style.display = cidade === 'Outra' ? '' : 'none';
+        }
+        window.onCVForoCidadeChange = onCVForoCidadeChange;
+        function cvForoManualFinal() {
+            const cidade = document.getElementById('cv_foro_cidade').value;
+            if (!cidade) return null;
+            const cidadeFinal = cidade === 'Outra' ? cleanStr(document.getElementById('cv_foro_cidade_outra').value) : cidade;
+            if (!cidadeFinal) return null;
+            return { cidade: cidadeFinal, estado: document.getElementById('cv_foro_estado').value || null };
+        }
+
+        function openCVModal() {
+            document.getElementById('cvModal').classList.add('active');
+            toggleCVPagamento();
+        }
+        window.openCVModal = openCVModal;
+        function closeCVModal() {
+            document.getElementById('cvModal').classList.remove('active');
+            document.querySelectorAll('#cvModal form')[0].reset();
+            onCVCidadeChange('vend');
+            onCVCidadeChange('comp');
+            onCVForoCidadeChange();
+            toggleCVPagamento();
+        }
+        window.closeCVModal = closeCVModal;
+
+        async function saveCV(e) {
+            e.preventDefault();
+            const btn = document.querySelector('#cvModal .btn-save');
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Salvando...';
+            btn.disabled = true;
+
+            try {
+                const tipo = document.getElementById('cv_variante').value;
+
+                const vendedorData = {
+                    nome: cleanStr(document.getElementById('cv_vend_nome').value),
+                    cpf: cleanDigits(document.getElementById('cv_vend_cpf').value),
+                    rg: cleanStr(document.getElementById('cv_vend_rg').value),
+                    genero: cleanStr(document.getElementById('cv_vend_genero').value),
+                    estado_civil: cleanStr(document.getElementById('cv_vend_estado_civil').value),
+                    nacionalidade: cleanStr(document.getElementById('cv_vend_nacionalidade').value),
+                    profissao: cleanStr(document.getElementById('cv_vend_profissao').value),
+                    endereco: cleanStr(document.getElementById('cv_vend_endereco').value),
+                    bairro: cvBairroFinal('vend'),
+                    cidade: cvCidadeFinal('vend'),
+                    estado: document.getElementById('cv_vend_estado').value || null,
+                };
+                if (!vendedorData.nome) throw new Error('Nome do vendedor é obrigatório');
+                const vendedorId = await upsertPessoa(vendedorData);
+
+                const compradorData = {
+                    nome: cleanStr(document.getElementById('cv_comp_nome').value),
+                    cpf: cleanDigits(document.getElementById('cv_comp_cpf').value),
+                    rg: cleanStr(document.getElementById('cv_comp_rg').value),
+                    genero: cleanStr(document.getElementById('cv_comp_genero').value),
+                    estado_civil: cleanStr(document.getElementById('cv_comp_estado_civil').value),
+                    nacionalidade: cleanStr(document.getElementById('cv_comp_nacionalidade').value),
+                    profissao: cleanStr(document.getElementById('cv_comp_profissao').value),
+                    endereco: cleanStr(document.getElementById('cv_comp_endereco').value),
+                    bairro: cvBairroFinal('comp'),
+                    cidade: cvCidadeFinal('comp'),
+                    estado: document.getElementById('cv_comp_estado').value || null,
+                };
+                if (!compradorData.nome) throw new Error('Nome do comprador é obrigatório');
+                const compradorId = await upsertPessoa(compradorData);
+
+                const placa = cleanStr(document.getElementById('cv_placa').value);
+                if (!placa) throw new Error('Placa é obrigatória');
+                const ativoId = await upsertAtivo({
+                    tipo: 'VEICULO',
+                    proprietario_id: vendedorId,
+                    fabricante: cleanStr(document.getElementById('cv_fabricante').value),
+                    modelo: cleanStr(document.getElementById('cv_modelo').value),
+                    ano_fabricacao_modelo: cleanStr(document.getElementById('cv_ano').value),
+                    placa: placa.toUpperCase(),
+                    cor: cleanStr(document.getElementById('cv_cor').value),
+                    chassi: cleanStr(document.getElementById('cv_chassi').value),
+                    renavam: cleanDigits(document.getElementById('cv_renavam').value),
+                });
+
+                const dados = {};
+                const tipoVeiculo = cleanStr(document.getElementById('cv_tipo_veiculo').value);
+                if (tipoVeiculo) dados.tipo_veiculo = tipoVeiculo;
+
+                if (tipo === 'CV_VEICULO_VISTA') {
+                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_vista').value) || 0;
+                    if (!dados.valor_total) throw new Error('Valor total é obrigatório');
+                } else if (tipo === 'CV_VEICULO_PRAZO_ENTRADA') {
+                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_pe').value) || 0;
+                    dados.valor_entrada = parseFloat(document.getElementById('cv_valor_entrada_pe').value) || 0;
+                    dados.num_parcelas = parseInt(document.getElementById('cv_num_parcelas_pe').value, 10) || 0;
+                    dados.data_primeira_parcela = document.getElementById('cv_data_primeira_parcela_pe').value || null;
+                    if (!dados.valor_total || !dados.num_parcelas || !dados.data_primeira_parcela) throw new Error('Valor total, número de parcelas e data da 1ª parcela são obrigatórios');
+                } else if (tipo === 'CV_VEICULO_PRAZO_SEM_ENTRADA') {
+                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_se').value) || 0;
+                    dados.num_parcelas = parseInt(document.getElementById('cv_num_parcelas_se').value, 10) || 0;
+                    dados.data_primeira_parcela = document.getElementById('cv_data_primeira_parcela_se').value || null;
+                    if (!dados.valor_total || !dados.num_parcelas || !dados.data_primeira_parcela) throw new Error('Valor total, número de parcelas e data da 1ª parcela são obrigatórios');
+                }
+
+                const foroManual = cvForoManualFinal();
+                if (foroManual) { dados.foro_cidade = foroManual.cidade; dados.foro_estado = foroManual.estado; }
+                const test1Nome = cleanStr(document.getElementById('cv_test1_nome').value);
+                if (test1Nome) { dados.testemunha_1_nome = test1Nome; dados.testemunha_1_cpf = cleanDigits(document.getElementById('cv_test1_cpf').value) || null; }
+                const test2Nome = cleanStr(document.getElementById('cv_test2_nome').value);
+                if (test2Nome) { dados.testemunha_2_nome = test2Nome; dados.testemunha_2_cpf = cleanDigits(document.getElementById('cv_test2_cpf').value) || null; }
+
+                await dbInsert('contratos', {
+                    tipo_contrato: tipo,
+                    proprietario_id: vendedorId,
+                    responsavel_id: compradorId,
+                    ativo_id: ativoId,
+                    data_registro: new Date().toISOString(),
+                    dados,
+                });
+
+                closeCVModal();
+                await loadContratos();
+                alert('✅ Contrato registrado com sucesso!');
+            } catch (error) {
+                console.error('❌ Erro ao salvar compra e venda:', error);
+                alert('Erro: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        window.saveCV = saveCV;
+
         // ===== Painel de Serviços Blackout (menu inicial) =====
         // Ícones de marca (SVG linha única, verde/preto) que substituem os emoji nos
         // cards da Home. Mesmo viewBox 24x24 e mesmo traço em todos pra ficar consistente.
@@ -1629,6 +2082,7 @@
             document.getElementById('t_responsavel_fields').style.display = 'none';
             onTermoCidadeChange('prop');
             onTermoCidadeChange('resp');
+            onTermoForoCidadeChange();
         }
         window.openTermoModal = openTermoModal;
         window.closeTermoModal = closeTermoModal;
@@ -1690,12 +2144,23 @@
                     renavam: cleanDigits(document.getElementById('t_renavam').value),
                 });
 
+                const dados = {};
+                const tipoVeiculo = cleanStr(document.getElementById('t_tipo_veiculo').value);
+                if (tipoVeiculo) dados.tipo_veiculo = tipoVeiculo;
+                const foroManual = termoForoManualFinal();
+                if (foroManual) { dados.foro_cidade = foroManual.cidade; dados.foro_estado = foroManual.estado; }
+                const test1Nome = cleanStr(document.getElementById('t_test1_nome').value);
+                if (test1Nome) { dados.testemunha_1_nome = test1Nome; dados.testemunha_1_cpf = cleanDigits(document.getElementById('t_test1_cpf').value) || null; }
+                const test2Nome = cleanStr(document.getElementById('t_test2_nome').value);
+                if (test2Nome) { dados.testemunha_2_nome = test2Nome; dados.testemunha_2_cpf = cleanDigits(document.getElementById('t_test2_cpf').value) || null; }
+
                 await dbInsert('contratos', {
                     tipo_contrato: 'TERMO_DE_RESPONSABILIDADE',
                     proprietario_id: proprietarioId,
                     responsavel_id: responsavelId,
                     ativo_id: ativoId,
                     data_registro: new Date().toISOString(),
+                    dados: Object.keys(dados).length ? dados : null,
                 });
 
                 closeTermoModal();
@@ -1731,6 +2196,9 @@
             DECLARACAO_UNIAO_ESTAVEL: '💍 Declaração de União Estável',
             PROCURACAO_DETRAN: '🚓 Procuração Detran',
             PROCURACAO_SIMPLES: '📜 Procuração Simples',
+            CV_VEICULO_VISTA: '🚗 Compra e Venda de Veículo — à vista',
+            CV_VEICULO_PRAZO_ENTRADA: '🚗 Compra e Venda de Veículo — a prazo c/ entrada',
+            CV_VEICULO_PRAZO_SEM_ENTRADA: '🚗 Compra e Venda de Veículo — a prazo s/ entrada',
         };
         let contratosCache = [];
 
@@ -1763,9 +2231,9 @@
                     .from('contratos')
                     .select(`
                         id, data_registro, tipo_contrato, dados,
-                        proprietario:pessoas!contratos_proprietario_id_fkey(nome, cpf),
-                        responsavel:pessoas!contratos_responsavel_id_fkey(nome, cpf),
-                        ativo:ativos!contratos_ativo_id_fkey(placa, modelo, fabricante, cor)
+                        proprietario:pessoas!contratos_proprietario_id_fkey(nome, cpf, rg, genero, nacionalidade, estado_civil, profissao, endereco, bairro, cidade, estado),
+                        responsavel:pessoas!contratos_responsavel_id_fkey(nome, cpf, rg, genero, nacionalidade, estado_civil, profissao, endereco, bairro, cidade, estado),
+                        ativo:ativos!contratos_ativo_id_fkey(placa, modelo, fabricante, cor, ano_fabricacao_modelo, chassi, renavam)
                     `)
                     .order('data_registro', { ascending: false });
 
@@ -1784,12 +2252,17 @@
                     const tipoLabel = TIPO_CONTRATO_LABELS[c.tipo_contrato] || c.tipo_contrato;
                     const pessoaB = (c.responsavel && c.responsavel.nome !== c.proprietario?.nome) ? ` · ${escapeHtml(c.responsavel.nome)}` : '';
                     const veiculoTag = c.ativo?.placa ? ` · 🚗 ${escapeHtml(c.ativo.placa)}` : '';
+                    // As Declarações também têm corpo() no TIPOS, mas pra outro
+                    // formato de dados (dados.pessoa_a/pessoa_b, das pendentes) —
+                    // só mostra "Formatar" aqui pros tipos marcados origem:'contratos'.
+                    const temFormatacao = !!(TIPOS[c.tipo_contrato] && TIPOS[c.tipo_contrato].corpo && TIPOS[c.tipo_contrato].origem === 'contratos');
                     return `<div class="contrato-card">
                         <div class="contrato-info" style="cursor:pointer;" onclick="openContratoFicha('${c.id}')">
                             <b>${tipoLabel}</b>
                             <span class="subtext">👤 ${escapeHtml(c.proprietario?.nome) || '-'}${pessoaB}${veiculoTag}</span>
                             <span class="subtext">📅 ${dataFmt}</span>
                         </div>
+                        ${temFormatacao ? `<button class="btn-secondary" style="padding:6px 10px;" onclick="abrirContratoFormatado('${c.id}')" title="Formatar">📄</button>` : ''}
                         <button class="btn-delete" onclick="deleteContrato('${c.id}')" title="Excluir">🗑️</button>
                     </div>`;
                 }).join('');
@@ -1890,13 +2363,31 @@
         }
         window.loadDeclaracoesPendentes = loadDeclaracoesPendentes;
 
-        // ===== Declaração formatada (texto pronto pra assinar/imprimir, por tipo) =====
+        // ===== Motor de contratos (blocos componíveis — ver CONTRATOS-SPEC.md) =====
+        // g()/qualificar() são blocos puros reaproveitados por qualquer tipo de
+        // documento (Declaração hoje, Termo/Compra e venda/Locação depois).
         function g(genero, masc, fem) { return genero === 'Feminino' ? fem : masc; }
         function dataExtenso() {
             const d = new Date();
             return `Camboriú/SC, ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
         }
-        function qualificacao(p) {
+
+        // Flexão de gênero genérica pro padrão "Palavra(a)" que os <select>s do
+        // app já usam pra nacionalidade ("Brasileiro(a)") e estado civil
+        // ("Solteiro(a)", "Casado(a)"...) — cobre os dois com uma função só,
+        // em vez de um dicionário por campo. Exceções sem esse padrão (não
+        // flexionam) ficam em FLEX_EXCECOES.
+        const FLEX_EXCECOES = { 'União Estável': 'em união estável' };
+        function flexGenero(valor, fem) {
+            if (!valor) return '';
+            if (FLEX_EXCECOES[valor]) return FLEX_EXCECOES[valor];
+            const m = valor.match(/^(.*)o\(a\)$/i);
+            if (!m) return valor.toLowerCase();
+            return fem ? `${m[1].toLowerCase()}a` : `${m[1].toLowerCase()}o`;
+        }
+        const flexEstadoCivil = flexGenero; // nome antigo do passo 1, mesmo comportamento
+
+        function qualificar(p) {
             if (!p) return '';
             const partes = [
                 escapeHtml(p.nome),
@@ -1915,61 +2406,453 @@
             return `<p style="margin-top:36px;">_________________________________________<br>${escapeHtml(p.nome)}<br>CPF: ${escapeHtml(p.cpf)}</p>`;
         }
 
-        function formatarDeclaracaoTexto(d) {
-            const dados = d.dados || {};
-            const a = dados.pessoa_a || {};
-            const b = dados.pessoa_b || {};
-            const e = dados.especifico || {};
-            let corpo = '';
+        // ----- Blocos específicos do Termo de Responsabilidade -----
+        // (ver TERMO-RESPONSABILIDADE-REF.md — estilo declaratório em 1ª pessoa,
+        // diferente de qualificar()/assinatura() usados pelas Declarações: RG/CPF
+        // sem "Carteira de Identidade"/"C.P.F.", e nacionalidade/estado civil
+        // flexionados por gênero em vez do rótulo neutro do <select>.)
+        function qualificarTermo(p) {
+            const fem = p.genero === 'Feminino';
+            return `${escapeHtml(titleCase(p.nome))}, ${escapeHtml(flexGenero(p.nacionalidade, fem))}, ${escapeHtml(flexGenero(p.estado_civil, fem))},${escapeHtml(p.profissao || '')}, `
+                + `portador${g(p.genero, '', 'a')} do RG ${escapeHtml(p.rg || '')} e inscrit${g(p.genero, 'o', 'a')} no CPF ${escapeHtml(p.cpf || '')}, `
+                + `residente e domiciliad${g(p.genero, 'o', 'a')} no endereço ${escapeHtml(titleCase(p.endereco))} do bairro ${escapeHtml(p.bairro || '')} `
+                + `da cidade ${escapeHtml(p.cidade || '')}/${escapeHtml(p.estado || '')}`;
+        }
 
-            if (d.tipo_contrato === 'DECLARACAO_AUTONOMO') {
-                corpo += `<p>Eu, ${qualificacao(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(e.funcao || '')}</b>, de forma autônoma, ${escapeHtml(e.periodo || '')}, no horário das ${escapeHtml(e.horario_inicio || '')} às ${escapeHtml(e.horario_fim || '')} horas.</p>`;
-                if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                    corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
-                }
-                corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                corpo += `<p>${dataExtenso()}.</p>`;
-                corpo += assinatura(a);
-            } else if (d.tipo_contrato === 'DECLARACAO_TRABALHO') {
-                corpo += `<p>Eu, ${qualificacao(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(a.profissao || '')}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(e.dias_semana || '')}, no horário das ${escapeHtml(e.horario_entrada || '')} às ${escapeHtml(e.horario_saida || '')} horas.</p>`;
-                if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                    corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
-                }
-                corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                corpo += `<p>${dataExtenso()}.</p>`;
-                corpo += assinatura(a);
-            } else if (d.tipo_contrato === 'DECLARACAO_RESIDENCIA') {
-                corpo += `<p>Eu, ${qualificacao(a)}, DECLARO, para os devidos fins e a quem possa interessar, que resido no endereço acima qualificado.</p>`;
-                if (b && b.nome) {
-                    corpo += `<p>Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(b.nome)}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
-                }
-                corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                corpo += `<p>${dataExtenso()}.</p>`;
-                corpo += assinatura(a);
-                if (b && b.nome) corpo += assinatura(b);
-            } else if (d.tipo_contrato === 'DECLARACAO_UNIAO_ESTAVEL') {
-                const filiacaoA = `filh${g(a.genero, 'o', 'a')} de ${escapeHtml(e.filiacao_pai_a || '—')} e ${escapeHtml(e.filiacao_mae_a || '—')}`;
-                const filiacaoB = `filh${g(b.genero, 'o', 'a')} de ${escapeHtml(e.filiacao_pai_b || '—')} e ${escapeHtml(e.filiacao_mae_b || '—')}`;
-                corpo += `<p>Nós, ${qualificacao(a)}, ${filiacaoA}, e ${qualificacao(b)}, ${filiacaoB}, DECLARAMOS, para os devidos fins e a quem possa interessar, que vivemos em união estável há ${escapeHtml(e.tempo_uniao || '')}, residindo no mesmo endereço acima qualificado.</p>`;
-                corpo += `<p>Por ser expressão da verdade, firmamos a presente declaração para que produza os efeitos legais.</p>`;
-                corpo += `<p>${dataExtenso()}.</p>`;
-                corpo += assinatura(a);
-                corpo += assinatura(b);
-            } else {
-                corpo = '<p>Tipo de declaração sem template de formatação ainda.</p>';
-            }
+        const up = (s) => (s || '').toString().toUpperCase();
+        function formatPlaca(p) {
+            const s = up(p).replace(/[^A-Z0-9]/g, '');
+            return s.length > 3 ? `${s.slice(0, 3)}-${s.slice(3)}` : s;
+        }
 
-            return `<h1 style="text-align:center; font-size:16px; letter-spacing:1px; margin-bottom:22px;">DECLARAÇÃO</h1>${corpo}`;
+        // Lei 14.879/2024 (novo art. 63 do CPC): o foro eleito precisa ter vínculo
+        // com o domicílio de uma das partes, senão é "juízo aleatório" e pode ser
+        // declinado de ofício. Por isso não é mais string fixa — deriva da cidade
+        // de um dos papéis (cfg.foro), ou usa override manual salvo em dados.
+        function resolverForo(cfg, d, dados) {
+            if (dados.foro_cidade) return { cidade: dados.foro_cidade, estado: dados.foro_estado || '' };
+            const papel = cfg.foro === 'parte_2' ? cfg.papeis[1] : cfg.papeis[0];
+            const pessoa = d[papel] || {};
+            return { cidade: pessoa.cidade || '', estado: pessoa.estado || '' };
+        }
+
+        // Assinaturas lado a lado (Termo) em vez de empilhadas (Declaração).
+        // Testemunha imprime nome/CPF se preenchidos; se não, linha em branco
+        // pra assinar à mão no balcão — igual sempre foi no papel (e sem as duas
+        // testemunhas o documento perde força de título executivo, art. 784 III
+        // do CPC, por isso os campos existem mas continuam opcionais).
+        function blocoAssinaturasDuasColunas(partes, testemunhas) {
+            const col = (html) => `<td style="width:50%; padding-right:16px; vertical-align:top;">${html}</td>`;
+            const linhaPartes = partes.map(p => col(`_______________________________<br>${escapeHtml(titleCase(p.nome))}<br>${escapeHtml(p.label)}`)).join('');
+            const linhaTestemunhas = testemunhas.map((t, i) => col(
+                `_______________________________<br>`
+                + (t && t.nome ? `${escapeHtml(t.nome)}<br>` : '')
+                + `CPF: ${escapeHtml((t && t.cpf) || '')}<br>Testemunha 0${i + 1}`
+            )).join('');
+            return `<table style="width:100%; border-collapse:collapse; margin-top:32px;">`
+                + `<tr>${linhaPartes}</tr>`
+                + `<tr><td colspan="2" style="height:28px;"></td></tr>`
+                + `<tr>${linhaTestemunhas}</tr>`
+                + `</table>`;
+        }
+
+        // ----- Blocos específicos da Compra e Venda de Veículo -----
+        // (ver COMPRA-VENDA-REF.md — estilo "IDENTIFICAÇÃO DAS PARTES" +
+        // `Cláusula Nª` numerada, diferente do Termo. `d.proprietario`/
+        // `d.responsavel` seguem sendo os nomes de coluna reais (FK de
+        // `contratos`); `papeisLabel` é só o rótulo de exibição — VENDEDOR/
+        // COMPRADOR aqui, PROPRIETÁRIO/RESPONSÁVEL no Termo.)
+        function clausulaCV(n, texto) { return `<p>Cláusula ${n}ª. ${texto}</p>`; }
+
+        function dataBR(dataISO) {
+            if (!dataISO) return '';
+            return new Date(dataISO + 'T00:00:00').toLocaleDateString('pt-BR');
+        }
+        // O "dia do pagamento" nunca foi um dado independente de verdade — nos
+        // registros reais da planilha ele sempre bate com o dia da data da
+        // primeira parcela, e quando tinha campo separado gerava lixo (ex:
+        // contrato saiu com "dia 1373" por extenso). Por isso é sempre
+        // derivado, nas 3 variantes, e não tem campo próprio no formulário.
+        function diaDoMes(dataISO) {
+            if (!dataISO) return null;
+            return new Date(dataISO + 'T00:00:00').getDate();
+        }
+
+        function qualificarCV(p, papel) {
+            const fem = p.genero === 'Feminino';
+            return `${papel.toUpperCase()}: ${escapeHtml(titleCase(p.nome))}, ${escapeHtml(flexGenero(p.nacionalidade, fem))}, ${escapeHtml(flexGenero(p.estado_civil, fem))}, ${escapeHtml(p.profissao || '')}, `
+                + `portador${g(p.genero, '', 'a')} da Carteira de Identidade nº ${escapeHtml(p.rg || '')}, `
+                + `inscrit${g(p.genero, 'o', 'a')} no C.P.F. nº ${escapeHtml(p.cpf || '')}, `
+                + `residente e domiciliad${g(p.genero, 'o', 'a')} na ${escapeHtml(titleCase(p.endereco))}, bairro ${escapeHtml(p.bairro || '')} da Cidade de ${escapeHtml(p.cidade || '')}/${escapeHtml(p.estado || '')}.`;
+        }
+
+        // À vista usa uma frase mais curta (sem separar Fabricante/Modelo) —
+        // é assim mesmo no original, template mais antigo que os dois a prazo.
+        function blocoObjetoVista(n, v) {
+            return clausulaCV(n, `O presente contrato tem como OBJETO, o veículo denominado ${(v.tipo || 'carro').toLowerCase()}, modelo ${up(v.fabricante)} ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, cor: ${up(v.cor)}, placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')}, de propriedade do VENDEDOR, livre de qualquer ônus ou encargo.`);
+        }
+        function blocoObjetoPrazo(n, v) {
+            return clausulaCV(n, `O presente contrato tem como OBJETO, um veículo denominado ${(v.tipo || 'carro').toLowerCase()}, Fabricante ${up(v.fabricante)}, Modelo/Versão ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, na Cor: ${up(v.cor)}, Placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')}, de propriedade do VENDEDOR, livre de qualquer ônus ou encargo.`);
+        }
+        function blocoVeiculoUsadoInspecionado(n) {
+            return clausulaCV(n, 'O veículo, objeto deste contrato é usado, apresentando desgaste natural decorrente do tempo, já visto e inspecionado pelo COMPRADOR, o qual tomou ciência de suas condições e estado de conservação.');
+        }
+        function paragrafoCompradorAceita() {
+            return '<p>Primeiro Parágrafo. O COMPRADOR aceita o veículo nas condições em que se encontra, ciente de que quaisquer reparos, consertos ou manutenções necessárias serão de sua exclusiva responsabilidade a partir da assinatura deste instrumento pelas partes.</p>';
+        }
+        function blocoEntregaLocalIndicado(n) {
+            return clausulaCV(n, 'O VENDEDOR se obriga a entregar o veículo no local indicado pelo COMPRADOR, nas mesmas condições em que se encontrava quando foi por este inspecionado.');
+        }
+        function blocoTransferenciaPropriedade(n, aPrazo) {
+            return clausulaCV(n, aPrazo
+                ? 'A transferência da propriedade dos veículos negociados e ajustados nesse contrato será feita no prazo de 30 (trinta) dias após a quitação da última parcela acertada para o pagamento do automóvel.'
+                : 'A transferência da propriedade do veículo será feita no prazo de 30 (trinta) dias após a quitação do valor acertado na compra e venda do automóvel.');
+        }
+        function blocoContratoValeAssinatura(n) {
+            return clausulaCV(n, 'O presente contrato passa a valer a partir da assinatura pelas partes, obrigando-se a ele os herdeiros ou sucessores das mesmas.');
+        }
+        function blocoForoCV(n, foro) {
+            return clausulaCV(n, `Para dirimir quaisquer controvérsias oriundas do CONTRATO, as partes elegem o foro da comarca de ${escapeHtml(foro.cidade)}/${escapeHtml(foro.estado)}.`);
+        }
+        function blocoFechoCV(cidade) {
+            return `<p>Por estarem assim justos e contratados, firmam o presente instrumento, em duas vias de igual teor, juntamente com 2 (duas) testemunhas.</p><p>${escapeHtml(cidade)}, ${dataExtensoLonga()}</p>`;
+        }
+        // dataExtenso() do Termo já devolve "Cidade/UF, data" fixo — aqui a
+        // cidade do fecho é a do foro (variável), então só a parte da data.
+        function dataExtensoLonga() {
+            return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+        }
+        function blocoAssinaturasEmpilhadasCV(partes, testemunhas) {
+            let out = partes.map(p => `<p style="margin-top:28px;">_______________________________<br>${escapeHtml(p.label)}: ${escapeHtml(titleCase(p.nome))}</p>`).join('');
+            out += testemunhas.map((t, i) => {
+                const n = i + 1;
+                if (t && t.nome) return `<p style="margin-top:28px;">_______________________________<br>Testemunha ${n}: ${escapeHtml(t.nome)} - CPF: ${escapeHtml(t.cpf || '')}</p>`;
+                return `<p style="margin-top:28px;">_______________________________<br>Testemunha ${n} - CPF:</p>`;
+            }).join('');
+            return out;
+        }
+
+        // Registro de tipos (CONTRATOS-SPEC.md §3): cada entrada sabe montar seu
+        // próprio corpo a partir de {pessoa_a, pessoa_b, especifico}. Substitui o
+        // if/else antigo — adicionar um tipo novo vira uma entrada aqui, não um
+        // novo `else if`. TERMO_DE_RESPONSABILIDADE ainda não tem `corpo`: é o
+        // próximo passo (motor aplicado a um tipo que nunca teve texto formatado).
+        const TIPOS = {
+            DECLARACAO_AUTONOMO: {
+                titulo: 'DECLARAÇÃO',
+                papeis: ['declarante'],
+                corpo(d) {
+                    const dados = d.dados || {};
+                    const a = dados.pessoa_a || {};
+                    const e = dados.especifico || {};
+                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(e.funcao || '')}</b>, de forma autônoma, ${escapeHtml(e.periodo || '')}, no horário das ${escapeHtml(e.horario_inicio || '')} às ${escapeHtml(e.horario_fim || '')} horas.</p>`;
+                    if (e.informar_renda === 'SIM' && e.renda_mensal) {
+                        corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                    }
+                    corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    corpo += `<p>${dataExtenso()}.</p>`;
+                    corpo += assinatura(a);
+                    return corpo;
+                }
+            },
+            DECLARACAO_TRABALHO: {
+                titulo: 'DECLARAÇÃO',
+                papeis: ['declarante'],
+                corpo(d) {
+                    const dados = d.dados || {};
+                    const a = dados.pessoa_a || {};
+                    const e = dados.especifico || {};
+                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(a.profissao || '')}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(e.dias_semana || '')}, no horário das ${escapeHtml(e.horario_entrada || '')} às ${escapeHtml(e.horario_saida || '')} horas.</p>`;
+                    if (e.informar_renda === 'SIM' && e.renda_mensal) {
+                        corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                    }
+                    corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    corpo += `<p>${dataExtenso()}.</p>`;
+                    corpo += assinatura(a);
+                    return corpo;
+                }
+            },
+            DECLARACAO_RESIDENCIA: {
+                titulo: 'DECLARAÇÃO',
+                papeis: ['declarante', 'coabitante'],
+                corpo(d) {
+                    const dados = d.dados || {};
+                    const a = dados.pessoa_a || {};
+                    const b = dados.pessoa_b || {};
+                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que resido no endereço acima qualificado.</p>`;
+                    if (b && b.nome) {
+                        corpo += `<p>Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(b.nome)}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
+                    }
+                    corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    corpo += `<p>${dataExtenso()}.</p>`;
+                    corpo += assinatura(a);
+                    if (b && b.nome) corpo += assinatura(b);
+                    return corpo;
+                }
+            },
+            DECLARACAO_UNIAO_ESTAVEL: {
+                titulo: 'DECLARAÇÃO',
+                papeis: ['declarante', 'conjuge'],
+                corpo(d) {
+                    const dados = d.dados || {};
+                    const a = dados.pessoa_a || {};
+                    const b = dados.pessoa_b || {};
+                    const e = dados.especifico || {};
+                    const filiacaoA = `filh${g(a.genero, 'o', 'a')} de ${escapeHtml(e.filiacao_pai_a || '—')} e ${escapeHtml(e.filiacao_mae_a || '—')}`;
+                    const filiacaoB = `filh${g(b.genero, 'o', 'a')} de ${escapeHtml(e.filiacao_pai_b || '—')} e ${escapeHtml(e.filiacao_mae_b || '—')}`;
+                    let corpo = `<p>Nós, ${qualificar(a)}, ${filiacaoA}, e ${qualificar(b)}, ${filiacaoB}, DECLARAMOS, para os devidos fins e a quem possa interessar, que vivemos em união estável há ${escapeHtml(e.tempo_uniao || '')}, residindo no mesmo endereço acima qualificado.</p>`;
+                    corpo += `<p>Por ser expressão da verdade, firmamos a presente declaração para que produza os efeitos legais.</p>`;
+                    corpo += `<p>${dataExtenso()}.</p>`;
+                    corpo += assinatura(a);
+                    corpo += assinatura(b);
+                    return corpo;
+                }
+            },
+            // Ver TERMO-RESPONSABILIDADE-REF.md: estilo declaratório em 1ª pessoa,
+            // numeração por letras (a, b, c...), assinaturas em duas colunas — bem
+            // diferente do padrão "Cláusula Nª" dos contratos de compra e venda que
+            // ainda vêm por aí. `foro: 'parte_1'` = deriva da cidade do primeiro
+            // papel (proprietário) por padrão, conforme Lei 14.879/2024 (art. 63
+            // do CPC — foro sem vínculo com o domicílio de uma das partes é
+            // "juízo aleatório" e pode ser declinado de ofício); `dados.foro_cidade`
+            // no registro sobrescreve isso quando preenchido manualmente no form.
+            TERMO_DE_RESPONSABILIDADE: {
+                titulo: 'TERMO DE RESPONSABILIDADE PARA TRANSFERÊNCIA DE RESPONSABILIDADE DE VEÍCULO',
+                papeis: ['proprietario', 'responsavel'],
+                foro: 'parte_1',
+                // marca que este corpo() espera o formato de `contratos` (FK
+                // proprietario/responsavel/ativo join), não o `dados.pessoa_a`
+                // das Declarações — usado por loadContratos() pra decidir se
+                // mostra o botão "Formatar" num registro do histórico (ver nota
+                // no botão 📄 do card, abaixo).
+                origem: 'contratos',
+                corpo(d) {
+                    const prop = d.proprietario || {};
+                    const resp = d.responsavel || {};
+                    const ativo = d.ativo || {};
+                    const dados = d.dados || {};
+                    const foro = resolverForo(this, d, dados);
+                    const tipoVeiculo = dados.tipo_veiculo || 'Automóvel';
+
+                    let out = '';
+                    out += `<p>Eu, ${qualificarTermo(prop)}, doravante denominado Proprietário, transfiro a responsabilidade integral pelo veículo de minha propriedade, descrito a seguir, ao condutor temporário ou novo usuário, conforme os termos deste documento:</p>`;
+
+                    out += `<h3>DADOS DO VEÍCULO</h3>`;
+                    out += `<p>Tipo de Veículo: ${up(tipoVeiculo)}&nbsp;&nbsp;&nbsp;Marca: ${up(ativo.fabricante)}&nbsp;&nbsp;&nbsp;Modelo: ${up(ativo.modelo)}<br>`
+                        + `Ano: ${escapeHtml(ativo.ano_fabricacao_modelo || '')}&nbsp;&nbsp;&nbsp;Placa: ${formatPlaca(ativo.placa)}&nbsp;&nbsp;&nbsp;Cor: ${up(ativo.cor)}<br>`
+                        + `Número do Chassi: ${up(ativo.chassi)}&nbsp;&nbsp;&nbsp;Número do Renavam: ${escapeHtml(ativo.renavam || '')}</p>`;
+
+                    out += `<h3>DADOS DO CONDUTOR TEMPORÁRIO OU NOVO USUÁRIO</h3>`;
+                    out += `<p>Nome: ${qualificarTermo(resp)}</p>`;
+
+                    out += `<h3>TRANSFERÊNCIA DE RESPONSABILIDADE</h3>`;
+                    out += `<p>a) O Proprietário transfere integralmente a responsabilidade sobre o veículo descrito acima ao Condutor Temporário ou Novo Usuário, a partir da data de assinatura deste Termo de Responsabilidade.</p>`;
+                    out += `<p>b) O Condutor Temporário ou Novo Usuário assume todas as responsabilidades legais, civis, administrativas, fiscais e criminais referentes ao veículo mencionado neste Termo de Responsabilidade.</p>`;
+                    out += `<p>c) O Condutor Temporário ou Novo Usuário deste veículo declara estar ciente e se responsabiliza integralmente por todas as infrações de trânsito e respectivas multas que possam ser cometidas durante o período em que estiver utilizando o veículo. O Condutor concorda em efetuar prontamente o pagamento das multas e demais despesas decorrentes das infrações cometidas, bem como em arcar com eventuais pontos na sua Carteira Nacional de Habilitação (CNH) relacionados a essas infrações.</p>`;
+                    out += `<p>d) O Condutor reconhece que qualquer transferência de pontuação da CNH, em decorrência das infrações cometidas enquanto estiver utilizando o veículo, será de sua inteira responsabilidade. O Condutor declara-se ciente de que a não transferência de pontos para sua CNH poderá acarretar em medidas administrativas, tais como a suspensão temporária ou definitiva do direito de dirigir, conforme estabelecido pelo Código de Trânsito Brasileiro e demais legislações aplicáveis.</p>`;
+                    out += `<p>e) O descumprimento desta cláusula acarretará a responsabilidade exclusiva do Condutor Temporário ou Novo Usuário, não eximindo o Proprietário de suas obrigações legais e contratuais. O Proprietário reserva-se o direito de adotar as medidas cabíveis em caso de descumprimento desta cláusula, inclusive o ressarcimento de eventuais prejuízos causados.</p>`;
+
+                    out += `<h3>VIGÊNCIA</h3>`;
+                    out += `<p>f) Este Termo de Responsabilidade tem validade a partir da data de assinatura e permanecerá em vigor até que ocorra a transferência formal da propriedade do veículo, de acordo com as normas estabelecidas pelas autoridades competentes.</p>`;
+
+                    out += `<h3>DISPOSIÇÕES GERAIS</h3>`;
+                    out += `<p>g) Este Termo de Responsabilidade é regido pelas leis brasileiras e quaisquer disputas decorrentes do mesmo deverão ser resolvidas no foro da comarca ${escapeHtml(foro.cidade)}/${escapeHtml(foro.estado)}.</p>`;
+                    out += `<p>h) Quaisquer modificações ou alterações neste Termo de Responsabilidade devem ser feitas por escrito e assinadas por ambas as partes envolvidas. O não cumprimento de qualquer cláusula deste Termo de Responsabilidade não implicará renúncia a qualquer direito ou cláusula estabelecida neste documento. Este Termo de Responsabilidade é vinculante e se estende aos herdeiros, sucessores e cessionários das partes envolvidas.</p>`;
+
+                    out += `<p>Por concordância das partes, assinam este Termo de Responsabilidade em duas vias de igual teor e forma, na presença de duas testemunhas.</p>`;
+                    out += `<p>${dataExtenso()}</p>`;
+
+                    out += blocoAssinaturasDuasColunas(
+                        [{ nome: prop.nome, label: 'Proprietário do Veículo' }, { nome: resp.nome, label: 'Responsável pelo Veículo' }],
+                        [
+                            { nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf },
+                            { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf },
+                        ]
+                    );
+                    return out;
+                }
+            },
+
+            // Ver COMPRA-VENDA-REF.md §2.1. Testemunha nasceu duplicada
+            // ("Testemunha 01" duas vezes) no original — corrigido aqui pelo
+            // blocoAssinaturasEmpilhadasCV, que já numera 1/2 sozinho.
+            CV_VEICULO_VISTA: {
+                titulo: 'CONTRATO DE COMPRA E VENDA DE VEÍCULO USADO À VISTA',
+                papeis: ['proprietario', 'responsavel'],
+                papeisLabel: ['VENDEDOR', 'COMPRADOR'],
+                foro: 'parte_1',
+                origem: 'contratos',
+                corpo(d) {
+                    const vendedor = d.proprietario || {};
+                    const comprador = d.responsavel || {};
+                    const v = d.ativo || {};
+                    const dados = d.dados || {};
+                    const foro = resolverForo(this, d, dados);
+                    let n = 1;
+                    let out = '';
+                    out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
+                    out += `<p>${qualificarCV(vendedor, 'VENDEDOR')}</p>`;
+                    out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
+                    out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Veículo Usado à Vista, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
+                    out += `<h3>DO OBJETO DO CONTRATO</h3>`;
+                    out += blocoObjetoVista(n++, v);
+                    out += blocoVeiculoUsadoInspecionado(n++);
+                    out += `<h3>DAS RESPONSABILIDADES</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza por eventuais defeitos do veículo, uma vez que o veículo é usado e é vendido no estado em que se encontra, sem qualquer garantia, expressa ou implícita, de funcionamento adequado ou bom estado.');
+                    out += paragrafoCompradorAceita();
+                    out += blocoEntregaLocalIndicado(n++);
+                    out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO VEÍCULO</h3>`;
+                    out += blocoTransferenciaPropriedade(n++, false);
+                    out += `<h3>DO PAGAMENTO</h3>`;
+                    out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(dados.valor_total)} (${extensoReais(dados.valor_total)}) a ser quitada no ato da assinatura desse contrato.`);
+                    out += `<h3>CONDIÇÕES GERAIS</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR não se responsabilizará pelos danos causados no veículo por negligência do COMPRADOR, e por problemas decorrentes da não realização das revisões acertadas.');
+                    out += blocoContratoValeAssinatura(n++);
+                    out += `<h3>DO FORO</h3>`;
+                    out += blocoForoCV(n++, foro);
+                    out += blocoFechoCV(foro.cidade);
+                    out += blocoAssinaturasEmpilhadasCV(
+                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
+                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
+                    );
+                    return out;
+                }
+            },
+
+            // Ver COMPRA-VENDA-REF.md §2.2. Corrige 3 bugs do original: "CCláusula
+            // 5ª" (C duplicado), duas cláusulas "5ª" seguidas e duas "6ª" seguidas
+            // — o contador `n` contínuo já evita isso sozinho. O "dia do
+            // pagamento" não é mais campo do formulário: deriva de
+            // `data_primeira_parcela` (ver diaDoMes) porque o campo separado
+            // gerava lixo (contrato real saiu com "dia 1373" por extenso).
+            CV_VEICULO_PRAZO_ENTRADA: {
+                titulo: 'CONTRATO DE COMPRA E VENDA DE VEÍCULO USADO À PRAZO C/ ENTRADA',
+                papeis: ['proprietario', 'responsavel'],
+                papeisLabel: ['VENDEDOR', 'COMPRADOR'],
+                foro: 'parte_1',
+                origem: 'contratos',
+                corpo(d) {
+                    const vendedor = d.proprietario || {};
+                    const comprador = d.responsavel || {};
+                    const v = d.ativo || {};
+                    const dados = d.dados || {};
+                    const foro = resolverForo(this, d, dados);
+                    const dia = diaDoMes(dados.data_primeira_parcela);
+                    const restante = (dados.valor_total || 0) - (dados.valor_entrada || 0);
+                    const parcela = dados.num_parcelas ? restante / dados.num_parcelas : 0;
+                    let n = 1;
+                    let out = '';
+                    out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
+                    out += `<p>${qualificarCV(vendedor, 'VENDEDOR')}</p>`;
+                    out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
+                    out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Veículo Usado à Prazo, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
+                    out += `<h3>DO OBJETO DO CONTRATO</h3>`;
+                    out += blocoObjetoPrazo(n++, v);
+                    out += blocoVeiculoUsadoInspecionado(n++);
+                    out += `<h3>DAS RESPONSABILIDADES</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza por eventuais defeitos do veículo, uma vez que o veículo é usado e foi vendido no estado em que se encontra, sem qualquer garantia, expressa ou implícita, de funcionamento adequado ou bom estado.');
+                    out += paragrafoCompradorAceita();
+                    out += clausulaCV(n++, 'Na hipótese de o COMPRADOR mudar-se para outra cidade distante do município onde foi celebrado o presente contrato, ou transferir sua residência para outro Estado da Federação, obriga-se o COMPRADOR a antecipar o pagamento integral de todas as parcelas vincendas, quitando totalmente o saldo devedor, bem como a providenciar, no prazo máximo de 10 (dez) dias, a transferência do veículo para o seu próprio nome junto ao órgão de trânsito competente.');
+                    out += blocoEntregaLocalIndicado(n++);
+                    out += clausulaCV(n++, 'A partir da data da entrega do veículo, toda e qualquer responsabilidade decorrente da posse, uso e condução do bem passa a ser exclusivamente do COMPRADOR, incluindo, mas não se limitando a:<br><br>a) pagamento de multas de trânsito, taxas e encargos administrativos;<br>b) indenizações decorrentes de acidentes, inclusive com danos materiais, morais, pessoais e/ou fatais;<br>c) responsabilidades cíveis, criminais ou administrativas oriundas da utilização do veículo.<br><br>O VENDEDOR fica, desde já, isento de qualquer obrigação ou responsabilidade sobre os fatos acima mencionados, cabendo ao COMPRADOR responder integralmente perante terceiros e autoridades competentes.');
+                    out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO VEÍCULO</h3>`;
+                    out += blocoTransferenciaPropriedade(n++, true);
+                    out += `<h3>DO PAGAMENTO</h3>`;
+                    out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(dados.valor_total)} (${extensoReais(dados.valor_total)}), a ser pago da seguinte forma:<br><br>`
+                        + `a) Uma entrada no valor de ${fmt(dados.valor_entrada)} (${extensoReais(dados.valor_entrada)}), e o valor restante de ${fmt(restante)} (${extensoReais(restante)}) em ${dados.num_parcelas} parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} (${numExtenso(dia)}) de cada mês, iniciando no dia ${dataBR(dados.data_primeira_parcela)} e seus meses subsequentes.`);
+                    out += clausulaCV(n++, 'Caso o comprador deixe de efetuar o pagamento de duas ou mais parcelas consecutivas do acordo de compra e venda de veículo a prazo, o contrato se auto recindirá de pleno direito, independentemente de notificação judicial ou extrajudicial, e o VENDEDOR terá o direito de tomar posse do veículo imediatamente, sem prejuízo de seu direito de reaver o valor já pago pelo COMPRADOR.');
+                    out += `<p>Primeiro Parágrafo. O VENDEDOR não tem obrigação de efetuar o reembolso do valor já pago pelo comprador de forma imediata. O VENDEDOR poderá dispor do veículo como melhor lhe convier, sem qualquer obrigação de restituição ao COMPRADOR, ficando este isento de qualquer ônus ou responsabilidade futura em relação ao veículo, incluindo eventuais despesas, tributos ou encargos incidentes sobre o bem.</p>`;
+                    out += `<h3>CONDIÇÕES GERAIS</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR não se responsabilizará pelos danos causados no veículo por negligência do COMPRADOR, e por problemas decorrentes da não realização das revisões acertadas.');
+                    out += blocoContratoValeAssinatura(n++);
+                    out += `<h3>DO FORO</h3>`;
+                    out += blocoForoCV(n++, foro);
+                    out += blocoFechoCV(foro.cidade);
+                    out += blocoAssinaturasEmpilhadasCV(
+                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
+                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
+                    );
+                    return out;
+                }
+            },
+
+            // Ver COMPRA-VENDA-REF.md §2.3. Igual à de cima, mas sem entrada:
+            // pagamento cai em N parcelas iguais desde a primeira. "dia do
+            // pagamento" também derivado (mesma decisão, mesmo motivo).
+            CV_VEICULO_PRAZO_SEM_ENTRADA: {
+                titulo: 'CONTRATO DE COMPRA E VENDA DE VEÍCULO USADO À PRAZO S/ ENTRADA',
+                papeis: ['proprietario', 'responsavel'],
+                papeisLabel: ['VENDEDOR', 'COMPRADOR'],
+                foro: 'parte_1',
+                origem: 'contratos',
+                corpo(d) {
+                    const vendedor = d.proprietario || {};
+                    const comprador = d.responsavel || {};
+                    const v = d.ativo || {};
+                    const dados = d.dados || {};
+                    const foro = resolverForo(this, d, dados);
+                    const dia = diaDoMes(dados.data_primeira_parcela);
+                    const parcela = dados.num_parcelas ? (dados.valor_total || 0) / dados.num_parcelas : 0;
+                    let n = 1;
+                    let out = '';
+                    out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
+                    out += `<p>${qualificarCV(vendedor, 'VENDEDOR')}</p>`;
+                    out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
+                    out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Veículo Usado à Prazo, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
+                    out += `<h3>DO OBJETO DO CONTRATO</h3>`;
+                    out += blocoObjetoPrazo(n++, v);
+                    out += blocoVeiculoUsadoInspecionado(n++);
+                    out += `<h3>DAS RESPONSABILIDADES</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza por eventuais defeitos do veículo, uma vez que o veículo é usado e foi vendido no estado em que se encontra, sem qualquer garantia, expressa ou implícita, de funcionamento adequado ou bom estado.');
+                    out += paragrafoCompradorAceita();
+                    out += blocoEntregaLocalIndicado(n++);
+                    out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO VEÍCULO</h3>`;
+                    out += blocoTransferenciaPropriedade(n++, true);
+                    out += `<h3>DO PAGAMENTO</h3>`;
+                    out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(dados.valor_total)} (${extensoReais(dados.valor_total)}), sendo pago em ${dados.num_parcelas} (${numExtenso(dados.num_parcelas)}) parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} de cada mês, iniciando no dia ${dataBR(dados.data_primeira_parcela)} e seus meses subsequentes.`);
+                    out += `<p>Parágrafo Primeiro. Caso o comprador deixe de efetuar o pagamento de duas ou mais parcelas consecutivas do acordo de compra e venda de veículo a prazo, o contrato se auto recindirá de pleno direito, independentemente de notificação judicial ou extrajudicial, e o vendedor terá o direito de tomar posse do veículo imediatamente, sem prejuízo de seu direito de reaver o valor já pago pelo comprador.</p>`;
+                    out += `<p>Parágrafo Segundo. O VENDEDOR não tem obrigação de efetuar o reembolso do valor já pago pelo comprador de forma imediata. O VENDEDOR poderá dispor do veículo como melhor lhe convier, sem qualquer obrigação de restituição ao comprador, ficando este isento de qualquer ônus ou responsabilidade futura em relação ao veículo, incluindo eventuais despesas, tributos ou encargos incidentes sobre o bem.</p>`;
+                    out += `<h3>CONDIÇÕES GERAIS</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza pelos danos causados no veículo objeto desse contrato ou por qualquer outro problemas decorrentes da não realização de revisões acertadas.');
+                    out += blocoContratoValeAssinatura(n++);
+                    out += `<h3>DO FORO</h3>`;
+                    out += blocoForoCV(n++, foro);
+                    out += blocoFechoCV(foro.cidade);
+                    out += blocoAssinaturasEmpilhadasCV(
+                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
+                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
+                    );
+                    return out;
+                }
+            },
+        };
+
+        function montarContrato(d) {
+            const cfg = TIPOS[d.tipo_contrato];
+            const titulo = cfg ? cfg.titulo : 'DECLARAÇÃO';
+            const corpo = cfg && cfg.corpo ? cfg.corpo(d) : '<p>Tipo de declaração sem template de formatação ainda.</p>';
+            return `<h1 style="text-align:center; font-size:16px; letter-spacing:1px; margin-bottom:22px;">${titulo}</h1>${corpo}`;
         }
 
         function abrirDeclFormatado(id) {
             const d = declaracoesPendentesCache.find(x => x.id === id);
             if (!d) return;
             document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato) + ' — formatada';
-            document.getElementById('declFormatadoConteudo').innerHTML = formatarDeclaracaoTexto(d);
+            document.getElementById('declFormatadoConteudo').innerHTML = montarContrato(d);
             document.getElementById('declFormatadoModal').classList.add('active');
         }
         window.abrirDeclFormatado = abrirDeclFormatado;
+
+        // Mesmo modal/mecanismo de impressão do abrirDeclFormatado acima, só que
+        // lendo de contratosCache (histórico já salvo) em vez de declaracoesPendentesCache.
+        function abrirContratoFormatado(id) {
+            const c = contratosCache.find(x => x.id === id);
+            if (!c) return;
+            document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[c.tipo_contrato] || c.tipo_contrato) + ' — formatada';
+            document.getElementById('declFormatadoConteudo').innerHTML = montarContrato(c);
+            document.getElementById('declFormatadoModal').classList.add('active');
+        }
+        window.abrirContratoFormatado = abrirContratoFormatado;
 
         function closeDeclFormatadoModal() {
             document.getElementById('declFormatadoModal').classList.remove('active');
