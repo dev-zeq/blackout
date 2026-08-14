@@ -2465,7 +2465,7 @@
         function printCurriculo(id) {
             const c = curriculosCache.find(x => x.id === id);
             if (!c) return;
-            const header = cvHeaderHtml(c);
+            const header = cvHeaderHtml(c.ia_texto && c.ia_header ? { ...c, ...c.ia_header } : c);
             const corpo = c.ia_texto ? markdownSimplesParaHtml(c.ia_texto) : formatarCurriculoTemplate(c);
             document.getElementById('printArea').innerHTML = header + corpo;
             setTimeout(() => window.print(), 100);
@@ -2553,6 +2553,20 @@
             return 'Outras Informações';
         }
 
+        // Capitaliza pra exibição nos formatados/impressão (nome próprio, cada
+        // palavra maiúscula, preposições minúsculas) — corrige o caso de
+        // "coloquei em minúsculo" sem precisar chamar IA. Não corrige erros de
+        // digitação de verdade (letra faltando etc.) — isso só a IA arruma,
+        // via `header` corrigido devolvido pela Edge Function `curriculo-ia`.
+        const TITLECASE_MINUSCULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
+        function titleCase(str) {
+            if (!str) return str;
+            return str.trim().toLowerCase().split(/\s+/).map((w, i) => {
+                if (i > 0 && TITLECASE_MINUSCULAS.has(w)) return w;
+                return w.charAt(0).toUpperCase() + w.slice(1);
+            }).join(' ');
+        }
+
         function cvHeaderHtml(c) {
             const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : null;
             const sub = [nascimento ? `Nascimento: ${nascimento}` : null, c.nacionalidade, c.estado_civil].filter(Boolean).join(' · ');
@@ -2561,13 +2575,15 @@
                 c.whatsapp && c.whatsapp !== c.telefone ? `💬 ${c.whatsapp}` : null,
                 c.email ? `✉️ ${c.email}` : null,
             ].filter(Boolean).join('   ');
-            const endereco = [c.endereco, c.bairro, c.cidade, c.estado].filter(Boolean).join(', ');
+            const nome = titleCase(c.nome);
+            const sobrenome = titleCase(c.sobrenome);
+            const endereco = [titleCase(c.endereco), titleCase(c.bairro), titleCase(c.cidade), c.estado].filter(Boolean).join(', ');
             const foto = c.foto_url ? `<img class="cv-photo" src="${escapeHtml(c.foto_url)}" alt="Foto">` : '';
             return `
                 <div class="cv-header">
                     ${foto}
                     <div class="cv-id">
-                        <h1>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</h1>
+                        <h1>${escapeHtml(nome)} ${escapeHtml(sobrenome) || ''}</h1>
                         ${sub ? `<p class="cv-sub">${escapeHtml(sub)}</p>` : ''}
                         ${contato ? `<p class="cv-contact">${contato}</p>` : ''}
                         ${endereco ? `<p class="cv-sub">${escapeHtml(endereco)}</p>` : ''}
@@ -2655,25 +2671,25 @@
             modal.dataset.nome = `${c.nome} ${c.sobrenome || ''}`;
             modal.dataset.useIA = useIA ? '1' : '';
 
-            const header = cvHeaderHtml(c);
-
             if (!useIA) {
                 btnRegerar.style.display = 'none';
-                conteudo.innerHTML = header + formatarCurriculoTemplate(c);
+                conteudo.innerHTML = cvHeaderHtml(c) + formatarCurriculoTemplate(c);
                 btnImprimir.style.display = '';
                 return;
             }
 
             // Já foi gerado antes pra esse currículo? Reaproveita — evita gastar
-            // token de novo toda vez que só quer imprimir depois.
+            // token de novo toda vez que só quer imprimir depois. Usa o cabeçalho
+            // já corrigido pela IA (ia_header) se tiver sido salvo junto.
             if (c.ia_texto) {
-                conteudo.innerHTML = header + markdownSimplesParaHtml(c.ia_texto);
+                const headerCorrigido = cvHeaderHtml(c.ia_header ? { ...c, ...c.ia_header } : c);
+                conteudo.innerHTML = headerCorrigido + markdownSimplesParaHtml(c.ia_texto);
                 btnImprimir.style.display = '';
                 btnRegerar.style.display = '';
                 return;
             }
 
-            await gerarComIA(c, header);
+            await gerarComIA(c, cvHeaderHtml(c));
         }
         window.abrirFormatado = abrirFormatado;
 
@@ -2696,11 +2712,13 @@
                 if (!data || !data.texto) throw new Error(data && data.error ? data.error : 'IA não retornou conteúdo');
 
                 c.ia_texto = data.texto;
+                c.ia_header = data.header || null;
                 c.ia_gerado_em = new Date().toISOString();
-                dbUpdate('curriculos', { ia_texto: c.ia_texto, ia_gerado_em: c.ia_gerado_em }, { id: c.id })
+                dbUpdate('curriculos', { ia_texto: c.ia_texto, ia_header: c.ia_header, ia_gerado_em: c.ia_gerado_em }, { id: c.id })
                     .catch((saveError) => console.warn('Não salvou o texto da IA:', saveError.message));
 
-                conteudo.innerHTML = header + markdownSimplesParaHtml(data.texto);
+                const headerCorrigido = c.ia_header ? cvHeaderHtml({ ...c, ...c.ia_header }) : header;
+                conteudo.innerHTML = headerCorrigido + markdownSimplesParaHtml(data.texto);
                 btnImprimir.style.display = '';
                 btnRegerar.style.display = '';
             } catch (err) {
