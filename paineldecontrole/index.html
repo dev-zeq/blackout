@@ -837,6 +837,8 @@
                         <option value="CV_VEICULO_VISTA">À vista</option>
                         <option value="CV_VEICULO_PRAZO_ENTRADA">A prazo, com entrada</option>
                         <option value="CV_VEICULO_PRAZO_SEM_ENTRADA">A prazo, sem entrada</option>
+                        <option value="CV_VEICULO_VISTA_CARRO">À vista, entrada é outro veículo</option>
+                        <option value="CV_VEICULO_PRAZO_CARRO_PARCELAS">A prazo, entrada é outro veículo</option>
                     </select>
                 </div>
 
@@ -975,6 +977,41 @@
                     </div>
                     <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_se"></div>
                     <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">O dia do vencimento das parcelas seguintes é sempre o mesmo dia da 1ª parcela — não precisa informar separado.</p>
+                </div>
+
+                <div id="cv_pag_vista_carro" style="display:none;">
+                    <div class="form-group"><label>Valor total do negócio</label><input type="number" step="0.01" id="cv_valor_total_vc"></div>
+                    <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">A quantia em dinheiro (item b) é calculada sozinha: valor total menos o valor do veículo dado na entrada, preenchido abaixo.</p>
+                </div>
+
+                <div id="cv_pag_prazo_carro_parcelas" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="cv_valor_total_pc"></div>
+                        <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_pc"></div>
+                    </div>
+                    <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_pc"></div>
+                    <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">O valor restante (dividido nas parcelas) é calculado sozinho: valor total menos o valor do veículo dado na entrada, preenchido abaixo. Dia do vencimento é sempre o dia da 1ª parcela.</p>
+                </div>
+
+                <div id="cv_veiculo2" style="display:none;">
+                    <div class="fieldset-title">🚙 Veículo dado na entrada (de propriedade do Comprador)</div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Tipo de veículo</label><input type="text" id="cv2_tipo_veiculo" value="Moto" placeholder="Carro, Moto..."></div>
+                        <div class="form-group"><label>Fabricante</label><input type="text" id="cv2_fabricante"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Modelo</label><input type="text" id="cv2_modelo"></div>
+                        <div class="form-group"><label>Ano fab./modelo</label><input type="text" id="cv2_ano" placeholder="2014/2014"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Cor</label><input type="text" id="cv2_cor"></div>
+                        <div class="form-group"><label>Placa</label><input type="text" id="cv2_placa"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Renavam</label><input type="text" id="cv2_renavam" inputmode="numeric"></div>
+                        <div class="form-group"><label>Chassi</label><input type="text" id="cv2_chassi"></div>
+                    </div>
+                    <div class="form-group"><label>Valor atribuído a este veículo na negociação</label><input type="number" step="0.01" id="cv2_valor"></div>
                 </div>
 
                 <div class="fieldset-title">⚖️ Foro</div>
@@ -1593,6 +1630,9 @@
             document.getElementById('cv_pag_vista').style.display = tipo === 'CV_VEICULO_VISTA' ? '' : 'none';
             document.getElementById('cv_pag_prazo_entrada').style.display = tipo === 'CV_VEICULO_PRAZO_ENTRADA' ? '' : 'none';
             document.getElementById('cv_pag_prazo_sem_entrada').style.display = tipo === 'CV_VEICULO_PRAZO_SEM_ENTRADA' ? '' : 'none';
+            document.getElementById('cv_pag_vista_carro').style.display = tipo === 'CV_VEICULO_VISTA_CARRO' ? '' : 'none';
+            document.getElementById('cv_pag_prazo_carro_parcelas').style.display = tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS' ? '' : 'none';
+            document.getElementById('cv_veiculo2').style.display = (tipo === 'CV_VEICULO_VISTA_CARRO' || tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS') ? '' : 'none';
         }
         window.toggleCVPagamento = toggleCVPagamento;
 
@@ -1721,6 +1761,10 @@
                 const dados = {};
                 const tipoVeiculo = cleanStr(document.getElementById('cv_tipo_veiculo').value);
                 if (tipoVeiculo) dados.tipo_veiculo = tipoVeiculo;
+                if (tipo === 'CV_VEICULO_VISTA_CARRO' || tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS') {
+                    const tipoVeiculoEntrada = cleanStr(document.getElementById('cv2_tipo_veiculo').value);
+                    if (tipoVeiculoEntrada) dados.tipo_veiculo_entrada = tipoVeiculoEntrada;
+                }
 
                 if (tipo === 'CV_VEICULO_VISTA') {
                     dados.valor_total = parseFloat(document.getElementById('cv_valor_total_vista').value) || 0;
@@ -1736,6 +1780,14 @@
                     dados.num_parcelas = parseInt(document.getElementById('cv_num_parcelas_se').value, 10) || 0;
                     dados.data_primeira_parcela = document.getElementById('cv_data_primeira_parcela_se').value || null;
                     if (!dados.valor_total || !dados.num_parcelas || !dados.data_primeira_parcela) throw new Error('Valor total, número de parcelas e data da 1ª parcela são obrigatórios');
+                } else if (tipo === 'CV_VEICULO_VISTA_CARRO') {
+                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_vc').value) || 0;
+                    if (!dados.valor_total) throw new Error('Valor total é obrigatório');
+                } else if (tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS') {
+                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_pc').value) || 0;
+                    dados.num_parcelas = parseInt(document.getElementById('cv_num_parcelas_pc').value, 10) || 0;
+                    dados.data_primeira_parcela = document.getElementById('cv_data_primeira_parcela_pc').value || null;
+                    if (!dados.valor_total || !dados.num_parcelas || !dados.data_primeira_parcela) throw new Error('Valor total, número de parcelas e data da 1ª parcela são obrigatórios');
                 }
 
                 const foroManual = cvForoManualFinal();
@@ -1745,7 +1797,7 @@
                 const test2Nome = cleanStr(document.getElementById('cv_test2_nome').value);
                 if (test2Nome) { dados.testemunha_2_nome = test2Nome; dados.testemunha_2_cpf = cleanDigits(document.getElementById('cv_test2_cpf').value) || null; }
 
-                await dbInsert('contratos', {
+                const [contratoRow] = await dbInsert('contratos', {
                     tipo_contrato: tipo,
                     proprietario_id: vendedorId,
                     responsavel_id: compradorId,
@@ -1753,6 +1805,32 @@
                     data_registro: new Date().toISOString(),
                     dados,
                 });
+
+                // Variantes "com carro": o 2º veículo (dado na entrada) é do
+                // COMPRADOR, não do vendedor, e liga no contrato via
+                // contrato_ativos (papel:'entrada') em vez de contratos.ativo_id
+                // — que já está ocupado pelo veículo principal, do vendedor.
+                if (tipo === 'CV_VEICULO_VISTA_CARRO' || tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS') {
+                    const valorEntradaVeiculo = parseFloat(document.getElementById('cv2_valor').value) || 0;
+                    if (!valorEntradaVeiculo) throw new Error('Valor do veículo dado na entrada é obrigatório');
+                    const ativo2Id = await upsertAtivo({
+                        tipo: 'VEICULO',
+                        proprietario_id: compradorId,
+                        fabricante: cleanStr(document.getElementById('cv2_fabricante').value),
+                        modelo: cleanStr(document.getElementById('cv2_modelo').value),
+                        ano_fabricacao_modelo: cleanStr(document.getElementById('cv2_ano').value),
+                        placa: cleanStr(document.getElementById('cv2_placa').value).toUpperCase() || null,
+                        cor: cleanStr(document.getElementById('cv2_cor').value),
+                        chassi: cleanStr(document.getElementById('cv2_chassi').value),
+                        renavam: cleanDigits(document.getElementById('cv2_renavam').value),
+                    });
+                    await dbInsert('contrato_ativos', {
+                        contrato_id: contratoRow.id,
+                        ativo_id: ativo2Id,
+                        papel: 'entrada',
+                        valor: valorEntradaVeiculo,
+                    });
+                }
 
                 closeCVModal();
                 await loadContratos();
@@ -2199,6 +2277,8 @@
             CV_VEICULO_VISTA: '🚗 Compra e Venda de Veículo — à vista',
             CV_VEICULO_PRAZO_ENTRADA: '🚗 Compra e Venda de Veículo — a prazo c/ entrada',
             CV_VEICULO_PRAZO_SEM_ENTRADA: '🚗 Compra e Venda de Veículo — a prazo s/ entrada',
+            CV_VEICULO_VISTA_CARRO: '🚗 Compra e Venda de Veículo — à vista c/ carro na entrada',
+            CV_VEICULO_PRAZO_CARRO_PARCELAS: '🚗 Compra e Venda de Veículo — a prazo, carro na entrada',
         };
         let contratosCache = [];
 
@@ -2233,7 +2313,8 @@
                         id, data_registro, tipo_contrato, dados,
                         proprietario:pessoas!contratos_proprietario_id_fkey(nome, cpf, rg, genero, nacionalidade, estado_civil, profissao, endereco, bairro, cidade, estado),
                         responsavel:pessoas!contratos_responsavel_id_fkey(nome, cpf, rg, genero, nacionalidade, estado_civil, profissao, endereco, bairro, cidade, estado),
-                        ativo:ativos!contratos_ativo_id_fkey(placa, modelo, fabricante, cor, ano_fabricacao_modelo, chassi, renavam)
+                        ativo:ativos!contratos_ativo_id_fkey(placa, modelo, fabricante, cor, ano_fabricacao_modelo, chassi, renavam),
+                        contrato_ativos(papel, valor, ativo:ativos(placa, modelo, fabricante, cor, ano_fabricacao_modelo, chassi, renavam))
                     `)
                     .order('data_registro', { ascending: false });
 
@@ -2488,14 +2569,33 @@
 
         // À vista usa uma frase mais curta (sem separar Fabricante/Modelo) —
         // é assim mesmo no original, template mais antigo que os dois a prazo.
-        function blocoObjetoVista(n, v) {
-            return clausulaCV(n, `O presente contrato tem como OBJETO, o veículo denominado ${(v.tipo || 'carro').toLowerCase()}, modelo ${up(v.fabricante)} ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, cor: ${up(v.cor)}, placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')}, de propriedade do VENDEDOR, livre de qualquer ônus ou encargo.`);
+        // `tipoVeiculo` vem de dados.tipo_veiculo (campo do form) — não existe
+        // coluna "tipo descritivo" em `ativos` (ativos.tipo é só a categoria
+        // fixa VEICULO/IMOVEL, não "carro"/"moto"), por isso não vem de `v`.
+        function blocoObjetoVista(n, v, tipoVeiculo) {
+            return clausulaCV(n, `O presente contrato tem como OBJETO, o veículo denominado ${(tipoVeiculo || 'carro').toLowerCase()}, modelo ${up(v.fabricante)} ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, cor: ${up(v.cor)}, placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')}, de propriedade do VENDEDOR, livre de qualquer ônus ou encargo.`);
         }
-        function blocoObjetoPrazo(n, v) {
-            return clausulaCV(n, `O presente contrato tem como OBJETO, um veículo denominado ${(v.tipo || 'carro').toLowerCase()}, Fabricante ${up(v.fabricante)}, Modelo/Versão ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, na Cor: ${up(v.cor)}, Placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')}, de propriedade do VENDEDOR, livre de qualquer ônus ou encargo.`);
+        function blocoObjetoPrazo(n, v, tipoVeiculo) {
+            return clausulaCV(n, `O presente contrato tem como OBJETO, um veículo denominado ${(tipoVeiculo || 'carro').toLowerCase()}, Fabricante ${up(v.fabricante)}, Modelo/Versão ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, na Cor: ${up(v.cor)}, Placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')}, de propriedade do VENDEDOR, livre de qualquer ônus ou encargo.`);
         }
         function blocoVeiculoUsadoInspecionado(n) {
             return clausulaCV(n, 'O veículo, objeto deste contrato é usado, apresentando desgaste natural decorrente do tempo, já visto e inspecionado pelo COMPRADOR, o qual tomou ciência de suas condições e estado de conservação.');
+        }
+        // Descrição do 2º veículo (o dado como entrada pelo COMPRADOR) dentro
+        // da cláusula de pagamento — mesmo padrão de frase do objeto principal
+        // (curta na à vista, longa na a prazo), mas "de propriedade do
+        // COMPRADOR" e sem o "livre de ônus" na variante à vista (é assim no
+        // original — ver COMPRA-VENDA-REF.md §2.4/§2.5). `tipoVeiculo` vem de
+        // dados.tipo_veiculo_entrada, mesmo motivo do comentário acima.
+        function trechoVeiculoEntradaVista(v, tipoVeiculo) {
+            return `um veículo denominado ${(tipoVeiculo || 'carro').toLowerCase()}, modelo ${up(v.fabricante)} ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, cor: ${up(v.cor)}, placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')} de propriedade do COMPRADOR.`;
+        }
+        function trechoVeiculoEntradaPrazo(v, tipoVeiculo) {
+            return `um veículo denominado ${(tipoVeiculo || 'carro').toLowerCase()}, Fabricante ${up(v.fabricante)}, Modelo/Versão ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, na Cor: ${up(v.cor)}, Placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')}, de propriedade do COMPRADOR, livre de qualquer ônus ou encargo.`;
+        }
+        function ativoEntradaDe(d) {
+            const row = (d.contrato_ativos || []).find(x => x.papel === 'entrada');
+            return { ativo: (row && row.ativo) || {}, valor: (row && row.valor) || 0 };
         }
         function paragrafoCompradorAceita() {
             return '<p>Primeiro Parágrafo. O COMPRADOR aceita o veículo nas condições em que se encontra, ciente de que quaisquer reparos, consertos ou manutenções necessárias serão de sua exclusiva responsabilidade a partir da assinatura deste instrumento pelas partes.</p>';
@@ -2695,7 +2795,7 @@
                     out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
                     out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Veículo Usado à Vista, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
                     out += `<h3>DO OBJETO DO CONTRATO</h3>`;
-                    out += blocoObjetoVista(n++, v);
+                    out += blocoObjetoVista(n++, v, dados.tipo_veiculo);
                     out += blocoVeiculoUsadoInspecionado(n++);
                     out += `<h3>DAS RESPONSABILIDADES</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza por eventuais defeitos do veículo, uma vez que o veículo é usado e é vendido no estado em que se encontra, sem qualquer garantia, expressa ou implícita, de funcionamento adequado ou bom estado.');
@@ -2747,7 +2847,7 @@
                     out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
                     out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Veículo Usado à Prazo, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
                     out += `<h3>DO OBJETO DO CONTRATO</h3>`;
-                    out += blocoObjetoPrazo(n++, v);
+                    out += blocoObjetoPrazo(n++, v, dados.tipo_veiculo);
                     out += blocoVeiculoUsadoInspecionado(n++);
                     out += `<h3>DAS RESPONSABILIDADES</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza por eventuais defeitos do veículo, uma vez que o veículo é usado e foi vendido no estado em que se encontra, sem qualquer garantia, expressa ou implícita, de funcionamento adequado ou bom estado.');
@@ -2800,7 +2900,7 @@
                     out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
                     out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Veículo Usado à Prazo, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
                     out += `<h3>DO OBJETO DO CONTRATO</h3>`;
-                    out += blocoObjetoPrazo(n++, v);
+                    out += blocoObjetoPrazo(n++, v, dados.tipo_veiculo);
                     out += blocoVeiculoUsadoInspecionado(n++);
                     out += `<h3>DAS RESPONSABILIDADES</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza por eventuais defeitos do veículo, uma vez que o veículo é usado e foi vendido no estado em que se encontra, sem qualquer garantia, expressa ou implícita, de funcionamento adequado ou bom estado.');
@@ -2814,6 +2914,115 @@
                     out += `<p>Parágrafo Segundo. O VENDEDOR não tem obrigação de efetuar o reembolso do valor já pago pelo comprador de forma imediata. O VENDEDOR poderá dispor do veículo como melhor lhe convier, sem qualquer obrigação de restituição ao comprador, ficando este isento de qualquer ônus ou responsabilidade futura em relação ao veículo, incluindo eventuais despesas, tributos ou encargos incidentes sobre o bem.</p>`;
                     out += `<h3>CONDIÇÕES GERAIS</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza pelos danos causados no veículo objeto desse contrato ou por qualquer outro problemas decorrentes da não realização de revisões acertadas.');
+                    out += blocoContratoValeAssinatura(n++);
+                    out += `<h3>DO FORO</h3>`;
+                    out += blocoForoCV(n++, foro);
+                    out += blocoFechoCV(foro.cidade);
+                    out += blocoAssinaturasEmpilhadasCV(
+                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
+                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
+                    );
+                    return out;
+                }
+            },
+
+            // Ver COMPRA-VENDA-REF.md §2.4. Igual à CV_VEICULO_VISTA, mas o
+            // pagamento é dividido entre um 2º veículo (entrada, de
+            // propriedade do COMPRADOR — vai pra `contrato_ativos` com
+            // papel:'entrada') e dinheiro. CONDIÇÕES GERAIS aqui só tem 1
+            // cláusula no original (sem a de "contrato vale a partir da
+            // assinatura") — reproduzido fiel, não é omissão do código.
+            CV_VEICULO_VISTA_CARRO: {
+                titulo: 'CONTRATO DE COMPRA E VENDA DE VEÍCULO USADO À VISTA',
+                papeis: ['proprietario', 'responsavel'],
+                papeisLabel: ['VENDEDOR', 'COMPRADOR'],
+                foro: 'parte_1',
+                origem: 'contratos',
+                corpo(d) {
+                    const vendedor = d.proprietario || {};
+                    const comprador = d.responsavel || {};
+                    const v = d.ativo || {};
+                    const dados = d.dados || {};
+                    const foro = resolverForo(this, d, dados);
+                    const { ativo: v2, valor: valorEntradaVeiculo } = ativoEntradaDe(d);
+                    const valorDinheiro = (dados.valor_total || 0) - valorEntradaVeiculo;
+                    let n = 1;
+                    let out = '';
+                    out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
+                    out += `<p>${qualificarCV(vendedor, 'VENDEDOR')}</p>`;
+                    out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
+                    out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Veículo Usado à Vista, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
+                    out += `<h3>DO OBJETO DO CONTRATO</h3>`;
+                    out += blocoObjetoVista(n++, v, dados.tipo_veiculo);
+                    out += blocoVeiculoUsadoInspecionado(n++);
+                    out += `<h3>DAS RESPONSABILIDADES</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza por eventuais defeitos do veículo, uma vez que o veículo é usado e é vendido no estado em que se encontra, sem qualquer garantia, expressa ou implícita, de funcionamento adequado ou bom estado.');
+                    out += paragrafoCompradorAceita();
+                    out += blocoEntregaLocalIndicado(n++);
+                    out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO VEÍCULO</h3>`;
+                    out += blocoTransferenciaPropriedade(n++, false);
+                    out += `<h3>DO PAGAMENTO</h3>`;
+                    out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(dados.valor_total)} (${extensoReais(dados.valor_total)}), sendo pago da seguinte forma:<br><br>`
+                        + `a) ${fmt(valorEntradaVeiculo)} (${extensoReais(valorEntradaVeiculo)}), através da transferência de propriedade de ${trechoVeiculoEntradaVista(v2, dados.tipo_veiculo_entrada)}<br><br>`
+                        + `b) Mais a quantia em dinheiro no valor de ${fmt(valorDinheiro)} (${extensoReais(valorDinheiro)}) a ser quitada no ato da assinatura desse contrato, sendo que a transferência do veículo e o pagamento em dinheiro ocorrerão simultaneamente.`);
+                    out += `<h3>CONDIÇÕES GERAIS</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR e COMPRADOR não se responsabilizaram pelos danos causados entre os veículos negociados desse contrato ou por qualquer outro problemas decorrentes da não realização de revisões periódicas em seus receptivos veículos.');
+                    out += `<h3>DO FORO</h3>`;
+                    out += blocoForoCV(n++, foro);
+                    out += blocoFechoCV(foro.cidade);
+                    out += blocoAssinaturasEmpilhadasCV(
+                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
+                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
+                    );
+                    return out;
+                }
+            },
+
+            // Ver COMPRA-VENDA-REF.md §2.5. Igual à CV_VEICULO_PRAZO_ENTRADA,
+            // mas a entrada é um 2º veículo (de propriedade do COMPRADOR) em
+            // vez de dinheiro — resto segue igual (parcelas, inadimplência,
+            // cláusula de mudança de cidade, foro do vendedor).
+            CV_VEICULO_PRAZO_CARRO_PARCELAS: {
+                titulo: 'CONTRATO DE COMPRA E VENDA DE VEÍCULO USADO À PRAZO C/ ENTRADA',
+                papeis: ['proprietario', 'responsavel'],
+                papeisLabel: ['VENDEDOR', 'COMPRADOR'],
+                foro: 'parte_1',
+                origem: 'contratos',
+                corpo(d) {
+                    const vendedor = d.proprietario || {};
+                    const comprador = d.responsavel || {};
+                    const v = d.ativo || {};
+                    const dados = d.dados || {};
+                    const foro = resolverForo(this, d, dados);
+                    const { ativo: v2, valor: valorEntradaVeiculo } = ativoEntradaDe(d);
+                    const dia = diaDoMes(dados.data_primeira_parcela);
+                    const restante = (dados.valor_total || 0) - valorEntradaVeiculo;
+                    const parcela = dados.num_parcelas ? restante / dados.num_parcelas : 0;
+                    let n = 1;
+                    let out = '';
+                    out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
+                    out += `<p>${qualificarCV(vendedor, 'VENDEDOR')}</p>`;
+                    out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
+                    out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Veículo Usado à Prazo, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
+                    out += `<h3>DO OBJETO DO CONTRATO</h3>`;
+                    out += blocoObjetoPrazo(n++, v, dados.tipo_veiculo);
+                    out += blocoVeiculoUsadoInspecionado(n++);
+                    out += `<h3>DAS RESPONSABILIDADES</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza por eventuais defeitos do veículo, uma vez que o veículo é usado e foi vendido no estado em que se encontra, sem qualquer garantia, expressa ou implícita, de funcionamento adequado ou bom estado.');
+                    out += paragrafoCompradorAceita();
+                    out += clausulaCV(n++, 'Na hipótese de o COMPRADOR mudar-se para outra cidade distante do município onde foi celebrado o presente contrato, ou transferir sua residência para outro Estado da Federação, obriga-se o COMPRADOR a antecipar o pagamento integral de todas as parcelas vincendas, quitando totalmente o saldo devedor, bem como a providenciar, no prazo máximo de 10 (dez) dias, a transferência do veículo para o seu próprio nome junto ao órgão de trânsito competente.');
+                    out += blocoEntregaLocalIndicado(n++);
+                    out += clausulaCV(n++, 'A partir da data da entrega do veículo, toda e qualquer responsabilidade decorrente da posse, uso e condução do bem passa a ser exclusivamente do COMPRADOR, incluindo, mas não se limitando a:<br><br>a) pagamento de multas de trânsito, taxas e encargos administrativos;<br>b) indenizações decorrentes de acidentes, inclusive com danos materiais, morais, pessoais e/ou fatais;<br>c) responsabilidades cíveis, criminais ou administrativas oriundas da utilização do veículo.<br><br>O VENDEDOR fica, desde já, isento de qualquer obrigação ou responsabilidade sobre os fatos acima mencionados, cabendo ao COMPRADOR responder integralmente perante terceiros e autoridades competentes.');
+                    out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO VEÍCULO</h3>`;
+                    out += blocoTransferenciaPropriedade(n++, true);
+                    out += `<h3>DO PAGAMENTO</h3>`;
+                    out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(dados.valor_total)} (${extensoReais(dados.valor_total)}), a ser pago da seguinte forma:<br><br>`
+                        + `a) Uma entrada no valor de ${fmt(valorEntradaVeiculo)} (${extensoReais(valorEntradaVeiculo)}) através da transferência de propriedade de ${trechoVeiculoEntradaPrazo(v2, dados.tipo_veiculo_entrada)}<br><br>`
+                        + `b) E o valor restante de ${fmt(restante)} (${extensoReais(restante)}) em ${dados.num_parcelas} parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} (${numExtenso(dia)}) de cada mês, iniciando no dia ${dataBR(dados.data_primeira_parcela)} e seus meses subsequentes.`);
+                    out += clausulaCV(n++, 'Caso o comprador deixe de efetuar o pagamento de duas ou mais parcelas consecutivas do acordo de compra e venda de veículo a prazo, o contrato se auto recindirá de pleno direito, independentemente de notificação judicial ou extrajudicial, e o VENDEDOR terá o direito de tomar posse do veículo imediatamente, sem prejuízo de seu direito de reaver o valor já pago pelo COMPRADOR.');
+                    out += `<p>Primeiro Parágrafo. O VENDEDOR não tem obrigação de efetuar o reembolso do valor já pago pelo comprador de forma imediata. O VENDEDOR poderá dispor do veículo como melhor lhe convier, sem qualquer obrigação de restituição ao COMPRADOR, ficando este isento de qualquer ônus ou responsabilidade futura em relação ao veículo, incluindo eventuais despesas, tributos ou encargos incidentes sobre o bem.</p>`;
+                    out += `<h3>CONDIÇÕES GERAIS</h3>`;
+                    out += clausulaCV(n++, 'O VENDEDOR e COMPRADOR não se responsabilizaram pelos danos causados entre os veículos negociados desse contrato ou por qualquer outro problemas decorrentes da não realização de revisões periódicas em seus receptivos veículos.');
                     out += blocoContratoValeAssinatura(n++);
                     out += `<h3>DO FORO</h3>`;
                     out += blocoForoCV(n++, foro);
