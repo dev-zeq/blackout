@@ -680,8 +680,34 @@
                 </div>
                 <div class="form-group"><label>Endereço</label><input type="text" id="t_prop_endereco"></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Bairro</label><input type="text" id="t_prop_bairro"></div>
-                    <div class="form-group"><label>Cidade/UF</label><input type="text" id="t_prop_cidade_uf" placeholder="Camboriú/SC"></div>
+                    <div class="form-group"><label>Cidade</label>
+                        <select id="t_prop_cidade" onchange="onTermoCidadeChange('prop')">
+                            <option value="">Selecione</option>
+                            <option value="Camboriú">Camboriú</option>
+                            <option value="Balneário Camboriú">Balneário Camboriú</option>
+                            <option value="Itapema">Itapema</option>
+                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Outra">Outra</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Estado</label>
+                        <select id="t_prop_estado">
+                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
+                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="t_prop_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="t_prop_cidade_outra"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Bairro</label>
+                        <select id="t_prop_bairro" onchange="onTermoBairroChange('prop')" disabled><option value="">Selecione a cidade primeiro</option></select>
+                    </div>
+                    <div class="form-group" id="t_prop_bairro_outro_wrap" style="display:none;"><label>Qual bairro?</label><input type="text" id="t_prop_bairro_outro"></div>
                 </div>
 
                 <div class="checkbox-row">
@@ -706,8 +732,34 @@
                     </div>
                     <div class="form-group"><label>Endereço</label><input type="text" id="t_resp_endereco"></div>
                     <div class="form-row">
-                        <div class="form-group"><label>Bairro</label><input type="text" id="t_resp_bairro"></div>
-                        <div class="form-group"><label>Cidade/UF</label><input type="text" id="t_resp_cidade_uf" placeholder="Camboriú/SC"></div>
+                        <div class="form-group"><label>Cidade</label>
+                            <select id="t_resp_cidade" onchange="onTermoCidadeChange('resp')">
+                                <option value="">Selecione</option>
+                                <option value="Camboriú">Camboriú</option>
+                                <option value="Balneário Camboriú">Balneário Camboriú</option>
+                                <option value="Itapema">Itapema</option>
+                                <option value="Porto Belo">Porto Belo</option>
+                                <option value="Outra">Outra</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Estado</label>
+                            <select id="t_resp_estado">
+                                <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+                                <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+                                <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+                                <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+                                <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+                                <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
+                                <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" id="t_resp_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="t_resp_cidade_outra"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Bairro</label>
+                            <select id="t_resp_bairro" onchange="onTermoBairroChange('resp')" disabled><option value="">Selecione a cidade primeiro</option></select>
+                        </div>
+                        <div class="form-group" id="t_resp_bairro_outro_wrap" style="display:none;"><label>Qual bairro?</label><input type="text" id="t_resp_bairro_outro"></div>
                     </div>
                 </div>
 
@@ -1210,14 +1262,56 @@
             return digits || null;
         }
 
-        function splitCidadeUf(val) {
-            const v = cleanStr(val);
-            if (!v) return { cidade: null, estado: null };
-            if (v.includes('/')) {
-                const idx = v.lastIndexOf('/');
-                return { cidade: v.slice(0, idx).trim() || null, estado: v.slice(idx + 1).trim() || null };
+        // Cidade + bairro selecionáveis no Termo (mesma região/lista usada nos
+        // formulários públicos de Currículo/Declaração) — evita erro de digitação
+        // tipo "cento" em vez de "Centro". "Outra"/"Outro" libera campo livre.
+        const CIDADES_BAIRROS = {
+            'Camboriú': ['Areias', 'Cedro', 'Centro', 'Conde Vila Verde', 'Lídia Duarte', 'Monte Alegre', 'Rio Pequeno', 'Santa Regina', 'São Francisco de Assis', 'Tabuleiro', 'Várzea do Ranchinho'],
+            'Balneário Camboriú': ['Ariribá', 'Barra', 'Barra Norte', 'Barra Sul', 'Centro', 'Estados', 'Estaleiro', 'Estaleirinho', 'Interpraias', 'Jardim Iate Clube', 'Laranjeiras', 'Municípios', 'Nações', 'Nova Esperança', 'Pioneiros', 'Praia dos Amores', 'São Judas', 'Vila Real'],
+            'Itapema': ['Alto do São Bento', 'Andorinha', 'Canto da Praia', 'Casa Branca', 'Castelo Branco', 'Centro', 'Ilhota', 'Meia Praia', 'Morretes', 'Sertãozinho', 'Tabuleiro dos Oliveiras', 'Várzea'],
+            'Porto Belo': ['Alto Perequê', 'Araçá', 'Balneário Perequê', 'Centro', 'Enseada Encantada', 'Jardim Dourado', 'Valongo', 'Vila Nova', 'Vivapark'],
+        };
+        function bairroSelectOptions(cidade, selected) {
+            const lista = CIDADES_BAIRROS[cidade] || [];
+            return '<option value="">Selecione</option>' + lista.map(b => `<option value="${escapeHtml(b)}" ${selected === b ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('') + `<option value="__outro__" ${selected === '__outro__' ? 'selected' : ''}>Outro</option>`;
+        }
+        function onTermoCidadeChange(prefixo) {
+            const cidade = document.getElementById(`t_${prefixo}_cidade`).value;
+            const outraWrap = document.getElementById(`t_${prefixo}_cidade_outra_wrap`);
+            const bairroSel = document.getElementById(`t_${prefixo}_bairro`);
+            const bairroOutroWrap = document.getElementById(`t_${prefixo}_bairro_outro_wrap`);
+            if (cidade === 'Outra') {
+                outraWrap.style.display = '';
+                bairroSel.innerHTML = '<option value="">Selecione a cidade primeiro</option>';
+                bairroSel.disabled = true;
+                bairroOutroWrap.style.display = '';
+            } else if (cidade) {
+                outraWrap.style.display = 'none';
+                bairroSel.disabled = false;
+                bairroSel.innerHTML = bairroSelectOptions(cidade, '');
+                bairroOutroWrap.style.display = 'none';
+            } else {
+                outraWrap.style.display = 'none';
+                bairroSel.innerHTML = '<option value="">Selecione a cidade primeiro</option>';
+                bairroSel.disabled = true;
+                bairroOutroWrap.style.display = 'none';
             }
-            return { cidade: v, estado: null };
+        }
+        window.onTermoCidadeChange = onTermoCidadeChange;
+        function onTermoBairroChange(prefixo) {
+            const bairro = document.getElementById(`t_${prefixo}_bairro`).value;
+            document.getElementById(`t_${prefixo}_bairro_outro_wrap`).style.display = bairro === '__outro__' ? '' : 'none';
+        }
+        window.onTermoBairroChange = onTermoBairroChange;
+        function termoCidadeFinal(prefixo) {
+            const cidade = document.getElementById(`t_${prefixo}_cidade`).value;
+            return cidade === 'Outra' ? cleanStr(document.getElementById(`t_${prefixo}_cidade_outra`).value) : (cidade || null);
+        }
+        function termoBairroFinal(prefixo) {
+            const cidade = document.getElementById(`t_${prefixo}_cidade`).value;
+            const bairro = document.getElementById(`t_${prefixo}_bairro`).value;
+            if (cidade === 'Outra' || bairro === '__outro__') return cleanStr(document.getElementById(`t_${prefixo}_bairro_outro`).value);
+            return bairro || null;
         }
 
         // ===== Painel de Serviços Blackout (menu inicial) =====
@@ -1533,6 +1627,8 @@
             document.getElementById('termoModal').classList.remove('active');
             document.querySelectorAll('#termoModal form')[0].reset();
             document.getElementById('t_responsavel_fields').style.display = 'none';
+            onTermoCidadeChange('prop');
+            onTermoCidadeChange('resp');
         }
         window.openTermoModal = openTermoModal;
         window.closeTermoModal = closeTermoModal;
@@ -1545,7 +1641,6 @@
             btn.disabled = true;
 
             try {
-                const propCidadeUf = splitCidadeUf(document.getElementById('t_prop_cidade_uf').value);
                 const proprietarioData = {
                     nome: cleanStr(document.getElementById('t_prop_nome').value),
                     cpf: cleanDigits(document.getElementById('t_prop_cpf').value),
@@ -1555,9 +1650,9 @@
                     nacionalidade: cleanStr(document.getElementById('t_prop_nacionalidade').value),
                     profissao: cleanStr(document.getElementById('t_prop_profissao').value),
                     endereco: cleanStr(document.getElementById('t_prop_endereco').value),
-                    bairro: cleanStr(document.getElementById('t_prop_bairro').value),
-                    cidade: propCidadeUf.cidade,
-                    estado: propCidadeUf.estado,
+                    bairro: termoBairroFinal('prop'),
+                    cidade: termoCidadeFinal('prop'),
+                    estado: document.getElementById('t_prop_estado').value || null,
                 };
                 if (!proprietarioData.nome) throw new Error('Nome do proprietário é obrigatório');
                 const proprietarioId = await upsertPessoa(proprietarioData);
@@ -1566,7 +1661,6 @@
                 if (!document.getElementById('t_mesmo_responsavel').checked) {
                     const respNome = cleanStr(document.getElementById('t_resp_nome').value);
                     if (!respNome) throw new Error('Nome do responsável é obrigatório');
-                    const respCidadeUf = splitCidadeUf(document.getElementById('t_resp_cidade_uf').value);
                     responsavelId = await upsertPessoa({
                         nome: respNome,
                         cpf: cleanDigits(document.getElementById('t_resp_cpf').value),
@@ -1576,9 +1670,9 @@
                         nacionalidade: cleanStr(document.getElementById('t_resp_nacionalidade').value),
                         profissao: cleanStr(document.getElementById('t_resp_profissao').value),
                         endereco: cleanStr(document.getElementById('t_resp_endereco').value),
-                        bairro: cleanStr(document.getElementById('t_resp_bairro').value),
-                        cidade: respCidadeUf.cidade,
-                        estado: respCidadeUf.estado,
+                        bairro: termoBairroFinal('resp'),
+                        cidade: termoCidadeFinal('resp'),
+                        estado: document.getElementById('t_resp_estado').value || null,
                     });
                 }
 
