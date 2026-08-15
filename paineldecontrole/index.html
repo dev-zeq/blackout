@@ -466,18 +466,17 @@
                     <h3>📑 Histórico de Contratos e Documentos</h3>
                     <span class="table-count" id="termoCount">0 registros</span>
                 </div>
+                <div class="actions" style="padding:12px 20px; border-bottom: 1px solid var(--border);">
+                    <button class="btn-primary" onclick="openTermoModal()">＋ Novo Termo</button>
+                    <button class="btn-primary" onclick="openCVModal()">＋ Novo Compra e Venda</button>
+                    <button class="btn-secondary" onclick="loadContratos()">🔄 Atualizar</button>
+                </div>
                 <div id="termoRows">
                     <div class="empty-state">
                         <div class="empty-icon">📭</div>
                         <div>Carregando...</div>
                     </div>
                 </div>
-            </div>
-
-            <div class="actions">
-                <button class="btn-primary" onclick="openTermoModal()">＋ Novo Termo</button>
-                <button class="btn-primary" onclick="openCVModal()">＋ Novo Compra e Venda</button>
-                <button class="btn-secondary" onclick="loadContratos()">🔄 Atualizar</button>
             </div>
         </div>
 
