@@ -2544,7 +2544,7 @@
                 + (t && t.nome ? `${escapeHtml(t.nome)}<br>` : '')
                 + `CPF: ${escapeHtml((t && t.cpf) || '')}<br>Testemunha 0${i + 1}`
             )).join('');
-            return `<table style="width:100%; border-collapse:collapse; margin-top:32px;">`
+            return `<table style="width:100%; border-collapse:collapse; margin-top:32px; page-break-inside:avoid; break-inside:avoid;">`
                 + `<tr>${linhaPartes}</tr>`
                 + `<tr><td colspan="2" style="height:28px;"></td></tr>`
                 + `<tr>${linhaTestemunhas}</tr>`
@@ -2643,7 +2643,11 @@
                 if (t && t.nome) return `<p style="margin-top:28px;">_______________________________<br>Testemunha ${n}: ${escapeHtml(t.nome)} - CPF: ${escapeHtml(t.cpf || '')}</p>`;
                 return `<p style="margin-top:28px;">_______________________________<br>Testemunha ${n} - CPF:</p>`;
             }).join('');
-            return out;
+            // page-break-inside:avoid no wrapper, não nos <p> individuais —
+            // impede a impressão de cortar entre VENDEDOR e COMPRADOR (ou
+            // entre uma parte e a testemunha), que ficava feio (usuário
+            // reportou vendo isso ao testar a impressão de um contrato real).
+            return `<div style="page-break-inside:avoid; break-inside:avoid;">${out}</div>`;
         }
 
         // Registro de tipos (CONTRATOS-SPEC.md §3): cada entrada sabe montar seu
