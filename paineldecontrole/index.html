@@ -2649,6 +2649,23 @@
             // reportou vendo isso ao testar a impressão de um contrato real).
             return `<div style="page-break-inside:avoid; break-inside:avoid;">${out}</div>`;
         }
+        // Junta DO FORO + fecho + assinaturas num bloco só com
+        // page-break-inside:avoid (não page-break-before:always — isso
+        // forçaria página nova mesmo em contrato curto que caberia inteiro
+        // numa folha). Assim, se o bloco não couber onde estava, o
+        // navegador empurra ele inteiro pra próxima página, em vez de
+        // cortar em qualquer ponto no meio do caminho (usuário reportou
+        // sobra estranha de espaço em branco antes das assinaturas).
+        function blocoFinalCV(n, foro, vendedor, comprador, dados) {
+            let out = `<h3>DO FORO</h3>`;
+            out += blocoForoCV(n, foro);
+            out += blocoFechoCV(foro.cidade);
+            out += blocoAssinaturasEmpilhadasCV(
+                [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
+                [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
+            );
+            return `<div style="page-break-inside:avoid; break-inside:avoid;">${out}</div>`;
+        }
 
         // Registro de tipos (CONTRATOS-SPEC.md §3): cada entrada sabe montar seu
         // próprio corpo a partir de {pessoa_a, pessoa_b, especifico}. Substitui o
@@ -2826,13 +2843,7 @@
                     out += `<h3>CONDIÇÕES GERAIS</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR não se responsabilizará pelos danos causados no veículo por negligência do COMPRADOR, e por problemas decorrentes da não realização das revisões acertadas.');
                     out += blocoContratoValeAssinatura(n++);
-                    out += `<h3>DO FORO</h3>`;
-                    out += blocoForoCV(n++, foro);
-                    out += blocoFechoCV(foro.cidade);
-                    out += blocoAssinaturasEmpilhadasCV(
-                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
-                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
-                    );
+                    out += blocoFinalCV(n++, foro, vendedor, comprador, dados);
                     return out;
                 }
             },
@@ -2883,13 +2894,7 @@
                     out += `<h3>CONDIÇÕES GERAIS</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR não se responsabilizará pelos danos causados no veículo por negligência do COMPRADOR, e por problemas decorrentes da não realização das revisões acertadas.');
                     out += blocoContratoValeAssinatura(n++);
-                    out += `<h3>DO FORO</h3>`;
-                    out += blocoForoCV(n++, foro);
-                    out += blocoFechoCV(foro.cidade);
-                    out += blocoAssinaturasEmpilhadasCV(
-                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
-                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
-                    );
+                    out += blocoFinalCV(n++, foro, vendedor, comprador, dados);
                     return out;
                 }
             },
@@ -2933,13 +2938,7 @@
                     out += `<h3>CONDIÇÕES GERAIS</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR não se responsabiliza pelos danos causados no veículo objeto desse contrato ou por qualquer outro problemas decorrentes da não realização de revisões acertadas.');
                     out += blocoContratoValeAssinatura(n++);
-                    out += `<h3>DO FORO</h3>`;
-                    out += blocoForoCV(n++, foro);
-                    out += blocoFechoCV(foro.cidade);
-                    out += blocoAssinaturasEmpilhadasCV(
-                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
-                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
-                    );
+                    out += blocoFinalCV(n++, foro, vendedor, comprador, dados);
                     return out;
                 }
             },
@@ -2985,13 +2984,7 @@
                         + `b) Mais a quantia em dinheiro no valor de ${fmt(valorDinheiro)} (${extensoReais(valorDinheiro)}) a ser quitada no ato da assinatura desse contrato, sendo que a transferência do veículo e o pagamento em dinheiro ocorrerão simultaneamente.`);
                     out += `<h3>CONDIÇÕES GERAIS</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR e COMPRADOR não se responsabilizaram pelos danos causados entre os veículos negociados desse contrato ou por qualquer outro problemas decorrentes da não realização de revisões periódicas em seus receptivos veículos.');
-                    out += `<h3>DO FORO</h3>`;
-                    out += blocoForoCV(n++, foro);
-                    out += blocoFechoCV(foro.cidade);
-                    out += blocoAssinaturasEmpilhadasCV(
-                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
-                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
-                    );
+                    out += blocoFinalCV(n++, foro, vendedor, comprador, dados);
                     return out;
                 }
             },
@@ -3042,13 +3035,7 @@
                     out += `<h3>CONDIÇÕES GERAIS</h3>`;
                     out += clausulaCV(n++, 'O VENDEDOR e COMPRADOR não se responsabilizaram pelos danos causados entre os veículos negociados desse contrato ou por qualquer outro problemas decorrentes da não realização de revisões periódicas em seus receptivos veículos.');
                     out += blocoContratoValeAssinatura(n++);
-                    out += `<h3>DO FORO</h3>`;
-                    out += blocoForoCV(n++, foro);
-                    out += blocoFechoCV(foro.cidade);
-                    out += blocoAssinaturasEmpilhadasCV(
-                        [{ nome: vendedor.nome, label: 'VENDEDOR(A)' }, { nome: comprador.nome, label: 'COMPRADOR(A)' }],
-                        [{ nome: dados.testemunha_1_nome, cpf: dados.testemunha_1_cpf }, { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf }]
-                    );
+                    out += blocoFinalCV(n++, foro, vendedor, comprador, dados);
                     return out;
                 }
             },
