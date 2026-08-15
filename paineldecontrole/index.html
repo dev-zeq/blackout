@@ -199,9 +199,16 @@
         }
         #printArea { display: none; }
         @media print {
-            body * { visibility: hidden; }
-            #printArea, #printArea * { visibility: visible; }
-            #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 24px; color: #000; background: #fff; }
+            /* display:none (não visibility:hidden) tira o resto do painel do
+               fluxo por completo — visibility:hidden mantém o espaço ocupado
+               e o fundo preto do <body> (--bg: #000000) segue pintando por
+               baixo, o que gerava páginas extras totalmente pretas depois do
+               conteúdo de verdade (bug real, achado pelo usuário ao testar
+               a impressão de um contrato). */
+            @page { size: A4 portrait; margin: 12mm; }
+            body > *:not(#printArea) { display: none !important; }
+            html, body { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+            #printArea { display: block; width: 100%; padding: 24px; color: #000; background: #fff; }
             #printArea h1 { font-size: 22px; margin-bottom: 4px; }
             #printArea h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #000; padding-bottom: 4px; margin: 18px 0 8px; }
             #printArea p { font-size: 13px; margin: 3px 0; line-height: 1.4; }
