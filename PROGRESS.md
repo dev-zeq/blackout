@@ -80,6 +80,24 @@ Testado ao vivo (criar, conferir no banco, editar/recarregar, apagar):
 - Currículo, cidade Camboriú — mesma coisa, incluindo o `estado` (coluna fixa) vindo `null`→`"SC"` automaticamente e `dados.rua`/`dados.numero` persistidos.
 - Os outros 3 formulários de Declaração (Trabalho, Residência, União Estável) só tiveram teste de fumaça (sem erro de JS, campos renderizando certo) — o padrão é idêntico ao do Autônomo, que foi testado ponta a ponta.
 
+## Emitir Recibo (2026-08-16)
+
+Nova função independente no painel, sem mexer em nada das outras. Card **"🧾 Emitir Recibo"** aparece primeiro no menu inicial (`MENU_ITEMS`), com tooltip explicando o que faz.
+
+**Fluxo**: Novo Recibo → formulário → Visualizar Recibo (prévia fiel do documento impresso, ainda sem número definitivo) → Gerar Recibo (grava no banco e atribui o número) → tela final com Imprimir/PDF, Novo Recibo e Fechar.
+
+**Campos do formulário**: Nome do pagador/Razão Social (obrigatório); Tipo de pagador (Pessoa Física/Jurídica) — mostra CPF só se PF, CNPJ só se PJ, nunca os dois; Descrição dos serviços (texto livre, várias linhas); Valor do serviço (mostrado formatado em R$ e por extenso, ex. "R$ 150,00" / "Cento e cinquenta reais.", usando o helper `extensoReais()` que já existia); Forma de pagamento (Dinheiro/PIX/Cartão de débito/Cartão de crédito); Data (pré-preenchida com hoje, editável); Observações (opcional — se não preenchido, a seção inteira some da prévia/impressão, não fica um espaço vazio).
+
+**Numeração sequencial**: tabela nova `recibos` no Supabase, coluna `numero serial unique` — o Postgres garante atomicamente que cada INSERT pega o próximo número disponível, sem risco de dois recibos saírem com o mesmo número mesmo se gerados ao mesmo tempo. Exibido sempre com 6 dígitos (`Nº 000001`).
+
+**Layout timbrado**: logo Blackout (SVG inline, círculo verde com "B"), nome "BLACKOUT" + "Serviços de Impressões e Gráfica Rápida", número/data no canto, seções Recebemos de / Referente a / Valor recebido / Forma de pagamento / Observações (se houver), rodapé com os dados reais da empresa: "Blackout — R. Monte Agulhas Negras, 265 - sl 04, Bairro Monte Alegre - Camboriú/SC — (47) 99991-2755". **Nenhum dado da empresa foi inventado** — só os que o usuário passou explicitamente; o exemplo de pagador (nome/CPF/CNPJ de terceiro) que apareceu no pedido original foi usado só como referência de formatação, nunca gravado como dado real da empresa.
+
+**Impressão/PDF**: reaproveita o padrão existente (`#printArea` + `window.print()`) — não existe biblioteca de geração de PDF no projeto, então "Gerar PDF" é feito via a opção nativa "Salvar como PDF" da janela de impressão do navegador, igual já funciona pros contratos e currículos.
+
+**Banco de dados**: tabela `recibos` (RLS: só `SELECT` pro `anon`; toda escrita passa pela Edge Function `db-write`, que precisou ganhar `recibos: ['insert','update','delete']` no mapa `ALLOWED` — sem isso a escrita falha com "Operação não permitida", mesmo padrão de bug já visto antes com `declaracoes_pendentes`/`curriculos`).
+
+Testado ao vivo: 2 recibos gerados em sequência (números 000001 e 000002, confirmando que não repete/reusa número), formulário PF↔PJ trocando CPF/CNPJ corretamente, Observações vazio não deixa buraco no documento, prévia idêntica ao documento final, listagem em "Recibos Emitidos" (mais recente primeiro), reabrir um recibo já emitido pela lista, excluir. Registros de teste apagados depois e a sequência do banco resetada pra 1, então o primeiro recibo real do usuário vai sair como Nº 000001.
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Locação de imóvel não tem opção de "imóvel com múltiplas unidades" ou campos de IPTU/condomínio separados — hoje é uma cláusula fixa genérica.

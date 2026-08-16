@@ -236,6 +236,29 @@
         #formatadoConteudo p { font-size: 13px; margin: 4px 0; line-height: 1.5; }
         #formatadoConteudo ul { margin: 4px 0; padding-left: 18px; }
         #formatadoConteudo li { font-size: 13px; margin: 3px 0; line-height: 1.4; }
+
+        /* Recibo timbrado — sempre claro (papel), mesmo com o resto do painel
+           escuro: usado dentro de um cartão branco no modal e em #printArea
+           na impressão, por isso as cores aqui são fixas, não var(--...). */
+        .recibo-doc { background: #fff; color: #111; font-family: Arial, Helvetica, sans-serif; padding: 28px 26px; border-radius: 10px; }
+        .recibo-doc-header { display: flex; align-items: center; gap: 14px; }
+        .recibo-doc-brand { flex: 1; min-width: 0; }
+        .recibo-doc-empresa { font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #0c1f14; }
+        .recibo-doc-tagline { font-size: 11px; color: #555; margin-top: 2px; }
+        .recibo-doc-numero { text-align: right; flex-shrink: 0; }
+        .recibo-doc-numero-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #16a34a; text-transform: uppercase; }
+        .recibo-doc-numero-valor { font-size: 16px; font-weight: 800; color: #111; }
+        .recibo-doc-data { font-size: 12px; color: #555; margin-top: 2px; }
+        .recibo-doc-linha { height: 2px; background: #16a34a; margin: 16px 0; border-radius: 2px; }
+        .recibo-doc-secao { margin-bottom: 16px; }
+        .recibo-doc-secao-titulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #16a34a; margin-bottom: 4px; }
+        .recibo-doc-secao-corpo { font-size: 14px; line-height: 1.5; color: #222; }
+        .recibo-doc-valor { font-size: 22px; font-weight: 800; color: #111; }
+        .recibo-doc-extenso { font-size: 13px; color: #444; font-style: italic; margin-top: 2px; }
+        .recibo-doc-footer { font-size: 11.5px; color: #555; line-height: 1.6; text-align: center; }
+        @media print {
+            #printArea .recibo-doc { padding: 0; border-radius: 0; }
+        }
     </style>
 </head>
 <body>
@@ -617,6 +640,22 @@
                 <button class="btn-secondary" onclick="loadCurriculos()">🔄 Atualizar</button>
             </div>
         </div>
+
+        <div class="view" id="viewRecibo">
+            <button class="back-btn" onclick="goHome()">← Menu</button>
+            <div class="actions" style="margin-bottom:20px;">
+                <button class="btn-primary" onclick="abrirNovoRecibo()">🧾 Novo Recibo</button>
+            </div>
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>🧾 Recibos Emitidos</h3>
+                    <span class="table-count" id="reciboCount">0 registros</span>
+                </div>
+                <div id="reciboRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="modal" id="fichaCurriculoModal">
@@ -669,6 +708,16 @@
             <div class="modal-buttons" style="padding:14px 20px; margin-top:0;">
                 <button type="button" class="btn-cancel" onclick="fecharEdicaoFormulario()">Fechar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Emitir Recibo: um modal só, com 3 telas trocadas via innerHTML
+         (formulário → pré-visualização → recibo gerado) — ver reciboEtapa
+         e renderRecibo*() no script. -->
+    <div class="modal" id="reciboModal">
+        <div class="modal-content wide">
+            <h2 id="reciboModalTitulo">🧾 Novo Recibo</h2>
+            <div id="reciboModalBody"></div>
         </div>
     </div>
 
@@ -1915,12 +1964,14 @@
             financeiro: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M3 7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="17" cy="13" r="1.3" fill="currentColor" stroke="none"/></svg>`,
             fechamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
             planejamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M4 21h16"/><path d="M5 21V10l7-5 7 5v11"/><circle cx="9.5" cy="14.5" r="1.6"/><circle cx="14.5" cy="14.5" r="1.6"/></svg>`,
+            recibo: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 3h12v18l-2.5-1.6L13 21l-2.5-1.6L8 21l-2.5-1.6L6 21z"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="11.5" x2="15.5" y2="11.5"/><path d="M8.5 15h4"/></svg>`,
         };
 
         // Espelha o grid de atalhos da planilha "PAINEL DE CONTROLE" usada na loja.
         // Só os módulos já migrados pro Supabase (financeiro, contratos) e os links
         // externos reais têm ação; o resto fica marcado "em breve" até serem migrados.
         const MENU_ITEMS = [
+            { icon: 'recibo', label: 'Emitir Recibo', action: { type: 'view', view: 'recibo' }, desc: 'Emita recibos de serviços prestados de forma rápida e personalizada.' },
             { icon: 'curriculo', label: 'Currículo', action: { type: 'view', view: 'curriculo' }, badgeKey: 'curriculo' },
             { icon: 'declaracao', label: 'Declaração', action: { type: 'sub', key: 'declaracao' } },
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
@@ -2045,7 +2096,7 @@
             ]},
         };
 
-        let viewsInitialized = { caixa: false, termos: false };
+        let viewsInitialized = { caixa: false, termos: false, recibo: false };
 
         // Contagem de itens pendentes pra mostrar como bolinha vermelha nos cards
         // do menu (Currículo, Contratos) — atualizada em loadPendingCounts().
@@ -2056,7 +2107,7 @@
             grid.innerHTML = MENU_ITEMS.map((item, i) => {
                 const enabled = !!item.action;
                 const count = item.badgeKey ? (pendingCounts[item.badgeKey] || 0) : 0;
-                return `<div class="menu-tile ${enabled ? 'enabled' : 'disabled'}" onclick="handleMenuClick(${i})">
+                return `<div class="menu-tile ${enabled ? 'enabled' : 'disabled'}" onclick="handleMenuClick(${i})" ${item.desc ? `title="${escapeHtml(item.desc)}"` : ''}>
                     ${count > 0 ? `<span class="menu-badge">${count > 99 ? '99+' : count}</span>` : ''}
                     <div class="menu-icon">${ICONS[item.icon] || ''}</div>
                     <div class="menu-label">${item.label}${enabled ? '' : '<span class="menu-soon">Em breve</span>'}</div>
@@ -2115,12 +2166,14 @@
             document.getElementById('viewTermos').classList.toggle('active', view === 'termos');
             document.getElementById('viewCurriculo').classList.toggle('active', view === 'curriculo');
             document.getElementById('viewPlanejamento').classList.toggle('active', view === 'planejamento');
+            document.getElementById('viewRecibo').classList.toggle('active', view === 'recibo');
             if (!viewsInitialized[view]) {
                 viewsInitialized[view] = true;
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
                 else if (view === 'termos') { loadContratos(); loadDeclaracoesPendentes(); }
                 else if (view === 'curriculo') loadCurriculos();
                 else if (view === 'planejamento') loadPlanejamento();
+                else if (view === 'recibo') loadRecibos();
             }
             scrollToSection(scrollTo);
         }
@@ -2150,6 +2203,7 @@
             document.getElementById('viewSub').classList.remove('active');
             document.getElementById('viewCurriculo').classList.remove('active');
             document.getElementById('viewPlanejamento').classList.remove('active');
+            document.getElementById('viewRecibo').classList.remove('active');
             document.getElementById('viewHome').classList.add('active');
             loadPendingCounts();
         }
@@ -4266,6 +4320,302 @@
         }
         window.closeFormatadoModal = closeFormatadoModal;
 
+        // ===== Emitir Recibo =====
+        // Fluxo: Novo Recibo (form) → Visualizar (pré-visualização, nada salvo
+        // ainda) → Gerar Recibo (grava no banco, número vem do `serial` da
+        // coluna `numero` — incremento atômico, sem risco de dois recibos
+        // saírem com o mesmo número mesmo se dois admins gerarem ao mesmo
+        // tempo). O mesmo modal (#reciboModal) troca de conteúdo por etapa.
+        let recibosCache = [];
+        let reciboForm = null;
+        let reciboGerado = null; // registro já salvo (id + numero reais), usado por Ver/Imprimir/Novo
+
+        function reciboValorInicial() {
+            return {
+                pagador_nome: '', pagador_tipo: 'PF', pagador_documento: '',
+                descricao_servico: '', valor: '', forma_pagamento: 'Dinheiro',
+                data_recibo: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD local, não UTC
+                observacoes: '',
+            };
+        }
+        function formatarNumeroRecibo(n) { return String(n).padStart(6, '0'); }
+        function formatarDocumentoLabel(tipo) { return tipo === 'PJ' ? 'CNPJ' : 'CPF'; }
+
+        const RECIBO_LOGO_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:52px;height:52px;flex-shrink:0;">
+            <circle cx="50" cy="50" r="48" fill="#0c1f14" stroke="#22C55E" stroke-width="3"/>
+            <path d="M50 18 A32 32 0 1 1 18 50" stroke="#22C55E" stroke-width="5" stroke-linecap="round" fill="none"/>
+            <polygon points="50,8 42,22 58,22" fill="#22C55E"/>
+            <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
+        </svg>`;
+
+        // Monta o HTML do recibo timbrado a partir de {numero, pagador_nome,
+        // pagador_tipo, pagador_documento, descricao_servico, valor,
+        // forma_pagamento, data_recibo, observacoes}. `numero` null = ainda não
+        // foi gerado (pré-visualização). Reaproveitado no modal e no #printArea.
+        function montarReciboHtml(r) {
+            const numeroTexto = r.numero ? `Nº ${formatarNumeroRecibo(r.numero)}` : 'PRÉ-VISUALIZAÇÃO';
+            const dataTexto = r.data_recibo ? dataBR(r.data_recibo) : '—';
+            const valorNum = Number(r.valor) || 0;
+            const extensoBruto = valorNum > 0 ? extensoReais(valorNum) : '';
+            const valorExtenso = extensoBruto ? extensoBruto.charAt(0).toUpperCase() + extensoBruto.slice(1) + '.' : '';
+            const documentoLabel = formatarDocumentoLabel(r.pagador_tipo);
+            const descricaoHtml = escapeHtml(r.descricao_servico || '').replace(/\n/g, '<br>') || '—';
+            return `
+            <div class="recibo-doc">
+                <div class="recibo-doc-header">
+                    ${RECIBO_LOGO_SVG}
+                    <div class="recibo-doc-brand">
+                        <div class="recibo-doc-empresa">BLACKOUT</div>
+                        <div class="recibo-doc-tagline">Serviços de Impressões e Gráfica Rápida</div>
+                    </div>
+                    <div class="recibo-doc-numero">
+                        <div class="recibo-doc-numero-label">Recibo de Serviço</div>
+                        <div class="recibo-doc-numero-valor">${numeroTexto}</div>
+                        <div class="recibo-doc-data">${escapeHtml(dataTexto)}</div>
+                    </div>
+                </div>
+                <div class="recibo-doc-linha"></div>
+                <div class="recibo-doc-secao">
+                    <div class="recibo-doc-secao-titulo">Recebemos de</div>
+                    <div class="recibo-doc-secao-corpo">
+                        <b>${escapeHtml(r.pagador_nome || '')}</b>${r.pagador_documento ? `<br>${documentoLabel}: ${escapeHtml(r.pagador_documento)}` : ''}
+                    </div>
+                </div>
+                <div class="recibo-doc-secao">
+                    <div class="recibo-doc-secao-titulo">Referente a</div>
+                    <div class="recibo-doc-secao-corpo">${descricaoHtml}</div>
+                </div>
+                <div class="recibo-doc-secao">
+                    <div class="recibo-doc-secao-titulo">Valor recebido</div>
+                    <div class="recibo-doc-valor">${fmt(valorNum)}</div>
+                    ${valorExtenso ? `<div class="recibo-doc-extenso">${escapeHtml(valorExtenso)}</div>` : ''}
+                </div>
+                <div class="recibo-doc-secao">
+                    <div class="recibo-doc-secao-titulo">Forma de pagamento</div>
+                    <div class="recibo-doc-secao-corpo">${escapeHtml(r.forma_pagamento || '')}</div>
+                </div>
+                ${r.observacoes ? `<div class="recibo-doc-secao">
+                    <div class="recibo-doc-secao-titulo">Observações</div>
+                    <div class="recibo-doc-secao-corpo">${escapeHtml(r.observacoes).replace(/\n/g, '<br>')}</div>
+                </div>` : ''}
+                <div class="recibo-doc-linha"></div>
+                <div class="recibo-doc-footer">
+                    <b>Blackout</b><br>
+                    R. Monte Agulhas Negras, 265 - sl 04, Bairro Monte Alegre - Camboriú/SC<br>
+                    (47) 99991-2755
+                </div>
+            </div>`;
+        }
+
+        async function loadRecibos() {
+            const container = document.getElementById('reciboRows');
+            try {
+                const { data, error } = await supabase.from('recibos').select('*').order('numero', { ascending: false });
+                if (error) throw new Error(error.message);
+                recibosCache = data || [];
+                document.getElementById('reciboCount').textContent = recibosCache.length + ' registro' + (recibosCache.length !== 1 ? 's' : '');
+                if (recibosCache.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum recibo emitido ainda</div></div>';
+                    return;
+                }
+                container.innerHTML = recibosCache.map(r => `<div class="contrato-card">
+                    <div class="contrato-info" style="cursor:pointer;" onclick="verRecibo('${r.id}')">
+                        <b>Nº ${formatarNumeroRecibo(r.numero)}</b>
+                        <span class="subtext">👤 ${escapeHtml(r.pagador_nome)}</span>
+                        <span class="subtext">💰 ${fmt(r.valor)} · 📅 ${dataBR(r.data_recibo)}</span>
+                    </div>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="verRecibo('${r.id}')" title="Ver / Imprimir">🧾</button>
+                    <button class="btn-delete" onclick="excluirRecibo('${r.id}')" title="Excluir">🗑️</button>
+                </div>`).join('');
+            } catch (error) {
+                container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}</div>`;
+            }
+        }
+        window.loadRecibos = loadRecibos;
+
+        function abrirNovoRecibo() {
+            reciboForm = reciboValorInicial();
+            reciboGerado = null;
+            document.getElementById('reciboModalTitulo').textContent = '🧾 Novo Recibo';
+            renderReciboForm();
+            document.getElementById('reciboModal').classList.add('active');
+        }
+        window.abrirNovoRecibo = abrirNovoRecibo;
+
+        function salvarReciboFormDoDom() {
+            const val = (id) => document.getElementById(id)?.value;
+            if (val('rc_nome') !== undefined) reciboForm.pagador_nome = val('rc_nome').trim();
+            if (val('rc_tipo') !== undefined) reciboForm.pagador_tipo = val('rc_tipo');
+            if (val('rc_documento') !== undefined) reciboForm.pagador_documento = val('rc_documento').trim();
+            if (val('rc_descricao') !== undefined) reciboForm.descricao_servico = val('rc_descricao').trim();
+            if (val('rc_valor') !== undefined) reciboForm.valor = val('rc_valor');
+            if (val('rc_forma') !== undefined) reciboForm.forma_pagamento = val('rc_forma');
+            if (val('rc_data') !== undefined) reciboForm.data_recibo = val('rc_data');
+            if (val('rc_obs') !== undefined) reciboForm.observacoes = val('rc_obs').trim();
+        }
+
+        const RECIBO_FORMAS_PAGAMENTO = ['Dinheiro', 'PIX', 'Cartão de débito', 'Cartão de crédito'];
+        function renderReciboForm() {
+            const body = document.getElementById('reciboModalBody');
+            const pj = reciboForm.pagador_tipo === 'PJ';
+            body.innerHTML = `
+                <div class="form-group">
+                    <label>Nome do pagador / Razão Social *</label>
+                    <input type="text" id="rc_nome" value="${escapeHtml(reciboForm.pagador_nome)}">
+                </div>
+                <div class="form-group">
+                    <label>Tipo de pagador *</label>
+                    <select id="rc_tipo" onchange="onReciboTipoChange()">
+                        <option value="PF" ${!pj ? 'selected' : ''}>Pessoa Física</option>
+                        <option value="PJ" ${pj ? 'selected' : ''}>Pessoa Jurídica</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>${pj ? 'CNPJ' : 'CPF'} (não obrigatório)</label>
+                    <input type="text" id="rc_documento" value="${escapeHtml(reciboForm.pagador_documento)}" placeholder="${pj ? '00.000.000/0000-00' : '000.000.000-00'}">
+                </div>
+                <div class="form-group">
+                    <label>Descrição dos serviços *</label>
+                    <textarea id="rc_descricao" rows="4" style="width:100%; padding:12px 16px; background:var(--bg-elev); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; font-family:inherit; resize:vertical;">${escapeHtml(reciboForm.descricao_servico)}</textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Valor do serviço (R$) *</label>
+                        <input type="number" id="rc_valor" step="0.01" min="0" inputmode="decimal" value="${escapeHtml(reciboForm.valor)}">
+                    </div>
+                    <div class="form-group">
+                        <label>Forma de pagamento *</label>
+                        <select id="rc_forma">${RECIBO_FORMAS_PAGAMENTO.map(o => `<option value="${o}" ${reciboForm.forma_pagamento === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Data *</label>
+                    <input type="date" id="rc_data" value="${escapeHtml(reciboForm.data_recibo)}">
+                </div>
+                <div class="form-group">
+                    <label>Observações (opcional)</label>
+                    <textarea id="rc_obs" rows="2" style="width:100%; padding:12px 16px; background:var(--bg-elev); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; font-family:inherit; resize:vertical;">${escapeHtml(reciboForm.observacoes)}</textarea>
+                </div>
+                <div id="reciboFormErro" style="color:var(--danger); font-size:13px; margin:-8px 0 12px; display:none;"></div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeReciboModal()">Cancelar</button>
+                    <button type="button" class="btn-save" onclick="visualizarRecibo()">👁️ Visualizar Recibo</button>
+                </div>`;
+        }
+        function onReciboTipoChange() {
+            salvarReciboFormDoDom();
+            reciboForm.pagador_documento = ''; // troca de tipo invalida o documento já digitado
+            renderReciboForm();
+        }
+        window.onReciboTipoChange = onReciboTipoChange;
+
+        function validarReciboForm() {
+            if (!reciboForm.pagador_nome) return 'Informe o nome do pagador / razão social.';
+            if (!reciboForm.descricao_servico) return 'Descreva o serviço prestado.';
+            if (!reciboForm.valor || Number(reciboForm.valor) <= 0) return 'Informe o valor do serviço.';
+            if (!reciboForm.data_recibo) return 'Informe a data do recibo.';
+            return null;
+        }
+
+        function visualizarRecibo() {
+            salvarReciboFormDoDom();
+            const erro = validarReciboForm();
+            if (erro) {
+                const el = document.getElementById('reciboFormErro');
+                el.textContent = erro; el.style.display = 'block';
+                return;
+            }
+            document.getElementById('reciboModalTitulo').textContent = '👁️ Pré-visualização do Recibo';
+            renderReciboPreview();
+        }
+        window.visualizarRecibo = visualizarRecibo;
+
+        function renderReciboPreview() {
+            const body = document.getElementById('reciboModalBody');
+            body.innerHTML = `
+                <div style="background:#fff; border-radius:12px; overflow:hidden; margin-bottom:16px;">${montarReciboHtml({ ...reciboForm, numero: null })}</div>
+                <p class="subtext" style="text-align:center; margin-bottom:16px;">O número definitivo é atribuído ao gerar o recibo.</p>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="voltarParaFormRecibo()">← Voltar</button>
+                    <button type="button" class="btn-save" id="btnGerarRecibo" onclick="gerarRecibo()">✅ Gerar Recibo</button>
+                </div>`;
+        }
+        function voltarParaFormRecibo() {
+            document.getElementById('reciboModalTitulo').textContent = '🧾 Novo Recibo';
+            renderReciboForm();
+        }
+        window.voltarParaFormRecibo = voltarParaFormRecibo;
+
+        async function gerarRecibo() {
+            const btn = document.getElementById('btnGerarRecibo');
+            if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+            try {
+                const payload = {
+                    pagador_nome: reciboForm.pagador_nome,
+                    pagador_tipo: reciboForm.pagador_tipo,
+                    pagador_documento: reciboForm.pagador_documento || null,
+                    descricao_servico: reciboForm.descricao_servico,
+                    valor: Number(reciboForm.valor),
+                    forma_pagamento: reciboForm.forma_pagamento,
+                    data_recibo: reciboForm.data_recibo,
+                    observacoes: reciboForm.observacoes || null,
+                };
+                const [data] = await dbInsert('recibos', payload);
+                reciboGerado = data;
+                document.getElementById('reciboModalTitulo').textContent = `🧾 Recibo Nº ${formatarNumeroRecibo(data.numero)}`;
+                renderReciboFinal();
+                loadRecibos();
+            } catch (error) {
+                if (btn) { btn.disabled = false; btn.textContent = '✅ Gerar Recibo'; }
+                alert('Não deu pra gerar o recibo: ' + error.message);
+            }
+        }
+        window.gerarRecibo = gerarRecibo;
+
+        function renderReciboFinal() {
+            const body = document.getElementById('reciboModalBody');
+            body.innerHTML = `
+                <div style="background:#fff; border-radius:12px; overflow:hidden; margin-bottom:16px;">${montarReciboHtml(reciboGerado)}</div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeReciboModal()">Fechar</button>
+                    <button type="button" class="btn-secondary" onclick="abrirNovoRecibo()">🧾 Novo Recibo</button>
+                    <button type="button" class="btn-save" onclick="imprimirRecibo()">🖨️ Imprimir / PDF</button>
+                </div>`;
+        }
+
+        function verRecibo(id) {
+            const r = recibosCache.find(x => x.id === id);
+            if (!r) return;
+            reciboGerado = r;
+            document.getElementById('reciboModalTitulo').textContent = `🧾 Recibo Nº ${formatarNumeroRecibo(r.numero)}`;
+            renderReciboFinal();
+            document.getElementById('reciboModal').classList.add('active');
+        }
+        window.verRecibo = verRecibo;
+
+        async function excluirRecibo(id) {
+            if (!confirm('Excluir este recibo? Essa ação não pode ser desfeita.')) return;
+            try {
+                await dbDelete('recibos', { id });
+                await loadRecibos();
+            } catch (error) {
+                alert('Erro ao excluir: ' + error.message);
+            }
+        }
+        window.excluirRecibo = excluirRecibo;
+
+        function closeReciboModal() {
+            document.getElementById('reciboModal').classList.remove('active');
+        }
+        window.closeReciboModal = closeReciboModal;
+
+        function imprimirRecibo() {
+            if (!reciboGerado) return;
+            document.getElementById('printArea').innerHTML = montarReciboHtml(reciboGerado);
+            setTimeout(() => window.print(), 100);
+        }
+        window.imprimirRecibo = imprimirRecibo;
+
         function imprimirFormatado() {
             document.getElementById('printArea').innerHTML = document.getElementById('formatadoConteudo').innerHTML;
             setTimeout(() => window.print(), 100);
@@ -4284,7 +4634,7 @@
 
         // Fecha modal com ESC
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { closeModal(); closeTermoModal(); closePixModal(); closeSaidaModal(); closeDespesaFixaModal(); closeFichaModal(); closeFormatadoModal(); closeDeclFormatadoModal(); }
+            if (e.key === 'Escape') { closeModal(); closeTermoModal(); closePixModal(); closeSaidaModal(); closeDespesaFixaModal(); closeFichaModal(); closeFormatadoModal(); closeDeclFormatadoModal(); closeReciboModal(); }
         });
 
         // Fecha modal clicando fora
@@ -4314,6 +4664,9 @@
         });
         document.getElementById('editarFormularioModal').addEventListener('click', (e) => {
             if (e.target.id === 'editarFormularioModal') fecharEdicaoFormulario();
+        });
+        document.getElementById('reciboModal').addEventListener('click', (e) => {
+            if (e.target.id === 'reciboModal') closeReciboModal();
         });
 
         // Inicia o dashboard (após desbloqueio)
