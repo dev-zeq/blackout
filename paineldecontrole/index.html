@@ -320,9 +320,48 @@
         .orc-doc-obs-texto { font-size: 15px; line-height: 1.6; color: #4a3a10; }
         .orc-doc-obs-pix { margin-top: 10px; font-size: 17px; font-weight: 800; color: #0c1f14; }
         .orc-doc-obs-pix span { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #92650a; display: block; margin-bottom: 2px; }
+        .orc-doc-confirmacao { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e5cf8f; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+        .orc-doc-confirmacao-texto { font-size: 13.5px; font-weight: 700; color: #0c1f14; margin-bottom: 8px; }
+        .orc-doc-confirmacao-emojis { display: flex; align-items: center; gap: 12px; }
+        .orc-doc-emoji-sim { font-size: 38px; line-height: 1; }
+        .orc-doc-emoji-nao { font-size: 19px; line-height: 1; opacity: .55; }
         @media (max-width: 380px) {
             .orc-doc-detalhes-grid { grid-template-columns: 1fr; }
         }
+
+        /* Quadro de exportação em tamanho de story (1080×1920, 9:16) — montado
+           fora da tela só na hora de gerar a imagem (ver orcGerarCanvas). Fontes
+           bem maiores que o card em tela porque o quadro físico é bem maior. */
+        .orc-story-frame { width: 1080px; height: 1920px; box-sizing: border-box; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 56px 60px; background: linear-gradient(160deg, #10241a 0%, #081410 55%, #000 100%); font-family: Arial, Helvetica, sans-serif; }
+        .orc-story-card { width: 100%; background: #fff; color: #1a1a1a; border-radius: 32px; padding: 60px 54px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); box-sizing: border-box; }
+        .orc-story-header { display: flex; align-items: center; gap: 26px; padding-bottom: 36px; border-bottom: 5px solid #16a34a; }
+        .orc-story-logo svg { width: 110px; height: 110px; display: block; }
+        .orc-story-empresa { font-size: 44px; font-weight: 900; letter-spacing: 2px; color: #0c1f14; line-height: 1.1; }
+        .orc-story-titulo { font-size: 24px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #16a34a; margin-top: 8px; }
+        .orc-story-detalhes { margin: 40px 0; background: #f7faf8; border: 2px solid #dfe8e3; border-radius: 24px; padding: 34px 36px; }
+        .orc-story-detalhes-titulo { font-size: 22px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #16a34a; margin-bottom: 22px; }
+        .orc-story-detalhes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 32px; }
+        .orc-story-detalhes-grid span { display: block; font-size: 19px; color: #7a8983; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+        .orc-story-detalhes-grid b { font-size: 30px; color: #1a1a1a; }
+        .orc-story-opcoes { display: flex; flex-direction: column; gap: 30px; }
+        .orc-story-opcao { border-radius: 24px; padding: 34px 36px; border: 3px solid #dfe8e3; background: #fafcfb; }
+        .orc-story-opcao-cor { border-color: #bfe6cc; background: #f2faf5; }
+        .orc-story-opcao-titulo { font-size: 34px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 22px; color: #333; }
+        .orc-story-opcao-cor .orc-story-opcao-titulo { color: #16a34a; }
+        .orc-story-opcao-linha { display: flex; justify-content: space-between; font-size: 29px; color: #333; margin-bottom: 16px; }
+        .orc-story-opcao-obs { font-size: 25px; font-style: italic; color: #7a8983; margin-bottom: 16px; }
+        .orc-story-opcao-total { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; padding-top: 22px; border-top: 3px dashed #c9d6cf; font-size: 26px; font-weight: 800; color: #0c1f14; }
+        .orc-story-opcao-total b { font-size: 42px; }
+        .orc-story-obs { margin-top: 40px; padding: 34px 36px; background: #fff8e6; border: 3px solid #f0d78c; border-radius: 24px; }
+        .orc-story-obs-titulo { font-size: 24px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #92650a; margin-bottom: 16px; }
+        .orc-story-obs-texto { font-size: 27px; line-height: 1.6; color: #4a3a10; }
+        .orc-story-obs-pix { margin-top: 20px; font-size: 32px; font-weight: 800; color: #0c1f14; }
+        .orc-story-obs-pix span { font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #92650a; display: block; margin-bottom: 4px; }
+        .orc-story-confirmacao { margin-top: 24px; padding-top: 20px; border-top: 2px dashed #e5cf8f; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+        .orc-story-confirmacao-texto { font-size: 24px; font-weight: 700; color: #0c1f14; margin-bottom: 12px; }
+        .orc-story-confirmacao-emojis { display: flex; align-items: center; gap: 20px; }
+        .orc-story-emoji-sim { font-size: 58px; line-height: 1; }
+        .orc-story-emoji-nao { font-size: 28px; line-height: 1; opacity: .55; }
     </style>
 </head>
 <body>
@@ -4666,6 +4705,7 @@
         }
 
         let orcSelecionado = { tipo: null };
+        let orcUltimoResultado = null;
 
         function selecionarOrcTipo(tipo) {
             orcSelecionado.tipo = tipo;
@@ -4701,6 +4741,7 @@
                 card.innerHTML = `<div class="empty-icon">🧮</div><div>Preencha os campos acima para calcular o orçamento.</div>`;
                 btnExportar.disabled = true;
                 btnWhatsapp.disabled = true;
+                orcUltimoResultado = null;
                 return;
             }
             erroEl.textContent = '';
@@ -4708,6 +4749,7 @@
             const encad = orcPrecoEncadernacao(v.paginas, v.encadernacoes);
             const totalPB = pb + encad;
             const totalCor = cor + encad;
+            orcUltimoResultado = { v, pb, cor, encad, totalPB, totalCor };
             const linhaEncadernacao = v.encadernacoes > 0
                 ? `<div class="orc-doc-opcao-linha"><span>Valor das encadernações</span><b>${fmt(encad)}</b></div>`
                 : `<div class="orc-doc-opcao-obs">Obs: sem encadernação</div>`;
@@ -4747,16 +4789,88 @@
                     <div class="orc-doc-obs-titulo">Próximo passo</div>
                     <div class="orc-doc-obs-texto">Para incluirmos este pedido na fila de produção, é necessário efetuar o pagamento do valor combinado. Após o pagamento, seu pedido segue para a fila de produção e você será avisado assim que estiver pronto.</div>
                     <div class="orc-doc-obs-pix"><span>Chave PIX (celular)</span>(47) 99737-0714</div>
+                    <div class="orc-doc-confirmacao">
+                        <div class="orc-doc-confirmacao-texto">Posso confirmar seu pedido?</div>
+                        <div class="orc-doc-confirmacao-emojis"><span class="orc-doc-emoji-sim">👍</span><span class="orc-doc-emoji-nao">👎</span></div>
+                    </div>
                 </div>`;
             btnExportar.disabled = false;
             btnWhatsapp.disabled = false;
         }
         window.atualizarOrcamento = atualizarOrcamento;
 
+        // Monta o miolo do "quadro" de story (1080×1920, 9:16) a partir do último
+        // orçamento calculado — mesmos dados do card em tela, só que num layout
+        // dedicado com fontes bem maiores pra ficar legível em celular.
+        function montarOrcStoryHtml() {
+            const r = orcUltimoResultado;
+            if (!r) return '';
+            const { v, pb, cor, encad, totalPB, totalCor } = r;
+            const linhaEncadernacao = v.encadernacoes > 0
+                ? `<div class="orc-story-opcao-linha"><span>Valor das encadernações</span><b>${fmt(encad)}</b></div>`
+                : `<div class="orc-story-opcao-obs">Obs: sem encadernação</div>`;
+            return `
+                <div class="orc-story-card">
+                    <div class="orc-story-header">
+                        <div class="orc-story-logo">${RECIBO_LOGO_SVG}</div>
+                        <div>
+                            <div class="orc-story-empresa">BLACKOUT</div>
+                            <div class="orc-story-titulo">Orçamento de Impressão</div>
+                        </div>
+                    </div>
+                    <div class="orc-story-detalhes">
+                        <div class="orc-story-detalhes-titulo">Detalhes do Serviço</div>
+                        <div class="orc-story-detalhes-grid">
+                            <div><span>Quantidade de páginas</span><b>${v.paginas}</b></div>
+                            <div><span>Tipo de impressão</span><b>${ORC_TIPO_DESCRICAO[v.tipo] || v.tipo}</b></div>
+                            <div><span>Tipo de papel</span><b>${escapeHtml(ORC_PAPEL_LABEL[v.papel] || v.papel)}</b></div>
+                            <div><span>Encadernações</span><b>${v.encadernacoes}</b></div>
+                        </div>
+                    </div>
+                    <div class="orc-story-opcoes">
+                        <div class="orc-story-opcao">
+                            <div class="orc-story-opcao-titulo">Opção 1 — Preto e Branco</div>
+                            <div class="orc-story-opcao-linha"><span>Valor das impressões</span><b>${fmt(pb)}</b></div>
+                            ${linhaEncadernacao}
+                            <div class="orc-story-opcao-total"><span>TOTAL</span><b>${fmt(totalPB)}</b></div>
+                        </div>
+                        <div class="orc-story-opcao orc-story-opcao-cor">
+                            <div class="orc-story-opcao-titulo">Opção 2 — Colorido</div>
+                            <div class="orc-story-opcao-linha"><span>Valor das impressões</span><b>${fmt(cor)}</b></div>
+                            ${linhaEncadernacao}
+                            <div class="orc-story-opcao-total"><span>TOTAL</span><b>${fmt(totalCor)}</b></div>
+                        </div>
+                    </div>
+                    <div class="orc-story-obs">
+                        <div class="orc-story-obs-titulo">Próximo passo</div>
+                        <div class="orc-story-obs-texto">Para incluirmos este pedido na fila de produção, é necessário efetuar o pagamento do valor combinado. Após o pagamento, seu pedido segue para a fila de produção e você será avisado assim que estiver pronto.</div>
+                        <div class="orc-story-obs-pix"><span>Chave PIX (celular)</span>(47) 99737-0714</div>
+                        <div class="orc-story-confirmacao">
+                            <div class="orc-story-confirmacao-texto">Posso confirmar seu pedido?</div>
+                            <div class="orc-story-confirmacao-emojis"><span class="orc-story-emoji-sim">👍</span><span class="orc-story-emoji-nao">👎</span></div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // Gera a imagem final sempre no tamanho de story (1080×1920, 9:16) —
+        // monta o quadro fora da tela (fora da área visível, mas presente no
+        // DOM, que é o que o html2canvas precisa pra capturar certinho),
+        // fotografa e remove. Não depende do tamanho do card em tela.
         async function orcGerarCanvas() {
-            const card = document.getElementById('orcamentoCard');
-            if (card.className !== 'orc-doc') return null;
-            return html2canvas(card, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+            if (!orcUltimoResultado) return null;
+            const frame = document.createElement('div');
+            frame.className = 'orc-story-frame';
+            frame.style.position = 'fixed';
+            frame.style.left = '-99999px';
+            frame.style.top = '0';
+            frame.innerHTML = montarOrcStoryHtml();
+            document.body.appendChild(frame);
+            try {
+                return await html2canvas(frame, { width: 1080, height: 1920, scale: 1, backgroundColor: '#0c1f14', useCORS: true });
+            } finally {
+                frame.remove();
+            }
         }
 
         function orcNomeArquivo() {
@@ -4786,12 +4900,10 @@
         }
         window.exportarOrcamento = exportarOrcamento;
 
-        // Tenta compartilhar a imagem direto pelo share sheet do aparelho (o
-        // WhatsApp aparece como uma das opções) via Web Share API — funciona no
-        // Chrome/Android e no Safari/iOS. Onde isso não existe (a maioria dos
-        // navegadores desktop não deixa compartilhar arquivo), baixa a imagem e
-        // abre o WhatsApp Web com uma mensagem pronta pra pessoa só anexar o
-        // arquivo que acabou de baixar.
+        // Baixa a imagem e abre o WhatsApp Web (web.whatsapp.com) numa aba nova
+        // já logada — de propósito não usa a Web Share API nem o link wa.me,
+        // que em desktop podem abrir o app nativo do WhatsApp em vez do
+        // WhatsApp Web, que é o que a loja usa no atendimento.
         async function enviarOrcamentoWhatsapp() {
             const btn = document.getElementById('orc_btn_whatsapp');
             const textoOriginal = btn.textContent;
@@ -4800,21 +4912,16 @@
             try {
                 const canvas = await orcGerarCanvas();
                 if (!canvas) return;
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-                const arquivo = new File([blob], orcNomeArquivo(), { type: 'image/jpeg' });
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                const link = document.createElement('a');
+                link.download = orcNomeArquivo();
+                link.href = dataUrl;
+                link.click();
                 const mensagem = 'Segue o orçamento de impressão da Blackout 🖨️';
-                if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
-                    await navigator.share({ files: [arquivo], title: 'Orçamento Blackout', text: mensagem });
-                } else {
-                    const link = document.createElement('a');
-                    link.download = orcNomeArquivo();
-                    link.href = URL.createObjectURL(blob);
-                    link.click();
-                    alert('A imagem foi baixada. Abra o WhatsApp e anexe o arquivo pra enviar pro cliente.');
-                    window.open('https://wa.me/?text=' + encodeURIComponent(mensagem), '_blank', 'noopener');
-                }
+                window.open('https://web.whatsapp.com/send?text=' + encodeURIComponent(mensagem), '_blank', 'noopener');
+                alert('A imagem foi baixada. No WhatsApp Web, escolha a conversa e anexe o arquivo pra enviar pro cliente.');
             } catch (error) {
-                if (error?.name !== 'AbortError') alert('Não deu pra preparar o envio: ' + error.message);
+                alert('Não deu pra preparar o envio: ' + error.message);
             } finally {
                 btn.disabled = false;
                 btn.textContent = textoOriginal;
