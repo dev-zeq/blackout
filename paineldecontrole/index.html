@@ -708,7 +708,7 @@
                             <option value="Camboriú">Camboriú</option>
                             <option value="Balneário Camboriú">Balneário Camboriú</option>
                             <option value="Itapema">Itapema</option>
-                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Itajaí">Itajaí</option>
                             <option value="Outra">Outra</option>
                         </select>
                     </div>
@@ -762,7 +762,7 @@
                                 <option value="Camboriú">Camboriú</option>
                                 <option value="Balneário Camboriú">Balneário Camboriú</option>
                                 <option value="Itapema">Itapema</option>
-                                <option value="Porto Belo">Porto Belo</option>
+                                <option value="Itajaí">Itajaí</option>
                                 <option value="Outra">Outra</option>
                             </select>
                         </div>
@@ -814,7 +814,7 @@
                             <option value="Camboriú">Camboriú</option>
                             <option value="Balneário Camboriú">Balneário Camboriú</option>
                             <option value="Itapema">Itapema</option>
-                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Itajaí">Itajaí</option>
                             <option value="Outra">Outra</option>
                         </select>
                     </div>
@@ -889,7 +889,7 @@
                             <option value="Camboriú">Camboriú</option>
                             <option value="Balneário Camboriú">Balneário Camboriú</option>
                             <option value="Itapema">Itapema</option>
-                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Itajaí">Itajaí</option>
                             <option value="Outra">Outra</option>
                         </select>
                     </div>
@@ -937,7 +937,7 @@
                             <option value="Camboriú">Camboriú</option>
                             <option value="Balneário Camboriú">Balneário Camboriú</option>
                             <option value="Itapema">Itapema</option>
-                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Itajaí">Itajaí</option>
                             <option value="Outra">Outra</option>
                         </select>
                     </div>
@@ -1050,7 +1050,7 @@
                             <option value="Camboriú">Camboriú</option>
                             <option value="Balneário Camboriú">Balneário Camboriú</option>
                             <option value="Itapema">Itapema</option>
-                            <option value="Porto Belo">Porto Belo</option>
+                            <option value="Itajaí">Itajaí</option>
                             <option value="Outra">Outra</option>
                         </select>
                     </div>
@@ -1585,7 +1585,7 @@
             'Camboriú': ['Areias', 'Cedro', 'Centro', 'Conde Vila Verde', 'Lídia Duarte', 'Monte Alegre', 'Rio Pequeno', 'Santa Regina', 'São Francisco de Assis', 'Tabuleiro', 'Várzea do Ranchinho'],
             'Balneário Camboriú': ['Ariribá', 'Barra', 'Barra Norte', 'Barra Sul', 'Centro', 'Estados', 'Estaleiro', 'Estaleirinho', 'Interpraias', 'Jardim Iate Clube', 'Laranjeiras', 'Municípios', 'Nações', 'Nova Esperança', 'Pioneiros', 'Praia dos Amores', 'São Judas', 'Vila Real'],
             'Itapema': ['Alto do São Bento', 'Andorinha', 'Canto da Praia', 'Casa Branca', 'Castelo Branco', 'Centro', 'Ilhota', 'Meia Praia', 'Morretes', 'Sertãozinho', 'Tabuleiro dos Oliveiras', 'Várzea'],
-            'Porto Belo': ['Alto Perequê', 'Araçá', 'Balneário Perequê', 'Centro', 'Enseada Encantada', 'Jardim Dourado', 'Valongo', 'Vila Nova', 'Vivapark'],
+            'Itajaí': ['Centro', 'Cabeçudas', 'Praia Brava', 'Fazenda', 'Cordeiros', 'São Vicente', 'Barra do Rio', 'Dom Bosco', 'São João', 'Espinheiros', 'Ressacada', 'Salseiros', 'Vila Operária', 'Murta', 'Rio Bonito'],
         };
         function bairroSelectOptions(cidade, selected) {
             const lista = CIDADES_BAIRROS[cidade] || [];
@@ -3085,7 +3085,7 @@
                     const temEntrada = entradaTotal > 0;
                     const dia = diaDoMes(e.data_primeira_parcela);
                     const restante = aPrazo ? (Number(e.valor_total) || 0) - entradaTotal : 0;
-                    const parcela = aPrazo && e.num_parcelas ? restante / e.num_parcelas : 0;
+                    const parcela = aPrazo && e.num_parcelas ? Math.floor(restante / e.num_parcelas) : 0;
                     let n = 1;
                     let out = '';
                     out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
@@ -3157,7 +3157,7 @@
                     const temEntrada = entradaTotal > 0;
                     const dia = diaDoMes(e.data_primeira_parcela);
                     const restante = aPrazo ? (Number(e.valor_total) || 0) - entradaTotal : 0;
-                    const parcela = aPrazo && e.num_parcelas ? restante / e.num_parcelas : 0;
+                    const parcela = aPrazo && e.num_parcelas ? Math.floor(restante / e.num_parcelas) : 0;
                     let n = 1;
                     let out = '';
                     out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
@@ -3170,9 +3170,10 @@
                         : (e.area_m2 ? `, com área de ${escapeHtml(String(e.area_m2))} m²` : '');
                     out += clausulaCV(n++, `O presente contrato tem como OBJETO o imóvel do tipo ${up(e.tipo_imovel || 'Imóvel')}, situado na ${escapeHtml(titleCase(e.endereco_imovel))}, bairro ${escapeHtml(e.bairro_imovel || '')}, ${escapeHtml(e.cidade_imovel || '')}/${escapeHtml(e.estado_imovel || '')}${medidasTexto}${e.matricula ? `, matriculado sob o nº ${escapeHtml(e.matricula)}${e.cartorio ? ` no ${escapeHtml(e.cartorio)}` : ''}` : ''}, de propriedade do VENDEDOR, livre de qualquer ônus, gravame ou pendência judicial.`);
                     out += `<h3>DAS RESPONSABILIDADES</h3>`;
-                    out += clausulaCV(n++, 'O imóvel é vendido no estado de conservação em que se encontra, já visto e inspecionado pelo COMPRADOR, o qual tomou ciência de suas condições, cabendo eventuais reparos, a partir da assinatura deste instrumento, exclusivamente ao COMPRADOR.');
-                    out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO IMÓVEL</h3>`;
-                    out += clausulaCV(n++, `As partes se comprometem a providenciar a lavratura da escritura pública de compra e venda e o respectivo registro no Cartório de Registro de Imóveis competente, no prazo de 30 (trinta) dias após a quitação integral do valor ajustado neste contrato, correndo as despesas cartorárias e tributárias (ITBI) por conta do COMPRADOR, salvo disposição em contrário entre as partes.`);
+                    out += clausulaCV(n++, 'O COMPRADOR se responsabilizará pelo pagamento dos impostos, taxas e despesas que incidam sobre o imóvel a partir do momento em que for assinado este contrato, mesmo que o lançamento seja feito em nome do VENDEDOR ou de terceiros.');
+                    out += clausulaCV(n++, 'O COMPRADOR se responsabilizará pelas despesas com a transcrição do imóvel a ser realizada quando da total quitação do valor acertado neste contrato.');
+                    out += clausulaCV(n++, 'A posse do imóvel passará ao COMPRADOR quando da assinatura deste instrumento até o momento do pagamento do valor previsto neste instrumento.');
+                    out += clausulaCV(n++, 'Quando da assinatura deste contrato, o VENDEDOR disponibilizará terreno ao COMPRADOR livre de coisas que impeçam a livre fruição da posse por este último.');
                     out += `<h3>DO PAGAMENTO</h3>`;
                     if (!aPrazo && !veiculoEntrada) {
                         out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do imóvel objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}) a ser quitada no ato da assinatura desse contrato.`);
@@ -3198,6 +3199,8 @@
                     if (aPrazo) {
                         out += clausulaCV(n++, 'Caso o COMPRADOR deixe de efetuar o pagamento de duas ou mais parcelas consecutivas do acordo de compra e venda deste imóvel, o contrato se auto recindirá de pleno direito, independentemente de notificação judicial ou extrajudicial, e o VENDEDOR terá o direito de reaver a posse do imóvel imediatamente, sem prejuízo de seu direito de reaver o valor já pago pelo COMPRADOR.');
                     }
+                    out += `<h3>DA MULTA</h3>`;
+                    out += clausulaCV(n++, 'Caso alguma das partes não cumpra o disposto nas cláusulas estabelecidas neste instrumento, responsabilizar-se-á pelo pagamento de multa equivalente a 30% do valor da venda do imóvel.');
                     out += `<h3>CONDIÇÕES GERAIS</h3>`;
                     out += blocoContratoValeAssinatura(n++);
                     out += `<h3>DO FORO</h3>`;

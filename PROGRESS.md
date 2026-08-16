@@ -51,4 +51,4 @@ A tabela `declaracoes_pendentes` tinha uma CHECK constraint (`declaracoes_penden
 
 - Locação de imóvel não tem opção de "imóvel com múltiplas unidades" ou campos de IPTU/condomínio separados — hoje é uma cláusula fixa genérica.
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
-- O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido.
+- O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
