@@ -182,7 +182,7 @@ const s = {
 
     im_tipo_imovel: '', im_tipo_imovel_outro: '', im_finalidade: 'Residenciais',
     im_endereco: '', im_cidade: '', im_cidade_outra: '', im_bairro: '', im_bairro_outro: '', im_estado: '',
-    im_area: '', im_matricula: '', im_cartorio: '',
+    im_area: '', im_terreno_frente: '', im_terreno_fundo: '', im_matricula: '', im_cartorio: '',
 
     forma_pagamento: '', valor_total: '', valor_entrada: '', num_parcelas: '', data_primeira_parcela: '',
 
@@ -195,6 +195,34 @@ const s = {
 
     test1_nome: '', test1_cpf: '', test2_nome: '', test2_cpf: '',
 };
+
+// Terreno pede frente/fundo em vez de área direta — o m² total é calculado
+// sozinho (frente × fundo) e só aparece somado no contrato, igual na planilha.
+function terrenoAreaTexto() {
+    const area = (Number(s.im_terreno_frente) || 0) * (Number(s.im_terreno_fundo) || 0);
+    return area ? area.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' m²' : '—';
+}
+function areaImovelFinal() {
+    if (valorSelecaoOutro('im_tipo_imovel') === 'Terreno') {
+        const frente = Number(s.im_terreno_frente) || 0, fundo = Number(s.im_terreno_fundo) || 0;
+        return (frente && fundo) ? frente * fundo : null;
+    }
+    return s.im_area || null;
+}
+function condAreaImovelHtml() {
+    if (valorSelecaoOutro('im_tipo_imovel') === 'Terreno') {
+        return `
+        <div class="field"><label>Metros de frente *</label><input type="number" step="0.01" data-key="im_terreno_frente" data-role="terreno-medida" value="${esc(s.im_terreno_frente)}"></div>
+        <div class="field"><label>Metros de fundo (profundidade) *</label><input type="number" step="0.01" data-key="im_terreno_fundo" data-role="terreno-medida" value="${esc(s.im_terreno_fundo)}"></div>
+        <div class="field"><label>Área total (calculada automaticamente)</label><input type="text" id="terrenoAreaDisplay" value="${terrenoAreaTexto()}" disabled style="opacity:.7;"></div>`;
+    }
+    return `<div class="field"><label>Área (m²)</label><input type="number" step="0.01" data-key="im_area" value="${esc(s.im_area)}"></div>`;
+}
+function renderCondAreaImovel() {
+    const el = document.getElementById('condAreaImovel');
+    if (!el) return;
+    el.innerHTML = condAreaImovelHtml();
+}
 
 function cidadeFinal(p) { return s[p + '_cidade'] === 'Outra' ? s[p + '_cidade_outra'] : s[p + '_cidade']; }
 function bairroFinal(p) { return (s[p + '_cidade'] === 'Outra' || s[p + '_bairro'] === '__outro__') ? s[p + '_bairro_outro'] : s[p + '_bairro']; }
@@ -268,7 +296,7 @@ function afterRenderStep() {
     if (key === 'pessoaA') { renderCondCidade('a'); renderCondNacionalidade('a'); }
     if (key === 'pessoaB') { renderCondCidade('b'); renderCondNacionalidade('b'); }
     if (key === 'veiculo') { ['v_tipo_veiculo', 'v_fabricante', 'v_cor'].forEach(renderCondSelecaoOutro); }
-    if (key === 'imovel') { renderCondCidade('im'); renderCondSelecaoOutro('im_tipo_imovel'); }
+    if (key === 'imovel') { renderCondCidade('im'); renderCondSelecaoOutro('im_tipo_imovel'); renderCondAreaImovel(); }
     if (key === 'entrada') renderCondEntradaVeiculo();
     if (key === 'garantia') renderCondGarantia();
 }
@@ -371,7 +399,7 @@ function stepImovelCV() {
     <div class="field"><label>Endereço do imóvel (rua e número) *</label><input type="text" data-key="im_endereco" value="${esc(s.im_endereco)}"></div>
     ${cidadeCampoHtml('im')}
     <div class="field"><label>Estado *</label><select data-key="im_estado"><option value="">Selecione</option>${estadoOptions(s.im_estado)}</select></div>
-    <div class="field"><label>Área (m²)</label><input type="number" step="0.01" data-key="im_area" value="${esc(s.im_area)}"></div>
+    <div id="condAreaImovel">${condAreaImovelHtml()}</div>
     <div class="field"><label>Matrícula do imóvel</label><input type="text" data-key="im_matricula" value="${esc(s.im_matricula)}"></div>
     <div class="field"><label>Cartório de Registro de Imóveis</label><input type="text" data-key="im_cartorio" value="${esc(s.im_cartorio)}"></div>
     <div id="errorMsg" class="error-msg"></div>
@@ -569,6 +597,7 @@ function validateCurrentStep() {
             return null;
         case 'imovel':
             if (!valorSelecaoOutro('im_tipo_imovel') || !s.im_endereco || !cidadeFinal('im') || !bairroFinal('im') || !s.im_estado) return 'Preencha todos os campos obrigatórios (*).';
+            if (s.tipo === 'imovel_cv' && valorSelecaoOutro('im_tipo_imovel') === 'Terreno' && (!s.im_terreno_frente || !s.im_terreno_fundo)) return 'Informe os metros de frente e de fundo do terreno.';
             return null;
         case 'pagamento':
             if (!s.forma_pagamento || !s.valor_total) return 'Preencha todos os campos obrigatórios (*).';
@@ -600,6 +629,10 @@ cardEl.addEventListener('input', e => {
     if (key && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.type !== 'radio') {
         s[key] = e.target.value;
     }
+    if (e.target.dataset.role === 'terreno-medida') {
+        const disp = document.getElementById('terrenoAreaDisplay');
+        if (disp) disp.value = terrenoAreaTexto();
+    }
 });
 cardEl.addEventListener('change', e => {
     const t = e.target;
@@ -616,7 +649,7 @@ cardEl.addEventListener('change', e => {
         const p = t.dataset.prefix;
         renderCondBairroOutro(p);
     }
-    if (t.dataset.role === 'select-outro') { renderCondSelecaoOutro(key); }
+    if (t.dataset.role === 'select-outro') { renderCondSelecaoOutro(key); if (key === 'im_tipo_imovel') renderCondAreaImovel(); }
     if (t.type === 'radio' && (key === 'a_nacionalidade' || key === 'b_nacionalidade')) { renderCondNacionalidade(key.slice(0, 1)); }
     if (t.dataset.role === 'garantia') { renderCondGarantia(); }
     if (key === 'entrada_veiculo') { renderCondEntradaVeiculo(); }
@@ -680,7 +713,7 @@ async function submitForm() {
             ...especifico,
             tipo_imovel: valorSelecaoOutro('im_tipo_imovel'), endereco_imovel: s.im_endereco,
             bairro_imovel: bairroFinal('im'), cidade_imovel: cidadeFinal('im'), estado_imovel: s.im_estado,
-            area_m2: s.im_area || null, matricula: s.im_matricula || null, cartorio: s.im_cartorio || null,
+            area_m2: areaImovelFinal(), matricula: s.im_matricula || null, cartorio: s.im_cartorio || null,
             forma_pagamento: s.forma_pagamento, valor_total: Number(s.valor_total) || 0,
             veiculo_entrada: veiculoEntrada(),
             valor_entrada: s.valor_entrada ? Number(s.valor_entrada) : 0,

@@ -217,6 +217,12 @@
             #printArea .cv-sub, #printArea .cv-contact { color: #333; }
             #printArea ul { margin: 4px 0; padding-left: 18px; }
             #printArea li { font-size: 13px; margin: 2px 0; }
+            /* Formatação de Declarações/Contratos (montarContrato) — fonte maior e
+               mais espaçamento entre linhas que o padrão do #printArea, só aqui.
+               O h1 (título) já vem com font-size inline no montarContrato() —
+               inline sempre vence regra de classe, por isso não é repetido aqui. */
+            #printArea .doc-formatado-print h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.4px; margin: 22px 0 10px; }
+            #printArea .doc-formatado-print p { font-size: 15px; line-height: 1.85; margin: 8px 0; }
         }
         /* Currículo formatado (template e IA) — cabeçalho com foto + seções */
         .cv-header { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 2px solid var(--accent); }
@@ -638,7 +644,7 @@
     <div class="modal" id="declFormatadoModal">
         <div class="modal-content wide">
             <h2 id="declFormatadoTitulo">📄 Declaração Formatada</h2>
-            <div id="declFormatadoConteudo" style="font-size:14px; color:var(--text-dim); line-height:1.6;"></div>
+            <div id="declFormatadoConteudo" style="font-size:15.5px; color:var(--text-dim); line-height:1.85;"></div>
             <div class="modal-buttons">
                 <button type="button" class="btn-cancel" onclick="closeDeclFormatadoModal()">Fechar</button>
                 <button type="button" class="btn-save" onclick="imprimirDeclFormatada()">🖨️ Imprimir</button>
@@ -3228,7 +3234,7 @@
                     out += clausulaCV(n++, 'Correm por conta do LOCATÁRIO as despesas ordinárias de condomínio, água, luz, gás e demais consumos do imóvel durante a vigência do contrato, bem como o IPTU, salvo estipulação em contrário entre as partes.');
                     out += `<h3>DA GARANTIA</h3>`;
                     if (e.garantia === 'Caução') {
-                        out += clausulaCV(n++, `A título de garantia locatícia, o LOCATÁRIO entrega ao LOCADOR, nesta data, a importância de ${fmt(e.valor_caucao)} (${extensoReais(e.valor_caucao)}), a título de caução, a ser devolvida ao término do contrato, descontadas eventuais pendências, nos termos da Lei nº 8.245/1991.`);
+                        out += clausulaCV(n++, `A título de garantia locatícia, o LOCATÁRIO entrega ao LOCADOR, juntamente com o pagamento do primeiro aluguel, a importância de ${fmt(e.valor_caucao)} (${extensoReais(e.valor_caucao)}), a título de caução, a ser devolvida ao término do contrato, descontadas eventuais pendências, nos termos da Lei nº 8.245/1991.`);
                     } else if (e.garantia === 'Fiador') {
                         out += clausulaCV(n++, `A título de garantia locatícia, figura como FIADOR e principal pagador ${escapeHtml(titleCase(e.fiador_nome || ''))}, portador do CPF nº ${escapeHtml(e.fiador_cpf || '')}, que responde solidariamente pelas obrigações assumidas pelo LOCATÁRIO neste contrato até a efetiva entrega das chaves.`);
                     } else if (e.garantia === 'Seguro-fiança') {
@@ -3258,9 +3264,8 @@
             const cfg = TIPOS[d.tipo_contrato];
             const titulo = cfg ? cfg.titulo : 'DECLARAÇÃO';
             const corpo = cfg && cfg.corpo ? cfg.corpo(d) : '<p>Tipo de declaração sem template de formatação ainda.</p>';
-            return `<h1 style="text-align:center; font-size:16px; letter-spacing:1px; margin-bottom:22px;">${titulo}</h1>${corpo}`;
+            return `<h1 style="text-align:center; font-size:18px; letter-spacing:1px; margin-bottom:22px;">${titulo}</h1>${corpo}`;
         }
-
         function abrirDeclFormatado(id) {
             const d = declaracoesPendentesCache.find(x => x.id === id);
             if (!d) return;
@@ -3287,7 +3292,7 @@
         window.closeDeclFormatadoModal = closeDeclFormatadoModal;
 
         function imprimirDeclFormatada() {
-            document.getElementById('printArea').innerHTML = document.getElementById('declFormatadoConteudo').innerHTML;
+            document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print">${document.getElementById('declFormatadoConteudo').innerHTML}</div>`;
             setTimeout(() => window.print(), 100);
         }
         window.imprimirDeclFormatada = imprimirDeclFormatada;
