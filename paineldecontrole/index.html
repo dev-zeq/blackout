@@ -646,8 +646,24 @@
             <h2 id="declFormatadoTitulo">📄 Declaração Formatada</h2>
             <div id="declFormatadoConteudo" style="font-size:15.5px; color:var(--text-dim); line-height:1.85;"></div>
             <div class="modal-buttons">
-                <button type="button" class="btn-cancel" onclick="closeDeclFormatadoModal()">Fechar</button>
+                <button type="button" class="btn-secondary" id="declFormatadoBtnEditar" style="display:none;" onclick="abrirEdicaoContrato()">✏️ Editar</button>
                 <button type="button" class="btn-save" onclick="imprimirDeclFormatada()">🖨️ Imprimir</button>
+                <button type="button" class="btn-cancel" onclick="closeDeclFormatadoModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reabre o mesmo contrato-form.html (público) dentro de um iframe, já
+         apontado pro registro existente (?editId=...) — a edição acontece
+         pelos campos originais do formulário, não editando o texto final.
+         Ver contrato-form.html (modo de edição) e o listener de 'message'
+         logo abaixo de abrirEdicaoContrato(), que fecha este modal e
+         re-formata o contrato quando o iframe avisa que salvou. -->
+    <div class="modal" id="editarContratoModal">
+        <div class="modal-content wide" style="padding:0; overflow:hidden; display:flex; flex-direction:column;">
+            <iframe id="editarContratoFrame" src="about:blank" style="width:100%; height:78vh; border:0; display:block; background:#05170c;"></iframe>
+            <div class="modal-buttons" style="padding:14px 20px; margin-top:0;">
+                <button type="button" class="btn-cancel" onclick="fecharEdicaoContrato()">Fechar</button>
             </div>
         </div>
     </div>
@@ -2312,6 +2328,13 @@
         };
         let contratosCache = [];
 
+        // Só os 3 tipos vindos do formulário público (contrato-form.html) sabem
+        // reabrir/editar a si mesmos — os outros tipos (Declarações, Termo, CV_*
+        // manuais) não têm um formulário equivalente pra reabrir, então o botão
+        // Editar fica escondido pra eles. Ver declFormatadoAtual/abrirEdicaoContrato.
+        const TIPOS_EDITAVEIS_VIA_FORMULARIO = ['CONTRATO_CV_VEICULO', 'CONTRATO_CV_IMOVEL', 'CONTRATO_LOCACAO_IMOVEL'];
+        let declFormatadoAtual = null; // { id, tabela: 'declaracoes_pendentes' } do contrato aberto no modal de formatação
+
         function openContratoFicha(id) {
             const c = contratosCache.find(x => x.id === id);
             if (!c) return;
@@ -3278,17 +3301,23 @@
             document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato) + ' — formatada';
             document.getElementById('declFormatadoConteudo').innerHTML = montarContrato(d);
             document.getElementById('declFormatadoModal').classList.add('active');
+            declFormatadoAtual = { id: d.id, tabela: 'declaracoes_pendentes' };
+            document.getElementById('declFormatadoBtnEditar').style.display = TIPOS_EDITAVEIS_VIA_FORMULARIO.includes(d.tipo_contrato) ? '' : 'none';
         }
         window.abrirDeclFormatado = abrirDeclFormatado;
 
         // Mesmo modal/mecanismo de impressão do abrirDeclFormatado acima, só que
         // lendo de contratosCache (histórico já salvo) em vez de declaracoesPendentesCache.
+        // Esses tipos (Termo, CV_* manuais) não têm formulário público equivalente
+        // pra reabrir, então o botão Editar nunca aparece aqui.
         function abrirContratoFormatado(id) {
             const c = contratosCache.find(x => x.id === id);
             if (!c) return;
             document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[c.tipo_contrato] || c.tipo_contrato) + ' — formatada';
             document.getElementById('declFormatadoConteudo').innerHTML = montarContrato(c);
             document.getElementById('declFormatadoModal').classList.add('active');
+            declFormatadoAtual = { id: c.id, tabela: 'contratos' };
+            document.getElementById('declFormatadoBtnEditar').style.display = 'none';
         }
         window.abrirContratoFormatado = abrirContratoFormatado;
 
@@ -3296,6 +3325,48 @@
             document.getElementById('declFormatadoModal').classList.remove('active');
         }
         window.closeDeclFormatadoModal = closeDeclFormatadoModal;
+
+        // Abre o mesmo contrato-form.html público num iframe, apontado pro
+        // registro existente — a edição usa os campos originais do formulário
+        // (não edita o texto final). Quando o formulário salva ou cancela, ele
+        // avisa aqui via postMessage (ver contrato-form.html, submitForm/cancelarEdicao).
+        function abrirEdicaoContrato() {
+            if (!declFormatadoAtual || declFormatadoAtual.tabela !== 'declaracoes_pendentes') return;
+            document.getElementById('editarContratoFrame').src = 'contrato-form.html?editId=' + encodeURIComponent(declFormatadoAtual.id);
+            document.getElementById('editarContratoModal').classList.add('active');
+        }
+        window.abrirEdicaoContrato = abrirEdicaoContrato;
+
+        function fecharEdicaoContrato() {
+            document.getElementById('editarContratoModal').classList.remove('active');
+            document.getElementById('editarContratoFrame').src = 'about:blank';
+        }
+        window.fecharEdicaoContrato = fecharEdicaoContrato;
+
+        window.addEventListener('message', async (ev) => {
+            if (ev.origin !== window.location.origin) return;
+            if (!ev.data || typeof ev.data !== 'object') return;
+            if (ev.data.type === 'contrato-editar-cancelado') {
+                fecharEdicaoContrato();
+            } else if (ev.data.type === 'contrato-salvar-pedido') {
+                // Quem grava é o painel (já autenticado com a senha da equipe),
+                // não o formulário público dentro do iframe — ver dbUpdate/db-write
+                // e o comentário em contrato-form.html (submitForm, modo de edição).
+                try {
+                    await dbUpdate('declaracoes_pendentes', ev.data.registro, { id: ev.data.id });
+                    fecharEdicaoContrato();
+                    await loadDeclaracoesPendentes();
+                    if (declFormatadoAtual && declFormatadoAtual.id === ev.data.id) {
+                        abrirDeclFormatado(ev.data.id);
+                    }
+                } catch (err) {
+                    const frame = document.getElementById('editarContratoFrame');
+                    if (frame && frame.contentWindow) {
+                        frame.contentWindow.postMessage({ type: 'contrato-salvar-resultado', ok: false, error: err.message }, window.location.origin);
+                    }
+                }
+            }
+        });
 
         function imprimirDeclFormatada() {
             document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print">${document.getElementById('declFormatadoConteudo').innerHTML}</div>`;
