@@ -85,7 +85,9 @@
         .actions { display: flex; gap: 12px; flex-wrap: wrap; }
         .btn-primary { flex: 2; padding: 16px; border: none; border-radius: 16px; font-size: 16px; font-weight: 700; cursor: pointer; color: #05170c; background: linear-gradient(135deg, var(--accent-bright), var(--accent)); box-shadow: 0 4px 20px rgba(34,197,94,0.35); min-width: 200px; }
         .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
         .btn-secondary { flex: 1; padding: 16px; border: 1px solid var(--border-strong); border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; color: var(--text-dim); background: var(--surface); min-width: 120px; }
+        .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 1000; align-items: flex-end; justify-content: center; padding: 16px; }
         .modal.active { display: flex; }
         .modal-content { background: linear-gradient(180deg, #0d0d0f, #000); border: 1px solid var(--border-strong); border-radius: 20px 20px 0 0; padding: 28px 24px; width: 100%; max-width: 450px; animation: slideUp 0.3s ease-out; }
@@ -286,6 +288,40 @@
         @media print {
             #printArea .recibo-doc { border-radius: 0; box-shadow: none; }
             #printArea .recibo-doc-watermark svg { width: 340px; height: 340px; }
+        }
+
+        /* Orçamento de Impressões — seletor de tipo (tema escuro do painel) e
+           card final (tema claro, igual ao recibo, pensado pra virar JPG). */
+        .orc-tipo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .orc-tipo-btn { padding: 14px 6px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; line-height: 1.6; transition: border-color .15s, background .15s, color .15s; }
+        .orc-tipo-btn.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+        .orc-card-vazio { padding: 32px 20px; text-align: center; color: var(--text-faint); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: 16px; margin-top: 16px; font-size: 13px; }
+        .orc-doc { position: relative; background: #fff; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-top: 16px; padding: 28px 26px; }
+        .orc-doc-header { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; border-bottom: 3px solid #16a34a; }
+        .orc-doc-logo svg { width: 54px; height: 54px; display: block; }
+        .orc-doc-empresa { font-size: 20px; font-weight: 900; letter-spacing: 1.2px; color: #0c1f14; }
+        .orc-doc-titulo { font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #16a34a; margin-top: 3px; }
+        .orc-doc-detalhes { margin: 20px 0; background: #f7faf8; border: 1px solid #dfe8e3; border-radius: 12px; padding: 16px 18px; }
+        .orc-doc-detalhes-titulo { font-size: 11.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #16a34a; margin-bottom: 10px; }
+        .orc-doc-detalhes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+        .orc-doc-detalhes-grid span { display: block; font-size: 10.5px; color: #7a8983; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+        .orc-doc-detalhes-grid b { font-size: 14.5px; color: #1a1a1a; }
+        .orc-doc-opcoes { display: flex; flex-direction: column; gap: 14px; }
+        .orc-doc-opcao { border-radius: 12px; padding: 16px 18px; border: 1.5px solid #dfe8e3; background: #fafcfb; }
+        .orc-doc-opcao-cor { border-color: #bfe6cc; background: #f2faf5; }
+        .orc-doc-opcao-titulo { font-size: 18px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 12px; color: #333; }
+        .orc-doc-opcao-cor .orc-doc-opcao-titulo { color: #16a34a; }
+        .orc-doc-opcao-linha { display: flex; justify-content: space-between; font-size: 16px; color: #333; margin-bottom: 8px; }
+        .orc-doc-opcao-obs { font-size: 13.5px; font-style: italic; color: #7a8983; margin-bottom: 8px; }
+        .orc-doc-opcao-total { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #c9d6cf; font-size: 14px; font-weight: 800; color: #0c1f14; }
+        .orc-doc-opcao-total b { font-size: 21px; }
+        .orc-doc-obs { margin-top: 20px; padding: 16px 18px; background: #fff8e6; border: 1.5px solid #f0d78c; border-radius: 12px; }
+        .orc-doc-obs-titulo { font-size: 13px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: #92650a; margin-bottom: 8px; }
+        .orc-doc-obs-texto { font-size: 15px; line-height: 1.6; color: #4a3a10; }
+        .orc-doc-obs-pix { margin-top: 10px; font-size: 17px; font-weight: 800; color: #0c1f14; }
+        .orc-doc-obs-pix span { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #92650a; display: block; margin-bottom: 2px; }
+        @media (max-width: 380px) {
+            .orc-doc-detalhes-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -682,6 +718,55 @@
                 <div id="reciboRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                 </div>
+            </div>
+        </div>
+
+        <div class="view" id="viewOrcamento">
+            <button class="back-btn" onclick="goHome()">← Menu</button>
+            <div class="menu-title">🖨️ Orçamento de Impressões</div>
+
+            <div class="table-container" style="padding:20px;">
+                <div class="form-group">
+                    <label>Quantidade de páginas</label>
+                    <input type="number" id="orc_paginas" min="1" step="1" inputmode="numeric" placeholder="Ex: 25" oninput="atualizarOrcamento()">
+                </div>
+
+                <div class="form-group">
+                    <label>Tipo de impressão</label>
+                    <div class="orc-tipo-grid" id="orc_tipo_grid">
+                        <button type="button" class="orc-tipo-btn" data-valor="Escritas" onclick="selecionarOrcTipo('Escritas')">✍️<br>Escritas</button>
+                        <button type="button" class="orc-tipo-btn" data-valor="Imagens" onclick="selecionarOrcTipo('Imagens')">🖼️<br>Imagens</button>
+                        <button type="button" class="orc-tipo-btn" data-valor="Chapadas" onclick="selecionarOrcTipo('Chapadas')">🎨<br>Chapadas</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Tipo de papel</label>
+                    <select id="orc_papel" onchange="atualizarOrcamento()">
+                        <option value="">Selecione</option>
+                        <option value="Sulfite 75g">Sulfite 75g</option>
+                        <option value="A Laser 75g">A Laser 75g</option>
+                        <option value="P.Cartão">Papel Cartão</option>
+                        <option value="P.Foto">Papel Foto</option>
+                        <option value="P.Adesivo">Papel Adesivo</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:6px;">
+                    <label>Quantidade de encadernações</label>
+                    <input type="number" id="orc_encadernacoes" min="0" step="1" inputmode="numeric" value="0" oninput="atualizarOrcamento()">
+                </div>
+                <div class="lock-error" id="orc_erro"></div>
+            </div>
+
+            <div id="orcamentoCard" class="orc-card-vazio">
+                <div class="empty-icon">🧮</div>
+                <div>Preencha os campos acima para calcular o orçamento.</div>
+            </div>
+
+            <div class="actions" style="margin-top:16px;">
+                <button class="btn-primary" id="orc_btn_exportar" onclick="exportarOrcamento()" disabled>📤 Exportar Orçamento</button>
+                <button class="btn-secondary" id="orc_btn_whatsapp" onclick="enviarOrcamentoWhatsapp()" disabled>➡️ Enviar pelo WhatsApp</button>
             </div>
         </div>
     </div>
@@ -1300,6 +1385,7 @@
     <script type="module">
         import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
         import extenso from 'https://esm.sh/extenso@2';
+        import html2canvas from 'https://esm.sh/html2canvas@1.4.1';
 
         // Valor por extenso em reais — usado nas cláusulas de pagamento dos
         // contratos de compra e venda. A fórmula da planilha era feita à mão e
@@ -1993,6 +2079,7 @@
             fechamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
             planejamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M4 21h16"/><path d="M5 21V10l7-5 7 5v11"/><circle cx="9.5" cy="14.5" r="1.6"/><circle cx="14.5" cy="14.5" r="1.6"/></svg>`,
             recibo: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 3h12v18l-2.5-1.6L13 21l-2.5-1.6L8 21l-2.5-1.6L6 21z"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="11.5" x2="15.5" y2="11.5"/><path d="M8.5 15h4"/></svg>`,
+            orcamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><rect x="7" y="14" width="10" height="7"/><line x1="8" y1="17.5" x2="16" y2="17.5"/><line x1="8" y1="20" x2="13" y2="20"/></svg>`,
         };
 
         // Espelha o grid de atalhos da planilha "PAINEL DE CONTROLE" usada na loja.
@@ -2000,6 +2087,7 @@
         // externos reais têm ação; o resto fica marcado "em breve" até serem migrados.
         const MENU_ITEMS = [
             { icon: 'recibo', label: 'Emitir Recibo', action: { type: 'view', view: 'recibo' }, desc: 'Emita recibos de serviços prestados de forma rápida e personalizada.' },
+            { icon: 'orcamento', label: 'Orçamento de Impressões', action: { type: 'view', view: 'orcamento' }, desc: 'Calcule orçamentos de impressão e encadernação com base na análise visual do arquivo do cliente.' },
             { icon: 'curriculo', label: 'Currículo', action: { type: 'view', view: 'curriculo' }, badgeKey: 'curriculo' },
             { icon: 'declaracao', label: 'Declaração', action: { type: 'sub', key: 'declaracao' } },
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
@@ -2195,6 +2283,7 @@
             document.getElementById('viewCurriculo').classList.toggle('active', view === 'curriculo');
             document.getElementById('viewPlanejamento').classList.toggle('active', view === 'planejamento');
             document.getElementById('viewRecibo').classList.toggle('active', view === 'recibo');
+            document.getElementById('viewOrcamento').classList.toggle('active', view === 'orcamento');
             if (!viewsInitialized[view]) {
                 viewsInitialized[view] = true;
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
@@ -2232,6 +2321,7 @@
             document.getElementById('viewCurriculo').classList.remove('active');
             document.getElementById('viewPlanejamento').classList.remove('active');
             document.getElementById('viewRecibo').classList.remove('active');
+            document.getElementById('viewOrcamento').classList.remove('active');
             document.getElementById('viewHome').classList.add('active');
             loadPendingCounts();
         }
@@ -4473,6 +4563,264 @@
                 </div>
             </div>`;
         }
+
+        // ===== Orçamento de Impressões =====
+        // Tabelas de preço e fórmulas copiadas fielmente da planilha Google Sheets
+        // "PAINEL DE CONTROLE" (aba PAINEL DE CONTROLE), células AJ7/AJ8/AJ11/AJ12,
+        // lidas em 2026-08-16. Cada tier é [limiteDePaginas, multiplicadorPorPagina]
+        // e reproduz um IFS(AH4<limite, valor, ...) em ordem — o primeiro tier cuja
+        // página total é MENOR que o limite vence; o último tier (Infinity) é o
+        // "TRUE" (catch-all) da fórmula original. Não alterar sem reconferir a
+        // planilha: qualquer preço aqui precisa bater exatamente com AJ7/AJ8.
+        const ORC_PRECOS = {
+            pb: {
+                'Sulfite 75g': {
+                    Escritas: [[10,1],[20,0.75],[30,0.6],[50,0.58],[100,0.55],[250,0.5],[400,0.47],[750,0.44],[1000,0.42],[Infinity,0.4]],
+                    Imagens: [[10,1.25],[20,1],[30,0.8],[50,0.78],[100,0.75],[250,0.7],[400,0.67],[750,0.64],[1000,0.62],[Infinity,0.6]],
+                    Chapadas: [[10,1.5],[20,1.25],[30,1],[50,0.98],[100,0.95],[250,0.9],[400,0.87],[750,0.84],[1000,0.82],[Infinity,0.8]],
+                },
+                'A Laser 75g': {
+                    Escritas: [[5,2],[10,1.6],[20,1.2],[30,0.96],[50,0.93],[100,0.88],[250,0.8],[400,0.75],[750,0.7],[1000,0.67],[Infinity,0.64]],
+                    Imagens: [[5,2.5],[10,2],[20,1.6],[30,1.28],[50,1.25],[100,1.2],[250,1.12],[400,1.07],[750,1.024],[1000,0.99],[Infinity,0.96]],
+                    Chapadas: [[5,3],[10,2.5],[20,2],[30,1.6],[50,1.57],[100,1.52],[250,1.44],[400,1.39],[750,1.34],[1000,1.31],[Infinity,1.28]],
+                },
+                'P.Cartão': {
+                    Escritas: [[10,3.5],[15,3.25],[20,3],[25,2.75],[Infinity,2.5]],
+                    Imagens: [[10,3.75],[15,3.5],[20,3.25],[25,3],[Infinity,2.75]],
+                    Chapadas: [[10,4],[15,3.75],[20,3.5],[25,3.25],[Infinity,3]],
+                },
+                'P.Foto': {
+                    Escritas: [[10,4.5],[15,4.25],[20,4],[25,3.75],[Infinity,3.5]],
+                    Imagens: [[10,4.75],[15,4.5],[20,4.25],[25,4],[Infinity,3.75]],
+                    Chapadas: [[10,5],[15,4.75],[20,4.5],[25,4.25],[Infinity,4]],
+                },
+                'P.Adesivo': {
+                    Escritas: [[10,5.5],[15,5.25],[20,5],[25,4.75],[Infinity,4.5]],
+                    Imagens: [[10,5.75],[15,5.5],[20,5.25],[25,5],[Infinity,4.75]],
+                    Chapadas: [[10,6],[15,5.75],[20,5.5],[25,5.25],[Infinity,5]],
+                },
+            },
+            cor: {
+                'Sulfite 75g': {
+                    Escritas: [[5,2],[10,1.75],[20,1.5],[30,1.25],[50,1.2],[100,1.1],[250,1.05],[400,1],[750,0.95],[1000,0.9],[Infinity,0.85]],
+                    Imagens: [[5,2.25],[10,2],[20,1.75],[30,1.5],[50,1.4],[100,1.3],[250,1.25],[400,1.2],[750,1.15],[1000,1.1],[Infinity,1.05]],
+                    Chapadas: [[5,2.5],[10,2.25],[20,2],[30,1.75],[50,1.6],[100,1.5],[250,1.45],[400,1.4],[750,1.35],[1000,1.3],[Infinity,1.25]],
+                },
+                'A Laser 75g': {
+                    Escritas: [[5,3.2],[10,2.8],[20,2.4],[30,2],[50,1.92],[100,1.76],[250,1.68],[400,1.6],[750,1.52],[1000,1.44],[Infinity,1.36]],
+                    Imagens: [[5,3.6],[10,3.2],[20,2.8],[30,2.4],[50,2.24],[100,2.08],[250,2],[400,1.92],[750,1.84],[1000,1.76],[Infinity,1.68]],
+                    Chapadas: [[5,5],[10,3.6],[20,3.2],[30,2.8],[50,2.56],[100,2.4],[250,2.32],[400,2.24],[750,2.16],[1000,2.08],[Infinity,2]],
+                },
+                'P.Cartão': {
+                    Escritas: [[10,4.5],[15,4.25],[20,4],[25,3.75],[Infinity,3.5]],
+                    Imagens: [[10,4.75],[15,4.5],[20,4.25],[25,4],[Infinity,3.75]],
+                    Chapadas: [[10,5],[15,4.75],[20,4.5],[25,4.25],[Infinity,4]],
+                },
+                'P.Foto': {
+                    Escritas: [[10,5.5],[15,5.25],[20,5],[25,4.75],[Infinity,4.5]],
+                    Imagens: [[10,5.75],[15,5.5],[20,5.25],[25,5],[Infinity,4.75]],
+                    Chapadas: [[10,6],[15,5.75],[20,5.5],[25,5.25],[Infinity,5]],
+                },
+                'P.Adesivo': {
+                    Escritas: [[10,6.5],[15,6.25],[20,6],[25,5.75],[Infinity,5.5]],
+                    Imagens: [[10,6.75],[15,6.5],[20,6.25],[25,6],[Infinity,5.75]],
+                    Chapadas: [[10,7],[15,6.75],[20,6.5],[25,6.25],[Infinity,6]],
+                },
+            },
+        };
+        const ORC_PAPEL_LABEL = { 'Sulfite 75g': 'Sulfite 75g', 'A Laser 75g': 'A Laser 75g', 'P.Cartão': 'Papel Cartão', 'P.Foto': 'Papel Foto', 'P.Adesivo': 'Papel Adesivo' };
+        // Descrição que aparece pro cliente no orçamento — a categoria interna
+        // (Escritas/Imagens/Chapadas) usada no cálculo continua a mesma, só a
+        // exibição no card muda pra algo que o cliente entenda de primeira.
+        const ORC_TIPO_DESCRICAO = { Escritas: 'Somente texto', Imagens: 'Contém imagem e texto', Chapadas: 'Bastante imagens' };
+
+        function orcMultiplicador(tiers, paginas) {
+            for (const [limite, valor] of tiers) {
+                if (paginas < limite) return valor;
+            }
+            return tiers[tiers.length - 1][1];
+        }
+
+        // AJ7 (P&B) e AJ8 (Colorido): páginas × multiplicador(papel, categoria, páginas).
+        function orcPrecoImpressao(papel, categoria, paginas) {
+            const tabelaPB = ORC_PRECOS.pb[papel]?.[categoria];
+            const tabelaCor = ORC_PRECOS.cor[papel]?.[categoria];
+            if (!tabelaPB || !tabelaCor) return { pb: 0, cor: 0 };
+            return {
+                pb: paginas * orcMultiplicador(tabelaPB, paginas),
+                cor: paginas * orcMultiplicador(tabelaCor, paginas),
+            };
+        }
+
+        // AJ11/AJ12 (parte de encadernação): IF(AI10 vazio/0, 0, AI10 * preço-unitário),
+        // preço unitário por caderno tiered pela média de páginas por caderno (AH4/AI10).
+        function orcPrecoEncadernacao(paginas, qtdEncadernacoes) {
+            if (!qtdEncadernacoes || qtdEncadernacoes <= 0) return 0;
+            const mediaPorCaderno = paginas / qtdEncadernacoes;
+            let precoUnitario;
+            if (mediaPorCaderno < 50) precoUnitario = 7;
+            else if (mediaPorCaderno < 150) precoUnitario = 10;
+            else if (mediaPorCaderno < 250) precoUnitario = 12;
+            else precoUnitario = 15;
+            return qtdEncadernacoes * precoUnitario;
+        }
+
+        let orcSelecionado = { tipo: null };
+
+        function selecionarOrcTipo(tipo) {
+            orcSelecionado.tipo = tipo;
+            document.querySelectorAll('#orc_tipo_grid .orc-tipo-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.valor === tipo);
+            });
+            atualizarOrcamento();
+        }
+        window.selecionarOrcTipo = selecionarOrcTipo;
+
+        function orcValidar() {
+            const paginasStr = document.getElementById('orc_paginas').value;
+            const paginas = Number(paginasStr);
+            const papel = document.getElementById('orc_papel').value;
+            const encStr = document.getElementById('orc_encadernacoes').value;
+            const encadernacoes = encStr === '' ? 0 : Number(encStr);
+            if (!paginasStr || !(paginas > 0)) return { ok: false, erro: 'Informe a quantidade de páginas (maior que zero).' };
+            if (!orcSelecionado.tipo) return { ok: false, erro: 'Selecione o tipo de impressão (Escritas, Imagens ou Chapadas).' };
+            if (!papel) return { ok: false, erro: 'Selecione o tipo de papel.' };
+            if (encadernacoes < 0) return { ok: false, erro: 'Quantidade de encadernações não pode ser negativa.' };
+            return { ok: true, paginas, tipo: orcSelecionado.tipo, papel, encadernacoes };
+        }
+
+        function atualizarOrcamento() {
+            const card = document.getElementById('orcamentoCard');
+            const erroEl = document.getElementById('orc_erro');
+            const btnExportar = document.getElementById('orc_btn_exportar');
+            const btnWhatsapp = document.getElementById('orc_btn_whatsapp');
+            const v = orcValidar();
+            if (!v.ok) {
+                erroEl.textContent = document.getElementById('orc_paginas').value || document.getElementById('orc_papel').value || orcSelecionado.tipo ? v.erro : '';
+                card.className = 'orc-card-vazio';
+                card.innerHTML = `<div class="empty-icon">🧮</div><div>Preencha os campos acima para calcular o orçamento.</div>`;
+                btnExportar.disabled = true;
+                btnWhatsapp.disabled = true;
+                return;
+            }
+            erroEl.textContent = '';
+            const { pb, cor } = orcPrecoImpressao(v.papel, v.tipo, v.paginas);
+            const encad = orcPrecoEncadernacao(v.paginas, v.encadernacoes);
+            const totalPB = pb + encad;
+            const totalCor = cor + encad;
+            const linhaEncadernacao = v.encadernacoes > 0
+                ? `<div class="orc-doc-opcao-linha"><span>Valor das encadernações</span><b>${fmt(encad)}</b></div>`
+                : `<div class="orc-doc-opcao-obs">Obs: sem encadernação</div>`;
+            card.className = 'orc-doc';
+            card.innerHTML = `
+                <div class="orc-doc-header">
+                    <div class="orc-doc-logo">${RECIBO_LOGO_SVG}</div>
+                    <div>
+                        <div class="orc-doc-empresa">BLACKOUT</div>
+                        <div class="orc-doc-titulo">Orçamento de Impressão</div>
+                    </div>
+                </div>
+                <div class="orc-doc-detalhes">
+                    <div class="orc-doc-detalhes-titulo">Detalhes do Serviço</div>
+                    <div class="orc-doc-detalhes-grid">
+                        <div><span>Quantidade de páginas</span><b>${v.paginas}</b></div>
+                        <div><span>Tipo de impressão</span><b>${ORC_TIPO_DESCRICAO[v.tipo] || v.tipo}</b></div>
+                        <div><span>Tipo de papel</span><b>${escapeHtml(ORC_PAPEL_LABEL[v.papel] || v.papel)}</b></div>
+                        <div><span>Encadernações</span><b>${v.encadernacoes}</b></div>
+                    </div>
+                </div>
+                <div class="orc-doc-opcoes">
+                    <div class="orc-doc-opcao">
+                        <div class="orc-doc-opcao-titulo">Opção 1 — Preto e Branco</div>
+                        <div class="orc-doc-opcao-linha"><span>Valor das impressões</span><b>${fmt(pb)}</b></div>
+                        ${linhaEncadernacao}
+                        <div class="orc-doc-opcao-total"><span>TOTAL</span><b>${fmt(totalPB)}</b></div>
+                    </div>
+                    <div class="orc-doc-opcao orc-doc-opcao-cor">
+                        <div class="orc-doc-opcao-titulo">Opção 2 — Colorido</div>
+                        <div class="orc-doc-opcao-linha"><span>Valor das impressões</span><b>${fmt(cor)}</b></div>
+                        ${linhaEncadernacao}
+                        <div class="orc-doc-opcao-total"><span>TOTAL</span><b>${fmt(totalCor)}</b></div>
+                    </div>
+                </div>
+                <div class="orc-doc-obs">
+                    <div class="orc-doc-obs-titulo">Próximo passo</div>
+                    <div class="orc-doc-obs-texto">Para incluirmos este pedido na fila de produção, é necessário efetuar o pagamento do valor combinado. Após o pagamento, seu pedido segue para a fila de produção e você será avisado assim que estiver pronto.</div>
+                    <div class="orc-doc-obs-pix"><span>Chave PIX (celular)</span>(47) 99737-0714</div>
+                </div>`;
+            btnExportar.disabled = false;
+            btnWhatsapp.disabled = false;
+        }
+        window.atualizarOrcamento = atualizarOrcamento;
+
+        async function orcGerarCanvas() {
+            const card = document.getElementById('orcamentoCard');
+            if (card.className !== 'orc-doc') return null;
+            return html2canvas(card, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+        }
+
+        function orcNomeArquivo() {
+            const paginas = document.getElementById('orc_paginas').value || 'orcamento';
+            return `orcamento-blackout-${paginas}pg.jpg`;
+        }
+
+        async function exportarOrcamento() {
+            const btn = document.getElementById('orc_btn_exportar');
+            const textoOriginal = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Gerando imagem...';
+            try {
+                const canvas = await orcGerarCanvas();
+                if (!canvas) return;
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                const link = document.createElement('a');
+                link.download = orcNomeArquivo();
+                link.href = dataUrl;
+                link.click();
+            } catch (error) {
+                alert('Não deu pra gerar a imagem: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = textoOriginal;
+            }
+        }
+        window.exportarOrcamento = exportarOrcamento;
+
+        // Tenta compartilhar a imagem direto pelo share sheet do aparelho (o
+        // WhatsApp aparece como uma das opções) via Web Share API — funciona no
+        // Chrome/Android e no Safari/iOS. Onde isso não existe (a maioria dos
+        // navegadores desktop não deixa compartilhar arquivo), baixa a imagem e
+        // abre o WhatsApp Web com uma mensagem pronta pra pessoa só anexar o
+        // arquivo que acabou de baixar.
+        async function enviarOrcamentoWhatsapp() {
+            const btn = document.getElementById('orc_btn_whatsapp');
+            const textoOriginal = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Preparando...';
+            try {
+                const canvas = await orcGerarCanvas();
+                if (!canvas) return;
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+                const arquivo = new File([blob], orcNomeArquivo(), { type: 'image/jpeg' });
+                const mensagem = 'Segue o orçamento de impressão da Blackout 🖨️';
+                if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+                    await navigator.share({ files: [arquivo], title: 'Orçamento Blackout', text: mensagem });
+                } else {
+                    const link = document.createElement('a');
+                    link.download = orcNomeArquivo();
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    alert('A imagem foi baixada. Abra o WhatsApp e anexe o arquivo pra enviar pro cliente.');
+                    window.open('https://wa.me/?text=' + encodeURIComponent(mensagem), '_blank', 'noopener');
+                }
+            } catch (error) {
+                if (error?.name !== 'AbortError') alert('Não deu pra preparar o envio: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = textoOriginal;
+            }
+        }
+        window.enviarOrcamentoWhatsapp = enviarOrcamentoWhatsapp;
 
         async function loadRecibos() {
             const container = document.getElementById('reciboRows');
