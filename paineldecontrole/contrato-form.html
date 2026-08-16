@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Contrato — Blackout</title>
+<style>
+    :root {
+        --bg: #05170c;
+        --surface: #0c1f14;
+        --surface-2: #0f2818;
+        --border: rgba(255,255,255,0.08);
+        --text: #eafff1;
+        --text-dim: #8fa89a;
+        --text-faint: #5c7568;
+        --accent: #22c55e;
+        --accent-bright: #4ade80;
+        --accent-dim: rgba(34,197,94,0.12);
+        --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #0a2415 0%, var(--bg) 55%); color: var(--text);
+        padding: 24px 16px 60px;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 22px; }
+    .header .logo { width: 52px; height: 52px; margin: 0 auto 10px; }
+    .header h1 { font-size: 19px; margin: 0 0 4px; }
+    .header p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+    .progress-track { height: 5px; background: var(--surface); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); border-radius: 10px; transition: width .25s ease; }
+    .step-label { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-bright); margin-bottom: 18px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 22px 18px; }
+    .card h2 { font-size: 15px; margin: 0 0 6px; color: var(--text); }
+    .step-sub { font-size: 12.5px; color: var(--text-dim); margin: 0 0 16px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+    .field .hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+    input[type=text], input[type=tel], input[type=email], input[type=date], input[type=number], select, textarea {
+        width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); color: var(--text); font-size: 14.5px; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .radio-group, .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-pill { flex: 1 1 auto; min-width: 90px; }
+    .radio-pill input { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-pill .pill-label {
+        display: block; text-align: center; padding: 11px 10px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .12s;
+    }
+    .radio-pill input:checked + .pill-label { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+    .tipo-card { display: block; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-2); padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all .12s; }
+    .tipo-card:hover { border-color: rgba(34,197,94,0.4); }
+    .tipo-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+    .tipo-card .tipo-emoji { font-size: 22px; margin-bottom: 6px; }
+    .tipo-card .tipo-title { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .tipo-card .tipo-desc { font-size: 12px; color: var(--text-dim); }
+    .nav-row { display: flex; gap: 10px; margin-top: 22px; }
+    .btn { flex: 1; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn-next { background: linear-gradient(135deg, var(--accent-bright), var(--accent)); color: #05170c; box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
+    .btn-back { background: var(--surface-2); color: var(--text-dim); flex: 0 0 90px; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .error-msg { color: var(--danger); font-size: 12px; margin-top: 10px; display: none; }
+    .review-item { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+    .review-item .rk { color: var(--text-dim); }
+    .review-item .rv { color: var(--text); text-align: right; font-weight: 600; }
+    .success-box { text-align: center; padding: 40px 10px; }
+    .success-box .check { width: 64px; height: 64px; margin: 0 auto 18px; }
+    .success-box h2 { font-size: 18px; margin-bottom: 8px; }
+    .success-box p { color: var(--text-dim); font-size: 13.5px; }
+    @media (max-width: 380px) { .card { padding: 18px 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="46" fill="#05170c" stroke="#22C55E" stroke-width="4"/>
+            <g fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round">
+                <path d="M 50 10 A 40 40 0 1 1 12 60"/>
+            </g>
+            <polygon points="50,8 42,22 58,22" fill="#22C55E"/>
+            <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
+        </svg>
+        <h1>Formulário de Contrato</h1>
+        <p>Escolha o tipo de contrato e preencha os dados — a gente prepara tudo pra você.</p>
+    </div>
+
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="step-label" id="stepLabel"></div>
+
+    <div class="card" id="cardArea"></div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pill(name, value, checked, label) {
+    const id = name + '_' + value.replace(/\W/g, '');
+    return `<label class="radio-pill"><input type="radio" name="${name}" data-key="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''}><span class="pill-label" for="${id}">${esc(label || value)}</span></label>`;
+}
+const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+function estadoOptions(selected) {
+    return ESTADOS_BR.map(u => `<option value="${u}" ${selected === u ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+// Cidade + bairro selecionáveis (região onde a Blackout atua) — "Outra"/"Outro"
+// sempre libera campo livre, pra não travar quem é de fora da região. Usado tanto
+// pro endereço de cada pessoa quanto pro endereço do imóvel — por isso os
+// campos são todos prefixados (a_, b_, im_) em vez de fixos, ver cidadeField().
+const CIDADES_BAIRROS = {
+    'Camboriú': ['Areias', 'Cedro', 'Centro', 'Conde Vila Verde', 'Lídia Duarte', 'Monte Alegre', 'Rio Pequeno', 'Santa Regina', 'São Francisco de Assis', 'Tabuleiro', 'Várzea do Ranchinho'],
+    'Balneário Camboriú': ['Ariribá', 'Barra', 'Barra Norte', 'Barra Sul', 'Centro', 'Estados', 'Estaleiro', 'Estaleirinho', 'Interpraias', 'Jardim Iate Clube', 'Laranjeiras', 'Municípios', 'Nações', 'Nova Esperança', 'Pioneiros', 'Praia dos Amores', 'São Judas', 'Vila Real'],
+    'Itapema': ['Alto do São Bento', 'Andorinha', 'Canto da Praia', 'Casa Branca', 'Castelo Branco', 'Centro', 'Ilhota', 'Meia Praia', 'Morretes', 'Sertãozinho', 'Tabuleiro dos Oliveiras', 'Várzea'],
+    'Porto Belo': ['Alto Perequê', 'Araçá', 'Balneário Perequê', 'Centro', 'Enseada Encantada', 'Jardim Dourado', 'Valongo', 'Vila Nova', 'Vivapark'],
+};
+const CIDADES_OPTS = [...Object.keys(CIDADES_BAIRROS), 'Outra'];
+function cidadeOptions(selected) {
+    return '<option value="">Selecione</option>' + CIDADES_OPTS.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
+}
+function bairroOptions(cidade, selected) {
+    const lista = CIDADES_BAIRROS[cidade] || [];
+    return '<option value="">Selecione</option>' + lista.map(b => `<option value="${b}" ${selected === b ? 'selected' : ''}>${b}</option>`).join('') + `<option value="__outro__" ${selected === '__outro__' ? 'selected' : ''}>Outro</option>`;
+}
+
+// Campo <select> com opção "Outro" que libera um input de texto livre — usado
+// pra manter tudo selecionável (marca, cor, tipo de veículo/imóvel) sem travar
+// quem tem um caso fora da lista.
+function campoSelecaoComOutro(key, label, opcoes, obrigatorio) {
+    const val = s[key];
+    return `<div class="field"><label>${esc(label)}${obrigatorio ? ' *' : ''}</label>
+        <select data-key="${key}" data-role="select-outro">
+            <option value="">Selecione</option>
+            ${opcoes.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
+            <option value="Outro" ${val === 'Outro' ? 'selected' : ''}>Outro</option>
+        </select>
+    </div><div id="cond_${key}"></div>`;
+}
+function renderCondSelecaoOutro(key) {
+    const el = document.getElementById(`cond_${key}`);
+    if (!el) return;
+    el.innerHTML = s[key] === 'Outro' ? `<div class="field"><label>Qual?</label><input type="text" data-key="${key}_outro" value="${esc(s[key + '_outro'])}"></div>` : '';
+}
+function valorSelecaoOutro(key) { return s[key] === 'Outro' ? s[key + '_outro'] : s[key]; }
+
+const ANO_ATUAL = new Date().getFullYear();
+function anoOptions(selected) {
+    let out = '<option value="">Ano</option>';
+    for (let y = ANO_ATUAL; y >= ANO_ATUAL - 40; y--) out += `<option value="${y}" ${String(y) === String(selected) ? 'selected' : ''}>${y}</option>`;
+    return out;
+}
+function diaOptions(selected) {
+    let out = '<option value="">Dia</option>';
+    for (let d = 1; d <= 31; d++) out += `<option value="${d}" ${String(d) === String(selected) ? 'selected' : ''}>${d}</option>`;
+    return out;
+}
+
+const MARCAS_VEICULO = ['Chevrolet', 'Fiat', 'Ford', 'Volkswagen', 'Honda', 'Toyota', 'Hyundai', 'Renault', 'Nissan', 'Jeep', 'Peugeot', 'Citroën', 'Mitsubishi', 'Kia', 'BMW', 'Mercedes-Benz', 'Audi', 'Yamaha', 'Suzuki', 'Kawasaki'];
+const CORES_VEICULO = ['Branco', 'Preto', 'Prata', 'Cinza', 'Vermelho', 'Azul', 'Verde', 'Amarelo', 'Marrom', 'Bege', 'Dourado'];
+const TIPOS_VEICULO = ['Carro', 'Moto', 'Caminhonete', 'Caminhão', 'Van/Utilitário', 'Ônibus'];
+const TIPOS_IMOVEL = ['Casa', 'Apartamento', 'Terreno', 'Sala Comercial', 'Kitnet/Studio', 'Chácara/Sítio', 'Galpão'];
+
+// ---------- Estado ----------
+const s = {
+    tipo: '', // 'veiculo_cv' | 'imovel_cv' | 'imovel_locacao'
+
+    a_nome: '', a_cpf: '', a_rg: '', a_genero: '', a_nacionalidade: 'Brasileiro(a)', a_nacionalidade_outro: '', a_estado_civil: '', a_profissao: '',
+    a_endereco: '', a_cidade: '', a_cidade_outra: '', a_bairro: '', a_bairro_outro: '', a_estado: '',
+
+    b_nome: '', b_cpf: '', b_rg: '', b_genero: '', b_nacionalidade: 'Brasileiro(a)', b_nacionalidade_outro: '', b_estado_civil: '', b_profissao: '',
+    b_endereco: '', b_cidade: '', b_cidade_outra: '', b_bairro: '', b_bairro_outro: '', b_estado: '',
+
+    v_tipo_veiculo: '', v_tipo_veiculo_outro: '', v_fabricante: '', v_fabricante_outro: '', v_modelo: '',
+    v_ano_fabricacao: '', v_ano_modelo: '', v_chassi: '', v_cor: '', v_cor_outro: '', v_placa: '', v_renavam: '',
+
+    im_tipo_imovel: '', im_tipo_imovel_outro: '', im_finalidade: 'Residenciais',
+    im_endereco: '', im_cidade: '', im_cidade_outra: '', im_bairro: '', im_bairro_outro: '', im_estado: '',
+    im_area: '', im_matricula: '', im_cartorio: '',
+
+    forma_pagamento: '', valor_total: '', valor_entrada: '', num_parcelas: '', data_primeira_parcela: '',
+
+    valor_aluguel: '', dia_vencimento: '', prazo_meses: '', data_inicio: '', indice_reajuste: 'IGP-M',
+    garantia: '', valor_caucao: '', fiador_nome: '', fiador_cpf: '',
+
+    test1_nome: '', test1_cpf: '', test2_nome: '', test2_cpf: '',
+};
+
+function cidadeFinal(p) { return s[p + '_cidade'] === 'Outra' ? s[p + '_cidade_outra'] : s[p + '_cidade']; }
+function bairroFinal(p) { return (s[p + '_cidade'] === 'Outra' || s[p + '_bairro'] === '__outro__') ? s[p + '_bairro_outro'] : s[p + '_bairro']; }
+function nacionalidadeFinal(p) { return s[p + '_nacionalidade'] === 'Outra' ? s[p + '_nacionalidade_outro'] : s[p + '_nacionalidade']; }
+
+function nacionalidadeCampoHtml(p) {
+    return `<div class="field"><label>Nacionalidade *</label>
+        <div class="radio-group">
+            ${pill(p + '_nacionalidade', 'Brasileiro(a)', s[p + '_nacionalidade'] === 'Brasileiro(a)')}
+            ${pill(p + '_nacionalidade', 'Venezuelano(a)', s[p + '_nacionalidade'] === 'Venezuelano(a)')}
+            ${pill(p + '_nacionalidade', 'Haitiano(a)', s[p + '_nacionalidade'] === 'Haitiano(a)')}
+            ${pill(p + '_nacionalidade', 'Outra', s[p + '_nacionalidade'] === 'Outra', 'Outra')}
+        </div>
+    </div><div id="cond_${p}_nacionalidade"></div>`;
+}
+function renderCondNacionalidade(p) {
+    const el = document.getElementById(`cond_${p}_nacionalidade`);
+    if (!el) return;
+    el.innerHTML = s[p + '_nacionalidade'] === 'Outra' ? `<div class="field"><label>Qual nacionalidade? *</label><input type="text" data-key="${p}_nacionalidade_outro" value="${esc(s[p + '_nacionalidade_outro'])}"></div>` : '';
+}
+
+function cidadeCampoHtml(p) {
+    return `<div class="field"><label>Cidade *</label><select data-key="${p}_cidade" data-role="cidade" data-prefix="${p}">${cidadeOptions(s[p + '_cidade'])}</select></div><div id="cond_${p}_cidade"></div>`;
+}
+function renderCondCidade(p) {
+    const el = document.getElementById(`cond_${p}_cidade`);
+    if (!el) return;
+    let html = '';
+    if (s[p + '_cidade'] === 'Outra') {
+        html += `<div class="field"><label>Qual cidade? *</label><input type="text" data-key="${p}_cidade_outra" value="${esc(s[p + '_cidade_outra'])}"></div>`;
+        html += `<div class="field"><label>Bairro *</label><input type="text" data-key="${p}_bairro_outro" value="${esc(s[p + '_bairro_outro'])}"></div>`;
+    } else if (s[p + '_cidade']) {
+        html += `<div class="field"><label>Bairro *</label><select data-key="${p}_bairro" data-role="bairro" data-prefix="${p}">${bairroOptions(s[p + '_cidade'], s[p + '_bairro'])}</select></div><div id="cond_${p}_bairro"></div>`;
+    }
+    el.innerHTML = html;
+    renderCondBairroOutro(p);
+}
+function renderCondBairroOutro(p) {
+    const el = document.getElementById(`cond_${p}_bairro`);
+    if (!el) return;
+    el.innerHTML = s[p + '_bairro'] === '__outro__' ? `<div class="field"><label>Qual bairro? *</label><input type="text" data-key="${p}_bairro_outro" value="${esc(s[p + '_bairro_outro'])}"></div>` : '';
+}
+
+let stepIndex = 0;
+let steps = [];
+
+function buildSteps() {
+    const t = s.tipo;
+    const S = { tipo: stepTipo };
+    if (!t) { steps = [S.tipo]; return; }
+    if (t === 'veiculo_cv') {
+        steps = [stepTipo, () => stepPessoa('a', 'VENDEDOR', 'Dados de quem está vendendo o veículo.'), () => stepPessoa('b', 'COMPRADOR', 'Dados de quem está comprando o veículo.'), stepVeiculo, stepPagamento, stepTestemunhas, stepRevisao];
+    } else if (t === 'imovel_cv') {
+        steps = [stepTipo, () => stepPessoa('a', 'VENDEDOR', 'Dados de quem está vendendo o imóvel.'), () => stepPessoa('b', 'COMPRADOR', 'Dados de quem está comprando o imóvel.'), stepImovelCV, stepPagamento, stepTestemunhas, stepRevisao];
+    } else if (t === 'imovel_locacao') {
+        steps = [stepTipo, () => stepPessoa('a', 'LOCADOR', 'Dados de quem está alugando o imóvel (proprietário).'), () => stepPessoa('b', 'LOCATÁRIO', 'Dados de quem vai morar/ocupar o imóvel.'), stepImovelLocacao, stepCondicoesLocacao, stepGarantia, stepTestemunhas, stepRevisao];
+    }
+}
+
+function render() {
+    const total = steps.length;
+    document.getElementById('progressFill').style.width = (total > 1 ? Math.round((stepIndex / (total - 1)) * 100) : 0) + '%';
+    document.getElementById('stepLabel').textContent = total > 1 ? `Etapa ${stepIndex + 1} de ${total}` : 'Comece por aqui';
+    const card = document.getElementById('cardArea');
+    card.innerHTML = steps[stepIndex]();
+    afterRenderStep();
+}
+
+function afterRenderStep() {
+    const key = stepKey();
+    if (key === 'pessoaA') { renderCondCidade('a'); renderCondNacionalidade('a'); }
+    if (key === 'pessoaB') { renderCondCidade('b'); renderCondNacionalidade('b'); }
+    if (key === 'veiculo') { ['v_tipo_veiculo', 'v_fabricante', 'v_cor'].forEach(renderCondSelecaoOutro); }
+    if (key === 'imovel') { renderCondCidade('im'); renderCondSelecaoOutro('im_tipo_imovel'); }
+    if (key === 'pagamento') renderCondPagamento();
+    if (key === 'garantia') renderCondGarantia();
+}
+
+// Identifica a etapa atual por "tipo" lógico (independe do índice, que muda
+// conforme o tipo de contrato escolhido) — usado por afterRenderStep,
+// validateCurrentStep e saveCurrentStep pra saber o que fazer.
+function stepKey() {
+    const fn = steps[stepIndex];
+    return fn.__key || (fn === stepTipo ? 'tipo' : fn === stepVeiculo ? 'veiculo' : fn === stepImovelCV || fn === stepImovelLocacao ? 'imovel'
+        : fn === stepPagamento ? 'pagamento' : fn === stepCondicoesLocacao ? 'locacao' : fn === stepGarantia ? 'garantia'
+        : fn === stepTestemunhas ? 'testemunhas' : fn === stepRevisao ? 'revisao' : (stepIndex === 1 ? 'pessoaA' : stepIndex === 2 ? 'pessoaB' : ''));
+}
+
+function goNext() {
+    saveCurrentStep();
+    const err = validateCurrentStep();
+    if (err) { showError(err); return; }
+    if (stepIndex < steps.length - 1) { stepIndex++; render(); window.scrollTo(0, 0); }
+}
+function goBack() { if (stepIndex > 0) { stepIndex--; render(); window.scrollTo(0, 0); } }
+function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+window.__goNext = goNext;
+window.__goBack = goBack;
+
+// ---------- Etapa: escolha do tipo ----------
+const TIPOS_OPCOES = [
+    { id: 'veiculo_cv', emoji: '🚗', titulo: 'Compra e Venda de Veículo', desc: 'Contrato entre vendedor e comprador de um veículo usado.' },
+    { id: 'imovel_cv', emoji: '🏠', titulo: 'Compra e Venda de Imóvel', desc: 'Contrato entre vendedor e comprador de um imóvel.' },
+    { id: 'imovel_locacao', emoji: '🔑', titulo: 'Locação de Imóvel', desc: 'Contrato de aluguel entre locador e locatário.' },
+];
+function stepTipo() {
+    return `
+    <h2>Qual contrato você precisa?</h2>
+    <p class="step-sub">Escolha uma opção pra gente te mostrar as perguntas certas.</p>
+    ${TIPOS_OPCOES.map(o => `
+        <div class="tipo-card ${s.tipo === o.id ? 'selected' : ''}" data-tipo-choice="${o.id}">
+            <div class="tipo-emoji">${o.emoji}</div>
+            <div class="tipo-title">${esc(o.titulo)}</div>
+            <div class="tipo-desc">${esc(o.desc)}</div>
+        </div>`).join('')}
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: pessoa (vendedor/comprador/locador/locatário) ----------
+function stepPessoa(p, papel, subtitulo) {
+    return `
+    <h2>${esc(papel)}</h2>
+    <p class="step-sub">${esc(subtitulo)}</p>
+    <div class="field"><label>Nome completo *</label><input type="text" data-key="${p}_nome" value="${esc(s[p + '_nome'])}"></div>
+    <div class="field"><label>CPF *</label><input type="text" data-key="${p}_cpf" value="${esc(s[p + '_cpf'])}"></div>
+    <div class="field"><label>RG</label><input type="text" data-key="${p}_rg" value="${esc(s[p + '_rg'])}"></div>
+    <div class="field"><label>Gênero *</label>
+        <div class="radio-group">${pill(p + '_genero', 'Masculino', s[p + '_genero'] === 'Masculino')}${pill(p + '_genero', 'Feminino', s[p + '_genero'] === 'Feminino')}</div>
+    </div>
+    ${nacionalidadeCampoHtml(p)}
+    <div class="field"><label>Estado civil</label>
+        <select data-key="${p}_estado_civil"><option value="">Selecione</option>${['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União Estável'].map(o => `<option value="${o}" ${s[p + '_estado_civil'] === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Profissão</label><input type="text" data-key="${p}_profissao" value="${esc(s[p + '_profissao'])}"></div>
+    <div class="field"><label>Endereço (rua e número) *</label><input type="text" data-key="${p}_endereco" value="${esc(s[p + '_endereco'])}"></div>
+    ${cidadeCampoHtml(p)}
+    <div class="field"><label>Estado *</label><select data-key="${p}_estado"><option value="">Selecione</option>${estadoOptions(s[p + '_estado'])}</select></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: veículo ----------
+function stepVeiculo() {
+    return `
+    <h2>Dados do Veículo</h2>
+    <p class="step-sub">Objeto do contrato de compra e venda.</p>
+    ${campoSelecaoComOutro('v_tipo_veiculo', 'Tipo de veículo', TIPOS_VEICULO, true)}
+    ${campoSelecaoComOutro('v_fabricante', 'Fabricante/Marca', MARCAS_VEICULO, true)}
+    <div class="field"><label>Modelo *</label><input type="text" data-key="v_modelo" value="${esc(s.v_modelo)}"></div>
+    <div class="field"><label>Ano de fabricação / Ano modelo</label>
+        <div class="date-row" style="display:flex; gap:8px;">
+            <select data-key="v_ano_fabricacao" style="flex:1;">${anoOptions(s.v_ano_fabricacao)}</select>
+            <select data-key="v_ano_modelo" style="flex:1;">${anoOptions(s.v_ano_modelo)}</select>
+        </div>
+    </div>
+    ${campoSelecaoComOutro('v_cor', 'Cor', CORES_VEICULO, false)}
+    <div class="field"><label>Placa *</label><input type="text" data-key="v_placa" value="${esc(s.v_placa)}"></div>
+    <div class="field"><label>Chassi</label><input type="text" data-key="v_chassi" value="${esc(s.v_chassi)}"><p class="hint">Se não souber de cabeça, pode deixar em branco e informar depois.</p></div>
+    <div class="field"><label>Renavam</label><input type="text" data-key="v_renavam" value="${esc(s.v_renavam)}"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: imóvel (compra e venda) ----------
+function stepImovelCV() {
+    return `
+    <h2>Dados do Imóvel</h2>
+    <p class="step-sub">Objeto do contrato de compra e venda.</p>
+    ${campoSelecaoComOutro('im_tipo_imovel', 'Tipo de imóvel', TIPOS_IMOVEL, true)}
+    <div class="field"><label>Endereço do imóvel (rua e número) *</label><input type="text" data-key="im_endereco" value="${esc(s.im_endereco)}"></div>
+    ${cidadeCampoHtml('im')}
+    <div class="field"><label>Estado *</label><select data-key="im_estado"><option value="">Selecione</option>${estadoOptions(s.im_estado)}</select></div>
+    <div class="field"><label>Área (m²)</label><input type="number" step="0.01" data-key="im_area" value="${esc(s.im_area)}"></div>
+    <div class="field"><label>Matrícula do imóvel</label><input type="text" data-key="im_matricula" value="${esc(s.im_matricula)}"></div>
+    <div class="field"><label>Cartório de Registro de Imóveis</label><input type="text" data-key="im_cartorio" value="${esc(s.im_cartorio)}"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: imóvel (locação) ----------
+function stepImovelLocacao() {
+    return `
+    <h2>Dados do Imóvel</h2>
+    <p class="step-sub">Imóvel que será alugado.</p>
+    ${campoSelecaoComOutro('im_tipo_imovel', 'Tipo de imóvel', TIPOS_IMOVEL, true)}
+    <div class="field"><label>Finalidade *</label>
+        <div class="radio-group">${pill('im_finalidade', 'Residenciais', s.im_finalidade === 'Residenciais', 'Residencial')}${pill('im_finalidade', 'Comerciais', s.im_finalidade === 'Comerciais', 'Comercial')}</div>
+    </div>
+    <div class="field"><label>Endereço do imóvel (rua e número) *</label><input type="text" data-key="im_endereco" value="${esc(s.im_endereco)}"></div>
+    ${cidadeCampoHtml('im')}
+    <div class="field"><label>Estado *</label><select data-key="im_estado"><option value="">Selecione</option>${estadoOptions(s.im_estado)}</select></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: pagamento (compra e venda — veículo ou imóvel) ----------
+function stepPagamento() {
+    return `
+    <h2>Forma de Pagamento</h2>
+    <div class="field"><label>Pagamento *</label>
+        <div class="radio-group">${pill('forma_pagamento', 'Vista', s.forma_pagamento === 'Vista', 'À Vista')}${pill('forma_pagamento', 'Prazo', s.forma_pagamento === 'Prazo', 'A Prazo')}</div>
+    </div>
+    <div class="field"><label>Valor total *</label><input type="number" step="0.01" data-key="valor_total" value="${esc(s.valor_total)}"></div>
+    <div id="condPagamento"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondPagamento() {
+    const el = document.getElementById('condPagamento');
+    if (!el) return;
+    if (s.forma_pagamento !== 'Prazo') { el.innerHTML = ''; return; }
+    el.innerHTML = `
+        <div class="field"><label>Valor de entrada</label><input type="number" step="0.01" data-key="valor_entrada" value="${esc(s.valor_entrada)}"><p class="hint">Deixe em branco se não houver entrada.</p></div>
+        <div class="field"><label>Número de parcelas *</label><input type="number" min="1" data-key="num_parcelas" value="${esc(s.num_parcelas)}"></div>
+        <div class="field"><label>Data da primeira parcela *</label><input type="date" data-key="data_primeira_parcela" value="${esc(s.data_primeira_parcela)}"></div>`;
+}
+
+// ---------- Etapa: condições da locação ----------
+function stepCondicoesLocacao() {
+    return `
+    <h2>Condições da Locação</h2>
+    <div class="field"><label>Valor do aluguel mensal *</label><input type="number" step="0.01" data-key="valor_aluguel" value="${esc(s.valor_aluguel)}"></div>
+    <div class="field"><label>Dia do vencimento (todo mês) *</label><select data-key="dia_vencimento">${diaOptions(s.dia_vencimento)}</select></div>
+    <div class="field"><label>Prazo do contrato (em meses) *</label><input type="number" min="1" data-key="prazo_meses" value="${esc(s.prazo_meses)}"></div>
+    <div class="field"><label>Data de início *</label><input type="date" data-key="data_inicio" value="${esc(s.data_inicio)}"></div>
+    <div class="field"><label>Índice de reajuste anual</label>
+        <select data-key="indice_reajuste">${['IGP-M', 'IPCA', 'INPC'].map(o => `<option value="${o}" ${s.indice_reajuste === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+    </div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: garantia (locação) ----------
+function stepGarantia() {
+    return `
+    <h2>Garantia Locatícia</h2>
+    <p class="step-sub">Como o locatário vai garantir o cumprimento do contrato.</p>
+    <div class="field">
+        <select data-key="garantia" data-role="garantia">
+            <option value="">Selecione</option>
+            <option value="Caução" ${s.garantia === 'Caução' ? 'selected' : ''}>Caução (depósito)</option>
+            <option value="Fiador" ${s.garantia === 'Fiador' ? 'selected' : ''}>Fiador</option>
+            <option value="Seguro-fiança" ${s.garantia === 'Seguro-fiança' ? 'selected' : ''}>Seguro-fiança</option>
+            <option value="Nenhuma" ${s.garantia === 'Nenhuma' ? 'selected' : ''}>Sem garantia</option>
+        </select>
+    </div>
+    <div id="condGarantia"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondGarantia() {
+    const el = document.getElementById('condGarantia');
+    if (!el) return;
+    if (s.garantia === 'Caução') {
+        el.innerHTML = `<div class="field"><label>Valor da caução *</label><input type="number" step="0.01" data-key="valor_caucao" value="${esc(s.valor_caucao)}"></div>`;
+    } else if (s.garantia === 'Fiador') {
+        el.innerHTML = `
+            <div class="field"><label>Nome completo do fiador *</label><input type="text" data-key="fiador_nome" value="${esc(s.fiador_nome)}"></div>
+            <div class="field"><label>CPF do fiador *</label><input type="text" data-key="fiador_cpf" value="${esc(s.fiador_cpf)}"></div>`;
+    } else {
+        el.innerHTML = '';
+    }
+}
+
+// ---------- Etapa: testemunhas (comum a todos, opcional) ----------
+function stepTestemunhas() {
+    return `
+    <h2>Testemunhas</h2>
+    <p class="step-sub">Opcional — se não tiver os dados agora, pode assinar em branco na hora da entrega.</p>
+    <div class="field"><label>Nome da testemunha 1</label><input type="text" data-key="test1_nome" value="${esc(s.test1_nome)}"></div>
+    <div class="field"><label>CPF da testemunha 1</label><input type="text" data-key="test1_cpf" value="${esc(s.test1_cpf)}"></div>
+    <div class="field"><label>Nome da testemunha 2</label><input type="text" data-key="test2_nome" value="${esc(s.test2_nome)}"></div>
+    <div class="field"><label>CPF da testemunha 2</label><input type="text" data-key="test2_cpf" value="${esc(s.test2_cpf)}"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: revisão ----------
+function stepRevisao() {
+    const objeto = s.tipo === 'veiculo_cv' ? `${valorSelecaoOutro('v_fabricante')} ${s.v_modelo} — ${s.v_placa}` : `${valorSelecaoOutro('im_tipo_imovel')}, ${s.im_endereco}`;
+    const rows = [
+        ['Contrato', TIPOS_OPCOES.find(o => o.id === s.tipo)?.titulo || ''],
+        [s.tipo === 'imovel_locacao' ? 'Locador' : 'Vendedor', s.a_nome],
+        [s.tipo === 'imovel_locacao' ? 'Locatário' : 'Comprador', s.b_nome],
+        ['Objeto', objeto],
+    ];
+    if (s.tipo === 'imovel_locacao') {
+        rows.push(['Aluguel mensal', s.valor_aluguel ? `R$ ${s.valor_aluguel}` : '—']);
+        rows.push(['Prazo', s.prazo_meses ? `${s.prazo_meses} meses` : '—']);
+    } else {
+        rows.push(['Pagamento', s.forma_pagamento === 'Prazo' ? 'A Prazo' : 'À Vista']);
+        rows.push(['Valor total', s.valor_total ? `R$ ${s.valor_total}` : '—']);
+    }
+    return `
+    <h2>Confira e envie</h2>
+    ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">Enviar contrato</button></div>`;
+}
+
+// ---------- Validação ----------
+function validarPessoa(p) {
+    if (!s[p + '_nome'] || !s[p + '_cpf'] || !s[p + '_genero'] || !nacionalidadeFinal(p) || !s[p + '_endereco'] || !cidadeFinal(p) || !bairroFinal(p) || !s[p + '_estado']) {
+        return 'Preencha todos os campos obrigatórios (*).';
+    }
+    return null;
+}
+function validateCurrentStep() {
+    const key = stepKey();
+    switch (key) {
+        case 'tipo': return s.tipo ? null : 'Escolha o tipo de contrato pra continuar.';
+        case 'pessoaA': return validarPessoa('a');
+        case 'pessoaB': return validarPessoa('b');
+        case 'veiculo':
+            if (!valorSelecaoOutro('v_tipo_veiculo') || !valorSelecaoOutro('v_fabricante') || !s.v_modelo || !s.v_placa) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 'imovel':
+            if (!valorSelecaoOutro('im_tipo_imovel') || !s.im_endereco || !cidadeFinal('im') || !bairroFinal('im') || !s.im_estado) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 'pagamento':
+            if (!s.forma_pagamento || !s.valor_total) return 'Preencha todos os campos obrigatórios (*).';
+            if (s.forma_pagamento === 'Prazo' && (!s.num_parcelas || !s.data_primeira_parcela)) return 'Preencha o número de parcelas e a data da primeira parcela.';
+            return null;
+        case 'locacao':
+            if (!s.valor_aluguel || !s.dia_vencimento || !s.prazo_meses || !s.data_inicio) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 'garantia':
+            if (!s.garantia) return 'Selecione o tipo de garantia.';
+            if (s.garantia === 'Caução' && !s.valor_caucao) return 'Informe o valor da caução.';
+            if (s.garantia === 'Fiador' && (!s.fiador_nome || !s.fiador_cpf)) return 'Preencha os dados do fiador.';
+            return null;
+        default: return null;
+    }
+}
+function saveCurrentStep() {
+    if (stepKey() === 'tipo') return; // já salvo no clique do card
+}
+
+// ---------- Delegação de eventos (form todo dirigido por data-key) ----------
+const cardEl = document.getElementById('cardArea');
+cardEl.addEventListener('input', e => {
+    const key = e.target.dataset.key;
+    if (key && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.type !== 'radio') {
+        s[key] = e.target.value;
+    }
+});
+cardEl.addEventListener('change', e => {
+    const t = e.target;
+    const key = t.dataset.key;
+    if (!key) return;
+    if (t.type === 'radio') { s[key] = t.value; }
+    else if (t.tagName === 'SELECT') { s[key] = t.value; }
+    if (t.dataset.role === 'cidade') {
+        const p = t.dataset.prefix;
+        s[p + '_bairro'] = ''; s[p + '_bairro_outro'] = '';
+        renderCondCidade(p);
+    }
+    if (t.dataset.role === 'bairro') {
+        const p = t.dataset.prefix;
+        renderCondBairroOutro(p);
+    }
+    if (t.dataset.role === 'select-outro') { renderCondSelecaoOutro(key); }
+    if (t.type === 'radio' && (key === 'a_nacionalidade' || key === 'b_nacionalidade')) { renderCondNacionalidade(key.slice(0, 1)); }
+    if (t.dataset.role === 'garantia') { renderCondGarantia(); }
+    if (key === 'forma_pagamento') { renderCondPagamento(); }
+});
+cardEl.addEventListener('click', e => {
+    const card = e.target.closest('[data-tipo-choice]');
+    if (card) {
+        s.tipo = card.dataset.tipoChoice;
+        buildSteps();
+        document.querySelectorAll('.tipo-card').forEach(c => c.classList.toggle('selected', c === card));
+    }
+    if (e.target.id === 'btnSubmit') submitForm();
+});
+
+// ---------- Envio ----------
+async function submitForm() {
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+
+    const pessoa = p => ({
+        nome: s[p + '_nome'], cpf: s[p + '_cpf'], rg: s[p + '_rg'] || null, genero: s[p + '_genero'],
+        nacionalidade: nacionalidadeFinal(p), estado_civil: s[p + '_estado_civil'] || null, profissao: s[p + '_profissao'] || null,
+        endereco: s[p + '_endereco'], bairro: bairroFinal(p), cidade: cidadeFinal(p), estado: s[p + '_estado'],
+    });
+    const anoFabricacaoModelo = () => {
+        if (!s.v_ano_fabricacao) return null;
+        return s.v_ano_modelo && s.v_ano_modelo !== s.v_ano_fabricacao ? `${s.v_ano_fabricacao}/${s.v_ano_modelo}` : `${s.v_ano_fabricacao}/${s.v_ano_fabricacao}`;
+    };
+
+    let tipo_contrato = '';
+    let especifico = {
+        testemunha_1_nome: s.test1_nome || null, testemunha_1_cpf: s.test1_cpf || null,
+        testemunha_2_nome: s.test2_nome || null, testemunha_2_cpf: s.test2_cpf || null,
+    };
+
+    if (s.tipo === 'veiculo_cv') {
+        tipo_contrato = 'CONTRATO_CV_VEICULO';
+        especifico = {
+            ...especifico,
+            tipo_veiculo: valorSelecaoOutro('v_tipo_veiculo'), fabricante: valorSelecaoOutro('v_fabricante'), modelo: s.v_modelo,
+            ano_fabricacao_modelo: anoFabricacaoModelo(), cor: valorSelecaoOutro('v_cor') || null, placa: s.v_placa,
+            chassi: s.v_chassi || null, renavam: s.v_renavam || null,
+            forma_pagamento: s.forma_pagamento, valor_total: Number(s.valor_total) || 0,
+            valor_entrada: s.valor_entrada ? Number(s.valor_entrada) : 0,
+            num_parcelas: s.num_parcelas ? Number(s.num_parcelas) : null,
+            data_primeira_parcela: s.data_primeira_parcela || null,
+        };
+    } else if (s.tipo === 'imovel_cv') {
+        tipo_contrato = 'CONTRATO_CV_IMOVEL';
+        especifico = {
+            ...especifico,
+            tipo_imovel: valorSelecaoOutro('im_tipo_imovel'), endereco_imovel: s.im_endereco,
+            bairro_imovel: bairroFinal('im'), cidade_imovel: cidadeFinal('im'), estado_imovel: s.im_estado,
+            area_m2: s.im_area || null, matricula: s.im_matricula || null, cartorio: s.im_cartorio || null,
+            forma_pagamento: s.forma_pagamento, valor_total: Number(s.valor_total) || 0,
+            valor_entrada: s.valor_entrada ? Number(s.valor_entrada) : 0,
+            num_parcelas: s.num_parcelas ? Number(s.num_parcelas) : null,
+            data_primeira_parcela: s.data_primeira_parcela || null,
+        };
+    } else if (s.tipo === 'imovel_locacao') {
+        tipo_contrato = 'CONTRATO_LOCACAO_IMOVEL';
+        especifico = {
+            ...especifico,
+            tipo_imovel: valorSelecaoOutro('im_tipo_imovel'), finalidade: s.im_finalidade,
+            endereco_imovel: s.im_endereco, bairro_imovel: bairroFinal('im'), cidade_imovel: cidadeFinal('im'), estado_imovel: s.im_estado,
+            valor_aluguel: Number(s.valor_aluguel) || 0, dia_vencimento: Number(s.dia_vencimento) || null,
+            prazo_meses: Number(s.prazo_meses) || null, data_inicio: s.data_inicio || null,
+            indice_reajuste: s.indice_reajuste || 'IGP-M',
+            garantia: s.garantia, valor_caucao: s.valor_caucao ? Number(s.valor_caucao) : null,
+            fiador_nome: s.fiador_nome || null, fiador_cpf: s.fiador_cpf || null,
+        };
+    }
+
+    const registro = {
+        tipo_contrato,
+        dados: { pessoa_a: pessoa('a'), pessoa_b: pessoa('b'), especifico },
+    };
+
+    const { error } = await supabase.from('declaracoes_pendentes').insert(registro);
+    if (error) {
+        showError('Não deu pra enviar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        btn.disabled = false; btn.textContent = 'Enviar contrato';
+        return;
+    }
+    document.getElementById('cardArea').innerHTML = `
+        <div class="success-box">
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+            <h2>Contrato enviado!</h2>
+            <p>Recebemos as informações. A equipe da Blackout vai preparar o contrato pra assinatura.</p>
+        </div>`;
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('stepLabel').textContent = 'Concluído';
+}
+
+buildSteps();
+render();
+</script>
+</body>
+</html>
