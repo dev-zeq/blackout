@@ -203,20 +203,18 @@ function terrenoAreaTexto() {
     return area ? area.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' m²' : '—';
 }
 function areaImovelFinal() {
-    if (valorSelecaoOutro('im_tipo_imovel') === 'Terreno') {
-        const frente = Number(s.im_terreno_frente) || 0, fundo = Number(s.im_terreno_fundo) || 0;
-        return (frente && fundo) ? frente * fundo : null;
-    }
-    return s.im_area || null;
+    if (valorSelecaoOutro('im_tipo_imovel') !== 'Terreno') return null;
+    const frente = Number(s.im_terreno_frente) || 0, fundo = Number(s.im_terreno_fundo) || 0;
+    return (frente && fundo) ? frente * fundo : null;
 }
+// Metragem só faz sentido pra Terreno (frente × fundo vira a área) — outros
+// tipos de imóvel (casa, apartamento...) não pedem nenhum campo de área.
 function condAreaImovelHtml() {
-    if (valorSelecaoOutro('im_tipo_imovel') === 'Terreno') {
-        return `
-        <div class="field"><label>Metros de frente *</label><input type="number" step="0.01" data-key="im_terreno_frente" data-role="terreno-medida" value="${esc(s.im_terreno_frente)}"></div>
-        <div class="field"><label>Metros de fundo (profundidade) *</label><input type="number" step="0.01" data-key="im_terreno_fundo" data-role="terreno-medida" value="${esc(s.im_terreno_fundo)}"></div>
-        <div class="field"><label>Área total (calculada automaticamente)</label><input type="text" id="terrenoAreaDisplay" value="${terrenoAreaTexto()}" disabled style="opacity:.7;"></div>`;
-    }
-    return `<div class="field"><label>Área (m²)</label><input type="number" step="0.01" data-key="im_area" value="${esc(s.im_area)}"></div>`;
+    if (valorSelecaoOutro('im_tipo_imovel') !== 'Terreno') return '';
+    return `
+    <div class="field"><label>Metros de frente *</label><input type="number" step="0.01" data-key="im_terreno_frente" data-role="terreno-medida" value="${esc(s.im_terreno_frente)}"></div>
+    <div class="field"><label>Metros de fundo (profundidade) *</label><input type="number" step="0.01" data-key="im_terreno_fundo" data-role="terreno-medida" value="${esc(s.im_terreno_fundo)}"></div>
+    <div class="field"><label>Área total (calculada automaticamente)</label><input type="text" id="terrenoAreaDisplay" value="${terrenoAreaTexto()}" disabled style="opacity:.7;"></div>`;
 }
 function renderCondAreaImovel() {
     const el = document.getElementById('condAreaImovel');
