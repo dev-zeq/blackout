@@ -3165,7 +3165,10 @@
                     out += `<p>${qualificarCV(comprador, 'COMPRADOR')}</p>`;
                     out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Imóvel, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>`;
                     out += `<h3>DO OBJETO DO CONTRATO</h3>`;
-                    out += clausulaCV(n++, `O presente contrato tem como OBJETO o imóvel do tipo ${up(e.tipo_imovel || 'Imóvel')}, situado na ${escapeHtml(titleCase(e.endereco_imovel))}, bairro ${escapeHtml(e.bairro_imovel || '')}, ${escapeHtml(e.cidade_imovel || '')}/${escapeHtml(e.estado_imovel || '')}${e.area_m2 ? `, com área de ${escapeHtml(String(e.area_m2))} m²` : ''}${e.matricula ? `, matriculado sob o nº ${escapeHtml(e.matricula)}${e.cartorio ? ` no ${escapeHtml(e.cartorio)}` : ''}` : ''}, de propriedade do VENDEDOR, livre de qualquer ônus, gravame ou pendência judicial.`);
+                    const medidasTexto = (e.frente_m && e.fundos_m)
+                        ? `, medindo ${escapeHtml(String(e.frente_m))} metros de frente por ${escapeHtml(String(e.fundos_m))} metros de fundos, perfazendo a área total de ${escapeHtml(String(e.area_m2))} m²`
+                        : (e.area_m2 ? `, com área de ${escapeHtml(String(e.area_m2))} m²` : '');
+                    out += clausulaCV(n++, `O presente contrato tem como OBJETO o imóvel do tipo ${up(e.tipo_imovel || 'Imóvel')}, situado na ${escapeHtml(titleCase(e.endereco_imovel))}, bairro ${escapeHtml(e.bairro_imovel || '')}, ${escapeHtml(e.cidade_imovel || '')}/${escapeHtml(e.estado_imovel || '')}${medidasTexto}${e.matricula ? `, matriculado sob o nº ${escapeHtml(e.matricula)}${e.cartorio ? ` no ${escapeHtml(e.cartorio)}` : ''}` : ''}, de propriedade do VENDEDOR, livre de qualquer ônus, gravame ou pendência judicial.`);
                     out += `<h3>DAS RESPONSABILIDADES</h3>`;
                     out += clausulaCV(n++, 'O imóvel é vendido no estado de conservação em que se encontra, já visto e inspecionado pelo COMPRADOR, o qual tomou ciência de suas condições, cabendo eventuais reparos, a partir da assinatura deste instrumento, exclusivamente ao COMPRADOR.');
                     out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO IMÓVEL</h3>`;
