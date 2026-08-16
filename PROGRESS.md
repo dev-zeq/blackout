@@ -64,11 +64,26 @@ Atualiza sempre o **mesmo registro** (mesmo `id`) — nunca cria linha nova, nun
 - Editar declaração (Autônomo): reabertura completa, troca da função exercida, salvar, confirmado no banco.
 - Editar currículo: reabertura com telefone/whatsapp com DDDs diferentes entre si (nenhum dos dois era 47) reconstruídos certinho, cidade "Outra" reconstruída, curso e experiência (arrays) reconstruídos, edição do nome da empresa salva e confirmada no banco sem duplicar.
 
+## Rua/Número/Complemento + SC automático em todos os formulários (2026-08-16)
+
+O que já tinha sido feito só em `contrato-form.html` (ver seção acima) foi replicado nos outros 5 formulários públicos: as 4 Declarações (Autônomo, Trabalho, Residência, União Estável) e o Currículo. Mesmo padrão em todo lugar:
+
+- Campo único de endereço virou **Rua / Número / Complemento (não obrigatório)** — composto num endereço só (`enderecoFinal()`) na hora de enviar/exibir.
+- Porto Belo → **Itajaí** na lista de cidades (mesmos bairros usados em `contrato-form.html`).
+- **Camboriú, Balneário Camboriú, Itapema e Itajaí** forçam Estado = SC e escondem o campo (`estadoForcadoSC()`/`estadoCampoHtml()`/`renderCondEstado()`); qualquer outra cidade (inclusive "Outra") continua pedindo o Estado.
+- `carregarParaEdicao()` de cada formulário ganhou `carregarEnderecoSolto()` (reconstrói Rua/Número/Complemento a partir do que foi salvo, com fallback pro endereço composto inteiro em registros antigos).
+
+**Onde cada um guarda o endereço**: os 4 formulários de Declaração salvam `rua`/`numero`/`complemento` direto dentro de `dados.pessoa_a` (é tudo JSON solto, sem problema). O Currículo é diferente — a tabela `curriculos` só tem uma coluna fixa `endereco` (já composta), sem coluna própria pra rua/número/complemento — então esses 3 campos ficam soltos dentro da coluna `dados` (que já guarda um monte de outra pergunta/resposta), com chaves curtas `dados.rua`/`dados.numero`/`dados.complemento`.
+
+Testado ao vivo (criar, conferir no banco, editar/recarregar, apagar):
+- Declaração de Autônomo, cidade Itajaí — SC automático, Rua/Número/Complemento persistidos e reconstruídos certinho na edição.
+- Currículo, cidade Camboriú — mesma coisa, incluindo o `estado` (coluna fixa) vindo `null`→`"SC"` automaticamente e `dados.rua`/`dados.numero` persistidos.
+- Os outros 3 formulários de Declaração (Trabalho, Residência, União Estável) só tiveram teste de fumaça (sem erro de JS, campos renderizando certo) — o padrão é idêntico ao do Autônomo, que foi testado ponta a ponta.
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Locação de imóvel não tem opção de "imóvel com múltiplas unidades" ou campos de IPTU/condomínio separados — hoje é uma cláusula fixa genérica.
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
-- Editar contrato: registros salvos *antes* dessa versão do formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
+- Editar contrato/declaração/currículo: registros salvos *antes* dessa versão de cada formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
 - Editar currículo: o campo "Qual tipo de cargo você busca no mercado de trabalho?" é salvo hoje a partir de `qual_cargo || tipo_cargo_busca` (um OR entre dois campos diferentes do formulário) — um bug preexistente, não introduzido agora. Ao editar, não dá pra saber qual dos dois originou o valor salvo, então ambos os campos são preenchidos de volta com o mesmo valor (redundante, mas não perde informação).
-- Nenhum dos formulários de Declaração/Currículo ganhou os campos de Rua/Número/Complemento separados nem a lógica de SC automático (Itajaí etc.) — isso foi pedido só pra contrato-form.html. Se quiser levar essas duas melhorias pros outros formulários também, é um pedido separado.

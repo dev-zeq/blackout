@@ -110,7 +110,7 @@ const s = {
     ddd47: '', ddd_custom: '', telefone_numero: '', whatsapp_mesmo: '', ddd_whatsapp: '', whatsapp_numero: '',
     contato_recado_nome: '', contato_recado_ddd: '', contato_recado_numero: '',
     tem_email: '', email: '',
-    endereco: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado_residencia: '',
+    rua: '', numero: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado_residencia: '',
     tem_superior: '', area_formacao: '', periodo_formacao: '', grau_escolar: '', processo_estudo: '', horario_estudo: '',
     fez_curso: '', cursos: [],
     informatica: '', outros_idiomas: '', quais_idiomas: '',
@@ -142,9 +142,13 @@ const CIDADES_BAIRROS = {
     'Camboriú': ['Areias', 'Cedro', 'Centro', 'Conde Vila Verde', 'Lídia Duarte', 'Monte Alegre', 'Rio Pequeno', 'Santa Regina', 'São Francisco de Assis', 'Tabuleiro', 'Várzea do Ranchinho'],
     'Balneário Camboriú': ['Ariribá', 'Barra', 'Barra Norte', 'Barra Sul', 'Centro', 'Estados', 'Estaleiro', 'Estaleirinho', 'Interpraias', 'Jardim Iate Clube', 'Laranjeiras', 'Municípios', 'Nações', 'Nova Esperança', 'Pioneiros', 'Praia dos Amores', 'São Judas', 'Vila Real'],
     'Itapema': ['Alto do São Bento', 'Andorinha', 'Canto da Praia', 'Casa Branca', 'Castelo Branco', 'Centro', 'Ilhota', 'Meia Praia', 'Morretes', 'Sertãozinho', 'Tabuleiro dos Oliveiras', 'Várzea'],
-    'Porto Belo': ['Alto Perequê', 'Araçá', 'Balneário Perequê', 'Centro', 'Enseada Encantada', 'Jardim Dourado', 'Valongo', 'Vila Nova', 'Vivapark'],
+    'Itajaí': ['Centro', 'Cabeçudas', 'Praia Brava', 'Fazenda', 'Cordeiros', 'São Vicente', 'Barra do Rio', 'Dom Bosco', 'São João', 'Espinheiros', 'Ressacada', 'Salseiros', 'Vila Operária', 'Murta', 'Rio Bonito'],
 };
 const CIDADES_OPTS = [...Object.keys(CIDADES_BAIRROS), 'Outra'];
+// Essas 4 cidades são sempre de SC — o formulário assume o estado sozinho e
+// nem pergunta, pra não travar quem não sabe a sigla. Outras cidades (inclusive
+// "Outra") continuam pedindo o Estado normalmente.
+const CIDADES_SC = ['Camboriú', 'Balneário Camboriú', 'Itapema', 'Itajaí'];
 function cidadeOptions(selected) {
     return '<option value="">Selecione</option>' + CIDADES_OPTS.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
 }
@@ -181,6 +185,31 @@ function renderCondBairroOutro() {
 }
 function cidadeFinal() { return s.cidade === 'Outra' ? s.cidade_outra : s.cidade; }
 function bairroFinal() { return (s.cidade === 'Outra' || s.bairro === '__outro__') ? s.bairro_outro : s.bairro; }
+// Rua/Número/Complemento entram separados e são compostos num endereço só na
+// hora de enviar/exibir.
+function enderecoFinal() {
+    const rua = (s.rua || '').trim();
+    const numero = (s.numero || '').trim();
+    const complemento = (s.complemento || '').trim();
+    if (!rua && !numero) return '';
+    let out = rua;
+    if (numero) out += (out ? ', nº ' : 'nº ') + numero;
+    if (complemento) out += ', ' + complemento;
+    return out;
+}
+// Camboriú, Balneário Camboriú, Itapema e Itajaí são sempre SC — nesses casos
+// nem mostra o campo de Estado, já assume a sigla sozinho.
+function estadoForcadoSC() { return CIDADES_SC.includes(s.cidade); }
+function estadoResidenciaFinal() { return estadoForcadoSC() ? 'SC' : s.estado_residencia; }
+function estadoResidenciaCampoHtml() {
+    if (estadoForcadoSC()) { s.estado_residencia = 'SC'; return ''; }
+    return `<div class="field"><label>Estado *</label><select id="f_estado_res"><option value="">Selecione</option>${estadoOptions(s.estado_residencia)}</select></div>`;
+}
+function renderCondEstadoResidencia() {
+    const el = document.getElementById('cond_estado_res');
+    if (!el) return;
+    el.innerHTML = estadoResidenciaCampoHtml();
+}
 // Caminho inverso de cidadeFinal()/bairroFinal() — usado só ao recarregar um
 // registro salvo pra edição (ver carregarParaEdicao).
 function carregarCidadeBairro(cidadeSalva, bairroSalvo) {
@@ -352,10 +381,12 @@ function stepEmailEndereco() {
         <div class="radio-group">${pill('f_tem_email', 'Sim', s.tem_email === 'Sim')}${pill('f_tem_email', 'Não', s.tem_email === 'Não')}</div>
     </div>
     <div id="condEmail"></div>
-    <div class="field"><label>Endereço atual (rua e número) *</label><input type="text" id="f_endereco" value="${esc(s.endereco)}"></div>
+    <div class="field"><label>Rua (endereço atual) *</label><input type="text" id="f_rua" value="${esc(s.rua)}"></div>
+    <div class="field"><label>Número *</label><input type="text" id="f_numero" value="${esc(s.numero)}"></div>
+    <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
     <div class="field"><label>Cidade *</label><select id="f_cidade">${cidadeOptions(s.cidade)}</select></div>
     <div id="condCidade"></div>
-    <div class="field"><label>Estado *</label><select id="f_estado_res"><option value="">Selecione</option>${estadoOptions(s.estado_residencia)}</select></div>
+    <div id="cond_estado_res">${estadoResidenciaCampoHtml()}</div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -598,7 +629,7 @@ function stepRevisao() {
         ['Nascimento', s.nascimento], ['Nacionalidade', s.nacionalidade],
         ['Estado civil', s.estado_civil], ['Telefone', s.telefone_numero],
         ['Email', s.tem_email === 'Sim' ? s.email : '—'],
-        ['Endereço', `${s.endereco}, ${bairroFinal()}, ${cidadeFinal()}/${s.estado_residencia}`],
+        ['Endereço', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoResidenciaFinal()}`],
         ['Cursos', s.fez_curso === 'Sim' ? s.cursos.filter(c => c.curso).map(c => c.curso).join(', ') || '—' : '—'],
         ['Experiência', s.tem_experiencia === 'Tenho experiência' ? s.empresas.filter(e => e.nome).map(e => e.nome).join(', ') || '—' : 'Primeiro emprego'],
         ['CNH', s.tem_cnh === 'Sim' ? `Categoria ${s.categoria_cnh}` : 'Não possui'],
@@ -627,7 +658,7 @@ function validateCurrentStep() {
             if (!s.ddd47 || !s.telefone_numero || !s.whatsapp_mesmo) return 'Preencha todos os campos obrigatórios (*).';
             return null;
         case 3:
-            if (!s.endereco || !cidadeFinal() || !bairroFinal() || !s.estado_residencia) return 'Preencha todos os campos obrigatórios (*).';
+            if (!s.rua || !s.numero || !cidadeFinal() || !bairroFinal() || !estadoResidenciaFinal()) return 'Preencha todos os campos obrigatórios (*).';
             return null;
         case 4:
             if (!s.grau_escolar) return 'Selecione seu grau escolar.';
@@ -658,8 +689,9 @@ function saveCurrentStep() {
             break;
         case 3:
             s.tem_email = checkedVal('f_tem_email'); s.email = val('f_email');
-            s.endereco = val('f_endereco'); s.cidade = val('f_cidade');
-            s.estado_residencia = val('f_estado_res');
+            s.rua = val('f_rua'); s.numero = val('f_numero'); s.complemento = val('f_complemento');
+            s.cidade = val('f_cidade');
+            if (!estadoForcadoSC()) s.estado_residencia = val('f_estado_res');
             break;
         case 4:
             s.tem_superior = checkedVal('f_tem_superior'); s.area_formacao = val('f_area_formacao');
@@ -712,7 +744,7 @@ function bindStepEvents() {
     document.querySelectorAll('input[name="f_whatsapp_mesmo"]').forEach(r => r.addEventListener('change', () => { s.whatsapp_mesmo = checkedVal('f_whatsapp_mesmo'); renderCondWhatsapp(); }));
     document.querySelectorAll('input[name="f_tem_email"]').forEach(r => r.addEventListener('change', () => { s.tem_email = checkedVal('f_tem_email'); renderCondEmail(); }));
     const selCidade = document.getElementById('f_cidade');
-    if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; renderCondCidade(); });
+    if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado_residencia = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstadoResidencia(); });
     document.querySelectorAll('input[name="f_tem_superior"]').forEach(r => r.addEventListener('change', () => { s.tem_superior = checkedVal('f_tem_superior'); renderCondSuperior(); }));
     document.querySelectorAll('input[name="f_fez_curso"]').forEach(r => r.addEventListener('change', () => { s.fez_curso = checkedVal('f_fez_curso'); renderCursosArea(); }));
     document.querySelectorAll('input[name="f_outros_idiomas"]').forEach(r => r.addEventListener('change', () => { s.outros_idiomas = checkedVal('f_outros_idiomas'); renderCondIdiomas(); }));
@@ -734,7 +766,7 @@ function bindStepEvents() {
 
     // renders iniciais dos blocos condicionais/repetíveis da etapa atual
     renderCondNacionalidade(); renderCondFilhos(); renderCondDdd(); renderCondWhatsapp();
-    renderCondEmail(); renderCondCidade(); renderCondSuperior(); renderCursosArea(); renderCondIdiomas();
+    renderCondEmail(); renderCondCidade(); renderCondEstadoResidencia(); renderCondSuperior(); renderCursosArea(); renderCondIdiomas();
     renderEmpresasArea(); renderReferenciasArea(); renderCondCargo(); renderCondCnh();
     renderFotoPreview();
 }
@@ -752,6 +784,10 @@ async function submitForm() {
 
     const dados = {};
     const put = (k, v) => { if (v !== '' && v != null) dados[k] = v; };
+    // Rua/Número/Complemento não têm coluna própria na tabela curriculos (só
+    // "endereco" já composto) — ficam soltos aqui dentro de `dados` só pra dar
+    // pra recarregar certinho no modo de edição (ver carregarParaEdicao).
+    put('rua', s.rua); put('numero', s.numero); put('complemento', s.complemento);
     put('QUAL FOI O SEXO ATRIBUÍDO NO SEU NASCIMENTO?', s.sexo);
     put('QUAL SUA NACIONALIDADE? (Seu País de Origem)', s.nacionalidade_outra);
     put('NATURALIDADE? (Apenas o nome da da cidade onde você nasceu)', s.naturalidade);
@@ -829,8 +865,8 @@ async function submitForm() {
         estado_civil: s.estado_civil || null,
         telefone, whatsapp,
         email: s.tem_email === 'Sim' ? (s.email || null) : null,
-        endereco: s.endereco || null, bairro: bairroFinal() || null,
-        cidade: cidadeFinal() || null, estado: s.estado_residencia || null,
+        endereco: enderecoFinal() || null, bairro: bairroFinal() || null,
+        cidade: cidadeFinal() || null, estado: estadoResidenciaFinal() || null,
         dados, foto_url,
     };
     // Status e data do pedido original não devem mudar só porque corrigiu um
@@ -899,6 +935,16 @@ window.__cancelarEdicao = cancelarEdicao;
 // `dados` guarda cada resposta com a pergunta inteira como chave (compatível
 // com os registros antigos da planilha) — put()/get() aqui é só o caminho
 // inverso do put() usado no submitForm, campo por campo, mesma chave exata.
+// Registro salvo antes dessa versão do formulário — só tinha o endereço já
+// junto. Não dá pra separar com segurança, então joga tudo em "Rua" e deixa
+// Número/Complemento em branco pro usuário ajustar.
+function carregarEnderecoSolto(rua, numero, complemento, enderecoComposto) {
+    if (rua || numero || complemento) {
+        s.rua = rua || ''; s.numero = numero || ''; s.complemento = complemento || '';
+    } else if (enderecoComposto) {
+        s.rua = enderecoComposto; s.numero = ''; s.complemento = '';
+    }
+}
 function carregarParaEdicao(row) {
     const dados = row.dados || {};
     const get = (k) => dados[k] ?? '';
@@ -941,7 +987,7 @@ function carregarParaEdicao(row) {
 
     s.tem_email = row.email ? 'Sim' : 'Não';
     s.email = row.email || '';
-    s.endereco = row.endereco || '';
+    carregarEnderecoSolto(get('rua'), get('numero'), get('complemento'), row.endereco);
     carregarCidadeBairro(row.cidade, row.bairro);
     s.estado_residencia = row.estado || '';
 

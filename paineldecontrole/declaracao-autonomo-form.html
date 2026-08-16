@@ -96,7 +96,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const s = {
     nome: '', cpf: '', rg: '', genero: '', estado_civil: '', nacionalidade: 'Brasileiro(a)', profissao: '',
-    endereco: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado: '',
+    rua: '', numero: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado: '',
     funcao: '', periodo: '', horario_inicio: '', horario_fim: '',
     informar_renda: '', renda_mensal: '',
 };
@@ -119,9 +119,13 @@ const CIDADES_BAIRROS = {
     'Camboriú': ['Areias', 'Cedro', 'Centro', 'Conde Vila Verde', 'Lídia Duarte', 'Monte Alegre', 'Rio Pequeno', 'Santa Regina', 'São Francisco de Assis', 'Tabuleiro', 'Várzea do Ranchinho'],
     'Balneário Camboriú': ['Ariribá', 'Barra', 'Barra Norte', 'Barra Sul', 'Centro', 'Estados', 'Estaleiro', 'Estaleirinho', 'Interpraias', 'Jardim Iate Clube', 'Laranjeiras', 'Municípios', 'Nações', 'Nova Esperança', 'Pioneiros', 'Praia dos Amores', 'São Judas', 'Vila Real'],
     'Itapema': ['Alto do São Bento', 'Andorinha', 'Canto da Praia', 'Casa Branca', 'Castelo Branco', 'Centro', 'Ilhota', 'Meia Praia', 'Morretes', 'Sertãozinho', 'Tabuleiro dos Oliveiras', 'Várzea'],
-    'Porto Belo': ['Alto Perequê', 'Araçá', 'Balneário Perequê', 'Centro', 'Enseada Encantada', 'Jardim Dourado', 'Valongo', 'Vila Nova', 'Vivapark'],
+    'Itajaí': ['Centro', 'Cabeçudas', 'Praia Brava', 'Fazenda', 'Cordeiros', 'São Vicente', 'Barra do Rio', 'Dom Bosco', 'São João', 'Espinheiros', 'Ressacada', 'Salseiros', 'Vila Operária', 'Murta', 'Rio Bonito'],
 };
 const CIDADES_OPTS = [...Object.keys(CIDADES_BAIRROS), 'Outra'];
+// Essas 4 cidades são sempre de SC — o formulário assume o estado sozinho e
+// nem pergunta, pra não travar quem não sabe a sigla. Outras cidades (inclusive
+// "Outra") continuam pedindo o Estado normalmente.
+const CIDADES_SC = ['Camboriú', 'Balneário Camboriú', 'Itapema', 'Itajaí'];
 function cidadeOptions(selected) {
     return '<option value="">Selecione</option>' + CIDADES_OPTS.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
 }
@@ -158,6 +162,31 @@ function renderCondBairroOutro() {
 }
 function cidadeFinal() { return s.cidade === 'Outra' ? s.cidade_outra : s.cidade; }
 function bairroFinal() { return (s.cidade === 'Outra' || s.bairro === '__outro__') ? s.bairro_outro : s.bairro; }
+// Rua/Número/Complemento entram separados e são compostos num endereço só na
+// hora de enviar/exibir.
+function enderecoFinal() {
+    const rua = (s.rua || '').trim();
+    const numero = (s.numero || '').trim();
+    const complemento = (s.complemento || '').trim();
+    if (!rua && !numero) return '';
+    let out = rua;
+    if (numero) out += (out ? ', nº ' : 'nº ') + numero;
+    if (complemento) out += ', ' + complemento;
+    return out;
+}
+// Camboriú, Balneário Camboriú, Itapema e Itajaí são sempre SC — nesses casos
+// nem mostra o campo de Estado, já assume a sigla sozinho.
+function estadoForcadoSC() { return CIDADES_SC.includes(s.cidade); }
+function estadoFinal() { return estadoForcadoSC() ? 'SC' : s.estado; }
+function estadoCampoHtml() {
+    if (estadoForcadoSC()) { s.estado = 'SC'; return ''; }
+    return `<div class="field"><label>Estado *</label><select id="f_estado"><option value="">Selecione</option>${estadoOptions(s.estado)}</select></div>`;
+}
+function renderCondEstado() {
+    const el = document.getElementById('cond_estado');
+    if (!el) return;
+    el.innerHTML = estadoCampoHtml();
+}
 // Caminho inverso de cidadeFinal()/bairroFinal() — usado só ao recarregar um
 // registro salvo pra edição (ver carregarParaEdicao).
 function carregarCidadeBairro(cidadeSalva, bairroSalvo) {
@@ -221,10 +250,12 @@ function stepDados() {
 function stepEndereco() {
     return `
     <h2>Endereço</h2>
-    <div class="field"><label>Endereço (rua e número) *</label><input type="text" id="f_endereco" value="${esc(s.endereco)}"></div>
+    <div class="field"><label>Rua *</label><input type="text" id="f_rua" value="${esc(s.rua)}"></div>
+    <div class="field"><label>Número *</label><input type="text" id="f_numero" value="${esc(s.numero)}"></div>
+    <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
     <div class="field"><label>Cidade *</label><select id="f_cidade">${cidadeOptions(s.cidade)}</select></div>
     <div id="condCidade"></div>
-    <div class="field"><label>Estado *</label><select id="f_estado"><option value="">Selecione</option>${estadoOptions(s.estado)}</select></div>
+    <div id="cond_estado">${estadoCampoHtml()}</div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -254,7 +285,7 @@ function renderCondRenda() {
 function stepRevisao() {
     const rows = [
         ['Nome', s.nome], ['CPF', s.cpf],
-        ['Endereço', `${s.endereco}, ${bairroFinal()}, ${cidadeFinal()}/${s.estado}`],
+        ['Endereço', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoFinal()}`],
         ['Função', s.funcao], ['Período', s.periodo],
         ['Horário', `${s.horario_inicio} às ${s.horario_fim}`],
         ['Renda mensal', s.informar_renda === 'SIM' ? ('R$ ' + s.renda_mensal) : 'não informada'],
@@ -274,7 +305,7 @@ function validateCurrentStep() {
             if (!s.nome || !s.cpf || !s.genero || !s.estado_civil || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
             return null;
         case 1:
-            if (!s.endereco || !cidadeFinal() || !bairroFinal() || !s.estado) return 'Preencha todos os campos obrigatórios (*).';
+            if (!s.rua || !s.numero || !cidadeFinal() || !bairroFinal() || !estadoFinal()) return 'Preencha todos os campos obrigatórios (*).';
             return null;
         case 2:
             if (!s.funcao || !s.periodo || !s.horario_inicio || !s.horario_fim) return 'Preencha todos os campos obrigatórios (*).';
@@ -290,7 +321,9 @@ function saveCurrentStep() {
             s.nacionalidade = val('f_nacionalidade'); s.profissao = val('f_profissao');
             break;
         case 1:
-            s.endereco = val('f_endereco'); s.cidade = val('f_cidade'); s.estado = val('f_estado');
+            s.rua = val('f_rua'); s.numero = val('f_numero'); s.complemento = val('f_complemento');
+            s.cidade = val('f_cidade');
+            if (!estadoForcadoSC()) s.estado = val('f_estado');
             break;
         case 2:
             s.funcao = val('f_funcao'); s.periodo = val('f_periodo');
@@ -301,8 +334,9 @@ function saveCurrentStep() {
 }
 function bindStepEvents() {
     const selCidade = document.getElementById('f_cidade');
-    if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; renderCondCidade(); });
+    if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstado(); });
     renderCondCidade();
+    renderCondEstado();
     document.querySelectorAll('input[name="f_informar_renda"]').forEach(r => r.addEventListener('change', () => { s.informar_renda = checkedVal('f_informar_renda'); renderCondRenda(); }));
     renderCondRenda();
     const btnSubmit = document.getElementById('btnSubmit');
@@ -320,7 +354,8 @@ async function submitForm() {
             pessoa_a: {
                 nome: s.nome, cpf: s.cpf, rg: s.rg || null, genero: s.genero,
                 estado_civil: s.estado_civil, nacionalidade: s.nacionalidade, profissao: s.profissao || null,
-                endereco: s.endereco, bairro: bairroFinal(), cidade: cidadeFinal(), estado: s.estado,
+                endereco: enderecoFinal(), rua: s.rua || null, numero: s.numero || null, complemento: s.complemento || null,
+                bairro: bairroFinal(), cidade: cidadeFinal(), estado: estadoFinal(),
             },
             especifico: {
                 funcao: s.funcao, periodo: s.periodo,
@@ -390,13 +425,23 @@ function cancelarEdicao() {
 }
 window.__cancelarEdicao = cancelarEdicao;
 
+// Registro salvo antes dessa versão do formulário — só tinha o endereço já
+// junto. Não dá pra separar com segurança, então joga tudo em "Rua" e deixa
+// Número/Complemento em branco pro usuário ajustar.
+function carregarEnderecoSolto(rua, numero, complemento, enderecoComposto) {
+    if (rua || numero || complemento) {
+        s.rua = rua || ''; s.numero = numero || ''; s.complemento = complemento || '';
+    } else if (enderecoComposto) {
+        s.rua = enderecoComposto; s.numero = ''; s.complemento = '';
+    }
+}
 function carregarParaEdicao(row) {
     const dados = row.dados || {};
     const a = dados.pessoa_a || {};
     const e = dados.especifico || {};
     s.nome = a.nome || ''; s.cpf = a.cpf || ''; s.rg = a.rg || ''; s.genero = a.genero || '';
     s.estado_civil = a.estado_civil || ''; s.nacionalidade = a.nacionalidade || 'Brasileiro(a)'; s.profissao = a.profissao || '';
-    s.endereco = a.endereco || '';
+    carregarEnderecoSolto(a.rua, a.numero, a.complemento, a.endereco);
     carregarCidadeBairro(a.cidade, a.bairro);
     s.estado = a.estado || '';
     s.funcao = e.funcao || ''; s.periodo = e.periodo || '';
