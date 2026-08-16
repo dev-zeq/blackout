@@ -634,9 +634,10 @@
             <h2 id="formatadoTitulo">📄 Currículo Formatado</h2>
             <div id="formatadoConteudo" style="font-size:14px; color:var(--text-dim); line-height:1.6;"></div>
             <div class="modal-buttons">
-                <button type="button" class="btn-cancel" onclick="closeFormatadoModal()">Fechar</button>
+                <button type="button" class="btn-secondary" onclick="abrirEdicaoCurriculo()">✏️ Editar</button>
                 <button type="button" class="btn-secondary" id="formatadoBtnRegerar" style="display:none;" onclick="regerarComIA()">🔄 Gerar de novo</button>
                 <button type="button" class="btn-save" id="formatadoBtnImprimir" onclick="imprimirFormatado()">🖨️ Imprimir</button>
+                <button type="button" class="btn-cancel" onclick="closeFormatadoModal()">Fechar</button>
             </div>
         </div>
     </div>
@@ -646,24 +647,27 @@
             <h2 id="declFormatadoTitulo">📄 Declaração Formatada</h2>
             <div id="declFormatadoConteudo" style="font-size:15.5px; color:var(--text-dim); line-height:1.85;"></div>
             <div class="modal-buttons">
-                <button type="button" class="btn-secondary" id="declFormatadoBtnEditar" style="display:none;" onclick="abrirEdicaoContrato()">✏️ Editar</button>
+                <button type="button" class="btn-secondary" id="declFormatadoBtnEditar" style="display:none;" onclick="abrirEdicaoDeclFormatado()">✏️ Editar</button>
                 <button type="button" class="btn-save" onclick="imprimirDeclFormatada()">🖨️ Imprimir</button>
                 <button type="button" class="btn-cancel" onclick="closeDeclFormatadoModal()">Fechar</button>
             </div>
         </div>
     </div>
 
-    <!-- Reabre o mesmo contrato-form.html (público) dentro de um iframe, já
+    <!-- Reabre o formulário público correspondente (contrato-form.html,
+         curriculo-form.html, declaracao-*-form.html) dentro de um iframe, já
          apontado pro registro existente (?editId=...) — a edição acontece
          pelos campos originais do formulário, não editando o texto final.
-         Ver contrato-form.html (modo de edição) e o listener de 'message'
-         logo abaixo de abrirEdicaoContrato(), que fecha este modal e
-         re-formata o contrato quando o iframe avisa que salvou. -->
-    <div class="modal" id="editarContratoModal">
+         Protocolo padrão (window.postMessage) igual pra qualquer formulário:
+         'form-salvar-pedido' {table,id,registro}, 'form-editar-cancelado',
+         resposta 'form-salvar-resultado' {ok,error} — ver o listener logo
+         abaixo de abrirEdicaoFormulario() e o comentário equivalente em
+         cada form (modo de edição). -->
+    <div class="modal" id="editarFormularioModal">
         <div class="modal-content wide" style="padding:0; overflow:hidden; display:flex; flex-direction:column;">
-            <iframe id="editarContratoFrame" src="about:blank" style="width:100%; height:78vh; border:0; display:block; background:#05170c;"></iframe>
+            <iframe id="editarFormularioFrame" src="about:blank" style="width:100%; height:78vh; border:0; display:block; background:#05170c;"></iframe>
             <div class="modal-buttons" style="padding:14px 20px; margin-top:0;">
-                <button type="button" class="btn-cancel" onclick="fecharEdicaoContrato()">Fechar</button>
+                <button type="button" class="btn-cancel" onclick="fecharEdicaoFormulario()">Fechar</button>
             </div>
         </div>
     </div>
@@ -2328,12 +2332,21 @@
         };
         let contratosCache = [];
 
-        // Só os 3 tipos vindos do formulário público (contrato-form.html) sabem
-        // reabrir/editar a si mesmos — os outros tipos (Declarações, Termo, CV_*
-        // manuais) não têm um formulário equivalente pra reabrir, então o botão
-        // Editar fica escondido pra eles. Ver declFormatadoAtual/abrirEdicaoContrato.
-        const TIPOS_EDITAVEIS_VIA_FORMULARIO = ['CONTRATO_CV_VEICULO', 'CONTRATO_CV_IMOVEL', 'CONTRATO_LOCACAO_IMOVEL'];
-        let declFormatadoAtual = null; // { id, tabela: 'declaracoes_pendentes' } do contrato aberto no modal de formatação
+        // Tipos vindos de um formulário público (contrato-form.html ou
+        // declaracao-*-form.html) sabem reabrir/editar a si mesmos — os outros
+        // tipos (Termo, CV_* manuais do painel) não têm formulário equivalente
+        // pra reabrir, então o botão Editar fica escondido pra eles. Ver
+        // declFormatadoAtual/abrirEdicaoDeclFormatado.
+        const EDICAO_FORMULARIO = {
+            CONTRATO_CV_VEICULO: 'contrato-form.html',
+            CONTRATO_CV_IMOVEL: 'contrato-form.html',
+            CONTRATO_LOCACAO_IMOVEL: 'contrato-form.html',
+            DECLARACAO_AUTONOMO: 'declaracao-autonomo-form.html',
+            DECLARACAO_TRABALHO: 'declaracao-trabalho-form.html',
+            DECLARACAO_RESIDENCIA: 'declaracao-residencia-form.html',
+            DECLARACAO_UNIAO_ESTAVEL: 'declaracao-uniao-estavel-form.html',
+        };
+        let declFormatadoAtual = null; // { id, tabela: 'declaracoes_pendentes', tipo } do contrato/declaração aberto no modal de formatação
 
         function openContratoFicha(id) {
             const c = contratosCache.find(x => x.id === id);
@@ -3301,8 +3314,8 @@
             document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato) + ' — formatada';
             document.getElementById('declFormatadoConteudo').innerHTML = montarContrato(d);
             document.getElementById('declFormatadoModal').classList.add('active');
-            declFormatadoAtual = { id: d.id, tabela: 'declaracoes_pendentes' };
-            document.getElementById('declFormatadoBtnEditar').style.display = TIPOS_EDITAVEIS_VIA_FORMULARIO.includes(d.tipo_contrato) ? '' : 'none';
+            declFormatadoAtual = { id: d.id, tabela: 'declaracoes_pendentes', tipo: d.tipo_contrato };
+            document.getElementById('declFormatadoBtnEditar').style.display = EDICAO_FORMULARIO[d.tipo_contrato] ? '' : 'none';
         }
         window.abrirDeclFormatado = abrirDeclFormatado;
 
@@ -3316,7 +3329,7 @@
             document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[c.tipo_contrato] || c.tipo_contrato) + ' — formatada';
             document.getElementById('declFormatadoConteudo').innerHTML = montarContrato(c);
             document.getElementById('declFormatadoModal').classList.add('active');
-            declFormatadoAtual = { id: c.id, tabela: 'contratos' };
+            declFormatadoAtual = { id: c.id, tabela: 'contratos', tipo: c.tipo_contrato };
             document.getElementById('declFormatadoBtnEditar').style.display = 'none';
         }
         window.abrirContratoFormatado = abrirContratoFormatado;
@@ -3326,47 +3339,75 @@
         }
         window.closeDeclFormatadoModal = closeDeclFormatadoModal;
 
-        // Abre o mesmo contrato-form.html público num iframe, apontado pro
-        // registro existente — a edição usa os campos originais do formulário
-        // (não edita o texto final). Quando o formulário salva ou cancela, ele
-        // avisa aqui via postMessage (ver contrato-form.html, submitForm/cancelarEdicao).
-        function abrirEdicaoContrato() {
+        // Abre um formulário público (contrato-form.html ou declaracao-*-form.html)
+        // num iframe, apontado pro registro existente — a edição usa os campos
+        // originais do formulário (não edita o texto final). Quando o formulário
+        // salva ou cancela, ele avisa aqui via postMessage (ver cada form,
+        // submitForm/cancelarEdicao, e o listener de 'message' logo abaixo).
+        function abrirEdicaoFormulario(url) {
+            document.getElementById('editarFormularioFrame').src = url;
+            document.getElementById('editarFormularioModal').classList.add('active');
+        }
+        function abrirEdicaoDeclFormatado() {
             if (!declFormatadoAtual || declFormatadoAtual.tabela !== 'declaracoes_pendentes') return;
-            document.getElementById('editarContratoFrame').src = 'contrato-form.html?editId=' + encodeURIComponent(declFormatadoAtual.id);
-            document.getElementById('editarContratoModal').classList.add('active');
+            const url = EDICAO_FORMULARIO[declFormatadoAtual.tipo];
+            if (!url) return;
+            abrirEdicaoFormulario(url + '?editId=' + encodeURIComponent(declFormatadoAtual.id));
         }
-        window.abrirEdicaoContrato = abrirEdicaoContrato;
+        window.abrirEdicaoDeclFormatado = abrirEdicaoDeclFormatado;
 
-        function fecharEdicaoContrato() {
-            document.getElementById('editarContratoModal').classList.remove('active');
-            document.getElementById('editarContratoFrame').src = 'about:blank';
+        function fecharEdicaoFormulario() {
+            document.getElementById('editarFormularioModal').classList.remove('active');
+            document.getElementById('editarFormularioFrame').src = 'about:blank';
         }
-        window.fecharEdicaoContrato = fecharEdicaoContrato;
+        window.fecharEdicaoFormulario = fecharEdicaoFormulario;
 
+        // Protocolo padrão de edição, igual pra qualquer formulário público:
+        // 'form-salvar-pedido' {table,id,registro} → grava via dbUpdate (só o
+        // painel tem a senha de escrita, o formulário público nunca grava
+        // direto); 'form-editar-cancelado' → só fecha; erro na gravação volta
+        // pro iframe como 'form-salvar-resultado' {ok:false,error} sem fechar,
+        // pra não perder o que a pessoa editou.
         window.addEventListener('message', async (ev) => {
             if (ev.origin !== window.location.origin) return;
             if (!ev.data || typeof ev.data !== 'object') return;
-            if (ev.data.type === 'contrato-editar-cancelado') {
-                fecharEdicaoContrato();
-            } else if (ev.data.type === 'contrato-salvar-pedido') {
-                // Quem grava é o painel (já autenticado com a senha da equipe),
-                // não o formulário público dentro do iframe — ver dbUpdate/db-write
-                // e o comentário em contrato-form.html (submitForm, modo de edição).
+            if (ev.data.type === 'form-editar-cancelado') {
+                fecharEdicaoFormulario();
+            } else if (ev.data.type === 'form-salvar-pedido') {
                 try {
-                    await dbUpdate('declaracoes_pendentes', ev.data.registro, { id: ev.data.id });
-                    fecharEdicaoContrato();
-                    await loadDeclaracoesPendentes();
-                    if (declFormatadoAtual && declFormatadoAtual.id === ev.data.id) {
-                        abrirDeclFormatado(ev.data.id);
+                    const registro = { ...ev.data.registro };
+                    // Currículo: se os dados de base mudaram, o texto gerado por IA
+                    // (se já tinha algum) fica desatualizado — limpa pra próxima
+                    // "Gerar de novo" refletir a edição, em vez de imprimir algo velho.
+                    if (ev.data.table === 'curriculos') {
+                        registro.ia_texto = null; registro.ia_header = null; registro.ia_gerado_em = null;
+                    }
+                    await dbUpdate(ev.data.table, registro, { id: ev.data.id });
+                    fecharEdicaoFormulario();
+                    if (ev.data.table === 'declaracoes_pendentes') {
+                        await loadDeclaracoesPendentes();
+                        if (declFormatadoAtual && declFormatadoAtual.id === ev.data.id) abrirDeclFormatado(ev.data.id);
+                    } else if (ev.data.table === 'curriculos') {
+                        await loadCurriculos();
+                        if (formatadoAtualId === ev.data.id) abrirFormatado(ev.data.id, false);
                     }
                 } catch (err) {
-                    const frame = document.getElementById('editarContratoFrame');
+                    const frame = document.getElementById('editarFormularioFrame');
                     if (frame && frame.contentWindow) {
-                        frame.contentWindow.postMessage({ type: 'contrato-salvar-resultado', ok: false, error: err.message }, window.location.origin);
+                        frame.contentWindow.postMessage({ type: 'form-salvar-resultado', ok: false, error: err.message }, window.location.origin);
                     }
                 }
             }
         });
+
+        // Currículo: abre o mesmo protocolo genérico acima (ver
+        // abrirEdicaoFormulario), só que sem checar EDICAO_FORMULARIO — currículo
+        // só tem um formulário mesmo, e o botão Editar sempre aparece pra ele.
+        function abrirEdicaoCurriculo() {
+            if (!formatadoAtualId) return;
+            abrirEdicaoFormulario('curriculo-form.html?editId=' + encodeURIComponent(formatadoAtualId));
+        }
+        window.abrirEdicaoCurriculo = abrirEdicaoCurriculo;
 
         function imprimirDeclFormatada() {
             document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print">${document.getElementById('declFormatadoConteudo').innerHTML}</div>`;
@@ -4270,6 +4311,9 @@
         });
         document.getElementById('declFormatadoModal').addEventListener('click', (e) => {
             if (e.target.id === 'declFormatadoModal') closeDeclFormatadoModal();
+        });
+        document.getElementById('editarFormularioModal').addEventListener('click', (e) => {
+            if (e.target.id === 'editarFormularioModal') fecharEdicaoFormulario();
         });
 
         // Inicia o dashboard (após desbloqueio)

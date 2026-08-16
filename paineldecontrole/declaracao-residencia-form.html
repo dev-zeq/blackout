@@ -158,6 +158,20 @@ function renderCondBairroOutro() {
 }
 function cidadeFinal() { return s.cidade === 'Outra' ? s.cidade_outra : s.cidade; }
 function bairroFinal() { return (s.cidade === 'Outra' || s.bairro === '__outro__') ? s.bairro_outro : s.bairro; }
+// Caminho inverso de cidadeFinal()/bairroFinal() — usado só ao recarregar um
+// registro salvo pra edição (ver carregarParaEdicao).
+function carregarCidadeBairro(cidadeSalva, bairroSalvo) {
+    if (cidadeSalva && CIDADES_OPTS.includes(cidadeSalva) && cidadeSalva !== 'Outra') {
+        s.cidade = cidadeSalva;
+        const lista = CIDADES_BAIRROS[cidadeSalva] || [];
+        if (bairroSalvo && lista.includes(bairroSalvo)) { s.bairro = bairroSalvo; }
+        else { s.bairro = '__outro__'; s.bairro_outro = bairroSalvo || ''; }
+    } else {
+        s.cidade = cidadeSalva ? 'Outra' : '';
+        s.cidade_outra = cidadeSalva || '';
+        s.bairro_outro = bairroSalvo || '';
+    }
+}
 
 let stepIndex = 0;
 let steps = [stepDados, stepEndereco, stepPessoaB, stepRevisao];
@@ -253,10 +267,11 @@ function stepRevisao() {
         ['2ª pessoa', s.tem_pessoa_b === 'SIM' ? s.b_nome : 'não'],
     ];
     return `
-    <h2>Confira e envie</h2>
+    <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
     ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
     <div id="errorMsg" class="error-msg"></div>
-    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">Enviar declaração</button></div>`;
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">${editMode ? 'Salvar alterações' : 'Enviar declaração'}</button></div>
+    ${editMode ? `<p style="text-align:center; margin-top:14px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
 }
 
 // ---------- Validação e coleta ----------
@@ -327,6 +342,15 @@ async function submitForm() {
 
     const registro = { tipo_contrato: 'DECLARACAO_RESIDENCIA', dados };
 
+    if (editMode) {
+        // O formulário público não tem (e não deve ter) a senha de escrita da
+        // equipe — só o painel tem, depois de desbloqueado. Por isso quem grava
+        // a edição é o painel: a gente só manda os dados prontos e espera a
+        // resposta (ver window.addEventListener('message') abaixo).
+        avisarPai({ type: 'form-salvar-pedido', table: 'declaracoes_pendentes', id: editId, registro });
+        return;
+    }
+
     const { error } = await supabase.from('declaracoes_pendentes').insert(registro);
     if (error) {
         showError('Não deu pra enviar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
@@ -342,10 +366,81 @@ async function submitForm() {
     document.getElementById('progressFill').style.width = '100%';
     document.getElementById('stepLabel').textContent = 'Concluído';
 }
+// Resposta do painel ao pedido de salvar (form-salvar-pedido) — só existe
+// quando o formulário está embutido no iframe de edição do painel.
+window.addEventListener('message', (ev) => {
+    if (ev.origin !== window.location.origin) return;
+    if (!ev.data || ev.data.type !== 'form-salvar-resultado') return;
+    const btn = document.getElementById('btnSubmit');
+    if (ev.data.ok) {
+        document.getElementById('cardArea').innerHTML = `
+            <div class="success-box">
+                <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+                <h2>Alterações salvas!</h2>
+                <p>A declaração foi atualizada.</p>
+            </div>`;
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('stepLabel').textContent = 'Concluído';
+    } else {
+        showError(ev.data.error || 'Não deu pra salvar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
+    }
+});
+
+// ---------- Modo de edição (reabre o formulário já preenchido a partir de um
+// registro existente em declaracoes_pendentes, pra corrigir sem duplicar) ----------
+let editMode = false;
+let editId = null;
+
+function avisarPai(msg) {
+    if (window.parent && window.parent !== window) window.parent.postMessage(msg, window.location.origin);
+}
+function cancelarEdicao() {
+    avisarPai({ type: 'form-editar-cancelado' });
+    if (window.parent === window) history.back();
+}
+window.__cancelarEdicao = cancelarEdicao;
+
+function carregarParaEdicao(row) {
+    const dados = row.dados || {};
+    const a = dados.pessoa_a || {};
+    s.nome = a.nome || ''; s.cpf = a.cpf || ''; s.rg = a.rg || ''; s.genero = a.genero || '';
+    s.estado_civil = a.estado_civil || ''; s.nacionalidade = a.nacionalidade || 'Brasileiro(a)';
+    s.profissao = a.profissao || '';
+    s.endereco = a.endereco || '';
+    carregarCidadeBairro(a.cidade, a.bairro);
+    s.estado = a.estado || '';
+    s.tem_pessoa_b = dados.pessoa_b ? 'SIM' : 'NAO';
+    if (dados.pessoa_b) {
+        const b = dados.pessoa_b;
+        s.b_nome = b.nome || ''; s.b_cpf = b.cpf || ''; s.b_rg = b.rg || '';
+        s.b_genero = b.genero || ''; s.b_estado_civil = b.estado_civil || '';
+        s.b_nacionalidade = b.nacionalidade || 'Brasileiro(a)'; s.b_profissao = b.profissao || '';
+    }
+}
+
+async function iniciar() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('editId');
+    if (!id) { render(); return; }
+    editMode = true; editId = id;
+    document.getElementById('cardArea').innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Carregando declaração…</p>';
+    const { data, error } = await supabase.from('declaracoes_pendentes').select('*').eq('id', id).single();
+    if (error || !data || data.tipo_contrato !== 'DECLARACAO_RESIDENCIA') {
+        document.getElementById('cardArea').innerHTML = `
+            <h2>Não foi possível abrir esta declaração</h2>
+            <p style="color:var(--text-dim); font-size:13px;">O registro não foi encontrado ou não é desse tipo.</p>`;
+        return;
+    }
+    carregarParaEdicao(data);
+    const headerP = document.querySelector('.header p');
+    if (headerP) headerP.textContent = 'Corrija os dados abaixo e salve as alterações.';
+    render();
+}
 
 window.__goNext = goNext;
 window.__goBack = goBack;
-render();
+iniciar();
 </script>
 </body>
 </html>

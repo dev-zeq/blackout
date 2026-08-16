@@ -121,6 +121,8 @@ const s = {
 };
 let fotoFile = null; // File object, fica fora de `s` (não é serializável do mesmo jeito)
 let fotoPreviewUrl = null;
+let fotoUrlOriginal = null; // foto já salva (modo de edição) — preservada se o usuário não mexer nela
+let fotoRemovida = false; // usuário clicou em "remover foto" numa foto que já existia
 
 const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -179,6 +181,20 @@ function renderCondBairroOutro() {
 }
 function cidadeFinal() { return s.cidade === 'Outra' ? s.cidade_outra : s.cidade; }
 function bairroFinal() { return (s.cidade === 'Outra' || s.bairro === '__outro__') ? s.bairro_outro : s.bairro; }
+// Caminho inverso de cidadeFinal()/bairroFinal() — usado só ao recarregar um
+// registro salvo pra edição (ver carregarParaEdicao).
+function carregarCidadeBairro(cidadeSalva, bairroSalvo) {
+    if (cidadeSalva && CIDADES_OPTS.includes(cidadeSalva) && cidadeSalva !== 'Outra') {
+        s.cidade = cidadeSalva;
+        const lista = CIDADES_BAIRROS[cidadeSalva] || [];
+        if (bairroSalvo && lista.includes(bairroSalvo)) { s.bairro = bairroSalvo; }
+        else { s.bairro = '__outro__'; s.bairro_outro = bairroSalvo || ''; }
+    } else {
+        s.cidade = cidadeSalva ? 'Outra' : '';
+        s.cidade_outra = cidadeSalva || '';
+        s.bairro_outro = bairroSalvo || '';
+    }
+}
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function dataNascimentoFields() {
@@ -569,7 +585,7 @@ function renderFotoPreview() {
         </div>`;
     const btnRemover = document.getElementById('btnRemoverFoto');
     if (btnRemover) btnRemover.addEventListener('click', () => {
-        fotoFile = null; fotoPreviewUrl = null;
+        fotoFile = null; fotoPreviewUrl = null; fotoRemovida = true;
         const inp = document.getElementById('f_foto'); if (inp) inp.value = '';
         renderFotoPreview();
     });
@@ -588,10 +604,11 @@ function stepRevisao() {
         ['CNH', s.tem_cnh === 'Sim' ? `Categoria ${s.categoria_cnh}` : 'Não possui'],
     ];
     return `
-    <h2>Confira e envie</h2>
+    <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
     ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
     <div id="errorMsg" class="error-msg"></div>
-    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">Enviar currículo</button></div>`;
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">${editMode ? 'Salvar alterações' : 'Enviar currículo'}</button></div>
+    ${editMode ? `<p style="text-align:center; margin-top:14px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
 }
 
 // ---------- Validação e coleta por etapa ----------
@@ -787,17 +804,21 @@ async function submitForm() {
     put('QUAL CATEGORIA DA SUA CNH?', s.categoria_cnh);
     put('SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)', s.tem_ear);
 
-    let foto_url = null;
+    // Se não mexeu na foto, preserva a que já existia (edição) — só troca se
+    // escolheu um arquivo novo, só limpa se clicou em "remover foto".
+    let foto_url = fotoUrlOriginal || null;
     if (fotoFile) {
         const ext = (fotoFile.name.split('.').pop() || 'jpg').toLowerCase();
         const path = `${crypto.randomUUID()}.${ext}`;
         const { error: uploadError } = await supabase.storage.from('curriculo-fotos').upload(path, fotoFile, { contentType: fotoFile.type || 'image/jpeg' });
         if (uploadError) {
             showError('Não deu pra enviar a foto. Você pode voltar e tentar de novo, ou pular a foto e enviar sem ela.');
-            btn.disabled = false; btn.textContent = 'Enviar currículo';
+            btn.disabled = false; btn.textContent = editMode ? 'Salvar alterações' : 'Enviar currículo';
             return;
         }
         foto_url = supabase.storage.from('curriculo-fotos').getPublicUrl(path).data.publicUrl;
+    } else if (fotoRemovida) {
+        foto_url = null;
     }
 
     const registro = {
@@ -810,9 +831,20 @@ async function submitForm() {
         email: s.tem_email === 'Sim' ? (s.email || null) : null,
         endereco: s.endereco || null, bairro: bairroFinal() || null,
         cidade: cidadeFinal() || null, estado: s.estado_residencia || null,
-        status: 'PENDENTE', dados, foto_url,
-        data_pedido: new Date().toISOString(),
+        dados, foto_url,
     };
+    // Status e data do pedido original não devem mudar só porque corrigiu um
+    // dado — senão editar um currículo já marcado "Feito" voltaria pendente.
+    if (!editMode) { registro.status = 'PENDENTE'; registro.data_pedido = new Date().toISOString(); }
+
+    if (editMode) {
+        // O formulário público não tem (e não deve ter) a senha de escrita da
+        // equipe — só o painel tem, depois de desbloqueado. Por isso quem grava
+        // a edição é o painel: a gente só manda os dados prontos e espera a
+        // resposta (ver window.addEventListener('message') abaixo).
+        avisarPai({ type: 'form-salvar-pedido', table: 'curriculos', id: editId, registro });
+        return;
+    }
 
     const { error } = await supabase.from('curriculos').insert(registro);
     if (error) {
@@ -829,12 +861,166 @@ async function submitForm() {
     document.getElementById('progressFill').style.width = '100%';
     document.getElementById('stepLabel').textContent = 'Concluído';
 }
+// Resposta do painel ao pedido de salvar (form-salvar-pedido) — só existe
+// quando o formulário está embutido no iframe de edição do painel.
+window.addEventListener('message', (ev) => {
+    if (ev.origin !== window.location.origin) return;
+    if (!ev.data || ev.data.type !== 'form-salvar-resultado') return;
+    const btn = document.getElementById('btnSubmit');
+    if (ev.data.ok) {
+        document.getElementById('cardArea').innerHTML = `
+            <div class="success-box">
+                <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+                <h2>Alterações salvas!</h2>
+                <p>O currículo foi atualizado.</p>
+            </div>`;
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('stepLabel').textContent = 'Concluído';
+    } else {
+        showError(ev.data.error || 'Não deu pra salvar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
+    }
+});
+
+// ---------- Modo de edição (reabre o formulário já preenchido a partir de um
+// registro existente em `curriculos`, pra corrigir sem duplicar) ----------
+let editMode = false;
+let editId = null;
+
+function avisarPai(msg) {
+    if (window.parent && window.parent !== window) window.parent.postMessage(msg, window.location.origin);
+}
+function cancelarEdicao() {
+    avisarPai({ type: 'form-editar-cancelado' });
+    if (window.parent === window) history.back();
+}
+window.__cancelarEdicao = cancelarEdicao;
+
+// `dados` guarda cada resposta com a pergunta inteira como chave (compatível
+// com os registros antigos da planilha) — put()/get() aqui é só o caminho
+// inverso do put() usado no submitForm, campo por campo, mesma chave exata.
+function carregarParaEdicao(row) {
+    const dados = row.dados || {};
+    const get = (k) => dados[k] ?? '';
+
+    s.nome = row.nome || ''; s.sobrenome = row.sobrenome || '';
+    s.sexo = row.genero || '';
+    s.nascimento = row.data_nascimento || '';
+    s.nacionalidade = row.nacionalidade || '';
+    s.estado_civil = row.estado_civil || '';
+    s.nacionalidade_outra = get('QUAL SUA NACIONALIDADE? (Seu País de Origem)');
+    s.naturalidade = get('NATURALIDADE? (Apenas o nome da da cidade onde você nasceu)');
+    s.estado_nascimento = get('EM QUAL ESTADO?');
+
+    s.tem_filhos = get('VOCÊ TEM FILHOS?');
+    s.qtd_filhos = get('QUANTOS FILHOS?');
+    s.idade_filho_cacula = get('SOBRE A IDADE DO SEU FILHO CAÇULA');
+
+    // Telefone/whatsapp são salvos como DDD+número concatenado, sem separador
+    // — só dá pra separar de volta porque DDD brasileiro é sempre 2 dígitos.
+    const tel = row.telefone || '';
+    if (tel.length >= 2) {
+        const ddd = tel.slice(0, 2);
+        s.telefone_numero = tel.slice(2);
+        s.ddd47 = ddd === '47' ? 'Sim' : 'Não';
+        s.ddd_custom = ddd === '47' ? '' : ddd;
+    }
+    const wa = row.whatsapp || '';
+    if (wa && wa === tel) {
+        s.whatsapp_mesmo = 'Sim';
+    } else if (wa) {
+        s.whatsapp_mesmo = 'Não';
+        s.ddd_whatsapp = wa.slice(0, 2);
+        s.whatsapp_numero = wa.slice(2);
+    } else if (tel) {
+        s.whatsapp_mesmo = 'Não';
+    }
+    s.contato_recado_nome = get('ESCREVA O NOME DE ALGUEM QUE VOCÊ TEM CONTATO FREQUENTIMENTE! (essa pessoa vai servir como seu contato de recado)');
+    s.contato_recado_ddd = get('E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO DE RECADO?');
+    s.contato_recado_numero = get('AGORA O NUMERO DO SEU TELEFONE DO SEU CONTATO DE RECADO? (sem o DDD)');
+
+    s.tem_email = row.email ? 'Sim' : 'Não';
+    s.email = row.email || '';
+    s.endereco = row.endereco || '';
+    carregarCidadeBairro(row.cidade, row.bairro);
+    s.estado_residencia = row.estado || '';
+
+    s.tem_superior = get('VOCÊ POSSUI ALGUMA FORMAÇÃO TÉCNICA DE ENSINO SUPERIOR?');
+    s.area_formacao = get('QUAL SUA ÁREA DE FORMAÇÃO SUPERIOR?');
+    s.periodo_formacao = get('E QUAL PERÍODO DE FORMAÇÃO VOCÊ ESTÁ ATUALMENTE?');
+    s.grau_escolar = get('E QUAL SERIA O SEU GRAU ESCOLAR?');
+    s.processo_estudo = get('REFERENTE AO SEU ESTUDO EM QUE PROCESSO VOCÊ ESTÁ ATUALMENTE?');
+    s.horario_estudo = get('EM QUAL HORÁRIO VOCÊ ESTUDA?');
+
+    s.fez_curso = get('VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?');
+    s.cursos = [];
+    for (let n = 1; n <= 5; n++) {
+        const curso = get(`INFORME O CURSO VOCÊ CONCLUIU? (${n})`);
+        const instituicao = get(`EM QUAL INSTITUIÇÃO? (${n})`);
+        const carga = get(`TOTAL DA CARGA HORÁRIA? (${n})`);
+        if (curso || instituicao || carga) s.cursos.push({ curso, instituicao, carga });
+    }
+
+    s.informatica = get('MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)');
+    s.outros_idiomas = get('ALÉM DO SEU IDIOMA NATIVO (natural da sua Região) VOCÊ POSSSUI CONHECIMENTO DE OUTROS IDIOMAS?');
+    s.quais_idiomas = get('ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO!');
+
+    s.tem_experiencia = get('VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?');
+    s.empresas = [];
+    for (let n = 1; n <= 4; n++) {
+        const nomeEmp = get(`NOME DA EMPRESA QUE VOCÊ JA PRESTOU SERVIÇO (${n})`);
+        const cargo = get(`QUAL ERA O SEU CARGO NESSA EMPRESA? (${n})`);
+        const periodo = get(`QUAL FOI O PERÍODO QUE VOCÊ TRABALHOU NESSA EMPRESA? (${n})`);
+        if (nomeEmp || cargo || periodo) s.empresas.push({ nome: nomeEmp, cargo, periodo });
+    }
+
+    s.referencias = [];
+    for (let n = 1; n <= 2; n++) {
+        const nomeRef = get(`QUAL SERIA O NOME DA REFERÊNCIA (${n})`);
+        const ddd = get(`E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO (${n})`);
+        const numero = get(`AGORA O NUMERO DO SEU TELEFONE DA REFERÊNCIA (${n})? (sem DDD)`);
+        if (nomeRef || ddd || numero) s.referencias.push({ nome: nomeRef, ddd, numero });
+    }
+
+    s.fumante = get('VOCÊ FUMANTE?');
+    s.disponibilidade = get('MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?').split(', ').filter(Boolean);
+    s.destacar_cargo = get('GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?');
+    // No envio original esse campo mistura qual_cargo/tipo_cargo_busca num só
+    // (put(...,s.qual_cargo || s.tipo_cargo_busca)) — não dá pra saber qual dos
+    // dois gerou o valor salvo, então preenche os dois de volta com segurança.
+    const tipoCargo = get('QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?');
+    s.qual_cargo = tipoCargo; s.tipo_cargo_busca = tipoCargo;
+
+    s.tem_cnh = get('VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?');
+    s.categoria_cnh = get('QUAL CATEGORIA DA SUA CNH?');
+    s.tem_ear = get('SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)');
+
+    if (row.foto_url) { fotoUrlOriginal = row.foto_url; fotoPreviewUrl = row.foto_url; }
+}
+
+async function iniciar() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('editId');
+    buildSteps();
+    if (!id) { render(); return; }
+    editMode = true; editId = id;
+    document.getElementById('cardArea').innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Carregando currículo…</p>';
+    const { data, error } = await supabase.from('curriculos').select('*').eq('id', id).single();
+    if (error || !data) {
+        document.getElementById('cardArea').innerHTML = `
+            <h2>Não foi possível abrir este currículo</h2>
+            <p style="color:var(--text-dim); font-size:13px;">O registro não foi encontrado.</p>`;
+        return;
+    }
+    carregarParaEdicao(data);
+    const headerP = document.querySelector('.header p');
+    if (headerP) headerP.textContent = 'Corrija os dados abaixo e salve as alterações.';
+    render();
+}
 
 window.__goNext = goNext;
 window.__goBack = goBack;
-
-buildSteps();
-render();
+iniciar();
 </script>
 </body>
 </html>
