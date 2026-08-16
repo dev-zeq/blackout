@@ -2677,6 +2677,13 @@
             return `<div style="page-break-inside:avoid; break-inside:avoid;">${out}</div>`;
         }
 
+        // Descreve um veículo dado como parte do pagamento (troca) num contrato de
+        // compra e venda vindo do formulário público — `v` é `especifico.veiculo_entrada`
+        // (shape solto, não FK de `ativos`, por isso os campos vêm direto dele).
+        function descricaoVeiculoTroca(v) {
+            return `um veículo denominado ${(v.tipo_veiculo || 'carro').toLowerCase()}, marca ${up(v.fabricante)}, modelo ${up(v.modelo)}, Ano de fabricação/Ano modelo: ${escapeHtml(v.ano_fabricacao_modelo || '')}, Chassi: ${up(v.chassi)}, cor: ${up(v.cor)}, placa: ${formatPlaca(v.placa)}, categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ${escapeHtml(v.renavam || '')}, avaliado em ${fmt(v.valor)} (${extensoReais(v.valor)}), de propriedade do COMPRADOR, dado como parte de pagamento (troca) na presente negociação.`;
+        }
+
         // Registro de tipos (CONTRATOS-SPEC.md §3): cada entrada sabe montar seu
         // próprio corpo a partir de {pessoa_a, pessoa_b, especifico}. Substitui o
         // if/else antigo — adicionar um tipo novo vira uma entrada aqui, não um
@@ -3065,9 +3072,13 @@
                     const e = dados.especifico || {};
                     const foro = { cidade: e.foro_cidade || vendedor.cidade || '', estado: e.foro_estado || vendedor.estado || '' };
                     const aPrazo = e.forma_pagamento === 'Prazo';
-                    const temEntrada = aPrazo && Number(e.valor_entrada) > 0;
+                    const veiculoEntrada = e.veiculo_entrada || null;
+                    const valorEntradaDinheiro = Number(e.valor_entrada) || 0;
+                    const valorEntradaVeiculo = veiculoEntrada ? (Number(veiculoEntrada.valor) || 0) : 0;
+                    const entradaTotal = valorEntradaDinheiro + valorEntradaVeiculo;
+                    const temEntrada = entradaTotal > 0;
                     const dia = diaDoMes(e.data_primeira_parcela);
-                    const restante = aPrazo ? (Number(e.valor_total) || 0) - (temEntrada ? Number(e.valor_entrada) || 0 : 0) : 0;
+                    const restante = aPrazo ? (Number(e.valor_total) || 0) - entradaTotal : 0;
                     const parcela = aPrazo && e.num_parcelas ? restante / e.num_parcelas : 0;
                     let n = 1;
                     let out = '';
@@ -3085,11 +3096,24 @@
                     out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO VEÍCULO</h3>`;
                     out += blocoTransferenciaPropriedade(n++, aPrazo);
                     out += `<h3>DO PAGAMENTO</h3>`;
-                    if (!aPrazo) {
+                    if (!aPrazo && !veiculoEntrada) {
                         out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}) a ser quitada no ato da assinatura desse contrato.`);
+                    } else if (!aPrazo && veiculoEntrada) {
+                        let texto = `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), sendo pago da seguinte forma:<br><br>`
+                            + `a) Através da entrega de ${descricaoVeiculoTroca(veiculoEntrada)}`;
+                        if (valorEntradaDinheiro > 0) {
+                            texto += `<br><br>b) Mais a quantia em dinheiro no valor de ${fmt(valorEntradaDinheiro)} (${extensoReais(valorEntradaDinheiro)}) a ser quitada no ato da assinatura desse contrato, sendo que a transferência dos veículos e o pagamento em dinheiro ocorrerão simultaneamente.`;
+                        }
+                        out += clausulaCV(n++, texto);
                     } else if (temEntrada) {
-                        out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), a ser pago da seguinte forma:<br><br>`
-                            + `a) Uma entrada no valor de ${fmt(e.valor_entrada)} (${extensoReais(e.valor_entrada)}), e o valor restante de ${fmt(restante)} (${extensoReais(restante)}) em ${e.num_parcelas} parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} (${numExtenso(dia)}) de cada mês, iniciando no dia ${dataBR(e.data_primeira_parcela)} e seus meses subsequentes.`);
+                        const partes = [];
+                        if (veiculoEntrada) partes.push(`Através da entrega de ${descricaoVeiculoTroca(veiculoEntrada)}`);
+                        if (valorEntradaDinheiro > 0) partes.push(`Uma entrada em dinheiro no valor de ${fmt(valorEntradaDinheiro)} (${extensoReais(valorEntradaDinheiro)})`);
+                        const letras = 'abcdefghij';
+                        let texto = `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), a ser pago da seguinte forma:<br><br>`;
+                        texto += partes.map((p, i) => `${letras[i]}) ${p}`).join('<br><br>');
+                        texto += `<br><br>${letras[partes.length]}) E o valor restante de ${fmt(restante)} (${extensoReais(restante)}) em ${e.num_parcelas} parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} (${numExtenso(dia)}) de cada mês, iniciando no dia ${dataBR(e.data_primeira_parcela)} e seus meses subsequentes.`;
+                        out += clausulaCV(n++, texto);
                     } else {
                         out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do veículo objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), sendo pago em ${e.num_parcelas} (${numExtenso(e.num_parcelas)}) parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} de cada mês, iniciando no dia ${dataBR(e.data_primeira_parcela)} e seus meses subsequentes.`);
                     }
@@ -3120,9 +3144,13 @@
                     const e = dados.especifico || {};
                     const foro = { cidade: e.foro_cidade || vendedor.cidade || '', estado: e.foro_estado || vendedor.estado || '' };
                     const aPrazo = e.forma_pagamento === 'Prazo';
-                    const temEntrada = aPrazo && Number(e.valor_entrada) > 0;
+                    const veiculoEntrada = e.veiculo_entrada || null;
+                    const valorEntradaDinheiro = Number(e.valor_entrada) || 0;
+                    const valorEntradaVeiculo = veiculoEntrada ? (Number(veiculoEntrada.valor) || 0) : 0;
+                    const entradaTotal = valorEntradaDinheiro + valorEntradaVeiculo;
+                    const temEntrada = entradaTotal > 0;
                     const dia = diaDoMes(e.data_primeira_parcela);
-                    const restante = aPrazo ? (Number(e.valor_total) || 0) - (temEntrada ? Number(e.valor_entrada) || 0 : 0) : 0;
+                    const restante = aPrazo ? (Number(e.valor_total) || 0) - entradaTotal : 0;
                     const parcela = aPrazo && e.num_parcelas ? restante / e.num_parcelas : 0;
                     let n = 1;
                     let out = '';
@@ -3137,11 +3165,24 @@
                     out += `<h3>DA TRANSFERÊNCIA DA PROPRIEDADE DO IMÓVEL</h3>`;
                     out += clausulaCV(n++, `As partes se comprometem a providenciar a lavratura da escritura pública de compra e venda e o respectivo registro no Cartório de Registro de Imóveis competente, no prazo de 30 (trinta) dias após a quitação integral do valor ajustado neste contrato, correndo as despesas cartorárias e tributárias (ITBI) por conta do COMPRADOR, salvo disposição em contrário entre as partes.`);
                     out += `<h3>DO PAGAMENTO</h3>`;
-                    if (!aPrazo) {
+                    if (!aPrazo && !veiculoEntrada) {
                         out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do imóvel objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}) a ser quitada no ato da assinatura desse contrato.`);
+                    } else if (!aPrazo && veiculoEntrada) {
+                        let texto = `O COMPRADOR pagará ao VENDEDOR, pela compra do imóvel objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), sendo pago da seguinte forma:<br><br>`
+                            + `a) Através da entrega de ${descricaoVeiculoTroca(veiculoEntrada)}`;
+                        if (valorEntradaDinheiro > 0) {
+                            texto += `<br><br>b) Mais a quantia em dinheiro no valor de ${fmt(valorEntradaDinheiro)} (${extensoReais(valorEntradaDinheiro)}) a ser quitada no ato da assinatura desse contrato, sendo que a transferência do veículo e o pagamento em dinheiro ocorrerão simultaneamente.`;
+                        }
+                        out += clausulaCV(n++, texto);
                     } else if (temEntrada) {
-                        out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do imóvel objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), a ser pago da seguinte forma:<br><br>`
-                            + `a) Uma entrada no valor de ${fmt(e.valor_entrada)} (${extensoReais(e.valor_entrada)}), e o valor restante de ${fmt(restante)} (${extensoReais(restante)}) em ${e.num_parcelas} parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} (${numExtenso(dia)}) de cada mês, iniciando no dia ${dataBR(e.data_primeira_parcela)} e seus meses subsequentes.`);
+                        const partes = [];
+                        if (veiculoEntrada) partes.push(`Através da entrega de ${descricaoVeiculoTroca(veiculoEntrada)}`);
+                        if (valorEntradaDinheiro > 0) partes.push(`Uma entrada em dinheiro no valor de ${fmt(valorEntradaDinheiro)} (${extensoReais(valorEntradaDinheiro)})`);
+                        const letras = 'abcdefghij';
+                        let texto = `O COMPRADOR pagará ao VENDEDOR, pela compra do imóvel objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), a ser pago da seguinte forma:<br><br>`;
+                        texto += partes.map((p, i) => `${letras[i]}) ${p}`).join('<br><br>');
+                        texto += `<br><br>${letras[partes.length]}) E o valor restante de ${fmt(restante)} (${extensoReais(restante)}) em ${e.num_parcelas} parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} (${numExtenso(dia)}) de cada mês, iniciando no dia ${dataBR(e.data_primeira_parcela)} e seus meses subsequentes.`;
+                        out += clausulaCV(n++, texto);
                     } else {
                         out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do imóvel objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), sendo pago em ${e.num_parcelas} (${numExtenso(e.num_parcelas)}) parcelas no valor de ${fmt(parcela)} (${extensoReais(parcela)}) cada, a serem pagas pontualmente todos os dias ${dia} de cada mês, iniciando no dia ${dataBR(e.data_primeira_parcela)} e seus meses subsequentes.`);
                     }

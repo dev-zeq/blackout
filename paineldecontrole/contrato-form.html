@@ -186,6 +186,10 @@ const s = {
 
     forma_pagamento: '', valor_total: '', valor_entrada: '', num_parcelas: '', data_primeira_parcela: '',
 
+    entrada_veiculo: '', // 'Sim' | 'Não' — houve veículo dado como parte do pagamento (troca)
+    ev_tipo_veiculo: '', ev_tipo_veiculo_outro: '', ev_fabricante: '', ev_fabricante_outro: '', ev_modelo: '',
+    ev_ano_fabricacao: '', ev_ano_modelo: '', ev_cor: '', ev_cor_outro: '', ev_placa: '', ev_chassi: '', ev_renavam: '', ev_valor: '',
+
     valor_aluguel: '', dia_vencimento: '', prazo_meses: '', data_inicio: '', indice_reajuste: 'IGP-M',
     garantia: '', valor_caucao: '', fiador_nome: '', fiador_cpf: '',
 
@@ -242,9 +246,9 @@ function buildSteps() {
     const S = { tipo: stepTipo };
     if (!t) { steps = [S.tipo]; return; }
     if (t === 'veiculo_cv') {
-        steps = [stepTipo, () => stepPessoa('a', 'VENDEDOR', 'Dados de quem está vendendo o veículo.'), () => stepPessoa('b', 'COMPRADOR', 'Dados de quem está comprando o veículo.'), stepVeiculo, stepPagamento, stepTestemunhas, stepRevisao];
+        steps = [stepTipo, () => stepPessoa('a', 'VENDEDOR', 'Dados de quem está vendendo o veículo.'), () => stepPessoa('b', 'COMPRADOR', 'Dados de quem está comprando o veículo.'), stepVeiculo, stepPagamento, stepEntrada, stepTestemunhas, stepRevisao];
     } else if (t === 'imovel_cv') {
-        steps = [stepTipo, () => stepPessoa('a', 'VENDEDOR', 'Dados de quem está vendendo o imóvel.'), () => stepPessoa('b', 'COMPRADOR', 'Dados de quem está comprando o imóvel.'), stepImovelCV, stepPagamento, stepTestemunhas, stepRevisao];
+        steps = [stepTipo, () => stepPessoa('a', 'VENDEDOR', 'Dados de quem está vendendo o imóvel.'), () => stepPessoa('b', 'COMPRADOR', 'Dados de quem está comprando o imóvel.'), stepImovelCV, stepPagamento, stepEntrada, stepTestemunhas, stepRevisao];
     } else if (t === 'imovel_locacao') {
         steps = [stepTipo, () => stepPessoa('a', 'LOCADOR', 'Dados de quem está alugando o imóvel (proprietário).'), () => stepPessoa('b', 'LOCATÁRIO', 'Dados de quem vai morar/ocupar o imóvel.'), stepImovelLocacao, stepCondicoesLocacao, stepGarantia, stepTestemunhas, stepRevisao];
     }
@@ -265,7 +269,7 @@ function afterRenderStep() {
     if (key === 'pessoaB') { renderCondCidade('b'); renderCondNacionalidade('b'); }
     if (key === 'veiculo') { ['v_tipo_veiculo', 'v_fabricante', 'v_cor'].forEach(renderCondSelecaoOutro); }
     if (key === 'imovel') { renderCondCidade('im'); renderCondSelecaoOutro('im_tipo_imovel'); }
-    if (key === 'pagamento') renderCondPagamento();
+    if (key === 'entrada') renderCondEntradaVeiculo();
     if (key === 'garantia') renderCondGarantia();
 }
 
@@ -275,7 +279,7 @@ function afterRenderStep() {
 function stepKey() {
     const fn = steps[stepIndex];
     return fn.__key || (fn === stepTipo ? 'tipo' : fn === stepVeiculo ? 'veiculo' : fn === stepImovelCV || fn === stepImovelLocacao ? 'imovel'
-        : fn === stepPagamento ? 'pagamento' : fn === stepCondicoesLocacao ? 'locacao' : fn === stepGarantia ? 'garantia'
+        : fn === stepPagamento ? 'pagamento' : fn === stepEntrada ? 'entrada' : fn === stepCondicoesLocacao ? 'locacao' : fn === stepGarantia ? 'garantia'
         : fn === stepTestemunhas ? 'testemunhas' : fn === stepRevisao ? 'revisao' : (stepIndex === 1 ? 'pessoaA' : stepIndex === 2 ? 'pessoaB' : ''));
 }
 
@@ -397,19 +401,67 @@ function stepPagamento() {
     <div class="field"><label>Pagamento *</label>
         <div class="radio-group">${pill('forma_pagamento', 'Vista', s.forma_pagamento === 'Vista', 'À Vista')}${pill('forma_pagamento', 'Prazo', s.forma_pagamento === 'Prazo', 'A Prazo')}</div>
     </div>
-    <div class="field"><label>Valor total *</label><input type="number" step="0.01" data-key="valor_total" value="${esc(s.valor_total)}"></div>
-    <div id="condPagamento"></div>
+    <div class="field"><label>Valor total do negócio *</label><input type="number" step="0.01" data-key="valor_total" value="${esc(s.valor_total)}"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
-function renderCondPagamento() {
-    const el = document.getElementById('condPagamento');
+
+// ---------- Etapa: entrada (veículo na troca + dinheiro + parcelas) ----------
+// Cobre os casos de "carro na entrada" do motor de contratos do painel: o
+// comprador pode dar um veículo como parte do pagamento (à vista ou a prazo),
+// além de — ou no lugar de — dinheiro.
+function stepEntrada() {
+    const objetoLabel = s.tipo === 'veiculo_cv' ? 'veículo' : 'imóvel';
+    return `
+    <h2>Entrada / Negociação</h2>
+    <p class="step-sub">Pra fechar certinho o pagamento do ${objetoLabel}.</p>
+    <div class="field"><label>Teve algum veículo entrando na negociação como parte do pagamento (troca)? *</label>
+        <div class="radio-group">${pill('entrada_veiculo', 'Sim', s.entrada_veiculo === 'Sim')}${pill('entrada_veiculo', 'Não', s.entrada_veiculo === 'Não')}</div>
+    </div>
+    <div id="condEntradaVeiculo"></div>
+    <div id="condEntradaDinheiroParcelas"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondEntradaVeiculo() {
+    const el = document.getElementById('condEntradaVeiculo');
     if (!el) return;
-    if (s.forma_pagamento !== 'Prazo') { el.innerHTML = ''; return; }
+    if (s.entrada_veiculo !== 'Sim') { el.innerHTML = ''; renderCondEntradaDinheiroParcelas(); return; }
     el.innerHTML = `
-        <div class="field"><label>Valor de entrada</label><input type="number" step="0.01" data-key="valor_entrada" value="${esc(s.valor_entrada)}"><p class="hint">Deixe em branco se não houver entrada.</p></div>
-        <div class="field"><label>Número de parcelas *</label><input type="number" min="1" data-key="num_parcelas" value="${esc(s.num_parcelas)}"></div>
-        <div class="field"><label>Data da primeira parcela *</label><input type="date" data-key="data_primeira_parcela" value="${esc(s.data_primeira_parcela)}"></div>`;
+        <h3 style="font-size:13px; color:var(--accent-bright); margin:18px 0 10px;">Dados do veículo dado na entrada</h3>
+        ${campoSelecaoComOutro('ev_tipo_veiculo', 'Tipo de veículo', TIPOS_VEICULO, true)}
+        ${campoSelecaoComOutro('ev_fabricante', 'Fabricante/Marca', MARCAS_VEICULO, true)}
+        <div class="field"><label>Modelo *</label><input type="text" data-key="ev_modelo" value="${esc(s.ev_modelo)}"></div>
+        <div class="field"><label>Ano de fabricação / Ano modelo</label>
+            <div class="date-row" style="display:flex; gap:8px;">
+                <select data-key="ev_ano_fabricacao" style="flex:1;">${anoOptions(s.ev_ano_fabricacao)}</select>
+                <select data-key="ev_ano_modelo" style="flex:1;">${anoOptions(s.ev_ano_modelo)}</select>
+            </div>
+        </div>
+        ${campoSelecaoComOutro('ev_cor', 'Cor', CORES_VEICULO, false)}
+        <div class="field"><label>Placa *</label><input type="text" data-key="ev_placa" value="${esc(s.ev_placa)}"></div>
+        <div class="field"><label>Chassi</label><input type="text" data-key="ev_chassi" value="${esc(s.ev_chassi)}"></div>
+        <div class="field"><label>Renavam</label><input type="text" data-key="ev_renavam" value="${esc(s.ev_renavam)}"></div>
+        <div class="field"><label>Valor desse veículo na negociação *</label><input type="number" step="0.01" data-key="ev_valor" value="${esc(s.ev_valor)}"></div>`;
+    ['ev_tipo_veiculo', 'ev_fabricante', 'ev_cor'].forEach(renderCondSelecaoOutro);
+    renderCondEntradaDinheiroParcelas();
+}
+function renderCondEntradaDinheiroParcelas() {
+    const el = document.getElementById('condEntradaDinheiroParcelas');
+    if (!el) return;
+    if (!s.entrada_veiculo) { el.innerHTML = ''; return; }
+    let html = '';
+    const labelDinheiro = s.entrada_veiculo === 'Sim'
+        ? (s.forma_pagamento === 'Prazo' ? 'Além do veículo, teve valor em dinheiro na entrada?' : 'Além do veículo, teve valor em dinheiro pago no ato?')
+        : 'Teve valor de entrada em dinheiro?';
+    if (s.forma_pagamento === 'Prazo' || s.entrada_veiculo === 'Sim') {
+        html += `<div class="field"><label>${esc(labelDinheiro)}</label><input type="number" step="0.01" data-key="valor_entrada" value="${esc(s.valor_entrada)}"><p class="hint">Deixe em branco se não houver.</p></div>`;
+    }
+    if (s.forma_pagamento === 'Prazo') {
+        html += `<div class="field"><label>Número de parcelas *</label><input type="number" min="1" data-key="num_parcelas" value="${esc(s.num_parcelas)}"></div>`;
+        html += `<div class="field"><label>Data da primeira parcela *</label><input type="date" data-key="data_primeira_parcela" value="${esc(s.data_primeira_parcela)}"></div>`;
+    }
+    el.innerHTML = html;
 }
 
 // ---------- Etapa: condições da locação ----------
@@ -487,6 +539,10 @@ function stepRevisao() {
     } else {
         rows.push(['Pagamento', s.forma_pagamento === 'Prazo' ? 'A Prazo' : 'À Vista']);
         rows.push(['Valor total', s.valor_total ? `R$ ${s.valor_total}` : '—']);
+        if (s.entrada_veiculo === 'Sim') {
+            rows.push(['Veículo na entrada', `${valorSelecaoOutro('ev_fabricante')} ${s.ev_modelo} — ${s.ev_placa} (R$ ${s.ev_valor})`]);
+        }
+        if (s.valor_entrada) rows.push(['Entrada em dinheiro', `R$ ${s.valor_entrada}`]);
     }
     return `
     <h2>Confira e envie</h2>
@@ -516,6 +572,10 @@ function validateCurrentStep() {
             return null;
         case 'pagamento':
             if (!s.forma_pagamento || !s.valor_total) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 'entrada':
+            if (!s.entrada_veiculo) return 'Responda se teve veículo entrando na negociação.';
+            if (s.entrada_veiculo === 'Sim' && (!valorSelecaoOutro('ev_tipo_veiculo') || !valorSelecaoOutro('ev_fabricante') || !s.ev_placa || !s.ev_valor)) return 'Preencha os dados do veículo dado na entrada.';
             if (s.forma_pagamento === 'Prazo' && (!s.num_parcelas || !s.data_primeira_parcela)) return 'Preencha o número de parcelas e a data da primeira parcela.';
             return null;
         case 'locacao':
@@ -559,7 +619,7 @@ cardEl.addEventListener('change', e => {
     if (t.dataset.role === 'select-outro') { renderCondSelecaoOutro(key); }
     if (t.type === 'radio' && (key === 'a_nacionalidade' || key === 'b_nacionalidade')) { renderCondNacionalidade(key.slice(0, 1)); }
     if (t.dataset.role === 'garantia') { renderCondGarantia(); }
-    if (key === 'forma_pagamento') { renderCondPagamento(); }
+    if (key === 'entrada_veiculo') { renderCondEntradaVeiculo(); }
 });
 cardEl.addEventListener('click', e => {
     const card = e.target.closest('[data-tipo-choice]');
@@ -581,9 +641,18 @@ async function submitForm() {
         nacionalidade: nacionalidadeFinal(p), estado_civil: s[p + '_estado_civil'] || null, profissao: s[p + '_profissao'] || null,
         endereco: s[p + '_endereco'], bairro: bairroFinal(p), cidade: cidadeFinal(p), estado: s[p + '_estado'],
     });
-    const anoFabricacaoModelo = () => {
-        if (!s.v_ano_fabricacao) return null;
-        return s.v_ano_modelo && s.v_ano_modelo !== s.v_ano_fabricacao ? `${s.v_ano_fabricacao}/${s.v_ano_modelo}` : `${s.v_ano_fabricacao}/${s.v_ano_fabricacao}`;
+    const anoFabricacaoModelo = (fab, mod) => {
+        if (!fab) return null;
+        return mod && mod !== fab ? `${fab}/${mod}` : `${fab}/${fab}`;
+    };
+    const veiculoEntrada = () => {
+        if (s.entrada_veiculo !== 'Sim') return null;
+        return {
+            tipo_veiculo: valorSelecaoOutro('ev_tipo_veiculo'), fabricante: valorSelecaoOutro('ev_fabricante'), modelo: s.ev_modelo,
+            ano_fabricacao_modelo: anoFabricacaoModelo(s.ev_ano_fabricacao, s.ev_ano_modelo), cor: valorSelecaoOutro('ev_cor') || null,
+            placa: s.ev_placa, chassi: s.ev_chassi || null, renavam: s.ev_renavam || null,
+            valor: Number(s.ev_valor) || 0,
+        };
     };
 
     let tipo_contrato = '';
@@ -597,9 +666,10 @@ async function submitForm() {
         especifico = {
             ...especifico,
             tipo_veiculo: valorSelecaoOutro('v_tipo_veiculo'), fabricante: valorSelecaoOutro('v_fabricante'), modelo: s.v_modelo,
-            ano_fabricacao_modelo: anoFabricacaoModelo(), cor: valorSelecaoOutro('v_cor') || null, placa: s.v_placa,
+            ano_fabricacao_modelo: anoFabricacaoModelo(s.v_ano_fabricacao, s.v_ano_modelo), cor: valorSelecaoOutro('v_cor') || null, placa: s.v_placa,
             chassi: s.v_chassi || null, renavam: s.v_renavam || null,
             forma_pagamento: s.forma_pagamento, valor_total: Number(s.valor_total) || 0,
+            veiculo_entrada: veiculoEntrada(),
             valor_entrada: s.valor_entrada ? Number(s.valor_entrada) : 0,
             num_parcelas: s.num_parcelas ? Number(s.num_parcelas) : null,
             data_primeira_parcela: s.data_primeira_parcela || null,
@@ -612,6 +682,7 @@ async function submitForm() {
             bairro_imovel: bairroFinal('im'), cidade_imovel: cidadeFinal('im'), estado_imovel: s.im_estado,
             area_m2: s.im_area || null, matricula: s.im_matricula || null, cartorio: s.im_cartorio || null,
             forma_pagamento: s.forma_pagamento, valor_total: Number(s.valor_total) || 0,
+            veiculo_entrada: veiculoEntrada(),
             valor_entrada: s.valor_entrada ? Number(s.valor_entrada) : 0,
             num_parcelas: s.num_parcelas ? Number(s.num_parcelas) : null,
             data_primeira_parcela: s.data_primeira_parcela || null,
