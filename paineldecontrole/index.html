@@ -3461,6 +3461,14 @@
                 }
             },
 
+            // Ver PROGRESS.md (seção "Revisão das cláusulas de Locação — fidelidade
+            // aos modelos antigos"): cláusulas reconstruídas a partir dos 2 modelos
+            // reais da planilha (locação com caução e sem caução), que compartilham
+            // a mesma redação-base — igual à decisão de manter um `corpo()` só pros
+            // dois casos, variando apenas o bloco de garantia. `pagamento_agua`/
+            // `pagamento_energia`/`permite_animais` são campos novos do formulário;
+            // uso `|| 'LOCATÁRIA'`/`|| 'Não'` como fallback pra registros salvos
+            // antes dessa mudança (que não têm esses campos).
             CONTRATO_LOCACAO_IMOVEL: {
                 titulo: 'CONTRATO DE LOCAÇÃO DE IMÓVEL',
                 papeis: ['pessoa_a', 'pessoa_b'],
@@ -3470,6 +3478,12 @@
                     const locatario = dados.pessoa_b || {};
                     const e = dados.especifico || {};
                     const foro = { cidade: e.foro_cidade || locador.cidade || '', estado: e.foro_estado || locador.estado || '' };
+                    const pagAgua = e.pagamento_agua || 'LOCATÁRIA';
+                    const pagEnergia = e.pagamento_energia || 'LOCATÁRIA';
+                    const permiteAnimais = e.permite_animais || 'Não';
+                    const textoResponsavelEncargo = (quem) => quem === 'Dividido entre as partes'
+                        ? 'por conta de ambas as partes, em partes iguais'
+                        : `por conta do(a) ${quem}`;
                     let n = 1;
                     let out = '';
                     out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
@@ -3479,15 +3493,21 @@
                     out += `<h3>DO OBJETO E FINALIDADE</h3>`;
                     out += clausulaCV(n++, `O LOCADOR dá em locação ao LOCATÁRIO o imóvel do tipo ${up(e.tipo_imovel || 'Imóvel')}, situado na ${escapeHtml(titleCase(e.endereco_imovel))}, bairro ${escapeHtml(e.bairro_imovel || '')}, ${escapeHtml(e.cidade_imovel || '')}/${escapeHtml(e.estado_imovel || '')}, destinado exclusivamente a fins ${escapeHtml((e.finalidade || 'Residenciais').toLowerCase())}.`);
                     out += `<h3>DO PRAZO</h3>`;
-                    out += clausulaCV(n++, `O prazo de locação é de ${escapeHtml(String(e.prazo_meses || ''))} (${numExtenso(e.prazo_meses || 0)}) meses, com início em ${dataBR(e.data_inicio)}, findo o qual, não havendo manifestação em contrário por nenhuma das partes, a locação prorroga-se por prazo indeterminado, nos termos da Lei nº 8.245/1991.`);
+                    out += clausulaCV(n++, `O prazo de locação é de ${escapeHtml(String(e.prazo_meses || ''))} (${numExtenso(e.prazo_meses || 0)}) meses, com início em ${dataBR(e.data_inicio)}, data em que o LOCATÁRIO obriga-se a restituir o imóvel completamente desocupado e em perfeitas condições, prazo este improrrogável, independentemente de aviso, notificação ou interpelação judicial ou extrajudicial.`);
                     out += `<h3>DO ALUGUEL E REAJUSTE</h3>`;
                     out += clausulaCV(n++, `O aluguel mensal é de ${fmt(e.valor_aluguel)} (${extensoReais(e.valor_aluguel)}), a ser pago pelo LOCATÁRIO até o dia ${escapeHtml(String(e.dia_vencimento || ''))} de cada mês, mediante recibo fornecido pelo LOCADOR.`);
-                    out += clausulaCV(n++, `O valor do aluguel será reajustado anualmente, de acordo com a variação do ${escapeHtml(e.indice_reajuste || 'IGP-M')}, ou outro índice que venha a substituí-lo por determinação legal.`);
+                    out += clausulaCV(n++, `Caso ocorra a renovação do contrato, o aluguel será reajustado de acordo com a variação do ${escapeHtml(e.indice_reajuste || 'IGP-M')}, ou outro índice que venha a substituí-lo por determinação legal.`);
                     out += `<h3>DOS ENCARGOS</h3>`;
-                    out += clausulaCV(n++, 'Correm por conta do LOCATÁRIO as despesas ordinárias de condomínio, água, luz, gás e demais consumos do imóvel durante a vigência do contrato, bem como o IPTU, salvo estipulação em contrário entre as partes.');
+                    out += clausulaCV(n++, `As despesas relativas ao fornecimento de água ficam ${textoResponsavelEncargo(pagAgua)}, e as de energia elétrica ficam ${textoResponsavelEncargo(pagEnergia)}, ambas durante toda a vigência deste contrato.`);
+                    out += clausulaCV(n++, 'Correm por conta do LOCATÁRIO as despesas ordinárias de condomínio, gás e demais consumos do imóvel durante a vigência do contrato, bem como o IPTU, salvo estipulação em contrário entre as partes.');
+                    out += `<h3>DA VISTORIA E DOS REPAROS</h3>`;
+                    out += clausulaCV(n++, 'O LOCATÁRIO terá o prazo de 5 (cinco) dias, contados da entrega do imóvel, para reclamar por escrito eventuais reparos ou manutenções pendentes sobre a situação do imóvel e seus utensílios. Findo esse prazo sem reclamação, nada mais competirá ao LOCADOR a esse respeito, ficando este isento de qualquer responsabilidade até o término do contrato.');
+                    out += clausulaCV(n++, 'O LOCATÁRIO faculta, desde já, ao LOCADOR examinar ou vistoriar o imóvel locado sempre que este entender conveniente ou necessário, mediante prévio aviso.');
                     out += `<h3>DA GARANTIA</h3>`;
                     if (e.garantia === 'Caução') {
-                        out += clausulaCV(n++, `A título de garantia locatícia, o LOCATÁRIO entrega ao LOCADOR, juntamente com o pagamento do primeiro aluguel, a importância de ${fmt(e.valor_caucao)} (${extensoReais(e.valor_caucao)}), a título de caução, a ser devolvida ao término do contrato, descontadas eventuais pendências, nos termos da Lei nº 8.245/1991.`);
+                        out += clausulaCV(n++, `A título de garantia locatícia, o LOCATÁRIO entrega ao LOCADOR, juntamente com o pagamento do primeiro aluguel, a importância de ${fmt(e.valor_caucao)} (${extensoReais(e.valor_caucao)}), a título de caução, a ser utilizada exclusivamente para reparar eventuais danos ou prejuízos causados pelo LOCATÁRIO ao imóvel durante o período de locação, e devolvida ao término do contrato, descontadas as eventuais pendências dessa natureza, nos termos da Lei nº 8.245/1991.`);
+                        out += `<p>Parágrafo Primeiro. Caso seja necessário utilizar a caução para reparar danos ou prejuízos, o LOCADOR notificará previamente o LOCATÁRIO, informando o valor utilizado e o motivo da utilização.</p>`;
+                        out += `<p>Parágrafo Segundo. A caução não poderá ser utilizada pelo LOCATÁRIO para quitar aluguéis ou qualquer outra dívida relacionada a este contrato, servindo exclusivamente para cobrir os danos ou prejuízos de que trata esta cláusula.</p>`;
                     } else if (e.garantia === 'Fiador') {
                         out += clausulaCV(n++, `A título de garantia locatícia, figura como FIADOR e principal pagador ${escapeHtml(titleCase(e.fiador_nome || ''))}, portador do CPF nº ${escapeHtml(e.fiador_cpf || '')}, que responde solidariamente pelas obrigações assumidas pelo LOCATÁRIO neste contrato até a efetiva entrega das chaves.`);
                     } else if (e.garantia === 'Seguro-fiança') {
@@ -3495,11 +3515,27 @@
                     } else {
                         out += clausulaCV(n++, 'As partes dispensam, de comum acordo, a exigência de garantia locatícia para este contrato.');
                     }
-                    out += `<h3>DA CONSERVAÇÃO E DEVOLUÇÃO DO IMÓVEL</h3>`;
+                    out += `<h3>DO USO E DA CONSERVAÇÃO DO IMÓVEL</h3>`;
                     out += clausulaCV(n++, 'O LOCATÁRIO recebe o imóvel em bom estado de conservação e limpeza, obrigando-se a devolvê-lo nas mesmas condições ao final da locação, ressalvado o desgaste natural decorrente do uso regular.');
                     out += clausulaCV(n++, 'Benfeitorias necessárias realizadas pelo LOCATÁRIO, ainda que não autorizadas, e as úteis, desde que autorizadas por escrito pelo LOCADOR, serão indenizáveis e permitem o direito de retenção. As benfeitorias voluptuárias não serão indenizadas, podendo ser levantadas pelo LOCATÁRIO, desde que não afetem a estrutura do imóvel.');
-                    out += `<h3>DA RESCISÃO</h3>`;
-                    out += clausulaCV(n++, 'A parte que der causa à rescisão antecipada deste contrato, fora das hipóteses legais, sujeita-se ao pagamento de multa equivalente a 3 (três) aluguéis vigentes, calculada proporcionalmente ao período restante do prazo contratual, nos termos do art. 4º da Lei nº 8.245/1991.');
+                    out += clausulaCV(n++, 'O LOCATÁRIO obriga-se a satisfazer todas as exigências dos Poderes Públicos a que der causa, sendo vedada qualquer modificação ou transformação no imóvel sem autorização prévia e por escrito do LOCADOR.');
+                    out += clausulaCV(n++, 'O LOCATÁRIO não poderá transferir este contrato, nem sublocar ou emprestar o imóvel, no todo ou em parte, sem o consentimento prévio e por escrito do LOCADOR.');
+                    if (permiteAnimais === 'Sim') {
+                        out += clausulaCV(n++, 'É permitida a permanência de animais de estimação no imóvel, desde que o LOCATÁRIO mantenha sua devida guarda, cuidado e higiene, responsabilizando-se integralmente por eventuais danos causados ao imóvel ou por incômodos à vizinhança e aos demais moradores decorrentes dessa guarda.');
+                    } else {
+                        out += clausulaCV(n++, 'Fica vedada a permanência de animais de estimação no interior do imóvel, tais como cães, gatos, aves, roedores, répteis, peixes, entre outros. O LOCATÁRIO compromete-se a não introduzir, hospedar ou permitir a permanência de quaisquer animais no imóvel, sob pena de infração contratual, além da obrigação de retirá-los imediatamente.');
+                    }
+                    out += `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>`;
+                    out += clausulaCV(n++, 'O LOCATÁRIO compromete-se a utilizar o imóvel de maneira a preservar o sossego, a tranquilidade e o direito ao descanso dos demais moradores e ocupantes do local, especialmente a partir das 22h00, horário a partir do qual deverá redobrar a atenção quanto ao uso de televisão, rádio, caixas de som, aparelhos musicais, instrumentos ou quaisquer equipamentos eletrônicos sonoros, evitando volume capaz de causar incômodo ou perturbação.');
+                    out += `<p>Parágrafo Primeiro. O LOCATÁRIO deverá igualmente evitar, a qualquer horário, festas, reuniões, gritos, algazarras, música em volume elevado ou quaisquer outras atividades que possam prejudicar o sossego e a tranquilidade dos demais moradores ou da vizinhança, sem que isso implique restrição ao convívio familiar e social normal e ao ruído inevitável da vida cotidiana.</p>`;
+                    out += `<p>Parágrafo Segundo. O LOCATÁRIO será responsável por orientar seus familiares, visitantes, convidados, prestadores de serviço e demais pessoas que frequentem o imóvel quanto ao cumprimento desta obrigação.</p>`;
+                    out += `<p>Parágrafo Terceiro. O descumprimento desta cláusula poderá caracterizar infração contratual, sem prejuízo das demais medidas previstas neste contrato, na legislação aplicável, na convenção de condomínio ou no regulamento interno do imóvel, quando existentes.</p>`;
+                    out += `<h3>DA RESCISÃO E DE OUTRAS DISPOSIÇÕES</h3>`;
+                    out += clausulaCV(n++, 'O LOCATÁRIO poderá rescindir este contrato antes do término do prazo estabelecido, mediante comunicação por escrito ao LOCADOR com antecedência mínima de 30 (trinta) dias, ficando isento do pagamento de qualquer multa por rescisão antecipada.');
+                    out += clausulaCV(n++, 'Em caso de desapropriação do imóvel locado, o LOCADOR ficará desobrigado de todas as cláusulas deste contrato, ressalvada ao LOCATÁRIO tão somente a faculdade de haver, junto ao poder desapropriante, a indenização a que porventura tiver direito.');
+                    out += clausulaCV(n++, 'Nenhuma intimação do Serviço Sanitário será motivo para o LOCATÁRIO abandonar o imóvel ou pedir a rescisão deste contrato, salvo mediante vistoria judicial que apure estar a construção ameaçada de ruína.');
+                    out += clausulaCV(n++, 'Tudo quanto for devido em razão deste contrato e que não comporte cobrança executiva será exigido em ação própria, correndo por conta do devedor os honorários do advogado que a parte credora constituir para esse fim.');
+                    out += clausulaCV(n++, 'O LOCATÁRIO renuncia expressamente ao direito de preferência na aquisição do imóvel. Em caso de venda, o LOCATÁRIO obriga-se a desocupá-lo no prazo de 30 (trinta) dias, contados da notificação prévia do LOCADOR.');
                     out += blocoContratoValeAssinatura(n++);
                     out += `<h3>DO FORO</h3>`;
                     out += blocoForoCV(n++, foro);

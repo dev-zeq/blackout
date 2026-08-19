@@ -195,6 +195,7 @@ const s = {
     ev_ano_fabricacao: '', ev_ano_modelo: '', ev_cor: '', ev_cor_outro: '', ev_placa: '', ev_chassi: '', ev_renavam: '', ev_valor: '',
 
     valor_aluguel: '', dia_vencimento: '', prazo_meses: '', data_inicio: '', indice_reajuste: 'IGP-M',
+    pagamento_agua: '', pagamento_energia: '', permite_animais: '',
     garantia: '', valor_caucao: '', fiador_nome: '', fiador_cpf: '',
 
     tem_testemunhas: '', // 'Sim' | 'Não'
@@ -568,8 +569,21 @@ function stepCondicoesLocacao() {
     <div class="field"><label>Índice de reajuste anual</label>
         <select data-key="indice_reajuste">${['IGP-M', 'IPCA', 'INPC'].map(o => `<option value="${o}" ${s.indice_reajuste === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
+    <div class="field"><label>Quem paga a fatura de água? *</label>
+        <select data-key="pagamento_agua">${optionsPagamentoEncargo(s.pagamento_agua)}</select>
+    </div>
+    <div class="field"><label>Quem paga a fatura de energia elétrica? *</label>
+        <select data-key="pagamento_energia">${optionsPagamentoEncargo(s.pagamento_energia)}</select>
+    </div>
+    <div class="field"><label>Permite animais de estimação no imóvel? *</label>
+        <div class="radio-group">${pill('permite_animais', 'Sim', s.permite_animais === 'Sim')}${pill('permite_animais', 'Não', s.permite_animais === 'Não')}</div>
+    </div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function optionsPagamentoEncargo(selected) {
+    return ['', 'LOCADOR', 'LOCATÁRIA', 'Dividido entre as partes'].map(o =>
+        `<option value="${o}" ${selected === o ? 'selected' : ''}>${o || 'Selecione'}</option>`).join('');
 }
 
 // ---------- Etapa: garantia (locação) ----------
@@ -687,6 +701,8 @@ function validateCurrentStep() {
             return null;
         case 'locacao':
             if (!s.valor_aluguel || !s.dia_vencimento || !s.prazo_meses || !s.data_inicio) return 'Preencha todos os campos obrigatórios (*).';
+            if (!s.pagamento_agua || !s.pagamento_energia) return 'Informe quem paga água e energia elétrica.';
+            if (!s.permite_animais) return 'Responda se o imóvel permite animais de estimação.';
             return null;
         case 'garantia':
             if (!s.garantia) return 'Selecione o tipo de garantia.';
@@ -836,6 +852,8 @@ async function submitForm() {
             valor_aluguel: Number(s.valor_aluguel) || 0, dia_vencimento: Number(s.dia_vencimento) || null,
             prazo_meses: Number(s.prazo_meses) || null, data_inicio: s.data_inicio || null,
             indice_reajuste: s.indice_reajuste || 'IGP-M',
+            pagamento_agua: s.pagamento_agua || 'LOCATÁRIA', pagamento_energia: s.pagamento_energia || 'LOCATÁRIA',
+            permite_animais: s.permite_animais || 'Não',
             garantia: s.garantia, valor_caucao: s.valor_caucao ? Number(s.valor_caucao) : null,
             fiador_nome: s.fiador_nome || null, fiador_cpf: s.fiador_cpf || null,
         };
@@ -997,6 +1015,8 @@ function carregarParaEdicao(row) {
         s.dia_vencimento = e.dia_vencimento != null ? String(e.dia_vencimento) : '';
         s.prazo_meses = e.prazo_meses != null ? String(e.prazo_meses) : '';
         s.data_inicio = e.data_inicio || ''; s.indice_reajuste = e.indice_reajuste || 'IGP-M';
+        s.pagamento_agua = e.pagamento_agua || 'LOCATÁRIA'; s.pagamento_energia = e.pagamento_energia || 'LOCATÁRIA';
+        s.permite_animais = e.permite_animais || 'Não';
         s.garantia = e.garantia || ''; s.valor_caucao = e.valor_caucao != null ? String(e.valor_caucao) : '';
         s.fiador_nome = e.fiador_nome || ''; s.fiador_cpf = e.fiador_cpf || '';
     }
