@@ -227,20 +227,29 @@
             #printArea .doc-formatado-print h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.4px; margin: 22px 0 10px; }
             #printArea .doc-formatado-print p { font-size: 15px; line-height: 1.85; margin: 8px 0; }
             /* Layout exclusivo do Contrato de Locação de Imóvel (pedido do
-               usuário, 2026-08-20/2026-08-20) — margens maiores no topo/rodapé
-               (as laterais continuam as mesmas do @page padrão acima), rodapé
+               usuário, 2026-08-20) — margens maiores no topo/rodapé (as
+               laterais continuam as mesmas do @page padrão acima), rodapé
                discreto fixo repetido em toda página (sem nada no cabeçalho além
                do título, que já é o h1 padrão — ver montarContrato()), e a área
-               de assinaturas centralizada numa página própria ao final.
-               Escopado só pela classe .locacao-imovel-print (aplicada só na
-               impressão deste tipo, ver imprimirDeclFormatada()) — não afeta
-               nenhum outro contrato/declaração. */
+               de assinaturas seguindo direto após a última cláusula (sem página
+               própria). Escopado só pela classe .locacao-imovel-print (aplicada
+               só na impressão deste tipo, ver imprimirDeclFormatada()) — não
+               afeta nenhum outro contrato/declaração. */
             @page locacao-imovel { size: A4 portrait; margin: 20mm 12mm; }
-            #printArea .locacao-imovel-print { page: locacao-imovel; padding-bottom: 18mm; }
+            #printArea .locacao-imovel-print { page: locacao-imovel; }
             /* Marca d'água discreta pedida pelo usuário: linha fina cinza-clara,
-               logo monocromática pequena ao lado do texto em cinza-escuro. */
-            .locacao-print-rodape { position: fixed; bottom: 8mm; left: 12mm; right: 12mm; display: flex; align-items: center; gap: 7px; font-size: 8.5px; color: #595959; border-top: 0.5px solid #d9d9d9; padding-top: 5px; }
-            .locacao-assinaturas-print { page-break-before: always; break-before: page; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 220mm; text-align: center; }
+               logo monocromática pequena ao lado do texto em cinza-escuro.
+               position:fixed em impressão no Chrome é ancorado à folha física da
+               página (não à caixa de conteúdo) — por isso bottom:10mm já pousa
+               a área do rodapé ~1cm acima da borda inferior real do papel,
+               dentro da margem de 20mm reservada pelo @page acima (que sozinha
+               já garante que o texto das cláusulas nunca desce até lá). */
+            .locacao-print-rodape { position: fixed; bottom: 10mm; left: 12mm; right: 12mm; display: flex; align-items: center; gap: 7px; font-size: 8.5px; color: #595959; border-top: 0.5px solid #d9d9d9; padding-top: 5px; }
+            /* Assinaturas fluem normalmente no fim do texto (sem page-break nem
+               centralização vertical) — só um respiro (margin-top) equivalente a
+               1-2 linhas antes do bloco, e cada linha/rótulo centralizado na
+               horizontal (text-align), como um fecho de contrato tradicional. */
+            .locacao-assinaturas-print { margin-top: 40px; text-align: center; page-break-inside: avoid; break-inside: avoid; }
             .locacao-assinaturas-print p { margin: 0; }
         }
         /* Currículo formatado (template e IA) — cabeçalho com foto + seções */
@@ -3547,9 +3556,13 @@
             // antes dessa mudança (que não têm esses campos).
             CONTRATO_LOCACAO_IMOVEL: {
                 titulo: 'CONTRATO DE LOCAÇÃO DE IMÓVEL',
-                // Título maior só neste contrato (pedido do usuário) — os demais
-                // tipos continuam no tamanho padrão (18px, ver montarContrato()).
-                tituloFontSize: 20,
+                // Título maior só neste contrato (pedido do usuário, ajustado
+                // pra 26px em 2026-08-20) — os demais tipos continuam no
+                // tamanho padrão (18px, ver montarContrato()). Negrito,
+                // centralização e espaçamento abaixo do título (margin-bottom)
+                // já vêm do <h1> em montarContrato(), inalterados — só o
+                // tamanho da fonte muda aqui.
+                tituloFontSize: 26,
                 papeis: ['pessoa_a', 'pessoa_b'],
                 corpo(d) {
                     const dados = d.dados || {};
@@ -3841,7 +3854,7 @@
                     <polygon points="50,8 42,22 58,22" fill="#8c8c8c"/>
                     <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="#595959">B</text>
                 </svg>`;
-                extras = `<div class="locacao-print-rodape">${logoRodapeMono}<span>Contrato elaborado pela Lan House Blackout, Impressões • Contratos • Documentos, WhatsApp 4799991-2755</span></div>`;
+                extras = `<div class="locacao-print-rodape">${logoRodapeMono}<span>Emitido por Blackout Impressões • WhatsApp (47) 99991-2755</span></div>`;
             }
             document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print${classeExtra}">${document.getElementById('declFormatadoConteudo').innerHTML}${extras}</div>`;
             setTimeout(() => window.print(), 100);
