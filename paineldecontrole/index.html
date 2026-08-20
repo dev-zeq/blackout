@@ -226,6 +226,22 @@
                inline sempre vence regra de classe, por isso não é repetido aqui. */
             #printArea .doc-formatado-print h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.4px; margin: 22px 0 10px; }
             #printArea .doc-formatado-print p { font-size: 15px; line-height: 1.85; margin: 8px 0; }
+            /* Layout exclusivo do Contrato de Locação de Imóvel (pedido do
+               usuário, 2026-08-20/2026-08-20) — margens maiores no topo/rodapé
+               (as laterais continuam as mesmas do @page padrão acima), rodapé
+               discreto fixo repetido em toda página (sem nada no cabeçalho além
+               do título, que já é o h1 padrão — ver montarContrato()), e a área
+               de assinaturas centralizada numa página própria ao final.
+               Escopado só pela classe .locacao-imovel-print (aplicada só na
+               impressão deste tipo, ver imprimirDeclFormatada()) — não afeta
+               nenhum outro contrato/declaração. */
+            @page locacao-imovel { size: A4 portrait; margin: 20mm 12mm; }
+            #printArea .locacao-imovel-print { page: locacao-imovel; padding-bottom: 18mm; }
+            /* Marca d'água discreta pedida pelo usuário: linha fina cinza-clara,
+               logo monocromática pequena ao lado do texto em cinza-escuro. */
+            .locacao-print-rodape { position: fixed; bottom: 8mm; left: 12mm; right: 12mm; display: flex; align-items: center; gap: 7px; font-size: 8.5px; color: #595959; border-top: 0.5px solid #d9d9d9; padding-top: 5px; }
+            .locacao-assinaturas-print { page-break-before: always; break-before: page; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 220mm; text-align: center; }
+            .locacao-assinaturas-print p { margin: 0; }
         }
         /* Currículo formatado (template e IA) — cabeçalho com foto + seções */
         .cv-header { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 2px solid var(--accent); }
@@ -2949,6 +2965,29 @@
             // reportou vendo isso ao testar a impressão de um contrato real).
             return `<div style="page-break-inside:avoid; break-inside:avoid;">${out}</div>`;
         }
+        // Bloco de assinaturas exclusivo do Contrato de Locação de Imóvel
+        // (pedido do usuário — os outros tipos continuam usando
+        // blocoAssinaturasEmpilhadasCV() acima, sem nenhuma mudança). Data/local
+        // + assinaturas + testemunhas ficam centralizados (horizontal sempre;
+        // vertical só na impressão, via a classe .locacao-assinaturas-print
+        // definida no CSS de impressão), numa página própria ao final
+        // (page-break-before), com mais espaço acima de cada linha pra caber a
+        // assinatura manual. Rótulo de cada parte já vem com o gênero certo
+        // (LOCADOR/LOCADORA, LOCATÁRIO/LOCATÁRIA) via termoLocador/termoLocatario,
+        // calculados no corpo() e passados em partes[].label.
+        function blocoAssinaturasLocacao(cidade, partes, testemunhas) {
+            const linha = (texto) => `<div style="margin-top:60px;"><div style="border-top:1px solid #000; width:260px; margin:0 auto 6px;"></div><p>${texto}</p></div>`;
+            let out = `<div class="locacao-assinaturas-print">`;
+            out += `<p>${escapeHtml(cidade)}, ${dataExtensoLonga()}.</p>`;
+            out += partes.map(p => linha(`${escapeHtml(p.label)}: ${escapeHtml(titleCase(p.nome))}`)).join('');
+            out += testemunhas.map((t, i) => {
+                const n = i + 1;
+                const texto = (t && t.nome) ? `Testemunha ${n}: ${escapeHtml(t.nome)} - CPF: ${escapeHtml(t.cpf || '')}` : `Testemunha ${n} - CPF:`;
+                return linha(texto);
+            }).join('');
+            out += `</div>`;
+            return out;
+        }
         // Junta DO FORO + fecho + assinaturas num bloco só com
         // page-break-inside:avoid (não page-break-before:always — isso
         // forçaria página nova mesmo em contrato curto que caberia inteiro
@@ -3508,6 +3547,9 @@
             // antes dessa mudança (que não têm esses campos).
             CONTRATO_LOCACAO_IMOVEL: {
                 titulo: 'CONTRATO DE LOCAÇÃO DE IMÓVEL',
+                // Título maior só neste contrato (pedido do usuário) — os demais
+                // tipos continuam no tamanho padrão (18px, ver montarContrato()).
+                tituloFontSize: 20,
                 papeis: ['pessoa_a', 'pessoa_b'],
                 corpo(d) {
                     const dados = d.dados || {};
@@ -3543,16 +3585,31 @@
                     let n = 1;
                     let out = '';
                     out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
-                    out += `<p>${qualificarCV(locador, termoLocador)}</p>`;
-                    out += `<p>${qualificarCV(locatario, termoLocatario, ehResidencial)}</p>`;
+                    // Formato padronizado "De um lado, ... doravante denominado
+                    // LOCADOR/LOCADORA" / "E, do outro lado, ... LOCATÁRIO/LOCATÁRIA"
+                    // (pedido do usuário, só neste contrato). Reaproveita
+                    // qualificarCV() sem alterar a função em si — só remove o
+                    // prefixo "PAPEL: " e o ponto final de cada retorno, pra encaixar
+                    // na frase nova.
+                    const semPrefixoPapel = (texto) => texto.replace(/^[^:]+:\s*/, '').replace(/\.$/, '');
+                    out += `<p>De um lado, ${semPrefixoPapel(qualificarCV(locador, termoLocador))}, doravante denominad${g(locador.genero, 'o', 'a')} ${termoLocador}.</p>`;
+                    out += `<p>E, do outro lado, ${semPrefixoPapel(qualificarCV(locatario, termoLocatario, ehResidencial))}, doravante denominad${g(locatario.genero, 'o', 'a')} ${termoLocatario}.</p>`;
                     out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Imóvel, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente, e pela Lei nº 8.245/1991.</p>`;
                     out += `<h3>DO OBJETO E FINALIDADE</h3>`;
-                    // Limite de moradores só existe (e só é pedido no formulário) em
-                    // locação residencial — ver stepCondicoesLocacao() em contrato-form.html.
+                    // Limite de moradores (residencial) e segmento de atividade
+                    // (comercial) são mutuamente exclusivos — cada um só existe (e só
+                    // é pedido no formulário) no tipo de locação correspondente, ver
+                    // stepCondicoesLocacao() em contrato-form.html.
                     const limiteMoradores = ehResidencial && e.max_moradores ? Number(e.max_moradores) : null;
-                    out += clausulaCV(n++, `${fLocador.O} ${termoLocador} dá em locação ${fLocatario.ao} ${termoLocatario} o imóvel do tipo ${up(e.tipo_imovel || 'Imóvel')}, situado na ${escapeHtml(titleCase(e.endereco_imovel))}, bairro ${escapeHtml(e.bairro_imovel || '')}, ${escapeHtml(e.cidade_imovel || '')}/${escapeHtml(e.estado_imovel || '')}, destinado exclusivamente a fins ${escapeHtml((e.finalidade || 'Residenciais').toLowerCase())}${limiteMoradores ? `, sendo autorizada a ocupação por, no máximo, ${limiteMoradores} ${limiteMoradores === 1 ? 'pessoa' : 'pessoas'}, conforme acordado entre as partes` : ''}.`);
+                    const segmentoAtividade = !ehResidencial && e.segmento_atividade ? e.segmento_atividade : null;
+                    const destinacao = ehResidencial
+                        ? `destinado exclusivamente a fins residenciais${limiteMoradores ? `, sendo autorizada a ocupação por, no máximo, ${limiteMoradores} ${limiteMoradores === 1 ? 'pessoa' : 'pessoas'}, conforme acordado entre as partes` : ''}`
+                        : `destinado exclusivamente ${segmentoAtividade ? `ao segmento de ${escapeHtml(segmentoAtividade)}` : 'a fins comerciais'}`;
+                    out += clausulaCV(n++, `${fLocador.O} ${termoLocador} dá em locação ${fLocatario.ao} ${termoLocatario} o imóvel do tipo ${up(e.tipo_imovel || 'Imóvel')}, situado na ${escapeHtml(titleCase(e.endereco_imovel))}, bairro ${escapeHtml(e.bairro_imovel || '')}, ${escapeHtml(e.cidade_imovel || '')}/${escapeHtml(e.estado_imovel || '')}, ${destinacao}.`);
                     if (limiteMoradores) {
                         out += `<p>Parágrafo Único. Caso haja permanência habitual de número de ocupantes superior ao limite estabelecido nesta cláusula, tal situação dependerá de autorização prévia e expressa ${fLocador.do} ${termoLocador}, podendo as partes, caso concordem, formalizar aditivo contratual para adequação, inclusive eventual revisão do valor do aluguel.</p>`;
+                    } else if (segmentoAtividade) {
+                        out += `<p>Parágrafo Único. Qualquer alteração do ramo de atividade ou da finalidade do imóvel dependerá de comunicação prévia ${fLocador.ao} ${termoLocador} com antecedência mínima de 30 (trinta) dias, além de autorização expressa e por escrito, sob pena de descumprimento contratual.</p>`;
                     }
                     out += `<h3>DO PRAZO</h3>`;
                     // Data de término só é calculada e exibida em locação residencial
@@ -3571,14 +3628,30 @@
                     out += clausulaCV(n++, 'Caso ocorra a renovação do contrato, o valor do aluguel será reajustado pelo Índice Geral de Preços do Mercado (IGP-M), ou por outro índice oficial que venha a substituí-lo por determinação legal, considerando o período de vigência do contrato.');
                     out += `<h3>DOS ENCARGOS</h3>`;
                     out += clausulaCV(n++, `As despesas relativas ao fornecimento de água ficam ${textoResponsavelEncargo(pagAgua)}, e as de energia elétrica ficam ${textoResponsavelEncargo(pagEnergia)}, ambas durante toda a vigência deste contrato.`);
+                    // Parágrafo novo (pedido do usuário, 2026-08-20): só aparece
+                    // quando a energia é responsabilidade do LOCATÁRIO/LOCATÁRIA
+                    // (pagEnergia === 'LOCATÁRIA' — valor fixo do formulário,
+                    // independe do gênero real da pessoa, que é tratado à parte
+                    // via fLocatario/termoLocatario). Não entra nem em "LOCADOR"
+                    // nem em "Dividido entre as partes".
+                    if (pagEnergia === 'LOCATÁRIA') {
+                        out += `<p>Parágrafo Único. Fica ${fLocatario.o} ${termoLocatario}, mediante autorização e consentimento ${fLocador.do} ${termoLocador}, autorizad${g(locatario.genero, 'o', 'a')} a promover a transferência da titularidade da unidade consumidora para o seu próprio nome, comprometendo-se a realizar esse procedimento junto à concessionária responsável no prazo máximo de 10 (dez) dias, contados da entrega das chaves ou do início da vigência do contrato. A partir da efetivação da transferência, ${fLocatario.o} ${termoLocatario} assume integralmente as responsabilidades de consumo, pagamento de faturas e demais obrigações relacionadas ao fornecimento de energia elétrica.</p>`;
+                    }
                     out += `<h3>DA VISTORIA E DOS REPAROS</h3>`;
                     out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} terá o prazo de 5 (cinco) dias, contados da entrega do imóvel, para reclamar por escrito eventuais reparos ou manutenções pendentes sobre a situação do imóvel e seus utensílios. Findo esse prazo sem reclamação, nada mais competirá ${fLocador.ao} ${termoLocador} a esse respeito, ficando ${g(locador.genero, 'este', 'esta')} ${g(locador.genero, 'isento', 'isenta')} de qualquer responsabilidade até o término do contrato.`);
                     out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} faculta, desde já, ${fLocador.ao} ${termoLocador} examinar ou vistoriar o imóvel locado sempre que ${g(locador.genero, 'este', 'esta')} entender conveniente ou necessário, mediante prévio aviso.`);
                     out += `<h3>DA GARANTIA</h3>`;
                     if (e.garantia === 'Caução') {
-                        out += clausulaCV(n++, `A título de garantia locatícia, ${fLocatario.o} ${termoLocatario} entrega ${fLocador.ao} ${termoLocador}, juntamente com o pagamento do primeiro aluguel, a importância de ${fmt(e.valor_caucao)} (${extensoReais(e.valor_caucao)}), a título de caução, a ser utilizada exclusivamente para reparar eventuais danos ou prejuízos causados ${fLocatario.pelo} ${termoLocatario} ao imóvel durante o período de locação, e devolvida ao término do contrato, descontadas as eventuais pendências dessa natureza, nos termos da Lei nº 8.245/1991.`);
-                        out += `<p>Parágrafo Primeiro. Caso seja necessário utilizar a caução para reparar danos ou prejuízos, ${fLocador.o} ${termoLocador} notificará previamente ${fLocatario.o} ${termoLocatario}, informando o valor utilizado e o motivo da utilização.</p>`;
-                        out += `<p>Parágrafo Segundo. A caução não poderá ser utilizada ${fLocatario.pelo} ${termoLocatario} para quitar aluguéis ou qualquer outra dívida relacionada a este contrato, servindo exclusivamente para cobrir os danos ou prejuízos de que trata esta cláusula.</p>`;
+                        // Regra alterada a pedido do usuário (2026-08-20): a caução não
+                        // é mais devolvida automaticamente ao final — fica retida pra
+                        // cobrir a recomposição do imóvel (pintura, reparos por uso,
+                        // manutenção), vale pros dois tipos de locação (residencial e
+                        // comercial, já que este bloco de garantia não é condicionado
+                        // por ehResidencial). Só a modalidade Caução muda; Fiador,
+                        // Seguro-fiança e Sem garantia continuam intocados abaixo.
+                        out += clausulaCV(n++, `A título de garantia locatícia, ${fLocatario.o} ${termoLocatario} entrega ${fLocador.ao} ${termoLocador}, juntamente com o pagamento do primeiro aluguel, a importância de ${fmt(e.valor_caucao)} (${extensoReais(e.valor_caucao)}), a título de caução. O valor da caução não será devolvido automaticamente ao término do contrato, sendo utilizado para cobrir as despesas necessárias à recomposição do imóvel, incluindo pintura, reparos decorrentes do uso e manutenção, nos termos da Lei nº 8.245/1991.`);
+                        out += `<p>Parágrafo Primeiro. Ao utilizar o valor da caução para as despesas de recomposição do imóvel de que trata esta cláusula, ${fLocador.o} ${termoLocador} notificará ${fLocatario.o} ${termoLocatario}, informando o valor utilizado e o motivo da utilização.</p>`;
+                        out += `<p>Parágrafo Segundo. A caução não poderá ser utilizada ${fLocatario.pelo} ${termoLocatario} para quitar aluguéis ou qualquer outra dívida relacionada a este contrato, servindo exclusivamente para cobrir as despesas de recomposição do imóvel de que trata esta cláusula.</p>`;
                     } else if (e.garantia === 'Fiador') {
                         out += clausulaCV(n++, `A título de garantia locatícia, figura como FIADOR e principal pagador ${escapeHtml(titleCase(e.fiador_nome || ''))}, portador do CPF nº ${escapeHtml(e.fiador_cpf || '')}, que responde solidariamente pelas obrigações assumidas ${fLocatario.pelo} ${termoLocatario} neste contrato até a efetiva entrega das chaves.`);
                     } else if (e.garantia === 'Seguro-fiança') {
@@ -3599,7 +3672,22 @@
                     out += `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>`;
                     out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} se compromete a utilizar o imóvel de forma a preservar o sossego, segurança e tranquilidade da vizinhança, evitando ruídos excessivos, som alto, festas ou atividades que possam causar incômodo, especialmente após as 22 horas. Responsabiliza-se também pelos atos de familiares, visitantes ou quaisquer pessoas que frequentem o imóvel. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
                     out += `<h3>DA RESCISÃO E DE OUTRAS DISPOSIÇÕES</h3>`;
-                    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} poderá rescindir este contrato antes do término do prazo estabelecido, mediante comunicação por escrito ${fLocador.ao} ${termoLocador} com antecedência mínima de 30 (trinta) dias, ficando ${g(locatario.genero, 'isento', 'isenta')} do pagamento de qualquer multa por rescisão antecipada.`);
+                    // Multa por rescisão antecipada é opcional (pergunta nova no
+                    // formulário, 2026-08-20) — quando não há multa (ou em registros
+                    // salvos antes desse campo existir, que caem em multa_rescisao
+                    // 'Não'/ausente), o texto continua exatamente como sempre foi:
+                    // locatário isento de qualquer multa.
+                    const temMulta = e.multa_rescisao === 'Sim';
+                    let textoMulta = '';
+                    if (temMulta && e.multa_rescisao_tipo === 'Alugueis' && e.multa_rescisao_qtd_alugueis) {
+                        const qtd = Number(e.multa_rescisao_qtd_alugueis);
+                        textoMulta = `${qtd} (${numExtenso(qtd)}) ${qtd === 1 ? 'aluguel' : 'aluguéis'} vigente(s) à época da rescisão`;
+                    } else if (temMulta && e.multa_rescisao_tipo === 'Valor fixo' && e.multa_rescisao_valor) {
+                        textoMulta = `${fmt(e.multa_rescisao_valor)} (${extensoReais(e.multa_rescisao_valor)})`;
+                    }
+                    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} poderá rescindir este contrato antes do término do prazo estabelecido, mediante comunicação por escrito ${fLocador.ao} ${termoLocador} com antecedência mínima de 30 (trinta) dias${textoMulta
+                        ? `, ficando ${g(locatario.genero, 'obrigado', 'obrigada')} ao pagamento de multa por rescisão antecipada correspondente a ${textoMulta}`
+                        : `, ficando ${g(locatario.genero, 'isento', 'isenta')} do pagamento de qualquer multa por rescisão antecipada`}.`);
                     out += clausulaCV(n++, `Em caso de desapropriação do imóvel locado, ${fLocador.o} ${termoLocador} ficará desobrigad${g(locador.genero, 'o', 'a')} de todas as cláusulas deste contrato, ressalvada ${fLocatario.ao} ${termoLocatario} tão somente a faculdade de haver, junto ao poder desapropriante, a indenização a que porventura tiver direito.`);
                     out += clausulaCV(n++, `Nenhuma intimação do Serviço Sanitário será motivo para ${fLocatario.o} ${termoLocatario} abandonar o imóvel ou pedir a rescisão deste contrato, salvo mediante vistoria judicial que apure estar a construção ameaçada de ruína.`);
                     out += clausulaCV(n++, 'Tudo quanto for devido em razão deste contrato e que não comporte cobrança executiva será exigido em ação própria, correndo por conta do devedor os honorários do advogado que a parte credora constituir para esse fim.');
@@ -3607,8 +3695,13 @@
                     out += blocoContratoValeAssinatura(n++);
                     out += `<h3>DO FORO</h3>`;
                     out += blocoForoCV(n++, foro);
-                    out += blocoFechoCV(foro.cidade);
-                    out += blocoAssinaturasEmpilhadasCV(
+                    // Fecho + assinaturas em layout próprio, só deste contrato (ver
+                    // blocoAssinaturasLocacao() abaixo) — não usa blocoFechoCV()/
+                    // blocoAssinaturasEmpilhadasCV(), que continuam intactas pros
+                    // outros tipos de contrato.
+                    out += `<p>Por estarem assim justos e contratados, firmam o presente instrumento, em duas vias de igual teor, juntamente com 2 (duas) testemunhas.</p>`;
+                    out += blocoAssinaturasLocacao(
+                        foro.cidade,
                         [{ nome: locador.nome, label: termoLocador }, { nome: locatario.nome, label: termoLocatario }],
                         [{ nome: e.testemunha_1_nome, cpf: e.testemunha_1_cpf }, { nome: e.testemunha_2_nome, cpf: e.testemunha_2_cpf }]
                     );
@@ -3621,7 +3714,10 @@
             const cfg = TIPOS[d.tipo_contrato];
             const titulo = cfg ? cfg.titulo : 'DECLARAÇÃO';
             const corpo = cfg && cfg.corpo ? cfg.corpo(d) : '<p>Tipo de declaração sem template de formatação ainda.</p>';
-            return `<h1 style="text-align:center; font-size:18px; letter-spacing:1px; margin-bottom:22px;">${titulo}</h1>${corpo}`;
+            // tituloFontSize é opcional por tipo (só a Locação de Imóvel define,
+            // ver TIPOS.CONTRATO_LOCACAO_IMOVEL) — os demais continuam em 18px.
+            const tituloFontSize = (cfg && cfg.tituloFontSize) || 18;
+            return `<h1 style="text-align:center; font-size:${tituloFontSize}px; letter-spacing:1px; margin-bottom:22px;">${titulo}</h1>${corpo}`;
         }
         function abrirDeclFormatado(id) {
             const d = declaracoesPendentesCache.find(x => x.id === id);
@@ -3725,7 +3821,29 @@
         window.abrirEdicaoCurriculo = abrirEdicaoCurriculo;
 
         function imprimirDeclFormatada() {
-            document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print">${document.getElementById('declFormatadoConteudo').innerHTML}</div>`;
+            // Marca d'água discreta de impressão (rodapé com logo monocromática +
+            // texto) só aparece no Contrato de Locação de Imóvel — pedido do
+            // usuário, os outros tipos (Compra e Venda, Declarações, Termo etc.)
+            // continuam exatamente como estavam. Sem nada no cabeçalho além do
+            // título (h1 padrão de montarContrato()) — pedido explícito de não
+            // colocar logo lá. Ver .locacao-imovel-print/.locacao-print-rodape no
+            // CSS de impressão pra margens maiores + rodapé fixo por página.
+            const ehLocacao = declFormatadoAtual && declFormatadoAtual.tipo === 'CONTRATO_LOCACAO_IMOVEL';
+            const classeExtra = ehLocacao ? ' locacao-imovel-print' : '';
+            let extras = '';
+            if (ehLocacao) {
+                // Versão monocromática (cinza) da logo — mesmo desenho da logo
+                // colorida usada no Recibo (RECIBO_LOGO_SVG), só com o verde da
+                // marca trocado por tons de cinza pra ficar discreta no rodapé.
+                const logoRodapeMono = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;">
+                    <circle cx="50" cy="50" r="48" fill="#f2f2f2" stroke="#8c8c8c" stroke-width="3"/>
+                    <path d="M50 18 A32 32 0 1 1 18 50" stroke="#8c8c8c" stroke-width="5" stroke-linecap="round" fill="none"/>
+                    <polygon points="50,8 42,22 58,22" fill="#8c8c8c"/>
+                    <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="#595959">B</text>
+                </svg>`;
+                extras = `<div class="locacao-print-rodape">${logoRodapeMono}<span>Contrato elaborado pela Lan House Blackout, Impressões • Contratos • Documentos, WhatsApp 4799991-2755</span></div>`;
+            }
+            document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print${classeExtra}">${document.getElementById('declFormatadoConteudo').innerHTML}${extras}</div>`;
             setTimeout(() => window.print(), 100);
         }
         window.imprimirDeclFormatada = imprimirDeclFormatada;
