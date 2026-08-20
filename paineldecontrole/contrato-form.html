@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Contrato — Blackout</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
 <style>
     :root {
         --bg: #05170c;
@@ -111,6 +112,13 @@
     .doc-confirma .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 5px; }
     .doc-confirma .field { margin-bottom: 12px; }
     .doc-confirma .field input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 14px; font-family: inherit; }
+
+    /* Campos de data (flatpickr): sem digitação, cursor de "escolher" e cor do app */
+    input[data-role="fp-data"], input[data-doc-campo="data_nascimento"] { cursor: pointer; caret-color: transparent; }
+    .flatpickr-day.selected, .flatpickr-day.selected:hover, .flatpickr-day.selected:focus { background: var(--accent); border-color: var(--accent); }
+    .flatpickr-day.today { border-color: var(--accent); }
+    .flatpickr-months .flatpickr-month, .flatpickr-current-month, .flatpickr-weekdays, span.flatpickr-weekday { background: var(--surface-2); }
+    .flatpickr-calendar { background: var(--surface); border: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -141,6 +149,8 @@
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import flatpickr from 'https://esm.sh/flatpickr@4.6.13';
+import { Portuguese } from 'https://esm.sh/flatpickr@4.6.13/dist/l10n/pt.js';
 const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -153,6 +163,35 @@ function pill(name, value, checked, label) {
 const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 function estadoOptions(selected) {
     return ESTADOS_BR.map(u => `<option value="${u}" ${selected === u ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+// Campos de data nunca são digitados — no celular abrem o seletor nativo
+// (rolagem), no computador abrem o calendário do flatpickr, sempre exibindo
+// DD/MM/AAAA (locale Portuguese). O estado interno (`s`) e o que é salvo no
+// banco continuam em AAAA-MM-DD (compatível com registros antigos).
+function campoDataBR(key, label, obrigatorio) {
+    return `<div class="field"><label>${esc(label)}${obrigatorio ? ' *' : ''}</label>
+        <input type="text" readonly placeholder="DD/MM/AAAA" data-key="${key}" data-role="fp-data"></div>`;
+}
+// Inicializa o flatpickr em todo campo de data dentro de `container` — precisa
+// ser chamado de novo toda vez que esse pedaço do DOM é recriado (o form
+// inteiro é redesenhado via innerHTML a cada passo), senão o clique não abre
+// o calendário. `defaultDate` vem do estado `s` pra sobreviver a voltar/avançar
+// e ao modo de edição de contrato já salvo.
+function inicializarCamposData(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-role="fp-data"]').forEach(el => {
+        const key = el.dataset.key;
+        flatpickr(el, {
+            locale: Portuguese,
+            altInput: true,
+            altFormat: 'd/m/Y',
+            dateFormat: 'Y-m-d',
+            defaultDate: s[key] || undefined,
+            allowInput: false,
+            onChange: (_datas, dataStr) => { s[key] = dataStr; },
+        });
+    });
 }
 
 // Cidade + bairro selecionáveis (região onde a Blackout atua) — "Outra"/"Outro"
@@ -240,8 +279,8 @@ const s = {
     ev_tipo_veiculo: '', ev_tipo_veiculo_outro: '', ev_fabricante: '', ev_fabricante_outro: '', ev_modelo: '',
     ev_ano_fabricacao: '', ev_ano_modelo: '', ev_cor: '', ev_cor_outro: '', ev_placa: '', ev_chassi: '', ev_renavam: '', ev_valor: '',
 
-    valor_aluguel: '', dia_vencimento: '', prazo_meses: '', data_inicio: '', indice_reajuste: 'IGP-M',
-    pagamento_agua: '', pagamento_energia: '', permite_animais: '',
+    valor_aluguel: '', dia_vencimento: '', prazo_meses: '', data_inicio: '',
+    pagamento_agua: '', pagamento_energia: '', permite_animais: '', max_moradores: '',
     garantia: '', valor_caucao: '', fiador_nome: '', fiador_cpf: '',
 
     tem_testemunhas: '', // 'Sim' | 'Não'
@@ -439,7 +478,7 @@ function mostrarDocConfirmacao(dados) {
         ['nome_completo', 'Nome completo', dados.nome_completo],
         ['cpf', 'CPF', dados.cpf],
         ['rg', 'RG', dados.rg],
-        ['data_nascimento', 'Data de nascimento (AAAA-MM-DD)', dados.data_nascimento],
+        ['data_nascimento', 'Data de nascimento', null], // preenchido via flatpickr logo abaixo
         ['nacionalidade', 'Nacionalidade', dados.nacionalidade],
         ['estado_civil', 'Estado civil', dados.estado_civil],
         ['orgao_emissor', 'Órgão emissor', dados.orgao_emissor],
@@ -449,13 +488,20 @@ function mostrarDocConfirmacao(dados) {
         <h3>Confira os dados lidos</h3>
         <p class="doc-sub">Corrija o que estiver errado antes de preencher o formulário.</p>
         <div class="doc-confirma">
-            ${campos.map(([k, label, v]) => `<div class="field"><label>${esc(label)}</label><input type="text" data-doc-campo="${k}" value="${esc(v || '')}"></div>`).join('')}
+            ${campos.map(([k, label, v]) => `<div class="field"><label>${esc(label)}</label><input type="text" ${k === 'data_nascimento' ? 'readonly placeholder="DD/MM/AAAA"' : ''} data-doc-campo="${k}" value="${esc(v || '')}"></div>`).join('')}
         </div>
         <button type="button" class="doc-action-btn primary" data-doc-action="usar">Usar estes dados</button>
         <button type="button" class="doc-action-btn cancel" data-doc-action="fechar">Descartar</button>`);
     const overlay = document.getElementById('docOverlay');
     overlay.dataset.nacValor = nac.valor === 'Outro' ? 'Outra' : (nac.valor || '');
     overlay.dataset.nacOutro = nac.outro || '';
+    const elNasc = overlay.querySelector('[data-doc-campo="data_nascimento"]');
+    if (elNasc) {
+        flatpickr(elNasc, {
+            locale: Portuguese, altInput: true, altFormat: 'd/m/Y', dateFormat: 'Y-m-d',
+            defaultDate: dados.data_nascimento || undefined, allowInput: false,
+        });
+    }
 }
 
 function aplicarDadosDocumento() {
@@ -466,7 +512,7 @@ function aplicarDadosDocumento() {
     if (campo('nome_completo')) s[p + '_nome'] = campo('nome_completo');
     if (campo('cpf')) s[p + '_cpf'] = campo('cpf');
     if (campo('rg')) s[p + '_rg'] = campo('rg');
-    if (campo('data_nascimento')) s[p + '_nascimento'] = campo('data_nascimento');
+    if (campo('data_nascimento')) s[p + '_nascimento'] = campo('data_nascimento'); // já vem AAAA-MM-DD (flatpickr)
     if (campo('estado_civil')) s[p + '_estado_civil'] = campo('estado_civil');
     if (campo('orgao_emissor')) s[p + '_orgao_emissor'] = campo('orgao_emissor');
     if (campo('uf_emissor')) s[p + '_uf_emissor'] = campo('uf_emissor');
@@ -509,7 +555,19 @@ function buildSteps() {
     } else if (t === 'imovel_cv') {
         steps = [stepTipo, () => stepPessoa('a', 'VENDEDOR', 'Dados de quem está vendendo o imóvel.'), () => stepPessoa('b', 'COMPRADOR', 'Dados de quem está comprando o imóvel.'), stepImovelCV, stepPagamento, stepEntrada, stepTestemunhas, stepRevisao];
     } else if (t === 'imovel_locacao') {
-        steps = [stepTipo, () => stepPessoa('a', 'LOCADOR', 'Dados de quem está alugando o imóvel (proprietário).'), () => stepPessoa('b', 'LOCATÁRIO', 'Dados de quem vai morar/ocupar o imóvel.'), stepImovelLocacao, stepCondicoesLocacao, stepGarantia, stepTestemunhas, stepRevisao];
+        // Etapa de finalidade (residencial × comercial) entra entre Locador e
+        // Locatário — a resposta muda se o Locatário a seguir pede endereço
+        // próprio ou não (ver locatarioSemEnderecoProprio()). Como isso desloca
+        // a posição do Locatário no array, as duas etapas de pessoa aqui
+        // precisam de `.__key` explícito (stepKey() não pode mais inferir pela
+        // posição fixa 1/2, que só vale pros outros dois tipos de contrato).
+        const passoLocador = () => stepPessoa('a', 'LOCADOR', 'Dados de quem está alugando o imóvel (proprietário).');
+        passoLocador.__key = 'pessoaA';
+        const passoFinalidade = () => stepFinalidadeLocacao();
+        passoFinalidade.__key = 'finalidadeLocacao';
+        const passoLocatario = () => stepPessoa('b', 'LOCATÁRIO', 'Dados de quem vai morar/ocupar o imóvel.');
+        passoLocatario.__key = 'pessoaB';
+        steps = [stepTipo, passoLocador, passoFinalidade, passoLocatario, stepImovelLocacao, stepCondicoesLocacao, stepGarantia, stepTestemunhas, stepRevisao];
     }
 }
 
@@ -524,11 +582,12 @@ function render() {
 
 function afterRenderStep() {
     const key = stepKey();
-    if (key === 'pessoaA') { renderCondCidade('a'); renderCondNacionalidade('a'); renderCondEstado('a'); }
-    if (key === 'pessoaB') { renderCondCidade('b'); renderCondNacionalidade('b'); renderCondEstado('b'); }
+    if (key === 'pessoaA') { renderCondCidade('a'); renderCondNacionalidade('a'); renderCondEstado('a'); inicializarCamposData(document.getElementById('cardArea')); }
+    if (key === 'pessoaB') { renderCondCidade('b'); renderCondNacionalidade('b'); renderCondEstado('b'); inicializarCamposData(document.getElementById('cardArea')); }
     if (key === 'veiculo') { ['v_tipo_veiculo', 'v_fabricante', 'v_cor'].forEach(renderCondSelecaoOutro); }
     if (key === 'imovel') { renderCondCidade('im'); renderCondSelecaoOutro('im_tipo_imovel'); renderCondAreaImovel(); renderCondEstado('im'); }
-    if (key === 'entrada') renderCondEntradaVeiculo();
+    if (key === 'entrada') renderCondEntradaVeiculo(); // já chama inicializarCamposData internamente, escopado no #condEntrada
+    if (key === 'locacao') inicializarCamposData(document.getElementById('cardArea'));
     if (key === 'garantia') renderCondGarantia();
     if (key === 'testemunhas') renderCondTestemunhas();
 }
@@ -581,6 +640,14 @@ function stepTipo() {
 }
 
 // ---------- Etapa: pessoa (vendedor/comprador/locador/locatário) ----------
+// Locação residencial: o endereço do locatário é sempre o próprio imóvel
+// alugado, então não faz sentido pedir um endereço separado pra ele — só em
+// locação comercial (loja/sala/galpão) o locatário informa endereço próprio
+// (ex: sede da empresa), distinto do imóvel alugado.
+function locatarioSemEnderecoProprio() {
+    return s.tipo === 'imovel_locacao' && s.im_finalidade === 'Residenciais';
+}
+
 function stepPessoa(p, papel, subtitulo) {
     // Piloto controlado: "Ler Documento" e os campos extras que ele preenche
     // (nascimento/órgão emissor/UF emissor) só aparecem em Locação de Imóvel —
@@ -594,7 +661,7 @@ function stepPessoa(p, papel, subtitulo) {
     <div class="field"><label>CPF *</label><input type="text" data-key="${p}_cpf" value="${esc(s[p + '_cpf'])}"></div>
     <div class="field"><label>RG</label><input type="text" data-key="${p}_rg" value="${esc(s[p + '_rg'])}"></div>
     ${pilotoDocumento ? `
-    <div class="field"><label>Data de nascimento</label><input type="date" data-key="${p}_nascimento" value="${esc(s[p + '_nascimento'])}"></div>
+    ${campoDataBR(`${p}_nascimento`, 'Data de nascimento', false)}
     <div class="field"><label>Órgão emissor (RG)</label><input type="text" data-key="${p}_orgao_emissor" value="${esc(s[p + '_orgao_emissor'])}"></div>
     <div class="field"><label>UF emissor (RG)</label><select data-key="${p}_uf_emissor"><option value="">Selecione</option>${estadoOptions(s[p + '_uf_emissor'])}</select></div>` : ''}
     <div class="field"><label>Gênero *</label>
@@ -605,11 +672,13 @@ function stepPessoa(p, papel, subtitulo) {
         <select data-key="${p}_estado_civil"><option value="">Selecione</option>${['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União Estável'].map(o => `<option value="${o}" ${s[p + '_estado_civil'] === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
     <div class="field"><label>Profissão</label><input type="text" data-key="${p}_profissao" value="${esc(s[p + '_profissao'])}"></div>
+    ${p === 'b' && locatarioSemEnderecoProprio() ? `
+    <p class="hint" style="margin:-4px 0 16px;">Como é uma locação residencial, o endereço do LOCATÁRIO será o próprio imóvel alugado — não precisa repetir aqui.</p>` : `
     <div class="field"><label>Rua *</label><input type="text" data-key="${p}_rua" value="${esc(s[p + '_rua'])}"></div>
     <div class="field"><label>Número *</label><input type="text" data-key="${p}_numero" value="${esc(s[p + '_numero'])}"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" data-key="${p}_complemento" value="${esc(s[p + '_complemento'])}"></div>
     ${cidadeCampoHtml(p)}
-    <div id="cond_${p}_estado">${estadoCampoHtml(p)}</div>
+    <div id="cond_${p}_estado">${estadoCampoHtml(p)}</div>`}
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -655,14 +724,26 @@ function stepImovelCV() {
 }
 
 // ---------- Etapa: imóvel (locação) ----------
+// ---------- Etapa: finalidade da locação (residencial × comercial) ----------
+// Perguntada logo depois do Locador (e antes do Locatário) porque muda os
+// campos pedidos do Locatário a seguir: residencial não pede endereço próprio
+// do locatário (usa o do imóvel), comercial pede endereço próprio dele.
+function stepFinalidadeLocacao() {
+    return `
+    <h2>Tipo de locação</h2>
+    <p class="step-sub">Isso muda quais dados a gente pede do locatário a seguir.</p>
+    <div class="field"><label>Este imóvel é residencial ou comercial? *</label>
+        <div class="radio-group">${pill('im_finalidade', 'Residenciais', s.im_finalidade === 'Residenciais', 'Residencial (casa, apartamento, kitnet...)')}${pill('im_finalidade', 'Comerciais', s.im_finalidade === 'Comerciais', 'Comercial (sala, loja, galpão...)')}</div>
+    </div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
 function stepImovelLocacao() {
     return `
     <h2>Dados do Imóvel</h2>
-    <p class="step-sub">Imóvel que será alugado.</p>
+    <p class="step-sub">Imóvel que será alugado (${s.im_finalidade === 'Comerciais' ? 'uso comercial' : 'uso residencial'}).</p>
     ${campoSelecaoComOutro('im_tipo_imovel', 'Tipo de imóvel', TIPOS_IMOVEL, true)}
-    <div class="field"><label>Finalidade *</label>
-        <div class="radio-group">${pill('im_finalidade', 'Residenciais', s.im_finalidade === 'Residenciais', 'Residencial')}${pill('im_finalidade', 'Comerciais', s.im_finalidade === 'Comerciais', 'Comercial')}</div>
-    </div>
     <div class="field"><label>Rua *</label><input type="text" data-key="im_rua" value="${esc(s.im_rua)}"></div>
     <div class="field"><label>Número *</label><input type="text" data-key="im_numero" value="${esc(s.im_numero)}"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" data-key="im_complemento" value="${esc(s.im_complemento)}"></div>
@@ -757,9 +838,10 @@ function renderCondEntradaDinheiroParcelas() {
     if (s.forma_pagamento === 'Prazo') {
         html += `<div class="field"><label>Número de parcelas *</label><input type="number" min="1" data-key="num_parcelas" value="${esc(s.num_parcelas)}"></div>`;
         html += `<div class="field"><label>Valor de cada parcela (calculado automaticamente)</label><input type="text" id="parcelaValorDisplay" value="${valorParcelaTexto()}" disabled style="opacity:.7;"></div>`;
-        html += `<div class="field"><label>Data da primeira parcela *</label><input type="date" data-key="data_primeira_parcela" value="${esc(s.data_primeira_parcela)}"></div>`;
+        html += campoDataBR('data_primeira_parcela', 'Data da primeira parcela', true);
     }
     el.innerHTML = html;
+    inicializarCamposData(el);
     renderCondValorEntradaDinheiro();
 }
 function renderCondValorEntradaDinheiro() {
@@ -776,10 +858,7 @@ function stepCondicoesLocacao() {
     <div class="field"><label>Valor do aluguel mensal *</label><input type="number" step="0.01" data-key="valor_aluguel" value="${esc(s.valor_aluguel)}"></div>
     <div class="field"><label>Dia do vencimento (todo mês) *</label><select data-key="dia_vencimento">${diaOptions(s.dia_vencimento)}</select></div>
     <div class="field"><label>Prazo do contrato (em meses) *</label><input type="number" min="1" data-key="prazo_meses" value="${esc(s.prazo_meses)}"></div>
-    <div class="field"><label>Data de início *</label><input type="date" data-key="data_inicio" value="${esc(s.data_inicio)}"></div>
-    <div class="field"><label>Índice de reajuste anual</label>
-        <select data-key="indice_reajuste">${['IGP-M', 'IPCA', 'INPC'].map(o => `<option value="${o}" ${s.indice_reajuste === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
-    </div>
+    ${campoDataBR('data_inicio', 'Data de início', true)}
     <div class="field"><label>Quem paga a fatura de água? *</label>
         <select data-key="pagamento_agua">${optionsPagamentoEncargo(s.pagamento_agua)}</select>
     </div>
@@ -789,6 +868,10 @@ function stepCondicoesLocacao() {
     <div class="field"><label>Permite animais de estimação no imóvel? *</label>
         <div class="radio-group">${pill('permite_animais', 'Sim', s.permite_animais === 'Sim')}${pill('permite_animais', 'Não', s.permite_animais === 'Não')}</div>
     </div>
+    ${s.im_finalidade === 'Residenciais' ? `
+    <div class="field"><label>Quantidade máxima de moradores autorizados *</label><input type="number" min="1" step="1" data-key="max_moradores" value="${esc(s.max_moradores)}">
+        <p class="hint">Definida em comum acordo entre locador e locatário — entra no contrato na cláusula de destinação do imóvel.</p>
+    </div>` : ''}
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -882,7 +965,13 @@ function stepRevisao() {
 
 // ---------- Validação ----------
 function validarPessoa(p) {
-    if (!s[p + '_nome'] || !s[p + '_cpf'] || !s[p + '_genero'] || !nacionalidadeFinal(p) || !s[p + '_rua'] || !s[p + '_numero'] || !cidadeFinal(p) || !bairroFinal(p) || !estadoFinal(p)) {
+    if (!s[p + '_nome'] || !s[p + '_cpf'] || !s[p + '_genero'] || !nacionalidadeFinal(p)) {
+        return 'Preencha todos os campos obrigatórios (*).';
+    }
+    // Locatário em locação residencial não tem campo de endereço próprio pra
+    // validar — ver locatarioSemEnderecoProprio() e stepPessoa().
+    if (p === 'b' && locatarioSemEnderecoProprio()) return null;
+    if (!s[p + '_rua'] || !s[p + '_numero'] || !cidadeFinal(p) || !bairroFinal(p) || !estadoFinal(p)) {
         return 'Preencha todos os campos obrigatórios (*).';
     }
     return null;
@@ -892,6 +981,7 @@ function validateCurrentStep() {
     switch (key) {
         case 'tipo': return s.tipo ? null : 'Escolha o tipo de contrato pra continuar.';
         case 'pessoaA': return validarPessoa('a');
+        case 'finalidadeLocacao': return s.im_finalidade ? null : 'Selecione se a locação é residencial ou comercial.';
         case 'pessoaB': return validarPessoa('b');
         case 'veiculo':
             if (!valorSelecaoOutro('v_tipo_veiculo') || !valorSelecaoOutro('v_fabricante') || !s.v_modelo || !s.v_placa) return 'Preencha todos os campos obrigatórios (*).';
@@ -914,6 +1004,7 @@ function validateCurrentStep() {
             if (!s.valor_aluguel || !s.dia_vencimento || !s.prazo_meses || !s.data_inicio) return 'Preencha todos os campos obrigatórios (*).';
             if (!s.pagamento_agua || !s.pagamento_energia) return 'Informe quem paga água e energia elétrica.';
             if (!s.permite_animais) return 'Responda se o imóvel permite animais de estimação.';
+            if (s.im_finalidade === 'Residenciais' && !s.max_moradores) return 'Informe a quantidade máxima de moradores autorizados.';
             return null;
         case 'garantia':
             if (!s.garantia) return 'Selecione o tipo de garantia.';
@@ -933,6 +1024,9 @@ function saveCurrentStep() {
 const cardEl = document.getElementById('cardArea');
 cardEl.addEventListener('input', e => {
     const key = e.target.dataset.key;
+    // Campos de data (flatpickr) são só-leitura e cuidam de `s[key]` sozinhos
+    // via onChange (ver inicializarCamposData) — nada a fazer aqui.
+    if (e.target.dataset.role === 'fp-data') return;
     if (key && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.type !== 'radio') {
         s[key] = e.target.value;
     }
@@ -993,15 +1087,23 @@ async function submitForm() {
 
     // rua/numero/complemento salvos soltos (além do endereco já composto) só
     // pra dar pra recarregar certinho no modo de edição — ver carregarParaEdicao().
-    const pessoa = p => ({
-        nome: s[p + '_nome'], cpf: s[p + '_cpf'], rg: s[p + '_rg'] || null, genero: s[p + '_genero'],
-        nacionalidade: nacionalidadeFinal(p), estado_civil: s[p + '_estado_civil'] || null, profissao: s[p + '_profissao'] || null,
-        endereco: enderecoFinal(p), rua: s[p + '_rua'] || null, numero: s[p + '_numero'] || null, complemento: s[p + '_complemento'] || null,
-        bairro: bairroFinal(p), cidade: cidadeFinal(p), estado: estadoFinal(p),
-        // Só preenchidos hoje via "Ler Documento" (piloto Locação de Imóvel) —
-        // ficam null pros outros tipos de contrato, que não têm essa UI.
-        nascimento: s[p + '_nascimento'] || null, orgao_emissor: s[p + '_orgao_emissor'] || null, uf_emissor: s[p + '_uf_emissor'] || null,
-    });
+    const pessoa = p => {
+        // Locatário em locação residencial não preenche endereço próprio — o
+        // endereço dele no contrato é o do próprio imóvel alugado (ver
+        // locatarioSemEnderecoProprio()/stepPessoa()). `enderecoFinal` e as
+        // outras funções `*Final` são genéricas por prefixo, então funcionam
+        // igual passando 'im' no lugar de 'a'/'b'.
+        const pref = (p === 'b' && locatarioSemEnderecoProprio()) ? 'im' : p;
+        return {
+            nome: s[p + '_nome'], cpf: s[p + '_cpf'], rg: s[p + '_rg'] || null, genero: s[p + '_genero'],
+            nacionalidade: nacionalidadeFinal(p), estado_civil: s[p + '_estado_civil'] || null, profissao: s[p + '_profissao'] || null,
+            endereco: enderecoFinal(pref), rua: s[pref + '_rua'] || null, numero: s[pref + '_numero'] || null, complemento: s[pref + '_complemento'] || null,
+            bairro: bairroFinal(pref), cidade: cidadeFinal(pref), estado: estadoFinal(pref),
+            // Só preenchidos hoje via "Ler Documento" (piloto Locação de Imóvel) —
+            // ficam null pros outros tipos de contrato, que não têm essa UI.
+            nascimento: s[p + '_nascimento'] || null, orgao_emissor: s[p + '_orgao_emissor'] || null, uf_emissor: s[p + '_uf_emissor'] || null,
+        };
+    };
     const anoFabricacaoModelo = (fab, mod) => {
         if (!fab) return null;
         return mod && mod !== fab ? `${fab}/${mod}` : `${fab}/${fab}`;
@@ -1071,9 +1173,11 @@ async function submitForm() {
             bairro_imovel: bairroFinal('im'), cidade_imovel: cidadeFinal('im'), estado_imovel: estadoFinal('im'),
             valor_aluguel: Number(s.valor_aluguel) || 0, dia_vencimento: Number(s.dia_vencimento) || null,
             prazo_meses: Number(s.prazo_meses) || null, data_inicio: s.data_inicio || null,
-            indice_reajuste: s.indice_reajuste || 'IGP-M',
             pagamento_agua: s.pagamento_agua || 'LOCATÁRIA', pagamento_energia: s.pagamento_energia || 'LOCATÁRIA',
             permite_animais: s.permite_animais || 'Não',
+            // Só se aplica (e só é pedido no formulário) em locação residencial —
+            // ver stepCondicoesLocacao(). Fica null em locação comercial.
+            max_moradores: s.im_finalidade === 'Residenciais' ? (Number(s.max_moradores) || null) : null,
             garantia: s.garantia, valor_caucao: s.valor_caucao ? Number(s.valor_caucao) : null,
             fiador_nome: s.fiador_nome || null, fiador_cpf: s.fiador_cpf || null,
         };
@@ -1235,9 +1339,10 @@ function carregarParaEdicao(row) {
         s.valor_aluguel = e.valor_aluguel != null ? String(e.valor_aluguel) : '';
         s.dia_vencimento = e.dia_vencimento != null ? String(e.dia_vencimento) : '';
         s.prazo_meses = e.prazo_meses != null ? String(e.prazo_meses) : '';
-        s.data_inicio = e.data_inicio || ''; s.indice_reajuste = e.indice_reajuste || 'IGP-M';
+        s.data_inicio = e.data_inicio || '';
         s.pagamento_agua = e.pagamento_agua || 'LOCATÁRIA'; s.pagamento_energia = e.pagamento_energia || 'LOCATÁRIA';
         s.permite_animais = e.permite_animais || 'Não';
+        s.max_moradores = e.max_moradores != null ? String(e.max_moradores) : '';
         s.garantia = e.garantia || ''; s.valor_caucao = e.valor_caucao != null ? String(e.valor_caucao) : '';
         s.fiador_nome = e.fiador_nome || ''; s.fiador_cpf = e.fiador_cpf || '';
     }

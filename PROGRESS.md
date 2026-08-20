@@ -158,6 +158,75 @@ Componente novo **só** nas etapas Locador/Locatário do Contrato de Locação d
 
 **Próximo passo, se o piloto for aprovado**: replicar o mesmo componente pras etapas de Vendedor/Comprador de Compra e Venda de Veículo/Imóvel, e decidir se `orgao_emissor`/`uf_emissor` entram na cláusula de qualificação.
 
+## Campos de data sem digitação — flatpickr (2026-08-19)
+
+Pedido do usuário: nenhum campo de data do sistema deveria exigir digitação — no celular tem que abrir o seletor nativo (rolagem), no computador um calendário, sempre exibindo DD/MM/AAAA. Antes de implementar, confirmei que o projeto não tinha nenhuma lib de date-picker (só `supabase-js`/`extenso`/`html2canvas` via `esm.sh`) — por isso foi adicionada a **flatpickr** (`esm.sh/flatpickr@4.6.13`, locale `Portuguese`, tema `dark.css` do próprio flatpickr via CDN, com pequenos overrides de cor pra bater com o `--accent` verde do app). Zero dependências, mesmo padrão de CDN já usado no projeto.
+
+Isso **substituiu** a tentativa anterior (máscara de texto DD/MM/AAAA digitada à mão, ver histórico de commits do mesmo dia) — o usuário decidiu que não queria digitação nenhuma, só seleção visual.
+
+**Onde**: só nos formulários que o cliente preenche — `contrato-form.html` (Data de nascimento do Locador/Locatário — piloto, Data de início da locação, Data da primeira parcela em compra/venda a prazo, e o campo de nascimento da tela de conferência do "Ler Documento") e o Recibo em `index.html` (campo Data). **Não** foi aplicado nos campos internos do painel (fechamento de caixa, planejamento, PIX, saídas, contratos manuais CV_*) — decisão explícita do usuário, escopo só nos formulários de cliente.
+
+**Como funciona**: `campoDataBR(key, label, obrigatorio)` em `contrato-form.html` (e o equivalente `inicializarCampoData()` em `index.html`) renderiza um `<input readonly data-role="fp-data">` — sem `value` no HTML, porque quem preenche é o flatpickr via `defaultDate` depois. `flatpickr(el, { altInput:true, altFormat:'d/m/Y', dateFormat:'Y-m-d', locale:Portuguese, allowInput:false, onChange })` cria um segundo input visível (o "altInput") mostrando DD/MM/AAAA, enquanto o input original vira `type=hidden` e guarda o valor real em AAAA-MM-DD — é esse valor original que o resto do código sempre leu (`s[key]`, `reciboForm.data_recibo`), então nada mudou no que é salvo no banco, só a forma de preencher.
+
+**Cuidado ao reaproveitar em telas que redesenham via `innerHTML`** (é o padrão de todo o projeto — cada etapa do formulário é uma string de template redesenhada do zero): toda vez que o pedaço do DOM com um campo de data é recriado, o flatpickr precisa ser inicializado de novo (senão o clique não abre nada) — mas cuidado pra não inicializar duas vezes o mesmo elemento (gera instância duplicada). Por isso as chamadas de `inicializarCamposData()` ficam escopadas por container específico (`#cardArea` inteiro só nas etapas que são redesenhadas por completo; `#condEntradaDinheiroParcelas` sozinho quando só aquele pedacinho é redesenhado dentro da etapa de Entrada).
+
+**Comportamento por dispositivo** (decisão consciente, não bug): no celular o flatpickr detecta e cede lugar ao seletor nativo do sistema operacional (rolagem de dia/mês/ano) — é o comportamento padrão da lib (`disableMobile: false`), e foi exatamente o que o usuário pediu ("no celular abra o seletor nativo"). No computador, o calendário é sempre o do flatpickr (garantindo DD/MM/AAAA em qualquer navegador).
+
+**Testado** (harness local): campo Data de nascimento abre calendário em português, tema escuro batendo com o app; navegação de ano digitando (precisa de Enter/blur pra recalcular o grid — só digitar sem confirmar não atualiza os dias, é comportamento da própria lib) escolhendo 15/08/1988 corretamente, valor interno confirmado via JS como `1988-08-15` (ISO); digitação manual no campo bloqueada (`allowInput:false`) — tentei digitar e nada mudou; tela de conferência do "Ler Documento" também usando flatpickr, pré-preenchida com a data lida pela IA (15/03/1988) e aplicando certinho ao formulário (`1988-03-15` confirmado). **Não testado**: `index.html`/Recibo (fica atrás da senha da equipe, não tenho acesso) — só confirmado que o arquivo carrega sem erro de console/import; e o seletor nativo real de celular (Android/iPhone), que só existe fora do ambiente de preview.
+
+## Endereço do Locatário condicional (residencial × comercial) — 2026-08-19
+
+Pedido do usuário: em locação **residencial** (casa, apartamento, kitnet...) não faz sentido pedir um endereço separado pro Locatário — o endereço dele passa a ser o do próprio imóvel alugado. Em locação **comercial** (sala, loja, galpão...) o Locatário continua informando endereço próprio (ex: sede da empresa), separado do imóvel.
+
+**Problema de ordem**: a etapa que pergunta "Finalidade" (Residencial/Comercial) sempre existiu (`im_finalidade`), mas ficava dentro da etapa "Dados do Imóvel", que só vem **depois** das etapas de Locador e Locatário — na hora de renderizar a etapa do Locatário ainda não dava pra saber se ia precisar do endereço dele ou não. Solução: criei uma etapa nova e pequena, **"Tipo de locação"**, entre Locador e Locatário, só com a pergunta Residencial/Comercial (o campo duplicado foi removido de dentro de "Dados do Imóvel", que agora só mostra um lembrete no subtítulo: "uso residencial"/"uso comercial"). Contrato ficou com 9 etapas em vez de 8.
+
+**Onde mexeu** (tudo em `contrato-form.html`, só a etapa de Locação de Imóvel — Compra e Venda de Veículo/Imóvel reaproveitam `stepPessoa()` sem nenhuma mudança):
+- `stepFinalidadeLocacao()` — etapa nova.
+- `buildSteps()` — no ramo `imovel_locacao`, as etapas de pessoa ganharam `.__key` explícito (`'pessoaA'`/`'pessoaB'`) porque a etapa nova desloca a posição do Locatário no array, e `stepKey()` tinha um fallback que inferia a etapa pela posição fixa (`stepIndex === 1/2`) — isso só valia enquanto Locatário era sempre a 3ª etapa, o que deixou de ser verdade só pra Locação.
+- `locatarioSemEnderecoProprio()` — helper novo (`true` quando `tipo === 'imovel_locacao' && im_finalidade === 'Residenciais'`), usado em 3 lugares: `stepPessoa()` (esconde Rua/Número/Complemento/Cidade/Estado do Locatário e mostra um aviso no lugar), `validarPessoa()` (não exige esses campos nesse caso) e o builder `pessoa(p)` dentro de `submitForm()` (quando é o caso, monta o endereço do Locatário a partir de `im_*` — endereço do imóvel — em vez de `b_*`, reaproveitando as mesmas funções genéricas `enderecoFinal`/`bairroFinal`/`cidadeFinal`/`estadoFinal`, que já são agnósticas de prefixo).
+
+**Efeito em contratos antigos reabertos pra edição**: se um contrato residencial antigo (de antes dessa mudança) tinha um endereço próprio do Locatário digitado manualmente, ao reabrir e salvar de novo esse endereço é substituído pelo do imóvel — é o comportamento esperado da nova regra, não um bug.
+
+**Testado**: fluxo Residencial completo (Locador com endereço → Tipo de locação = Residencial, pré-selecionado por padrão → Locatário sem nenhum campo de endereço, com o aviso explicativo → Dados do Imóvel com subtítulo "uso residencial", sem campo de Finalidade duplicado); voltei até "Tipo de locação", troquei pra Comercial, avancei de novo até Locatário e confirmei que os campos de Rua/Número/Complemento/Cidade/Estado voltam a aparecer normalmente. Sem erros no console em nenhum dos dois caminhos. **Não testado**: o texto final do contrato em produção (senha da equipe) e reabertura em modo de edição de um contrato salvo com essa lógica nova.
+
+## Cláusula DOS ENCARGOS simplificada (2026-08-19)
+
+Pedido do usuário: a cláusula de encargos do Contrato de Locação (`index.html`, `TIPOS.CONTRATO_LOCACAO_IMOVEL.corpo()`) tinha uma segunda cláusula fixa cobrando do LOCATÁRIO "despesas ordinárias de condomínio, gás e demais consumos do imóvel... bem como o IPTU" — item que não existe no modelo do usuário e nunca foi configurável no formulário (era texto fixo, sem campo nenhum por trás). Essa cláusula foi **removida por completo**. Restou só a primeira cláusula de DOS ENCARGOS, que já existia e já era gerada a partir dos campos do formulário (`pagamento_agua`/`pagamento_energia`, cada um com LOCADOR/LOCATÁRIA/Dividido entre as partes) — nada mudou na lógica dela, só o texto do caso "Dividido" ficou mais explícito: em vez de "em partes iguais", agora diz "divididas igualmente entre as partes, cabendo 50% (cinquenta por cento) para cada uma".
+
+Não precisou mexer no formulário (`contrato-form.html`) — os campos "Quem paga a fatura de água?"/"...de energia elétrica?" já existiam com exatamente as 3 opções pedidas (Locador/Locatária/Dividido), de uma sessão anterior (ver seção "Revisão das cláusulas de Locação" acima). Mudança ficou 100% dentro de `corpo()`, então só afeta o texto final do Contrato de Locação — não toca em Compra e Venda de Veículo/Imóvel nem em nenhum outro tipo de documento.
+
+**Testado**: `index.html` carrega sem erro de sintaxe/console. **Não testado**: o texto final renderizado em produção (senha da equipe) — a mudança é só remoção de uma `clausulaCV()` fixa + troca de uma string, então revisão foi por leitura de código.
+
+## Cláusula DO SOSSEGO reescrita do zero (2026-08-19)
+
+Pedido do usuário: substituir **integralmente** a cláusula de sossego (`index.html`, dentro de `TIPOS.CONTRATO_LOCACAO_IMOVEL.corpo()`, seção `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>`) pelo texto novo dele, não um ajuste. A versão anterior (criada numa sessão passada, ver "Revisão das cláusulas de Locação" acima) tinha 1 cláusula principal + 3 parágrafos (Primeiro/Segundo/Terceiro); a nova é um texto único, mais curto, sem parágrafos separados — troquei tudo por uma única `clausulaCV(n++, ...)` com o texto exato que o usuário passou (só capitalizei "LOCATÁRIO" pra bater com a convenção de maiúsculas já usada no resto do documento pra Locador/Locatário — nenhuma outra palavra foi alterada).
+
+Como a numeração das cláusulas (`n++`) é sequencial e não fixa, trocar 1 cláusula + 3 parágrafos por só 1 cláusula reduz a contagem de itens numerados em 3 a partir daí — é automático, não precisa de ajuste manual.
+
+**Testado**: `index.html` carrega sem erro de sintaxe/console. **Não testado**: texto final em produção (senha da equipe).
+
+## Limite de moradores na cláusula de destinação (2026-08-19)
+
+Pedido do usuário: campo novo obrigatório "Quantidade máxima de moradores autorizados" — definido em comum acordo entre locador e locatário — que complementa automaticamente a cláusula DO OBJETO E FINALIDADE, só em locação **residencial**.
+
+**Formulário** (`contrato-form.html`): campo novo (`max_moradores`, número inteiro, obrigatório) dentro de `stepCondicoesLocacao()`, condicionado a `s.im_finalidade === 'Residenciais'` — some completamente em locação comercial (nem aparece, nem é obrigatório lá). Validado em `validateCurrentStep()` (caso `'locacao'`), salvo em `especifico.max_moradores` no `submitForm()` (fica `null` em locação comercial) e restaurado em modo de edição (`carregarParaEdicao`).
+
+**Cláusula** (`index.html`, `TIPOS.CONTRATO_LOCACAO_IMOVEL.corpo()`, `<h3>DO OBJETO E FINALIDADE</h3>`): quando é residencial e o campo foi preenchido, a frase da cláusula ganha o complemento pedido — "...destinado exclusivamente a fins residenciais, sendo autorizada a ocupação por, no máximo, X pessoas, conforme acordado entre as partes." (concordância singular/plural tratada: "1 pessoa" vs "X pessoas"). Logo depois, um **Parágrafo Único** novo cobre o caso de excesso: precisa de autorização prévia e expressa do LOCADOR, podendo virar aditivo contratual (inclusive com revisão do valor do aluguel) se as partes concordarem — texto do usuário, sem alteração de conteúdo. Em locação comercial, ou se o campo não foi preenchido (registros antigos), a cláusula fica exatamente como já era, sem o complemento nem o parágrafo.
+
+**Testado**: fluxo completo no formulário (Locador → Tipo de locação Residencial → Locatário sem endereço → Imóvel → Condições da Locação) confirmando que o campo aparece, é obrigatório (bloqueia "Avançar" com a mensagem certa até preencher) e aceita o valor. `index.html` carrega sem erro de sintaxe/console. **Não testado**: o texto final da cláusula em produção (senha da equipe) e o caso comercial (onde o campo não deveria aparecer nem entrar na cláusula) — revisão desse caso foi por leitura de código, reaproveitando a mesma condicional (`im_finalidade === 'Residenciais'`) já testada nas mudanças anteriores do dia.
+
+## Índice de reajuste fixo, campo removido do formulário (2026-08-19)
+
+Pedido do usuário (com uma correção no meio da própria mensagem — pediu primeiro só pra Locação Residencial, depois corrigiu pra valer nos dois: residencial **e** comercial): remover o campo "Índice de reajuste anual" (que deixava o cliente escolher entre IGP-M/IPCA/INPC) do formulário de Locação, e usar sempre o mesmo texto fixo na cláusula, independente do que era escolhido antes.
+
+**Formulário** (`contrato-form.html`): campo `indice_reajuste` removido por completo — do `<select>` em `stepCondicoesLocacao()`, do estado inicial `s`, do que é salvo em `especifico` no `submitForm()`, e do que é restaurado em `carregarParaEdicao()`. Não sobrou nenhum resto (`grep` confirma zero ocorrências no arquivo).
+
+**Cláusula** (`index.html`, `DO ALUGUEL E REAJUSTE`): antes lia `e.indice_reajuste` (com fallback pra `'IGP-M'`); agora é uma string fixa, sempre a mesma, com a redação exata pedida pelo usuário: "Caso ocorra a renovação do contrato, o valor do aluguel será reajustado pelo Índice Geral de Preços do Mercado (IGP-M), ou por outro índice oficial que venha a substituí-lo por determinação legal, considerando o período de vigência do contrato." Vale pros dois casos (residencial e comercial) — a cláusula de reajuste nunca foi diferenciada por finalidade, então não precisou de nenhuma condicional nova.
+
+Registros antigos que tinham `indice_reajuste` diferente de IGP-M salvo (ex: IPCA/INPC) — se reabertos, o texto da cláusula sai sempre com IGP-M agora, independente do que foi escolhido na época; é o comportamento esperado da nova regra (índice deixou de ser configurável).
+
+**Testado**: os dois arquivos carregam sem erro de sintaxe/console; `grep` confirma que não sobrou nenhuma referência a `indice_reajuste` em `contrato-form.html`. **Não testado**: o texto final da cláusula em produção (senha da equipe) — mudança é troca de uma string fixa, revisão por leitura de código.
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Procuração DETRAN e Procuração Simples ainda não são geradas pelo painel — só existem como link pra Google Forms externo. Os modelos antigos já foram extraídos da planilha numa sessão (ver git history/conversa de 2026-08-19) e podem ser reaproveitados se o usuário decidir implementar.
