@@ -72,6 +72,45 @@
     .success-box h2 { font-size: 18px; margin-bottom: 8px; }
     .success-box p { color: var(--text-dim); font-size: 13.5px; }
     @media (max-width: 380px) { .card { padding: 18px 14px; } }
+
+    /* ---- Ler Documento (piloto: só Locação de Imóvel) ---- */
+    .btn-ler-doc {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; padding: 13px; margin-bottom: 18px; border-radius: 14px;
+        border: 1px dashed rgba(34,197,94,0.45); background: var(--accent-dim); color: var(--accent-bright);
+        font-size: 13.5px; font-weight: 700; cursor: pointer;
+    }
+    .doc-overlay {
+        position: fixed; inset: 0; background: rgba(2,10,5,0.72); backdrop-filter: blur(2px);
+        display: flex; align-items: flex-end; justify-content: center; z-index: 100; padding: 0;
+    }
+    .doc-overlay .doc-sheet {
+        width: 100%; max-width: 520px; background: var(--surface); border: 1px solid var(--border);
+        border-radius: 20px 20px 0 0; padding: 22px 18px 26px; max-height: 88vh; overflow-y: auto;
+    }
+    @media (min-width: 560px) {
+        .doc-overlay { align-items: center; }
+        .doc-overlay .doc-sheet { border-radius: 20px; max-height: 84vh; }
+    }
+    .doc-sheet h3 { font-size: 16px; margin: 0 0 4px; }
+    .doc-sheet .doc-sub { font-size: 12.5px; color: var(--text-dim); margin: 0 0 18px; }
+    .doc-action-btn {
+        display: block; width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 14px; border: 1px solid var(--border);
+        background: var(--surface-2); color: var(--text); font-size: 14.5px; font-weight: 700; cursor: pointer; text-align: center;
+    }
+    .doc-action-btn.primary { background: linear-gradient(135deg, var(--accent-bright), var(--accent)); color: #05170c; border: none; }
+    .doc-action-btn.cancel { color: var(--text-dim); background: transparent; border: none; margin-bottom: 0; }
+    .doc-loading { text-align: center; padding: 30px 10px; color: var(--text-dim); font-size: 14px; }
+    .doc-loading .spin {
+        width: 34px; height: 34px; margin: 0 auto 16px; border-radius: 50%;
+        border: 3px solid var(--border); border-top-color: var(--accent); animation: doc-spin 0.8s linear infinite;
+    }
+    @keyframes doc-spin { to { transform: rotate(360deg); } }
+    .doc-erro { text-align: center; padding: 10px; }
+    .doc-erro p { color: var(--danger); font-size: 13.5px; margin: 10px 0 20px; }
+    .doc-confirma .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 5px; }
+    .doc-confirma .field { margin-bottom: 12px; }
+    .doc-confirma .field input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 14px; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -94,6 +133,11 @@
 
     <div class="card" id="cardArea"></div>
 </div>
+
+<!-- Ler Documento (piloto Locação de Imóvel): inputs ocultos + overlay compartilhado -->
+<input type="file" id="docInputCamera" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="docInputGaleria" accept="image/*" style="display:none">
+<div id="docOverlay" class="doc-overlay" style="display:none"></div>
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -177,9 +221,11 @@ const s = {
 
     a_nome: '', a_cpf: '', a_rg: '', a_genero: '', a_nacionalidade: 'Brasileiro(a)', a_nacionalidade_outro: '', a_estado_civil: '', a_profissao: '',
     a_rua: '', a_numero: '', a_complemento: '', a_cidade: '', a_cidade_outra: '', a_bairro: '', a_bairro_outro: '', a_estado: '',
+    a_nascimento: '', a_orgao_emissor: '', a_uf_emissor: '', // só usados no piloto "Ler Documento" (Locação de Imóvel)
 
     b_nome: '', b_cpf: '', b_rg: '', b_genero: '', b_nacionalidade: 'Brasileiro(a)', b_nacionalidade_outro: '', b_estado_civil: '', b_profissao: '',
     b_rua: '', b_numero: '', b_complemento: '', b_cidade: '', b_cidade_outra: '', b_bairro: '', b_bairro_outro: '', b_estado: '',
+    b_nascimento: '', b_orgao_emissor: '', b_uf_emissor: '',
 
     v_tipo_veiculo: '', v_tipo_veiculo_outro: '', v_fabricante: '', v_fabricante_outro: '', v_modelo: '',
     v_ano_fabricacao: '', v_ano_modelo: '', v_chassi: '', v_cor: '', v_cor_outro: '', v_placa: '', v_renavam: '',
@@ -295,6 +341,162 @@ function renderCondBairroOutro(p) {
     el.innerHTML = s[p + '_bairro'] === '__outro__' ? `<div class="field"><label>Qual bairro? *</label><input type="text" data-key="${p}_bairro_outro" value="${esc(s[p + '_bairro_outro'])}"></div>` : '';
 }
 
+// ---------- Ler Documento (piloto: só Locação de Imóvel) ----------
+// A imagem nunca é salva: só existe em memória (canvas/base64) durante a
+// leitura, some assim que a Edge Function responde ou o overlay é fechado —
+// não sobe pro Storage nem é gravada em `s`/no registro do contrato.
+let docAlvo = null; // 'a' | 'b' — pra qual pessoa a leitura em andamento se aplica
+
+function abrirLeituraDocumento(p, papel) {
+    docAlvo = p;
+    renderDocOverlay(`
+        <h3>Ler Documento</h3>
+        <p class="doc-sub">Tire uma foto do RG ou CNH do ${esc(papel)}, ou escolha uma imagem já salva.</p>
+        <button type="button" class="doc-action-btn primary" data-doc-action="camera">📷 Tirar foto</button>
+        <button type="button" class="doc-action-btn" data-doc-action="galeria">🖼️ Escolher da galeria</button>
+        <button type="button" class="doc-action-btn cancel" data-doc-action="fechar">Cancelar</button>`);
+}
+function renderDocOverlay(innerHtml) {
+    const overlay = document.getElementById('docOverlay');
+    overlay.innerHTML = `<div class="doc-sheet">${innerHtml}</div>`;
+    overlay.style.display = 'flex';
+}
+function fecharDocOverlay() {
+    const overlay = document.getElementById('docOverlay');
+    overlay.style.display = 'none';
+    overlay.innerHTML = '';
+    delete overlay.dataset.nacValor; delete overlay.dataset.nacOutro;
+    docAlvo = null;
+}
+function mostrarDocCarregando() {
+    renderDocOverlay(`<div class="doc-loading"><div class="spin"></div>Lendo documento...</div>`);
+}
+// Mensagem fixa pedida pelo usuário sempre aparece — o "motivo" específico da
+// IA (quando existe) só entra como detalhe menor abaixo, nunca substituindo o texto principal.
+function mostrarDocErro(motivoDetalhe) {
+    renderDocOverlay(`
+        <div class="doc-erro">
+            <h3>Não foi possível ler</h3>
+            <p>Não foi possível realizar uma leitura confiável. Verifique a nitidez ou preencha manualmente.</p>
+            ${motivoDetalhe ? `<p style="color:var(--text-faint); font-size:12px; margin-top:-14px;">${esc(motivoDetalhe)}</p>` : ''}
+            <button type="button" class="doc-action-btn primary" data-doc-action="fechar">Entendi</button>
+        </div>`);
+}
+
+// Redimensiona/comprime no <canvas> (API nativa, sem lib nova) antes de mandar
+// pra IA — reduz custo/latência e o tamanho do payload da Edge Function.
+function comprimirImagem(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            const maxLado = 1600;
+            let { width, height } = img;
+            if (width > maxLado || height > maxLado) {
+                const escala = maxLado / Math.max(width, height);
+                width = Math.round(width * escala); height = Math.round(height * escala);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            URL.revokeObjectURL(url);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível abrir a imagem.')); };
+        img.src = url;
+    });
+}
+
+async function processarImagemDocumento(file) {
+    if (!file || !docAlvo) return;
+    const p = docAlvo;
+    const papel = p === 'a' ? 'LOCADOR' : 'LOCATÁRIO';
+    mostrarDocCarregando();
+    let imagem_base64;
+    try {
+        imagem_base64 = await comprimirImagem(file);
+    } catch {
+        mostrarDocErro('Não foi possível abrir essa imagem. Tenta outra ou preencha manualmente.');
+        return;
+    }
+    const { data, error } = await supabase.functions.invoke('documento-ia', { body: { imagem_base64, papel } });
+    imagem_base64 = null; // descarta a referência assim que a chamada termina
+    if (docAlvo !== p) return; // usuário fechou/cancelou enquanto a IA respondia
+    if (error || !data) {
+        mostrarDocErro('Não foi possível ler agora. Tenta de novo ou preencha manualmente.');
+        return;
+    }
+    if (!data.legivel) {
+        mostrarDocErro(data.motivo_nao_legivel || null);
+        return;
+    }
+    mostrarDocConfirmacao(data.dados);
+}
+
+function mostrarDocConfirmacao(dados) {
+    const nac = paraSelecaoOutro(dados.nacionalidade, ['Brasileiro(a)', 'Venezuelano(a)', 'Haitiano(a)']);
+    const campos = [
+        ['nome_completo', 'Nome completo', dados.nome_completo],
+        ['cpf', 'CPF', dados.cpf],
+        ['rg', 'RG', dados.rg],
+        ['data_nascimento', 'Data de nascimento (AAAA-MM-DD)', dados.data_nascimento],
+        ['nacionalidade', 'Nacionalidade', dados.nacionalidade],
+        ['estado_civil', 'Estado civil', dados.estado_civil],
+        ['orgao_emissor', 'Órgão emissor', dados.orgao_emissor],
+        ['uf_emissor', 'UF emissor', dados.uf_emissor],
+    ];
+    renderDocOverlay(`
+        <h3>Confira os dados lidos</h3>
+        <p class="doc-sub">Corrija o que estiver errado antes de preencher o formulário.</p>
+        <div class="doc-confirma">
+            ${campos.map(([k, label, v]) => `<div class="field"><label>${esc(label)}</label><input type="text" data-doc-campo="${k}" value="${esc(v || '')}"></div>`).join('')}
+        </div>
+        <button type="button" class="doc-action-btn primary" data-doc-action="usar">Usar estes dados</button>
+        <button type="button" class="doc-action-btn cancel" data-doc-action="fechar">Descartar</button>`);
+    const overlay = document.getElementById('docOverlay');
+    overlay.dataset.nacValor = nac.valor === 'Outro' ? 'Outra' : (nac.valor || '');
+    overlay.dataset.nacOutro = nac.outro || '';
+}
+
+function aplicarDadosDocumento() {
+    const p = docAlvo;
+    if (!p) return;
+    const overlay = document.getElementById('docOverlay');
+    const campo = k => (overlay.querySelector(`[data-doc-campo="${k}"]`)?.value || '').trim();
+    if (campo('nome_completo')) s[p + '_nome'] = campo('nome_completo');
+    if (campo('cpf')) s[p + '_cpf'] = campo('cpf');
+    if (campo('rg')) s[p + '_rg'] = campo('rg');
+    if (campo('data_nascimento')) s[p + '_nascimento'] = campo('data_nascimento');
+    if (campo('estado_civil')) s[p + '_estado_civil'] = campo('estado_civil');
+    if (campo('orgao_emissor')) s[p + '_orgao_emissor'] = campo('orgao_emissor');
+    if (campo('uf_emissor')) s[p + '_uf_emissor'] = campo('uf_emissor');
+    const nacVal = overlay.dataset.nacValor;
+    if (nacVal) {
+        s[p + '_nacionalidade'] = nacVal;
+        if (nacVal === 'Outra') s[p + '_nacionalidade_outro'] = overlay.dataset.nacOutro || campo('nacionalidade');
+    }
+    fecharDocOverlay();
+    render();
+}
+
+document.getElementById('docOverlay').addEventListener('click', e => {
+    const btn = e.target.closest('[data-doc-action]');
+    if (!btn) return;
+    const action = btn.dataset.docAction;
+    if (action === 'camera') document.getElementById('docInputCamera').click();
+    else if (action === 'galeria') document.getElementById('docInputGaleria').click();
+    else if (action === 'fechar') fecharDocOverlay();
+    else if (action === 'usar') aplicarDadosDocumento();
+});
+document.getElementById('docInputCamera').addEventListener('change', e => {
+    const file = e.target.files[0]; e.target.value = '';
+    processarImagemDocumento(file);
+});
+document.getElementById('docInputGaleria').addEventListener('change', e => {
+    const file = e.target.files[0]; e.target.value = '';
+    processarImagemDocumento(file);
+});
+
 let stepIndex = 0;
 let steps = [];
 
@@ -380,12 +582,21 @@ function stepTipo() {
 
 // ---------- Etapa: pessoa (vendedor/comprador/locador/locatário) ----------
 function stepPessoa(p, papel, subtitulo) {
+    // Piloto controlado: "Ler Documento" e os campos extras que ele preenche
+    // (nascimento/órgão emissor/UF emissor) só aparecem em Locação de Imóvel —
+    // Compra e Venda (veículo/imóvel) reaproveita esta mesma função sem mudança.
+    const pilotoDocumento = s.tipo === 'imovel_locacao';
     return `
     <h2>${esc(papel)}</h2>
     <p class="step-sub">${esc(subtitulo)}</p>
+    ${pilotoDocumento ? `<button type="button" class="btn-ler-doc" data-action="ler-documento" data-pessoa="${p}">📷 Ler Documento</button>` : ''}
     <div class="field"><label>Nome completo *</label><input type="text" data-key="${p}_nome" value="${esc(s[p + '_nome'])}"></div>
     <div class="field"><label>CPF *</label><input type="text" data-key="${p}_cpf" value="${esc(s[p + '_cpf'])}"></div>
     <div class="field"><label>RG</label><input type="text" data-key="${p}_rg" value="${esc(s[p + '_rg'])}"></div>
+    ${pilotoDocumento ? `
+    <div class="field"><label>Data de nascimento</label><input type="date" data-key="${p}_nascimento" value="${esc(s[p + '_nascimento'])}"></div>
+    <div class="field"><label>Órgão emissor (RG)</label><input type="text" data-key="${p}_orgao_emissor" value="${esc(s[p + '_orgao_emissor'])}"></div>
+    <div class="field"><label>UF emissor (RG)</label><select data-key="${p}_uf_emissor"><option value="">Selecione</option>${estadoOptions(s[p + '_uf_emissor'])}</select></div>` : ''}
     <div class="field"><label>Gênero *</label>
         <div class="radio-group">${pill(p + '_genero', 'Masculino', s[p + '_genero'] === 'Masculino')}${pill(p + '_genero', 'Feminino', s[p + '_genero'] === 'Feminino')}</div>
     </div>
@@ -759,6 +970,12 @@ cardEl.addEventListener('change', e => {
     if (key === 'tem_testemunhas') { renderCondTestemunhas(); }
 });
 cardEl.addEventListener('click', e => {
+    const lerDocBtn = e.target.closest('[data-action="ler-documento"]');
+    if (lerDocBtn) {
+        const p = lerDocBtn.dataset.pessoa;
+        abrirLeituraDocumento(p, p === 'a' ? 'LOCADOR' : 'LOCATÁRIO');
+        return;
+    }
     const card = e.target.closest('[data-tipo-choice]');
     if (card) {
         s.tipo = card.dataset.tipoChoice;
@@ -781,6 +998,9 @@ async function submitForm() {
         nacionalidade: nacionalidadeFinal(p), estado_civil: s[p + '_estado_civil'] || null, profissao: s[p + '_profissao'] || null,
         endereco: enderecoFinal(p), rua: s[p + '_rua'] || null, numero: s[p + '_numero'] || null, complemento: s[p + '_complemento'] || null,
         bairro: bairroFinal(p), cidade: cidadeFinal(p), estado: estadoFinal(p),
+        // Só preenchidos hoje via "Ler Documento" (piloto Locação de Imóvel) —
+        // ficam null pros outros tipos de contrato, que não têm essa UI.
+        nascimento: s[p + '_nascimento'] || null, orgao_emissor: s[p + '_orgao_emissor'] || null, uf_emissor: s[p + '_uf_emissor'] || null,
     });
     const anoFabricacaoModelo = (fab, mod) => {
         if (!fab) return null;
@@ -967,6 +1187,7 @@ function carregarPessoa(p, pes) {
     carregarEnderecoSolto(p, pes.rua, pes.numero, pes.complemento, pes.endereco);
     carregarCidadeBairro(p, pes.cidade, pes.bairro);
     s[p + '_estado'] = pes.estado || '';
+    s[p + '_nascimento'] = pes.nascimento || ''; s[p + '_orgao_emissor'] = pes.orgao_emissor || ''; s[p + '_uf_emissor'] = pes.uf_emissor || '';
 }
 function carregarVeiculo(prefixo, v) {
     if (!v) return;
