@@ -227,6 +227,36 @@ Registros antigos que tinham `indice_reajuste` diferente de IGP-M salvo (ex: IPC
 
 **Testado**: os dois arquivos carregam sem erro de sintaxe/console; `grep` confirma que não sobrou nenhuma referência a `indice_reajuste` em `contrato-form.html`. **Não testado**: o texto final da cláusula em produção (senha da equipe) — mudança é troca de uma string fixa, revisão por leitura de código.
 
+## Qualificação do Locatário sem endereço + prazo com data de término (2026-08-19)
+
+Duas mudanças pedidas juntas, as duas só em `index.html` (`TIPOS.CONTRATO_LOCACAO_IMOVEL.corpo()`), as duas restritas a **locação residencial** — comercial fica com o texto de sempre, sem nenhuma mudança.
+
+**1) Qualificação das partes**: o LOCATÁRIO deixou de ter o endereço na linha de qualificação ("NOME, nacionalidade, estado civil, profissão, portador da CI nº X, inscrito no CPF nº Y" — parou por aí, sem "residente e domiciliado..."). O LOCADOR continua com tudo, endereço incluso, igual sempre foi. `qualificarCV(p, papel)` (função compartilhada por todos os tipos de contrato) ganhou um 3º parâmetro opcional `semEndereco` — por padrão `false`/omitido, então nenhum outro chamador (Compra e Venda de Veículo/Imóvel, Locador, Locatário comercial) muda de comportamento. Só a chamada do Locatário em Locação passou `ehResidencial` nesse parâmetro. O endereço do imóvel alugado continua aparecendo — só que exclusivamente na cláusula DO OBJETO E FINALIDADE, que já existia (não duplicava antes porque, pra residencial, o endereço "do locatário" salvo já era o do imóvel — ver "Endereço do Locatário condicional" acima —, então a qualificação repetia a mesma informação da cláusula de objeto; agora não repete mais).
+
+**2) Cláusula DO PRAZO com data de término**: antes só mostrava a data de início (e ainda dizia, de forma confusa, que a mesma data de início era "a data em que o LOCATÁRIO obriga-se a restituir o imóvel" — sobrava só uma data pra duas coisas). Agora, em residencial, calcula a data de término (início + prazo em meses) e mostra as duas: "...com início em DD/MM/AAAA e término em DD/MM/AAAA, data em que o LOCATÁRIO obriga-se a restituir...". Helper novo `somarMesesBR(dataISO, meses)` (perto de `dataBR()`) faz a soma tratando o caso de o dia não existir no mês de destino (ex: 31/01 + 1 mês vira 28/02, não "estoura" pra 03/03). A cláusula é sempre recalculada a partir de `e.data_inicio`/`e.prazo_meses` direto na hora de montar o texto — não fica um valor salvo em lugar nenhum, então nunca desatualiza se um dos dois mudar. Comercial continua com o texto antigo (só data de início), sem a frase de término.
+
+**Testado**: `somarMesesBR` testado isoladamente no console com 4 casos (12 meses a partir de 10/08/2026 → 10/08/2027; 31/01 + 1 mês → 28/02, sem estourar; 29/02/2024 bissexto + 12 meses → 28/02/2025; 30 meses a partir de 15/01/2026 → 15/07/2028) — todos corretos. `index.html` carrega sem erro de sintaxe/console. **Não testado**: o texto final das duas cláusulas em produção (senha da equipe).
+
+## Concordância de gênero automática (LOCADOR/LOCADORA, LOCATÁRIO/LOCATÁRIA) — 2026-08-19
+
+Pedido do usuário: usar o campo Gênero (já existente no formulário, tanto pro Locador quanto pro Locatário) pra decidir automaticamente, em **todo** o texto do contrato — título de qualificação, cláusulas, obrigações e assinaturas —, se cada parte é tratada como LOCADOR/LOCATÁRIO (masculino) ou LOCADORA/LOCATÁRIA (feminino), sem precisar editar o texto na mão.
+
+Antes disso, o contrato inteiro usava "LOCADOR"/"LOCATÁRIO" fixos em maiúsculo em todas as ~30 ocorrências espalhadas pelas cláusulas (`TIPOS.CONTRATO_LOCACAO_IMOVEL.corpo()`, `index.html`), independente do gênero real de cada parte.
+
+**Como foi feito**: dentro de `corpo()`, dois valores calculados uma vez no topo da função a partir de `locador.genero`/`locatario.genero` — reaproveitando o helper `g(genero, masc, fem)` que já existia no sistema (usado em `qualificarCV()` pra flexionar "portador/portadora" etc.):
+- `termoLocador` = "LOCADOR" ou "LOCADORA"; `termoLocatario` = "LOCATÁRIO" ou "LOCATÁRIA".
+- `fLocador`/`fLocatario` (função `flexArtigos()`, nova) — os artigos e contrações que sempre acompanham essas palavras nas frases: `O/A`, `o/a`, `ao/à`, `pelo/pela`, `do/da`. Sem isso a palavra mudava mas o artigo do lado ficava errado (ex: "a LOCADORA" com artigo masculino).
+
+Toda cláusula que mencionava "LOCADOR"/"LOCATÁRIO" (qualificação das partes, objeto, prazo, aluguel, encargos, vistoria, garantia — caução/fiador/seguro-fiança —, uso e conservação, animais, sossego, rescisão, desapropriação, intimação sanitária, venda do imóvel, e o rótulo nas assinaturas no fim do contrato) foi reescrita trocando o texto fixo pelas variáveis `termoLocador`/`termoLocatario`/`fLocador.*`/`fLocatario.*`. Em duas cláusulas (vistoria e rescisão/desapropriação) também precisou flexionar adjetivos/pronomes que concordam com a parte em questão ("isento/isenta", "este/esta", "desobrigado/desobrigada"), senão a palavra LOCADOR mudava mas o resto da frase continuava no masculino.
+
+`qualificarCV(p, papel, semEndereco)` (função compartilhada por todos os tipos de contrato, ver "Qualificação do Locatário sem endereço" acima) passou a receber `termoLocador`/`termoLocatario` no lugar dos literais `'LOCADOR'`/`'LOCATÁRIO'` como segundo parâmetro — como já é uma função genérica, funciona sem nenhuma mudança nela.
+
+`textoResponsavelEncargo()` (cláusula DOS ENCARGOS) também foi ajustada: antes gerava "por conta do(a) LOCADOR" (artigo genérico "do(a)" fixo, sem refletir o gênero real); agora identifica qual das duas partes é (`quem === 'LOCADOR'`) e usa o artigo e o termo certos dessa parte especificamente.
+
+Só entra em Contrato de Locação — Compra e Venda de Veículo/Imóvel usam VENDEDOR/COMPRADOR (palavras que não têm variação de gênero na forma usada, "vendedor"/"comprador" continuam sem "a" nos textos desses contratos) e não foram tocados.
+
+**Testado**: lógica de flexão (termo + artigos) testada isoladamente no console pra 3 combinações — ambos masculino, ambos feminino, e misto (locador feminino + locatário masculino) — conferindo a concordância em 5 trechos representativos (objeto, prazo, aluguel, vistoria com pronome/adjetivo, desapropriação) — todos gramaticalmente corretos nos 3 casos. `index.html` carrega sem erro de sintaxe/console; `grep` confirma que não sobrou nenhum "LOCADOR"/"LOCATÁRIO" literal solto nas cláusulas (só as 3 ocorrências esperadas: a definição de `termoLocador`/`termoLocatario` e a comparação `quem === 'LOCADOR'`). **Não testado**: o texto final do contrato completo em produção (senha da equipe) — a extensão do teste (30+ trechos de cláusula) tornou inviável simular o `corpo()` inteiro fora do painel; a revisão desses trechos foi por leitura de código, um por um.
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Procuração DETRAN e Procuração Simples ainda não são geradas pelo painel — só existem como link pra Google Forms externo. Os modelos antigos já foram extraídos da planilha numa sessão (ver git history/conversa de 2026-08-19) e podem ser reaproveitados se o usuário decidir implementar.
