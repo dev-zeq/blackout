@@ -386,6 +386,18 @@ Pedido do usuário, mesmo dia: a cláusula "DO SOSSEGO E DO HORÁRIO DE SILÊNCI
 
 **Testado**: harness local nos dois arquivos (`window.montarContrato`/`window.__test.montarClausulasLocacao` expostos e revertidos) — confirmado, pra um registro residencial e um comercial sintéticos: residencial mantém título/texto de sempre; comercial tem o novo título, o novo texto ("sócios, funcionários, clientes"), e não contém "festas"/"familiares"/"visitantes"/"22 horas" em lugar nenhum. `index.html`/`contrato-form.html` carregam sem erro de console. **Não testado**: texto final em produção (senha da equipe).
 
+## Garantia por Fiador — cláusula ampliada + assinatura automática (2026-08-20)
+
+Pedido do usuário, prompt único com duas partes, só no Contrato de Locação de Imóvel:
+
+**1) Cláusula do fiador reescrita**: a cláusula antiga (uma frase resumida — "figura como FIADOR e principal pagador NOME... que responde solidariamente... até a efetiva entrega das chaves") foi trocada pela versão completa fornecida pelo usuário (4 períodos: solidariedade com o locatário, abrangência da responsabilidade — aluguéis/encargos/multas/correção monetária/juros/despesas judiciais e extrajudiciais/outros débitos —, vigência da responsabilidade até devolução do imóvel e quitação integral, e declaração de ciência/concordância do fiador). A identificação (nome/CPF) continua embutida na própria cláusula, já que não existe qualificação separada pra fiador em nenhum outro lugar do contrato. Menções a locador/locatário dentro do texto novo foram flexionadas pelo gênero real de cada parte (`termoLocatario`/`fLocatario`/`fLocador`), mesmo padrão do resto do documento — só isso foi ajustado em cima do texto que o usuário passou, o conteúdo em si não mudou.
+
+**2) Bloco de assinatura do fiador**: `blocoAssinaturasLocacao()` (`index.html`) e sua equivalente de pré-visualização `blocoAssinaturasLocacaoPreview()` (`contrato-form.html`) ganharam um parâmetro novo `fiador` (entre `partes` e `testemunhas`) — quando preenchido, insere uma linha de assinatura extra com a mesma formatação das demais (linha pra assinar + texto abaixo), no formato `FIADOR: Nome - CPF: 000.000.000-00` (CPF só aparece se informado). Os dois pontos de chamada passam `e.garantia === 'Fiador' ? { nome: e.fiador_nome, cpf: e.fiador_cpf } : null` — ou seja, o bloco simplesmente não é gerado pra Caução/Seguro-fiança/Sem garantia. Ordem final das assinaturas: LOCADOR/LOCADORA → LOCATÁRIO/LOCATÁRIA → FIADOR (se houver) → testemunhas, exatamente como pedido.
+
+O formulário (`contrato-form.html`) não precisou de nenhuma mudança — os campos `fiador_nome`/`fiador_cpf` já existiam e já eram salvos/restaurados; só a cláusula e o bloco de assinatura (ambos em código de geração de texto, não de coleta de dados) foram tocados.
+
+**Testado**: harness local nos dois arquivos (`window.montarContrato`/`window.__test.montarClausulasLocacao` expostos e revertidos) — pra um contrato residencial sintético com Fiador: cláusula contém a identificação certa e a frase final de declaração/ciência; bloco `FIADOR: Carlos Pereira - CPF: 999.999.999-99` aparece depois do LOCATÁRIO e antes da Testemunha 1 (ordem confirmada por posição de índice na string). Pra um contrato com Caução: nenhum "FIADOR:" aparece em lugar nenhum. Os dois arquivos carregam sem erro de console. **Não testado**: texto final em produção (senha da equipe).
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Procuração DETRAN e Procuração Simples ainda não são geradas pelo painel — só existem como link pra Google Forms externo. Os modelos antigos já foram extraídos da planilha numa sessão (ver git history/conversa de 2026-08-19) e podem ser reaproveitados se o usuário decidir implementar.

@@ -2980,11 +2980,20 @@
         // cada parte já vem com o gênero certo (LOCADOR/LOCADORA,
         // LOCATÁRIO/LOCATÁRIA) via termoLocador/termoLocatario,
         // calculados no corpo() e passados em partes[].label.
-        function blocoAssinaturasLocacao(cidade, partes, testemunhas) {
+        function blocoAssinaturasLocacao(cidade, partes, fiador, testemunhas) {
             const linha = (texto) => `<div style="margin-top:60px;"><div style="border-top:1px solid #000; width:260px; margin:0 auto 6px;"></div><p>${texto}</p></div>`;
             let out = `<div class="locacao-assinaturas-print">`;
             out += `<p>${escapeHtml(cidade)}, ${dataExtensoLonga()}.</p>`;
             out += partes.map(p => linha(`${escapeHtml(p.label)}: ${escapeHtml(titleCase(p.nome))}`)).join('');
+            // Bloco de assinatura do FIADOR — só aparece quando a garantia
+            // escolhida é Fiador (pedido do usuário, 2026-08-20). Entra logo
+            // depois do LOCATÁRIO e antes das testemunhas (ordem pedida:
+            // locador, locatário, fiador, testemunhas), com a mesma formatação
+            // das demais linhas (linha pra assinar + rótulo em destaque), e o
+            // CPF exibido do mesmo jeito que já aparece nas testemunhas.
+            if (fiador && fiador.nome) {
+                out += linha(`FIADOR: ${escapeHtml(titleCase(fiador.nome))}${fiador.cpf ? ` - CPF: ${escapeHtml(fiador.cpf)}` : ''}`);
+            }
             out += testemunhas.map((t, i) => {
                 const n = i + 1;
                 const texto = (t && t.nome) ? `Testemunha ${n}: ${escapeHtml(t.nome)} - CPF: ${escapeHtml(t.cpf || '')}` : `Testemunha ${n} - CPF:`;
@@ -3662,7 +3671,14 @@
                         out += `<p>Parágrafo Primeiro. Ao utilizar o valor da caução para as despesas de recomposição do imóvel de que trata esta cláusula, ${fLocador.o} ${termoLocador} notificará ${fLocatario.o} ${termoLocatario}, informando o valor utilizado e o motivo da utilização.</p>`;
                         out += `<p>Parágrafo Segundo. A caução não poderá ser utilizada ${fLocatario.pelo} ${termoLocatario} para quitar aluguéis ou qualquer outra dívida relacionada a este contrato, servindo exclusivamente para cobrir as despesas de recomposição do imóvel de que trata esta cláusula.</p>`;
                     } else if (e.garantia === 'Fiador') {
-                        out += clausulaCV(n++, `A título de garantia locatícia, figura como FIADOR e principal pagador ${escapeHtml(titleCase(e.fiador_nome || ''))}, portador do CPF nº ${escapeHtml(e.fiador_cpf || '')}, que responde solidariamente pelas obrigações assumidas ${fLocatario.pelo} ${termoLocatario} neste contrato até a efetiva entrega das chaves.`);
+                        // Cláusula ampliada (pedido do usuário, 2026-08-20) — texto
+                        // fornecido pelo usuário, só flexionando as menções a
+                        // locador/locatário pelo gênero real de cada parte (mesmo
+                        // padrão do resto do contrato) e mantendo a identificação
+                        // (nome/CPF) do fiador dentro da própria cláusula, já que
+                        // não há qualificação própria pra ele em outro lugar do
+                        // contrato.
+                        out += clausulaCV(n++, `O presente contrato é garantido por fiador, ${escapeHtml(titleCase(e.fiador_nome || ''))}, portador do CPF nº ${escapeHtml(e.fiador_cpf || '')}, que assume, de forma solidária com ${fLocatario.o} ${termoLocatario}, todas as obrigações decorrentes deste contrato de locação. O fiador responsabiliza-se pelo pagamento dos aluguéis, encargos locatícios, multas contratuais, correção monetária, juros, despesas judiciais e extrajudiciais, bem como por quaisquer outros débitos oriundos deste contrato, caso ${fLocatario.o} ${termoLocatario} deixe de cumprir suas obrigações. A responsabilidade do fiador permanecerá vigente durante toda a locação, estendendo-se até a efetiva devolução do imóvel mediante entrega das chaves ${fLocador.ao} ${termoLocador}, bem como até a quitação integral de todas as obrigações contratuais, salvo disposição legal ou contratual em sentido diverso. O fiador declara que leu integralmente este contrato, compreendeu todas as suas cláusulas e concorda expressamente com as obrigações assumidas, comprometendo-se a cumpri-las em todos os seus termos.`);
                     } else if (e.garantia === 'Seguro-fiança') {
                         out += clausulaCV(n++, `A título de garantia locatícia, ${fLocatario.o} ${termoLocatario} contratará, às suas expensas, seguro de fiança locatícia, comprovando sua vigência ${fLocador.ao} ${termoLocador} durante todo o período de locação.`);
                     } else {
@@ -3733,6 +3749,7 @@
                     out += blocoAssinaturasLocacao(
                         foro.cidade,
                         [{ nome: locador.nome, label: termoLocador }, { nome: locatario.nome, label: termoLocatario }],
+                        e.garantia === 'Fiador' ? { nome: e.fiador_nome, cpf: e.fiador_cpf } : null,
                         [{ nome: e.testemunha_1_nome, cpf: e.testemunha_1_cpf }, { nome: e.testemunha_2_nome, cpf: e.testemunha_2_cpf }]
                     );
                     return out;
