@@ -368,6 +368,24 @@ Além disso, o bloco de assinaturas deixou de ter espaço reservado: `.locacao-a
 
 **Testado**: mesmo harness local (`window.montarContrato` exposto e revertido) — o HTML final do contrato termina limpo logo após a Testemunha 2, sem "Blackout"/"WhatsApp" em nenhum lugar. `index.html` carrega sem erro de console. `git diff --stat` confirma que só esse arquivo mudou. **Não testado**: paginação real (mesma limitação de sempre — sem diálogo de impressão real neste ambiente).
 
+## Cláusula de animais condicional por tipo de locação (2026-08-20)
+
+Pedido do usuário: a pergunta "Permite animais de estimação no imóvel?" e a cláusula correspondente passaram a existir **só em locação residencial** — em comercial, nem a pergunta aparece no formulário nem a cláusula é gerada (nenhuma referência a animais no contrato comercial).
+
+**Formulário** (`contrato-form.html`, `stepCondicoesLocacao()`): o campo `permite_animais` ganhou o mesmo padrão condicional já usado por `max_moradores`/`segmento_atividade` (`s.im_finalidade === 'Residenciais'`) — some do formulário em comercial. `validateCurrentStep()` só exige o campo em residencial. `montarRegistro()` salva `permite_animais: null` em comercial (em vez do fallback `'Não'` de antes, que agora só se aplica em residencial).
+
+**Cláusula** (`index.html`, `TIPOS.CONTRATO_LOCACAO_IMOVEL.corpo()`, e replicada em `contrato-form.html`/`montarClausulasLocacao()` pra pré-visualização): o bloco `if (permiteAnimais === 'Sim') {...} else {...}` (permitido/vedado) inteiro passou a rodar só dentro de `if (ehResidencial) {...}` — em comercial, nenhuma das duas cláusulas é gerada.
+
+**Testado**: harness local nos dois arquivos (`window.montarContrato`/`window.__test.stepCondicoesLocacao`/`montarClausulasLocacao`/`validateCurrentStep` expostos temporariamente e revertidos depois) — confirmado que a pergunta aparece só em residencial no formulário, e que a cláusula de animais aparece só em residencial tanto em `index.html` quanto na pré-visualização (`grep` por "animal" no HTML gerado pra comercial dá zero). `index.html`/`contrato-form.html` carregam sem erro de console.
+
+## Cláusula de sossego com versão própria pra locação comercial (2026-08-20)
+
+Pedido do usuário, mesmo dia: a cláusula "DO SOSSEGO E DO HORÁRIO DE SILÊNCIO" (regras de silêncio pós-22h, festas, familiares/visitantes) só faz sentido em locação residencial — permanece **inalterada** nesse caso. Em locação comercial, o bloco inteiro (título + texto) foi trocado por uma versão própria: **"DO SOSSEGO E DA BOA CONVIVÊNCIA"** — determina uso exclusivo pra atividade comercial informada no contrato, observando legislação vigente, normas municipais, regras do condomínio (quando houver) e o direito ao sossego da vizinhança, responsabilizando a parte locatária pelos atos de sócios, funcionários, clientes e demais pessoas vinculadas ao funcionamento do estabelecimento — mesma penalidade final (infração contratual) do texto residencial. Nenhuma menção a moradores/familiares/visitantes/festas/horário de silêncio no texto comercial.
+
+**Onde** (`index.html`, `TIPOS.CONTRATO_LOCACAO_IMOVEL.corpo()`, e replicado em `contrato-form.html`/`montarClausulasLocacao()`): o `<h3>` e a `clausulaCV()` que antes eram incondicionais viraram um `if (ehResidencial) {...} else {...}` — cada ramo com título e texto próprios (o residencial preserva exatamente o `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>` de sempre). Texto flexiona `termoLocatario`/`fLocatario` pelo gênero real da parte, mesmo padrão do resto do contrato.
+
+**Testado**: harness local nos dois arquivos (`window.montarContrato`/`window.__test.montarClausulasLocacao` expostos e revertidos) — confirmado, pra um registro residencial e um comercial sintéticos: residencial mantém título/texto de sempre; comercial tem o novo título, o novo texto ("sócios, funcionários, clientes"), e não contém "festas"/"familiares"/"visitantes"/"22 horas" em lugar nenhum. `index.html`/`contrato-form.html` carregam sem erro de console. **Não testado**: texto final em produção (senha da equipe).
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Procuração DETRAN e Procuração Simples ainda não são geradas pelo painel — só existem como link pra Google Forms externo. Os modelos antigos já foram extraídos da planilha numa sessão (ver git history/conversa de 2026-08-19) e podem ser reaproveitados se o usuário decidir implementar.

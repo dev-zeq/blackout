@@ -3673,13 +3673,34 @@
                     out += clausulaCV(n++, `Benfeitorias necessárias realizadas ${fLocatario.pelo} ${termoLocatario}, ainda que não autorizadas, e as úteis, desde que autorizadas por escrito ${fLocador.pelo} ${termoLocador}, serão indenizáveis e permitem o direito de retenção. As benfeitorias voluptuárias não serão indenizadas, podendo ser levantadas ${fLocatario.pelo} ${termoLocatario}, desde que não afetem a estrutura do imóvel.`);
                     out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} obriga-se a satisfazer todas as exigências dos Poderes Públicos a que der causa, sendo vedada qualquer modificação ou transformação no imóvel sem autorização prévia e por escrito ${fLocador.do} ${termoLocador}.`);
                     out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} não poderá transferir este contrato, nem sublocar ou emprestar o imóvel, no todo ou em parte, sem o consentimento prévio e por escrito ${fLocador.do} ${termoLocador}.`);
-                    if (permiteAnimais === 'Sim') {
-                        out += clausulaCV(n++, `É permitida a permanência de animais de estimação no imóvel, desde que ${fLocatario.o} ${termoLocatario} mantenha sua devida guarda, cuidado e higiene, responsabilizando-se integralmente por eventuais danos causados ao imóvel ou por incômodos à vizinhança e aos demais moradores decorrentes dessa guarda.`);
-                    } else {
-                        out += clausulaCV(n++, `Fica vedada a permanência de animais de estimação no interior do imóvel, tais como cães, gatos, aves, roedores, répteis, peixes, entre outros. ${fLocatario.O} ${termoLocatario} compromete-se a não introduzir, hospedar ou permitir a permanência de quaisquer animais no imóvel, sob pena de infração contratual, além da obrigação de retirá-los imediatamente.`);
+                    // Cláusula de animais só existe em locação residencial (pedido
+                    // do usuário, 2026-08-20) — em comercial não há pergunta no
+                    // formulário nem cláusula/parágrafo/referência nenhuma sobre
+                    // o assunto no contrato.
+                    if (ehResidencial) {
+                        if (permiteAnimais === 'Sim') {
+                            out += clausulaCV(n++, `É permitida a permanência de animais de estimação no imóvel, desde que ${fLocatario.o} ${termoLocatario} mantenha sua devida guarda, cuidado e higiene, responsabilizando-se integralmente por eventuais danos causados ao imóvel ou por incômodos à vizinhança e aos demais moradores decorrentes dessa guarda.`);
+                        } else {
+                            out += clausulaCV(n++, `Fica vedada a permanência de animais de estimação no interior do imóvel, tais como cães, gatos, aves, roedores, répteis, peixes, entre outros. ${fLocatario.O} ${termoLocatario} compromete-se a não introduzir, hospedar ou permitir a permanência de quaisquer animais no imóvel, sob pena de infração contratual, além da obrigação de retirá-los imediatamente.`);
+                        }
                     }
-                    out += `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>`;
-                    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} se compromete a utilizar o imóvel de forma a preservar o sossego, segurança e tranquilidade da vizinhança, evitando ruídos excessivos, som alto, festas ou atividades que possam causar incômodo, especialmente após as 22 horas. Responsabiliza-se também pelos atos de familiares, visitantes ou quaisquer pessoas que frequentem o imóvel. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
+                    // Cláusula de sossego tem versão própria por tipo de locação
+                    // (pedido do usuário, 2026-08-20) — residencial mantém o
+                    // título e o texto exatamente como já eram (regras de
+                    // silêncio/festas/visitantes); comercial troca só o texto
+                    // por uma versão sem esses termos (não fazem sentido em uso
+                    // comercial), focado em atividade autorizada/legislação/
+                    // condomínio/sossego da vizinhança e responsabilidade por
+                    // sócios, funcionários e clientes — com título próprio
+                    // ("boa convivência" em vez de "horário de silêncio", que
+                    // não se aplica aqui).
+                    if (ehResidencial) {
+                        out += `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>`;
+                        out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} se compromete a utilizar o imóvel de forma a preservar o sossego, segurança e tranquilidade da vizinhança, evitando ruídos excessivos, som alto, festas ou atividades que possam causar incômodo, especialmente após as 22 horas. Responsabiliza-se também pelos atos de familiares, visitantes ou quaisquer pessoas que frequentem o imóvel. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
+                    } else {
+                        out += `<h3>DO SOSSEGO E DA BOA CONVIVÊNCIA</h3>`;
+                        out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} deverá utilizar o imóvel exclusivamente para a atividade comercial informada neste contrato, observando a legislação vigente, as normas municipais aplicáveis, as regras do condomínio, quando houver, e o direito ao sossego da vizinhança, responsabilizando-se pelos atos de sócios, funcionários, clientes e demais pessoas vinculadas ao funcionamento do estabelecimento. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
+                    }
                     out += `<h3>DA RESCISÃO E DE OUTRAS DISPOSIÇÕES</h3>`;
                     // Multa por rescisão antecipada é opcional (pergunta nova no
                     // formulário, 2026-08-20) — quando não há multa (ou em registros

@@ -888,9 +888,10 @@ function stepCondicoesLocacao() {
     <div class="field"><label>Quem paga a fatura de energia elétrica? *</label>
         <select data-key="pagamento_energia">${optionsPagamentoEncargo(s.pagamento_energia)}</select>
     </div>
+    ${s.im_finalidade === 'Residenciais' ? `
     <div class="field"><label>Permite animais de estimação no imóvel? *</label>
         <div class="radio-group">${pill('permite_animais', 'Sim', s.permite_animais === 'Sim')}${pill('permite_animais', 'Não', s.permite_animais === 'Não')}</div>
-    </div>
+    </div>` : ''}
     ${s.im_finalidade === 'Residenciais' ? `
     <div class="field"><label>Quantidade máxima de moradores autorizados *</label><input type="number" min="1" step="1" data-key="max_moradores" value="${esc(s.max_moradores)}">
         <p class="hint">Definida em comum acordo entre locador e locatário — entra no contrato na cláusula de destinação do imóvel.</p>
@@ -1064,7 +1065,7 @@ function validateCurrentStep() {
         case 'locacao':
             if (!s.valor_aluguel || !s.dia_vencimento || !s.prazo_meses || !s.data_inicio) return 'Preencha todos os campos obrigatórios (*).';
             if (!s.pagamento_agua || !s.pagamento_energia) return 'Informe quem paga água e energia elétrica.';
-            if (!s.permite_animais) return 'Responda se o imóvel permite animais de estimação.';
+            if (s.im_finalidade === 'Residenciais' && !s.permite_animais) return 'Responda se o imóvel permite animais de estimação.';
             if (s.im_finalidade === 'Residenciais' && !s.max_moradores) return 'Informe a quantidade máxima de moradores autorizados.';
             if (s.im_finalidade === 'Comerciais' && !s.segmento_atividade) return 'Informe o segmento da atividade comercial.';
             if (!s.multa_rescisao) return 'Responda se haverá multa por rescisão antecipada.';
@@ -1315,13 +1316,26 @@ function montarClausulasLocacao(registro) {
     out += clausulaCV(n++, `Benfeitorias necessárias realizadas ${fLocatario.pelo} ${termoLocatario}, ainda que não autorizadas, e as úteis, desde que autorizadas por escrito ${fLocador.pelo} ${termoLocador}, serão indenizáveis e permitem o direito de retenção. As benfeitorias voluptuárias não serão indenizadas, podendo ser levantadas ${fLocatario.pelo} ${termoLocatario}, desde que não afetem a estrutura do imóvel.`);
     out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} obriga-se a satisfazer todas as exigências dos Poderes Públicos a que der causa, sendo vedada qualquer modificação ou transformação no imóvel sem autorização prévia e por escrito ${fLocador.do} ${termoLocador}.`);
     out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} não poderá transferir este contrato, nem sublocar ou emprestar o imóvel, no todo ou em parte, sem o consentimento prévio e por escrito ${fLocador.do} ${termoLocador}.`);
-    if (permiteAnimais === 'Sim') {
-        out += clausulaCV(n++, `É permitida a permanência de animais de estimação no imóvel, desde que ${fLocatario.o} ${termoLocatario} mantenha sua devida guarda, cuidado e higiene, responsabilizando-se integralmente por eventuais danos causados ao imóvel ou por incômodos à vizinhança e aos demais moradores decorrentes dessa guarda.`);
-    } else {
-        out += clausulaCV(n++, `Fica vedada a permanência de animais de estimação no interior do imóvel, tais como cães, gatos, aves, roedores, répteis, peixes, entre outros. ${fLocatario.O} ${termoLocatario} compromete-se a não introduzir, hospedar ou permitir a permanência de quaisquer animais no imóvel, sob pena de infração contratual, além da obrigação de retirá-los imediatamente.`);
+    // Cláusula de animais só existe em locação residencial (mesma condicional
+    // aplicada em index.html) — comercial não tem pergunta nem cláusula.
+    if (ehResidencial) {
+        if (permiteAnimais === 'Sim') {
+            out += clausulaCV(n++, `É permitida a permanência de animais de estimação no imóvel, desde que ${fLocatario.o} ${termoLocatario} mantenha sua devida guarda, cuidado e higiene, responsabilizando-se integralmente por eventuais danos causados ao imóvel ou por incômodos à vizinhança e aos demais moradores decorrentes dessa guarda.`);
+        } else {
+            out += clausulaCV(n++, `Fica vedada a permanência de animais de estimação no interior do imóvel, tais como cães, gatos, aves, roedores, répteis, peixes, entre outros. ${fLocatario.O} ${termoLocatario} compromete-se a não introduzir, hospedar ou permitir a permanência de quaisquer animais no imóvel, sob pena de infração contratual, além da obrigação de retirá-los imediatamente.`);
+        }
     }
-    out += `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>`;
-    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} se compromete a utilizar o imóvel de forma a preservar o sossego, segurança e tranquilidade da vizinhança, evitando ruídos excessivos, som alto, festas ou atividades que possam causar incômodo, especialmente após as 22 horas. Responsabiliza-se também pelos atos de familiares, visitantes ou quaisquer pessoas que frequentem o imóvel. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
+    // Cláusula de sossego tem versão própria por tipo de locação (mesma
+    // condicional aplicada em index.html) — residencial mantém título e texto
+    // de sempre; comercial troca por versão sem silêncio/festas/visitantes,
+    // com título próprio.
+    if (ehResidencial) {
+        out += `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>`;
+        out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} se compromete a utilizar o imóvel de forma a preservar o sossego, segurança e tranquilidade da vizinhança, evitando ruídos excessivos, som alto, festas ou atividades que possam causar incômodo, especialmente após as 22 horas. Responsabiliza-se também pelos atos de familiares, visitantes ou quaisquer pessoas que frequentem o imóvel. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
+    } else {
+        out += `<h3>DO SOSSEGO E DA BOA CONVIVÊNCIA</h3>`;
+        out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} deverá utilizar o imóvel exclusivamente para a atividade comercial informada neste contrato, observando a legislação vigente, as normas municipais aplicáveis, as regras do condomínio, quando houver, e o direito ao sossego da vizinhança, responsabilizando-se pelos atos de sócios, funcionários, clientes e demais pessoas vinculadas ao funcionamento do estabelecimento. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
+    }
     out += `<h3>DA RESCISÃO E DE OUTRAS DISPOSIÇÕES</h3>`;
     const temMulta = e.multa_rescisao === 'Sim';
     let textoMulta = '';
@@ -1478,7 +1492,10 @@ function montarRegistro() {
             valor_aluguel: Number(s.valor_aluguel) || 0, dia_vencimento: Number(s.dia_vencimento) || null,
             prazo_meses: Number(s.prazo_meses) || null, data_inicio: s.data_inicio || null,
             pagamento_agua: s.pagamento_agua || 'LOCATÁRIA', pagamento_energia: s.pagamento_energia || 'LOCATÁRIA',
-            permite_animais: s.permite_animais || 'Não',
+            // permite_animais só se aplica (e só é pedido no formulário) em
+            // locação residencial — em comercial fica null, mesmo padrão de
+            // max_moradores/segmento_atividade logo abaixo.
+            permite_animais: s.im_finalidade === 'Residenciais' ? (s.permite_animais || 'Não') : null,
             // max_moradores só se aplica (e só é pedido no formulário) em locação
             // residencial; segmento_atividade só em comercial — ver
             // stepCondicoesLocacao(). Cada um fica null no caso que não se aplica.
