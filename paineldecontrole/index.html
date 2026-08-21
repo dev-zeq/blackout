@@ -228,29 +228,29 @@
             #printArea .doc-formatado-print p { font-size: 15px; line-height: 1.85; margin: 8px 0; }
             /* Layout exclusivo do Contrato de Locação de Imóvel (pedido do
                usuário, 2026-08-20) — margens maiores no topo/rodapé (as
-               laterais continuam as mesmas do @page padrão acima), rodapé
-               discreto fixo repetido em toda página (sem nada no cabeçalho além
-               do título, que já é o h1 padrão — ver montarContrato()), e a área
-               de assinaturas seguindo direto após a última cláusula (sem página
-               própria). Escopado só pela classe .locacao-imovel-print (aplicada
-               só na impressão deste tipo, ver imprimirDeclFormatada()) — não
-               afeta nenhum outro contrato/declaração. */
+               laterais continuam as mesmas do @page padrão acima), sem nada no
+               cabeçalho além do título (h1 padrão — ver montarContrato()), e a
+               área de assinaturas seguindo direto após a última cláusula (sem
+               página própria). Escopado só pela classe .locacao-imovel-print
+               (aplicada só na impressão deste tipo, ver imprimirDeclFormatada())
+               — não afeta nenhum outro contrato/declaração. */
             @page locacao-imovel { size: A4 portrait; margin: 20mm 12mm; }
             #printArea .locacao-imovel-print { page: locacao-imovel; }
-            /* Marca d'água discreta pedida pelo usuário: linha fina cinza-clara,
-               logo monocromática pequena ao lado do texto em cinza-escuro.
-               position:fixed em impressão no Chrome é ancorado à folha física da
-               página (não à caixa de conteúdo) — por isso bottom:10mm já pousa
-               a área do rodapé ~1cm acima da borda inferior real do papel,
-               dentro da margem de 20mm reservada pelo @page acima (que sozinha
-               já garante que o texto das cláusulas nunca desce até lá). */
-            .locacao-print-rodape { position: fixed; bottom: 10mm; left: 12mm; right: 12mm; display: flex; align-items: center; gap: 7px; font-size: 8.5px; color: #595959; border-top: 0.5px solid #d9d9d9; padding-top: 5px; }
             /* Assinaturas fluem normalmente no fim do texto (sem page-break nem
                centralização vertical) — só um respiro (margin-top) equivalente a
                1-2 linhas antes do bloco, e cada linha/rótulo centralizado na
                horizontal (text-align), como um fecho de contrato tradicional. */
             .locacao-assinaturas-print { margin-top: 40px; text-align: center; page-break-inside: avoid; break-inside: avoid; }
             .locacao-assinaturas-print p { margin: 0; }
+            /* Identificação institucional discreta (pedido do usuário,
+               2026-08-20) — antes era um rodapé fixo repetido em toda página
+               (position:fixed); foi removida e trocada por essa linha única,
+               dentro do fluxo normal do documento, logo abaixo do bloco de
+               assinaturas (só aparece então na última página, uma vez só).
+               Seletor com .locacao-assinaturas-print na frente pra vencer a
+               regra "p { margin: 0; }" logo acima (mesma especificidade de
+               classe+tag; sem isso o margin-top do respiro seria zerado). */
+            .locacao-assinaturas-print p.locacao-identificacao-print { margin-top: 18px; text-align: center; font-size: 8.5px; color: #595959; }
         }
         /* Currículo formatado (template e IA) — cabeçalho com foto + seções */
         .cv-header { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 2px solid var(--accent); }
@@ -2977,12 +2977,12 @@
         // Bloco de assinaturas exclusivo do Contrato de Locação de Imóvel
         // (pedido do usuário — os outros tipos continuam usando
         // blocoAssinaturasEmpilhadasCV() acima, sem nenhuma mudança). Data/local
-        // + assinaturas + testemunhas ficam centralizados (horizontal sempre;
-        // vertical só na impressão, via a classe .locacao-assinaturas-print
-        // definida no CSS de impressão), numa página própria ao final
-        // (page-break-before), com mais espaço acima de cada linha pra caber a
-        // assinatura manual. Rótulo de cada parte já vem com o gênero certo
-        // (LOCADOR/LOCADORA, LOCATÁRIO/LOCATÁRIA) via termoLocador/termoLocatario,
+        // + assinaturas + testemunhas ficam centralizados só na horizontal
+        // (classe .locacao-assinaturas-print, CSS de impressão), fluindo
+        // normalmente após a última cláusula (sem página própria), com mais
+        // espaço acima de cada linha pra caber a assinatura manual. Rótulo de
+        // cada parte já vem com o gênero certo (LOCADOR/LOCADORA,
+        // LOCATÁRIO/LOCATÁRIA) via termoLocador/termoLocatario,
         // calculados no corpo() e passados em partes[].label.
         function blocoAssinaturasLocacao(cidade, partes, testemunhas) {
             const linha = (texto) => `<div style="margin-top:60px;"><div style="border-top:1px solid #000; width:260px; margin:0 auto 6px;"></div><p>${texto}</p></div>`;
@@ -2994,6 +2994,14 @@
                 const texto = (t && t.nome) ? `Testemunha ${n}: ${escapeHtml(t.nome)} - CPF: ${escapeHtml(t.cpf || '')}` : `Testemunha ${n} - CPF:`;
                 return linha(texto);
             }).join('');
+            // Identificação institucional discreta (pedido do usuário,
+            // 2026-08-20) — antes era um rodapé fixo repetido em toda página;
+            // agora aparece só uma vez, logo abaixo da última testemunha, com
+            // espaçamento próprio (não empresta o margin-top:60px das linhas de
+            // assinatura, que é espaço reservado pra assinar à mão). Fica dentro
+            // do mesmo wrapper page-break-inside:avoid do bloco de assinaturas,
+            // então nunca se separa dele numa quebra de página.
+            out += `<p class="locacao-identificacao-print">Emitido por Blackout Impressões, WhatsApp 4799991-2755</p>`;
             out += `</div>`;
             return out;
         }
@@ -3834,29 +3842,19 @@
         window.abrirEdicaoCurriculo = abrirEdicaoCurriculo;
 
         function imprimirDeclFormatada() {
-            // Marca d'água discreta de impressão (rodapé com logo monocromática +
-            // texto) só aparece no Contrato de Locação de Imóvel — pedido do
-            // usuário, os outros tipos (Compra e Venda, Declarações, Termo etc.)
-            // continuam exatamente como estavam. Sem nada no cabeçalho além do
-            // título (h1 padrão de montarContrato()) — pedido explícito de não
-            // colocar logo lá. Ver .locacao-imovel-print/.locacao-print-rodape no
-            // CSS de impressão pra margens maiores + rodapé fixo por página.
+            // Margens maiores (topo/rodapé) só no Contrato de Locação de Imóvel
+            // — pedido do usuário, os outros tipos (Compra e Venda, Declarações,
+            // Termo etc.) continuam exatamente como estavam. Sem nada no
+            // cabeçalho além do título (h1 padrão de montarContrato()). A
+            // identificação institucional (texto pequeno cinza) não é mais um
+            // rodapé fixo repetido em toda página — já vem embutida no próprio
+            // conteúdo, logo abaixo do bloco de assinaturas (ver
+            // blocoAssinaturasLocacao()/.locacao-identificacao-print), então
+            // aparece uma vez só, na última página. Ver .locacao-imovel-print
+            // no CSS de impressão pra margens maiores.
             const ehLocacao = declFormatadoAtual && declFormatadoAtual.tipo === 'CONTRATO_LOCACAO_IMOVEL';
             const classeExtra = ehLocacao ? ' locacao-imovel-print' : '';
-            let extras = '';
-            if (ehLocacao) {
-                // Versão monocromática (cinza) da logo — mesmo desenho da logo
-                // colorida usada no Recibo (RECIBO_LOGO_SVG), só com o verde da
-                // marca trocado por tons de cinza pra ficar discreta no rodapé.
-                const logoRodapeMono = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;">
-                    <circle cx="50" cy="50" r="48" fill="#f2f2f2" stroke="#8c8c8c" stroke-width="3"/>
-                    <path d="M50 18 A32 32 0 1 1 18 50" stroke="#8c8c8c" stroke-width="5" stroke-linecap="round" fill="none"/>
-                    <polygon points="50,8 42,22 58,22" fill="#8c8c8c"/>
-                    <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="#595959">B</text>
-                </svg>`;
-                extras = `<div class="locacao-print-rodape">${logoRodapeMono}<span>Emitido por Blackout Impressões • WhatsApp (47) 99991-2755</span></div>`;
-            }
-            document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print${classeExtra}">${document.getElementById('declFormatadoConteudo').innerHTML}${extras}</div>`;
+            document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print${classeExtra}">${document.getElementById('declFormatadoConteudo').innerHTML}</div>`;
             setTimeout(() => window.print(), 100);
         }
         window.imprimirDeclFormatada = imprimirDeclFormatada;

@@ -348,6 +348,18 @@ Pedido do usuário: destacar mais o título "CONTRATO DE LOCAÇÃO DE IMÓVEL", 
 
 **Não testado**: aparência final em produção (senha da equipe) — mudança é de uma única constante numérica, revisão por leitura de código.
 
+## Identificação institucional saiu do rodapé fixo (2026-08-20)
+
+Pedido do usuário: a identificação da Blackout no Contrato de Locação de Imóvel deixou de ser um rodapé fixo repetido em toda página impressa (`.locacao-print-rodape`, `position:fixed`, ver "Rodapé e assinaturas na impressão" acima) e passou a aparecer **só uma vez**, dentro do fluxo normal do texto, logo abaixo da última testemunha — ou seja, só na última página.
+
+**Onde** (`index.html`): o texto foi movido pra dentro de `blocoAssinaturasLocacao()` (um `<p class="locacao-identificacao-print">` logo após o mapeamento das testemunhas, dentro do mesmo `<div>` que já tem `page-break-inside:avoid` — então nunca se separa do bloco de assinaturas numa quebra de página). `imprimirDeclFormatada()` perdeu toda a lógica de montar o rodapé fixo (`extras`, a logo SVG monocromática) — não precisa mais, o texto já vem embutido no `declFormatadoConteudo.innerHTML`. CSS: `.locacao-print-rodape` (fixed) removida; nova regra `.locacao-assinaturas-print p.locacao-identificacao-print` (precisa das duas classes juntas na frente pra vencer a especificidade de `.locacao-assinaturas-print p { margin: 0; }`, que senão zerava o respiro) com fonte 8.5px, cor `#595959`, centralizado, `margin-top:18px` (menor que o espaço de 60px reservado acima de cada linha de assinatura — não empresta esse espaço, é um respiro próprio e discreto).
+
+Texto trocado também nesta rodada: de "Emitido por Blackout Impressões • WhatsApp (47) 99991-2755" pra **"Emitido por Blackout Impressões, WhatsApp 4799991-2755"** (vírgula no lugar do • , telefone sem parênteses/espaço de novo — terceira variação de formato de telefone nesse rodapé ao longo das sessões, ver histórico acima).
+
+A logo monocromática (SVG) que existia só no rodapé foi removida junto — não tinha mais nenhum lugar que a usasse.
+
+**Testado**: harness local (`window.montarContrato` exposto temporariamente e revertido depois) confirma que o `<p class="locacao-identificacao-print">` aparece com o texto certo logo após a Testemunha 2, e que nenhum resto de `.locacao-print-rodape`/`logoRodapeMono` sobrou no arquivo (`grep` zero ocorrências). `index.html` carrega sem erro de console. **Não testado**: posição/espaçamento exatos numa impressão real (mesma limitação de sempre — sem acesso a diálogo de impressão real neste ambiente).
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Procuração DETRAN e Procuração Simples ainda não são geradas pelo painel — só existem como link pra Google Forms externo. Os modelos antigos já foram extraídos da planilha numa sessão (ver git history/conversa de 2026-08-19) e podem ser reaproveitados se o usuário decidir implementar.
