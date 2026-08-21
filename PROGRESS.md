@@ -360,6 +360,14 @@ A logo monocromática (SVG) que existia só no rodapé foi removida junto — n�
 
 **Testado**: harness local (`window.montarContrato` exposto temporariamente e revertido depois) confirma que o `<p class="locacao-identificacao-print">` aparece com o texto certo logo após a Testemunha 2, e que nenhum resto de `.locacao-print-rodape`/`logoRodapeMono` sobrou no arquivo (`grep` zero ocorrências). `index.html` carrega sem erro de console. **Não testado**: posição/espaçamento exatos numa impressão real (mesma limitação de sempre — sem acesso a diálogo de impressão real neste ambiente).
 
+## Identificação institucional removida por completo + assinaturas em fluxo natural (2026-08-20)
+
+Pedido do usuário, mesmo dia, em cima da seção acima: a identificação da Blackout foi removida **por completo** (não só o rodapé fixo — o texto/WhatsApp que tinha sido movido pra depois das testemunhas também saiu, sem deixar nenhuma linha divisória ou resto). `blocoAssinaturasLocacao()` não escreve mais o `<p class="locacao-identificacao-print">`; a regra CSS correspondente foi apagada. `grep` por "Blackout Impressões"/"WhatsApp 4799991"/"locacao-identificacao" no arquivo inteiro dá zero ocorrências.
+
+Além disso, o bloco de assinaturas deixou de ter espaço reservado: `.locacao-assinaturas-print` perdeu `page-break-inside:avoid`/`break-inside:avoid` e o `margin-top` caiu de 40px pra **8px** (mesmo ritmo dos parágrafos normais do contrato, `#printArea .doc-formatado-print p { margin: 8px 0; }`) — agora as assinaturas seguem o texto imediatamente após a última cláusula, sem bloco isolado nem margem grande. A quebra de página, se acontecer, é só a natural do navegador quando não sobra espaço físico na folha (comportamento padrão, não forçado por CSS).
+
+**Testado**: mesmo harness local (`window.montarContrato` exposto e revertido) — o HTML final do contrato termina limpo logo após a Testemunha 2, sem "Blackout"/"WhatsApp" em nenhum lugar. `index.html` carrega sem erro de console. `git diff --stat` confirma que só esse arquivo mudou. **Não testado**: paginação real (mesma limitação de sempre — sem diálogo de impressão real neste ambiente).
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Procuração DETRAN e Procuração Simples ainda não são geradas pelo painel — só existem como link pra Google Forms externo. Os modelos antigos já foram extraídos da planilha numa sessão (ver git history/conversa de 2026-08-19) e podem ser reaproveitados se o usuário decidir implementar.

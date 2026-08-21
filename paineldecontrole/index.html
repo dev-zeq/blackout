@@ -236,21 +236,17 @@
                — não afeta nenhum outro contrato/declaração. */
             @page locacao-imovel { size: A4 portrait; margin: 20mm 12mm; }
             #printArea .locacao-imovel-print { page: locacao-imovel; }
-            /* Assinaturas fluem normalmente no fim do texto (sem page-break nem
-               centralização vertical) — só um respiro (margin-top) equivalente a
-               1-2 linhas antes do bloco, e cada linha/rótulo centralizado na
-               horizontal (text-align), como um fecho de contrato tradicional. */
-            .locacao-assinaturas-print { margin-top: 40px; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+            /* Assinaturas seguem o texto imediatamente após a última cláusula
+               (pedido do usuário, 2026-08-20) — sem page-break forçado, sem
+               reservar espaço em branco nem página exclusiva; a quebra de
+               página só acontece se o navegador realmente não tiver mais
+               espaço físico na folha (fluxo normal de impressão). Só a
+               centralização horizontal (text-align) marca o bloco como um
+               fecho de contrato tradicional; margin-top pequeno, igual ao
+               espaçamento normal entre parágrafos do documento (ver
+               #printArea .doc-formatado-print p acima), não um respiro maior. */
+            .locacao-assinaturas-print { margin-top: 8px; text-align: center; }
             .locacao-assinaturas-print p { margin: 0; }
-            /* Identificação institucional discreta (pedido do usuário,
-               2026-08-20) — antes era um rodapé fixo repetido em toda página
-               (position:fixed); foi removida e trocada por essa linha única,
-               dentro do fluxo normal do documento, logo abaixo do bloco de
-               assinaturas (só aparece então na última página, uma vez só).
-               Seletor com .locacao-assinaturas-print na frente pra vencer a
-               regra "p { margin: 0; }" logo acima (mesma especificidade de
-               classe+tag; sem isso o margin-top do respiro seria zerado). */
-            .locacao-assinaturas-print p.locacao-identificacao-print { margin-top: 18px; text-align: center; font-size: 8.5px; color: #595959; }
         }
         /* Currículo formatado (template e IA) — cabeçalho com foto + seções */
         .cv-header { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 2px solid var(--accent); }
@@ -2994,14 +2990,6 @@
                 const texto = (t && t.nome) ? `Testemunha ${n}: ${escapeHtml(t.nome)} - CPF: ${escapeHtml(t.cpf || '')}` : `Testemunha ${n} - CPF:`;
                 return linha(texto);
             }).join('');
-            // Identificação institucional discreta (pedido do usuário,
-            // 2026-08-20) — antes era um rodapé fixo repetido em toda página;
-            // agora aparece só uma vez, logo abaixo da última testemunha, com
-            // espaçamento próprio (não empresta o margin-top:60px das linhas de
-            // assinatura, que é espaço reservado pra assinar à mão). Fica dentro
-            // do mesmo wrapper page-break-inside:avoid do bloco de assinaturas,
-            // então nunca se separa dele numa quebra de página.
-            out += `<p class="locacao-identificacao-print">Emitido por Blackout Impressões, WhatsApp 4799991-2755</p>`;
             out += `</div>`;
             return out;
         }
@@ -3845,13 +3833,10 @@
             // Margens maiores (topo/rodapé) só no Contrato de Locação de Imóvel
             // — pedido do usuário, os outros tipos (Compra e Venda, Declarações,
             // Termo etc.) continuam exatamente como estavam. Sem nada no
-            // cabeçalho além do título (h1 padrão de montarContrato()). A
-            // identificação institucional (texto pequeno cinza) não é mais um
-            // rodapé fixo repetido em toda página — já vem embutida no próprio
-            // conteúdo, logo abaixo do bloco de assinaturas (ver
-            // blocoAssinaturasLocacao()/.locacao-identificacao-print), então
-            // aparece uma vez só, na última página. Ver .locacao-imovel-print
-            // no CSS de impressão pra margens maiores.
+            // cabeçalho além do título (h1 padrão de montarContrato()) e sem
+            // nenhuma identificação institucional no rodapé (removida por
+            // completo, 2026-08-20 — ver .locacao-imovel-print no CSS de
+            // impressão pra margens maiores).
             const ehLocacao = declFormatadoAtual && declFormatadoAtual.tipo === 'CONTRATO_LOCACAO_IMOVEL';
             const classeExtra = ehLocacao ? ' locacao-imovel-print' : '';
             document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print${classeExtra}">${document.getElementById('declFormatadoConteudo').innerHTML}</div>`;
