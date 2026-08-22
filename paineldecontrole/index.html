@@ -142,6 +142,20 @@
         .contrato-card { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
         .contrato-info b { color: var(--text); }
         .contrato-info .subtext { display: block; margin-top: 2px; }
+        /* Lista de Currículos (2026-08-21) — item mais baixo que o padrão
+           .contrato-card (que empilha os botões numa coluna vertical à
+           direita, deixando o item alto): aqui os botões de ação ficam numa
+           linha horizontal só, abaixo do nome/dados, quebrando pra uma 2ª
+           linha sozinhos em tela estreita (flex-wrap) sem espremer o texto do
+           candidato. Classe própria, não reaproveita/altera .contrato-card —
+           as outras listas (Contratos, Declarações, Recibos) continuam
+           exatamente como estavam. */
+        .curriculo-card { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .curriculo-card:last-child { border-bottom: none; }
+        .curriculo-info b { color: var(--text); }
+        .curriculo-info .subtext { display: block; margin-top: 2px; }
+        .curriculo-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .curriculo-acoes .btn-delete { padding: 8px 9px; }
         .menu-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin-bottom: 16px; text-align: center; }
         .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .menu-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px 8px; text-align: center; cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
@@ -175,6 +189,16 @@
             padding: 7px 10px; font-size: 14px; cursor: pointer; line-height: 1; color: var(--text);
         }
         .btn-copy-link:active { transform: scale(0.94); }
+        /* Busca inteligente do módulo de Currículos (2026-08-21) — filtro em
+           tempo real na lista de pedidos, tipo "Ctrl+F" só que sem precisar
+           abrir a busca do navegador. Só existe aqui (viewCurriculo) — não
+           mexe no formulário público nem no layout do currículo formatado. */
+        .curriculo-busca-wrap { position: relative; margin: 14px 20px 2px; }
+        .curriculo-busca-icone { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.55; pointer-events: none; }
+        .curriculo-busca-input { width: 100%; padding: 12px 40px 12px 38px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 14px; font-family: inherit; }
+        .curriculo-busca-input:focus { outline: none; border-color: var(--accent); }
+        .curriculo-busca-limpar { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--surface-2); color: var(--text-dim); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .curriculo-busca-limpar:active { transform: translateY(-50%) scale(0.92); }
         .menu-tile-copy {
             position: absolute; top: 6px; right: 6px; background: var(--surface-2); border: 1px solid var(--border);
             border-radius: 8px; padding: 4px 6px; font-size: 12px; line-height: 1; cursor: pointer; color: var(--text);
@@ -248,7 +272,8 @@
             .locacao-assinaturas-print { margin-top: 8px; text-align: center; }
             .locacao-assinaturas-print p { margin: 0; }
         }
-        /* Currículo formatado (template e IA) — cabeçalho com foto + seções */
+        /* Currículo formatado com IA (markdown livre) — cabeçalho com foto + texto
+           corrido. O Formatado por template (sem IA) usa .cv2-* logo abaixo. */
         .cv-header { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 2px solid var(--accent); }
         .cv-header img.cv-photo { width: 76px; height: 76px; border-radius: 14px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--border); }
         .cv-header .cv-id { flex: 1; min-width: 0; }
@@ -260,6 +285,42 @@
         #formatadoConteudo p { font-size: 13px; margin: 4px 0; line-height: 1.5; }
         #formatadoConteudo ul { margin: 4px 0; padding-left: 18px; }
         #formatadoConteudo li { font-size: 13px; margin: 3px 0; line-height: 1.4; }
+
+        /* Currículo formatado por template (2026-08-21) — layout A4 de duas
+           colunas fiel ao modelo visual da gráfica: barra lateral escura com
+           foto 3x4 e dados pessoais/contato, coluna clara com as seções em
+           barras de título. Sempre claro (papel), igual ao .recibo-doc —
+           cores fixas, não var(--...), pra não herdar o tema escuro do painel
+           nem no modal nem na impressão. */
+        .cv2-doc { display: flex; align-items: stretch; background: #fff; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .cv2-sidebar { width: 240px; flex-shrink: 0; background: #3b4a5c; color: #fff; padding: 24px 18px; }
+        .cv2-foto-wrap { text-align: center; margin-bottom: 14px; }
+        .cv2-foto-wrap img { width: 118px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; border: 2px solid rgba(255,255,255,0.25); }
+        .cv2-foto-placeholder { width: 118px; aspect-ratio: 3 / 4; margin: 0 auto; border-radius: 4px; background: rgba(255,255,255,0.08); border: 2px dashed rgba(255,255,255,0.25); }
+        .cv2-nome { text-align: center; margin-bottom: 14px; }
+        .cv2-nome-linha { display: block; font-size: 17px; font-weight: 800; line-height: 1.3; }
+        .cv2-pessoal { text-align: center; font-size: 11.5px; line-height: 1.7; color: #dbe1e8; margin-bottom: 6px; }
+        .cv2-bar { background: #2c3948; font-size: 11px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; padding: 6px 8px; margin: 14px -18px 8px; }
+        .cv2-bar-content { font-size: 12px; line-height: 1.65; text-align: center; color: #eef1f4; word-break: break-word; }
+        .cv2-bar-content a { color: #eef1f4; }
+        .cv2-content { flex: 1; min-width: 0; padding: 26px 28px; }
+        .cv2-content section { margin-bottom: 20px; }
+        .cv2-content section:last-child { margin-bottom: 0; }
+        .cv2-bar-h { background: #ececec; color: #2c3948; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; padding: 7px 10px; margin: 0 0 12px; }
+        .cv2-content .cv2-item { margin-bottom: 12px; }
+        .cv2-content .cv2-item:last-child { margin-bottom: 0; }
+        .cv2-content .cv2-item p { margin: 0 0 2px; font-size: 12.5px; color: #1a1a1a; line-height: 1.5; }
+        .cv2-content .cv2-item p b { color: #2c3948; }
+        .cv2-content p.cv2-texto { font-size: 12.5px; line-height: 1.7; color: #1a1a1a; margin: 0 0 6px; }
+        .cv2-content p.cv2-texto:last-child { margin-bottom: 0; }
+        @media (max-width: 620px) {
+            .cv2-doc { flex-direction: column; }
+            .cv2-sidebar { width: 100%; }
+        }
+        @media print {
+            #printArea .cv2-doc { border-radius: 0; box-shadow: none; flex-direction: row; }
+            #printArea .cv2-doc, #printArea .cv2-doc * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
 
         /* Recibo timbrado — sempre claro (papel), mesmo com o resto do painel
            escuro: usado dentro de um cartão branco no modal e em #printArea
@@ -762,6 +823,11 @@
                         <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('https://forms.gle/davEvSQfJrXt7jxL6', this)" title="Copiar link">📋</button>
                         <span class="arrow" style="cursor:pointer;" onclick="window.open('https://forms.gle/davEvSQfJrXt7jxL6', '_blank', 'noopener')">↗</span>
                     </span>
+                </div>
+                <div class="curriculo-busca-wrap">
+                    <span class="curriculo-busca-icone">🔍</span>
+                    <input type="text" id="curriculoBusca" class="curriculo-busca-input" placeholder="Buscar por nome, telefone, e-mail, cidade..." oninput="filtrarCurriculos()">
+                    <button type="button" id="curriculoBuscaLimpar" class="curriculo-busca-limpar" onclick="limparBuscaCurriculo()" style="display:none;" title="Limpar busca">✕</button>
                 </div>
                 <div id="curriculoRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
@@ -4415,43 +4481,100 @@
         }
         window.closeFichaModal = closeFichaModal;
 
+        // Busca inteligente (2026-08-21) — normaliza tirando acento e caixa,
+        // pra "sao jose"/"São José" baterem igual. NFD decompõe cada letra
+        // acentuada em base + marca de acento separada; o regex derruba só a
+        // marca (intervalo Unicode das "combining diacritical marks").
+        function normalizarBusca(txt) {
+            // ̀-ͯ = intervalo Unicode das "combining diacritical
+            // marks" (acentos separados da letra depois do NFD) — usa o
+            // escape explícito de propósito, não o caractere literal, pra não
+            // depender de como cada ferramenta/editor trata combining marks
+            // soltos no meio do código-fonte.
+            return (txt == null ? '' : String(txt)).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+        }
+        // Monta o texto de busca de um currículo juntando as colunas fixas
+        // (nome, telefone, e-mail, cidade etc.) com **todo** o conteúdo de
+        // `dados` (JSON solto com todas as respostas do formulário — cursos,
+        // empresas, escolaridade, idiomas, o que for) — cobre "qualquer outro
+        // campo cadastrado" sem precisar listar campo por campo. Calculado uma
+        // vez por registro (não a cada tecla digitada) e guardado em `_busca`.
+        function curriculoTextoBusca(c) {
+            const partes = [c.nome, c.sobrenome, c.telefone, c.whatsapp, c.email, c.endereco, c.bairro, c.cidade, c.estado, c.status];
+            if (c.dados && typeof c.dados === 'object') {
+                Object.values(c.dados).forEach(v => { if (v != null && v !== '') partes.push(v); });
+            }
+            return normalizarBusca(partes.filter(v => v != null && v !== '').join(' | '));
+        }
         async function loadCurriculos() {
             const container = document.getElementById('curriculoRows');
             try {
                 const { data: rows, error } = await supabase.from('curriculos').select('*').order('data_pedido', { ascending: false });
                 if (error) throw new Error(error.message);
-                curriculosCache = rows || [];
-
-                document.getElementById('curriculoCount').textContent = curriculosCache.length + ' registro' + (curriculosCache.length !== 1 ? 's' : '');
-
-                if (curriculosCache.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum pedido ainda</div></div>';
-                    return;
-                }
-
-                container.innerHTML = curriculosCache.map(c => {
-                    const feito = c.status === 'FEITO';
-                    const dataFmt = c.data_pedido ? new Date(c.data_pedido).toLocaleDateString('pt-BR') : '-';
-                    return `<div class="contrato-card">
-                        <div class="contrato-info" style="cursor:pointer;" onclick="openFichaModal('${c.id}')">
-                            <b>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</b>
-                            <span class="subtext">📱 ${escapeHtml(c.telefone) || '-'} · 📍 ${escapeHtml(c.cidade) || '-'} · 📅 ${dataFmt}</span>
-                            <span class="subtext">${feito ? '✅ Feito' : '⏳ Pendente'}</span>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir (usa a versão com IA se já tiver, senão o formatado)">🖨️</button>
-                            <button class="btn-delete" onclick="abrirFormatado('${c.id}', false)" title="Formatado">📄</button>
-                            <button class="btn-delete" onclick="abrirFormatado('${c.id}', true)" title="Formatado com IA">🤖</button>
-                            <button class="btn-delete" onclick="toggleCurriculoStatus('${c.id}', '${feito ? 'PENDENTE' : 'FEITO'}')" title="${feito ? 'Marcar como pendente' : 'Marcar como feito'}">${feito ? '↩️' : '✅'}</button>
-                            <button class="btn-delete" onclick="deleteCurriculo('${c.id}')" title="Excluir">🗑️</button>
-                        </div>
-                    </div>`;
-                }).join('');
+                curriculosCache = (rows || []).map(c => { c._busca = curriculoTextoBusca(c); return c; });
+                // Reaplica a busca em andamento (se houver) — atualizar status/
+                // excluir/editar não deve fazer a pessoa perder o filtro que já
+                // tinha digitado.
+                filtrarCurriculos();
             } catch (error) {
                 container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}</div>`;
             }
         }
         window.loadCurriculos = loadCurriculos;
+
+        function renderCurriculoRows(lista, filtrando) {
+            const container = document.getElementById('curriculoRows');
+            document.getElementById('curriculoCount').textContent = filtrando
+                ? `${lista.length} de ${curriculosCache.length} registro${curriculosCache.length !== 1 ? 's' : ''}`
+                : `${curriculosCache.length} registro${curriculosCache.length !== 1 ? 's' : ''}`;
+
+            if (lista.length === 0) {
+                container.innerHTML = filtrando
+                    ? '<div class="empty-state"><div class="empty-icon">🔍</div><div>Nenhum currículo encontrado</div></div>'
+                    : '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum pedido ainda</div></div>';
+                return;
+            }
+
+            container.innerHTML = lista.map(c => {
+                const feito = c.status === 'FEITO';
+                const dataFmt = c.data_pedido ? new Date(c.data_pedido).toLocaleDateString('pt-BR') : '-';
+                return `<div class="curriculo-card">
+                    <div class="curriculo-info" style="cursor:pointer;" onclick="openFichaModal('${c.id}')">
+                        <b>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</b>
+                        <span class="subtext">📱 ${escapeHtml(c.telefone) || '-'} · 📍 ${escapeHtml(c.cidade) || '-'} · 📅 ${dataFmt}</span>
+                        <span class="subtext">${feito ? '✅ Feito' : '⏳ Pendente'}</span>
+                    </div>
+                    <div class="curriculo-acoes">
+                        <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir (usa a versão com IA se já tiver, senão o formatado)">🖨️</button>
+                        <button class="btn-delete" onclick="abrirFormatado('${c.id}', false)" title="Formatado">📄</button>
+                        <button class="btn-delete" onclick="abrirFormatado('${c.id}', true)" title="Formatado com IA">🤖</button>
+                        <button class="btn-delete" onclick="toggleCurriculoStatus('${c.id}', '${feito ? 'PENDENTE' : 'FEITO'}')" title="${feito ? 'Marcar como pendente' : 'Marcar como feito'}">${feito ? '↩️' : '✅'}</button>
+                        <button class="btn-delete" onclick="deleteCurriculo('${c.id}')" title="Excluir">🗑️</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Filtra em tempo real (chamada a cada tecla via oninput) — trecho em
+        // qualquer parte do texto, sem acento, sem diferenciar maiúsculas.
+        function filtrarCurriculos() {
+            const inputEl = document.getElementById('curriculoBusca');
+            const termoRaw = inputEl ? inputEl.value : '';
+            const btnLimpar = document.getElementById('curriculoBuscaLimpar');
+            if (btnLimpar) btnLimpar.style.display = termoRaw ? '' : 'none';
+            const termo = normalizarBusca(termoRaw);
+            const lista = termo ? curriculosCache.filter(c => c._busca.includes(termo)) : curriculosCache;
+            renderCurriculoRows(lista, !!termo);
+        }
+        window.filtrarCurriculos = filtrarCurriculos;
+
+        function limparBuscaCurriculo() {
+            const inputEl = document.getElementById('curriculoBusca');
+            if (inputEl) inputEl.value = '';
+            filtrarCurriculos();
+            if (inputEl) inputEl.focus();
+        }
+        window.limparBuscaCurriculo = limparBuscaCurriculo;
 
         // Imprime sempre a melhor versão disponível: se já gerou com IA antes
         // (salvo em ia_texto), usa ela; senão usa o Formatado por template —
@@ -4459,9 +4582,12 @@
         function printCurriculo(id) {
             const c = curriculosCache.find(x => x.id === id);
             if (!c) return;
-            const header = cvHeaderHtml(c.ia_texto && c.ia_header ? { ...c, ...c.ia_header } : c);
-            const corpo = c.ia_texto ? markdownSimplesParaHtml(c.ia_texto) : formatarCurriculoTemplate(c);
-            document.getElementById('printArea').innerHTML = header + corpo;
+            if (c.ia_texto) {
+                const header = cvHeaderHtml(c.ia_header ? { ...c, ...c.ia_header } : c);
+                document.getElementById('printArea').innerHTML = header + markdownSimplesParaHtml(c.ia_texto);
+            } else {
+                document.getElementById('printArea').innerHTML = formatarCurriculoLayout(c);
+            }
             setTimeout(() => window.print(), 100);
         }
         window.printCurriculo = printCurriculo;
@@ -4585,15 +4711,187 @@
                 </div>`;
         }
 
-        function formatarCurriculoTemplate(c) {
+        // Formata telefone salvo cru (DDD + número, sem máscara nenhuma no
+        // banco) só pra exibição no layout novo — não altera o valor salvo,
+        // só como o currículo mostra em tela/impressão.
+        function formatarTelefoneExibicao(tel) {
+            if (!tel) return '';
+            const d = String(tel).replace(/\D/g, '');
+            if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+            if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+            return tel;
+        }
+
+        // Largura útil da barra lateral pro nome (240px de .cv2-sidebar menos
+        // os 18px de padding de cada lado, ver CSS .cv2-sidebar/.cv2-nome).
+        const CV2_LARGURA_NOME = 204;
+        const CV2_NOME_FONTE_MAX = 17, CV2_NOME_FONTE_MIN = 11;
+
+        // Mede largura de texto sem precisar que o elemento esteja visível no
+        // DOM (o cabeçalho é montado como string de HTML antes de entrar em
+        // qualquer container) — usado só pra decidir quebra/tamanho de fonte,
+        // não afeta o texto em si.
+        let _cv2MedidorCtx = null;
+        function medirTextoCv2(texto, tamanhoPx, peso = '800') {
+            if (!_cv2MedidorCtx) _cv2MedidorCtx = document.createElement('canvas').getContext('2d');
+            _cv2MedidorCtx.font = `${peso} ${tamanhoPx}px Arial, Helvetica, sans-serif`;
+            return _cv2MedidorCtx.measureText(texto).width;
+        }
+
+        // Monta o nome do cabeçalho (barra lateral do currículo) a partir do
+        // nome completo (2026-08-21, ver "Nome completo" em curriculo-form.html)
+        // — nunca corta nem abrevia: só quebra em até 2 linhas nos espaços
+        // entre palavras (nunca no meio de uma palavra) e reduz a fonte (de
+        // CV2_NOME_FONTE_MAX até CV2_NOME_FONTE_MIN) só o necessário pra caber
+        // na largura da barra lateral, preservando fonte/alinhamento/negrito
+        // de sempre (.cv2-nome-linha) quando o nome já cabe no tamanho padrão.
+        function montarNomeCv2Html(nomeCompleto) {
+            const palavras = (nomeCompleto || '').trim().split(/\s+/).filter(Boolean);
+            if (!palavras.length) return '';
+            const linhaHtml = (linhas, tamanho) => linhas.map(l => `<span class="cv2-nome-linha" style="font-size:${tamanho}px;">${escapeHtml(l)}</span>`).join('');
+
+            // Ponto de quebra em 2 linhas que minimiza a linha mais larga —
+            // testa cada posição entre palavras (não existe se for 1 palavra só).
+            function melhorQuebra(tamanhoPx) {
+                if (palavras.length === 1) return [palavras[0]];
+                let linhas = null, largura = Infinity;
+                for (let i = 1; i < palavras.length; i++) {
+                    const l1 = palavras.slice(0, i).join(' ');
+                    const l2 = palavras.slice(i).join(' ');
+                    const maxLargura = Math.max(medirTextoCv2(l1, tamanhoPx), medirTextoCv2(l2, tamanhoPx));
+                    if (maxLargura < largura) { largura = maxLargura; linhas = [l1, l2]; }
+                }
+                return linhas;
+            }
+
+            // 1) Cabe numa linha só, no tamanho padrão? Prioridade máxima —
+            // preserva o design de sempre (nome curto não é quebrado à toa).
+            if (medirTextoCv2(nomeCompleto, CV2_NOME_FONTE_MAX) <= CV2_LARGURA_NOME) {
+                return linhaHtml([nomeCompleto], CV2_NOME_FONTE_MAX);
+            }
+
+            // 2) Não coube numa linha — distribui em 2 linhas, ainda no
+            // tamanho padrão (só reduz fonte se nem assim couber, ver passo 3).
+            const quebraPadrao = melhorQuebra(CV2_NOME_FONTE_MAX);
+            if (quebraPadrao.every(l => medirTextoCv2(l, CV2_NOME_FONTE_MAX) <= CV2_LARGURA_NOME)) {
+                return linhaHtml(quebraPadrao, CV2_NOME_FONTE_MAX);
+            }
+
+            // 3) Nem em 2 linhas coube no tamanho padrão — reduz a fonte até
+            // caber (1 linha se for uma palavra só, 2 linhas nos outros
+            // casos), ficando no tamanho mínimo mesmo sem caber perfeitamente
+            // no pior caso extremo (nunca corta/abrevia o texto).
+            let linhas = quebraPadrao, tamanhoFinal = CV2_NOME_FONTE_MIN;
+            for (let tamanho = CV2_NOME_FONTE_MAX - 1; tamanho >= CV2_NOME_FONTE_MIN; tamanho--) {
+                linhas = palavras.length === 1 ? [nomeCompleto] : melhorQuebra(tamanho);
+                tamanhoFinal = tamanho;
+                if (linhas.every(l => medirTextoCv2(l, tamanho) <= CV2_LARGURA_NOME)) break;
+            }
+            return linhaHtml(linhas, tamanhoFinal);
+        }
+
+        // Fonte do e-mail na barra lateral (2026-08-21) — 13px é o padrão;
+        // só reduz (12, depois 11) se o e-mail não couber numa linha só na
+        // largura da barra lateral. Nunca quebra linha, nunca corta o texto,
+        // nunca usa reticências — no pior caso (e-mail extremamente longo,
+        // nem 11px é suficiente) fica em 11px mesmo com um leve estouro
+        // visual, mesmo critério já usado pra reduzir a fonte do nome. Afeta
+        // só esta linha (`style` inline no próprio <a>) — o resto da barra
+        // lateral continua no tamanho de sempre (12px, `.cv2-bar-content`).
+        const CV2_EMAIL_FONTE_PADRAO = 13, CV2_EMAIL_FONTE_MIN = 11;
+        function montarEmailCv2Html(email) {
+            if (!email) return '';
+            let tamanhoFinal = CV2_EMAIL_FONTE_MIN;
+            for (let tamanho = CV2_EMAIL_FONTE_PADRAO; tamanho >= CV2_EMAIL_FONTE_MIN; tamanho--) {
+                tamanhoFinal = tamanho;
+                if (medirTextoCv2(email, tamanho, '400') <= CV2_LARGURA_NOME) break;
+            }
+            return `<a href="mailto:${escapeHtml(email)}" style="font-size:${tamanhoFinal}px; white-space:nowrap;">${escapeHtml(email)}</a>`;
+        }
+
+        // Chaves de `dados` que ganham bloco próprio no layout novo (barra
+        // lateral: Naturalidade, Filhos, Escolaridade; e a seção "Cargos
+        // Pretendidos" na coluna de conteúdo) — extraídas direto, sem entrar
+        // no agrupamento genérico de `secoes` por CAMPOS_POR_SECAO, pra não
+        // duplicar a mesma informação em dois lugares do documento.
+        const CHAVE_NATURALIDADE = 'NATURALIDADE? (Apenas o nome da da cidade onde você nasceu)';
+        const CHAVE_ESTADO_NASCIMENTO = 'EM QUAL ESTADO?';
+        const CHAVE_TEM_FILHOS = 'VOCÊ TEM FILHOS?';
+        const CHAVE_QTD_FILHOS = 'QUANTOS FILHOS?';
+        // Situação dos filhos (2026-08-21) — substitui o campo livre "idade do
+        // filho caçula" que existia antes; vira uma das 2 opções fixas abaixo,
+        // usada só pra decidir a redação do texto (ver montarTextoFilhos),
+        // nunca exibida como pergunta/resposta crua em lugar nenhum.
+        const CHAVE_SITUACAO_FILHOS = 'QUAL A SITUAÇÃO DOS SEUS FILHOS?';
+        // "Contato p/ Recado" foi removido do formulário e do layout em
+        // 2026-08-21 (simplificação, não correção) — as 3 chaves continuam
+        // listadas aqui só pra registros antigos que já tinham esse dado
+        // salvo em `dados` não caírem, sem lugar próprio, dentro de "Dados
+        // Adicionais" com uma pergunta crua e comprida como rótulo.
+        const CHAVE_RECADO_NOME = 'ESCREVA O NOME DE ALGUEM QUE VOCÊ TEM CONTATO FREQUENTIMENTE! (essa pessoa vai servir como seu contato de recado)';
+        const CHAVE_RECADO_DDD = 'E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO DE RECADO?';
+        const CHAVE_RECADO_NUMERO = 'AGORA O NUMERO DO SEU TELEFONE DO SEU CONTATO DE RECADO? (sem o DDD)';
+        // Escolaridade reestruturada em 2026-08-21 (nível + situação + período
+        // em cascata, só no Painel — não mexe em Google Forms/Sheets, ver
+        // curriculo-form.html). Chaves antigas (grau escolar/processo de
+        // estudo/formação superior) foram tiradas daqui de propósito — não
+        // ficam mais escondidas, caem no fluxo genérico de `secoes` (bucket
+        // "Formação", já em CAMPOS_POR_SECAO) igual a antes desta mudança,
+        // então um currículo salvo com o formulário antigo continua exibindo
+        // esses dados normalmente em "Dados Adicionais".
+        const CHAVE_ESCOLARIDADE = 'QUAL A SUA ESCOLARIDADE?';
+        const CHAVE_SITUACAO_ESCOLARIDADE = 'QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?';
+        const CHAVE_PERIODO_ESTUDO = 'EM QUE PERÍODO VOCÊ ESTUDA?';
+        const CHAVE_CARGO_DESEJADO = 'QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?';
+        const CHAVES_BARRA_LATERAL = new Set([
+            CHAVE_NATURALIDADE, CHAVE_ESTADO_NASCIMENTO, CHAVE_TEM_FILHOS, CHAVE_QTD_FILHOS, CHAVE_SITUACAO_FILHOS,
+            CHAVE_RECADO_NOME, CHAVE_RECADO_DDD, CHAVE_RECADO_NUMERO,
+            CHAVE_ESCOLARIDADE, CHAVE_SITUACAO_ESCOLARIDADE, CHAVE_PERIODO_ESTUDO, CHAVE_CARGO_DESEJADO,
+        ]);
+
+        // Texto do currículo pra filhos (2026-08-21) — "Sem Filhos" segue igual
+        // a sempre; com filhos, o texto NUNCA expõe idade específica: se todos
+        // forem maiores de 18, entra "maior(es) de idade"; se houver pelo menos
+        // um menor, fica só a quantidade, sem nenhum detalhe de idade — pedido
+        // explícito do usuário pra manter o currículo "limpo e profissional".
+        // Registro salvo antes desta mudança (sem `situacao` — só "idade do
+        // filho caçula" em texto livre, nunca usada aqui) cai no texto genérico
+        // de sempre, sem inventar uma situação que não foi informada.
+        function montarTextoFilhos(temFilhos, qtd, situacao) {
+            if (temFilhos === 'Não') return 'Sem Filhos';
+            if (temFilhos !== 'Sim') return null;
+            const n = parseInt(qtd, 10);
+            const singular = n === 1;
+            if (situacao === 'Todos maiores de 18 anos') return `${qtd || ''} ${singular ? 'filho maior de idade' : 'filhos maiores de idade'}`.trim();
+            if (situacao === 'Possui pelo menos um filho menor de 18') return `${qtd || ''} ${singular ? 'filho' : 'filhos'}`.trim();
+            return `${qtd || ''} Filho(s)`.trim();
+        }
+
+        // Combina nível + situação num texto só (ex: "Ensino Médio Completo",
+        // "Ensino Superior em andamento") — nunca fica pré-composto no banco,
+        // sempre montado na hora a partir dos 2 campos separados.
+        function montarTextoEscolaridade(nivel, situacao) {
+            if (!nivel) return '';
+            if (!situacao) return nivel;
+            return `${nivel} ${situacao === 'Em andamento' ? 'em andamento' : situacao}`;
+        }
+
+        // Monta o documento completo do currículo (barra lateral + coluna de
+        // conteúdo), layout A4 de duas colunas fiel ao modelo visual da
+        // gráfica (2026-08-21) — substitui cvHeaderHtml()+formatarCurriculoTemplate()
+        // no caminho "Formatado" (sem IA). O caminho com IA (texto livre da
+        // Edge Function) continua usando cvHeaderHtml() + markdown, sem
+        // mudança — não dá pra encaixar texto corrido nas barras fixas.
+        function formatarCurriculoLayout(c) {
             const dados = c.dados || {};
-            const cursos = {}, empresas = {}, referencias = {};
+            const cursos = {}, empresas = {}, referencias = {}, idiomas = {};
             const secoes = {};
 
             Object.entries(dados).forEach(([k, v]) => {
                 if (!k.trim() || !v) return;
                 const base = baseKey(k);
                 if (CAMPOS_IGNORAR.test(base)) return;
+                if (CHAVES_BARRA_LATERAL.has(base)) return;
                 const i = indiceKey(k);
                 if (base.startsWith('INFORME O CURSO')) { (cursos[i] = cursos[i] || {}).curso = v; return; }
                 if (base.startsWith('EM QUAL INSTITUIÇÃO')) { (cursos[i] = cursos[i] || {}).instituicao = v; return; }
@@ -4604,27 +4902,133 @@
                 if (base.startsWith('QUAL SERIA O NOME DA REFERÊNCIA') || base === 'QUAL SERIA O NOME DESSA PESSOA?' || base === 'QUAL SERIA O NOME DA OUTRA PESSOA?') { (referencias[i] = referencias[i] || {}).nome = v; return; }
                 if (base.startsWith('E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO')) { (referencias[i] = referencias[i] || {}).ddd = v; return; }
                 if (base.startsWith('AGORA O NUMERO DO SEU TELEFONE')) { (referencias[i] = referencias[i] || {}).numero = v; return; }
+                if (base.startsWith('QUAL IDIOMA VOCÊ FALA?')) { (idiomas[i] = idiomas[i] || {}).idioma = v; return; }
+                if (base.startsWith('QUAL O NÍVEL DE CONHECIMENTO NESSE IDIOMA?')) { (idiomas[i] = idiomas[i] || {}).nivel = v; return; }
 
                 const secao = secaoDaChave(k);
                 (secoes[secao] = secoes[secao] || []).push(`<p><b>${escapeHtml(labelAmigavel(k))}:</b> ${escapeHtml(String(v))}</p>`);
             });
 
-            const cursosItens = Object.values(cursos).filter(x => x.curso).map(x =>
-                `<li>${escapeHtml(x.curso)}${x.instituicao ? ' — ' + escapeHtml(x.instituicao) : ''}${x.carga ? ` (${escapeHtml(x.carga)})` : ''}</li>`);
-            if (cursosItens.length) (secoes['Cursos'] = secoes['Cursos'] || []).unshift(`<ul>${cursosItens.join('')}</ul>`);
+            const empresasArr = Object.values(empresas).filter(x => x.nome || x.cargo);
+            const cursosArr = Object.values(cursos).filter(x => x.curso);
+            const referenciasArr = Object.values(referencias).filter(x => x.nome);
+            const idiomasArr = Object.values(idiomas).filter(x => x.idioma);
 
-            const empresasItens = Object.values(empresas).filter(x => x.nome || x.cargo).map(x =>
-                `<li>${escapeHtml(x.cargo || 'Colaborador(a)')} — ${escapeHtml(x.nome || '')}${x.periodo ? ` (${escapeHtml(x.periodo)})` : ''}</li>`);
-            if (empresasItens.length) (secoes['Experiência Profissional'] = secoes['Experiência Profissional'] || []).unshift(`<ul>${empresasItens.join('')}</ul>`);
+            // --- Barra lateral: identidade + contato ---
+            // Nome completo é um campo só desde 2026-08-21 (curriculo-form.html
+            // — ver nomeCompletoAtual() lá), mas o banco continua com nome/
+            // sobrenome separados (mesmas colunas de sempre); aqui as duas
+            // partes são recompostas num nome só pro cabeçalho, que se ajusta
+            // sozinho (montarNomeCv2Html) em vez de sempre quebrar no mesmo
+            // ponto fixo entre nome e sobrenome.
+            const nomeCompleto = titleCase(`${c.nome || ''} ${c.sobrenome || ''}`.trim());
+            const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : null;
+            const foto = c.foto_url ? `<img src="${escapeHtml(c.foto_url)}" alt="Foto">` : '<div class="cv2-foto-placeholder"></div>';
 
-            const referenciasItens = Object.values(referencias).filter(x => x.nome).map(x =>
-                `<li>${escapeHtml(x.nome)}${(x.ddd || x.numero) ? ` — (${escapeHtml(x.ddd || '')}) ${escapeHtml(x.numero || '')}` : ''}</li>`);
-            if (referenciasItens.length) (secoes['Referências Pessoais'] = secoes['Referências Pessoais'] || []).unshift(`<ul>${referenciasItens.join('')}</ul>`);
+            const pessoalLinhas = [
+                c.nacionalidade ? `Nacionalidade: ${escapeHtml(titleCase(c.nacionalidade))}` : null,
+                c.estado_civil ? `Estado Civil: ${escapeHtml(c.estado_civil)}` : null,
+                escapeHtml(montarTextoFilhos(dados[CHAVE_TEM_FILHOS], dados[CHAVE_QTD_FILHOS], dados[CHAVE_SITUACAO_FILHOS]) || '') || null,
+            ].filter(Boolean);
 
-            const ordem = ['Formação', 'Cursos', 'Habilidades', 'Experiência Profissional', 'Referências Pessoais', 'Preferências e Habilitação', 'Outras Informações'];
-            const blocos = ordem.filter(s => secoes[s] && secoes[s].length).map(s => `<h2>${escapeHtml(s)}</h2>${secoes[s].join('')}`).join('');
+            const naturalidade = [dados[CHAVE_NATURALIDADE] ? titleCase(dados[CHAVE_NATURALIDADE]) : null, dados[CHAVE_ESTADO_NASCIMENTO]].filter(Boolean).map(escapeHtml).join(' /');
 
-            return blocos || '<p>Sem informações adicionais.</p>';
+            // Telefone e WhatsApp idênticos (2026-08-21) — vira uma linha só
+            // ("Telefone ou WhatsApp"), sem repetir o mesmo número duas vezes;
+            // diferentes continuam em duas linhas separadas, como sempre.
+            const contatoLinhas = (c.telefone && c.whatsapp && c.telefone === c.whatsapp)
+                ? [`Telefone ou WhatsApp: ${escapeHtml(formatarTelefoneExibicao(c.telefone))}`]
+                : [
+                    c.telefone ? `Ligação: ${escapeHtml(formatarTelefoneExibicao(c.telefone))}` : null,
+                    c.whatsapp ? `Whatsapp: ${escapeHtml(formatarTelefoneExibicao(c.whatsapp))}` : null,
+                  ].filter(Boolean);
+
+            const enderecoLinhas = [
+                c.endereco ? escapeHtml(titleCase(c.endereco)) : null,
+                c.bairro ? `no Bairro ${escapeHtml(titleCase(c.bairro))}` : null,
+                c.cidade ? `Cidade de ${escapeHtml(titleCase(c.cidade))}${c.estado ? '/' + escapeHtml(c.estado) : ''}` : null,
+            ].filter(Boolean);
+
+            const escolaridadeLinhas = [
+                escapeHtml(montarTextoEscolaridade(dados[CHAVE_ESCOLARIDADE], dados[CHAVE_SITUACAO_ESCOLARIDADE])) || null,
+                dados[CHAVE_PERIODO_ESTUDO] ? `Período: ${escapeHtml(dados[CHAVE_PERIODO_ESTUDO])}` : null,
+            ].filter(Boolean);
+
+            const barraLateral = (titulo, linhas) => linhas.length ? `
+                <div class="cv2-bar">${titulo}</div>
+                <div class="cv2-bar-content">${linhas.join('<br>')}</div>` : '';
+
+            const sidebarHtml = `
+                <div class="cv2-sidebar">
+                    <div class="cv2-foto-wrap">${foto}</div>
+                    <div class="cv2-nome">${montarNomeCv2Html(nomeCompleto)}</div>
+                    ${pessoalLinhas.length ? `<div class="cv2-pessoal">${pessoalLinhas.join('<br>')}</div>` : ''}
+                    ${nascimento ? barraLateral('Data de Nascimento', [escapeHtml(nascimento)]) : ''}
+                    ${naturalidade ? barraLateral('Naturalidade', [naturalidade]) : ''}
+                    ${contatoLinhas.length ? barraLateral('Contato/Fone', contatoLinhas) : ''}
+                    ${c.email ? barraLateral('E-mail', [montarEmailCv2Html(c.email)]) : ''}
+                    ${enderecoLinhas.length ? barraLateral('Endereço', enderecoLinhas) : ''}
+                    ${escolaridadeLinhas.length ? barraLateral('Escolaridade', escolaridadeLinhas) : ''}
+                </div>`;
+
+            // --- Coluna de conteúdo: seções em barra de título ---
+            const blocoExperiencias = empresasArr.length ? `
+                <section>
+                    <div class="cv2-bar-h">Experiências Profissionais</div>
+                    ${empresasArr.map(x => `
+                        <div class="cv2-item">
+                            ${x.nome ? `<p><b>EMPRESA:</b> ${escapeHtml(x.nome.toUpperCase())}</p>` : ''}
+                            ${x.cargo ? `<p>Cargo: ${escapeHtml(x.cargo)}</p>` : ''}
+                            ${x.periodo ? `<p>Período: ${escapeHtml(x.periodo)}</p>` : ''}
+                        </div>`).join('')}
+                </section>` : '';
+
+            const blocoCursos = cursosArr.length ? `
+                <section>
+                    <div class="cv2-bar-h">Cursos Profissionalizantes</div>
+                    ${cursosArr.map(x => `<p class="cv2-texto">${escapeHtml(x.curso)}${x.instituicao ? ' — ' + escapeHtml(x.instituicao) : ''}${x.carga ? ` (${escapeHtml(x.carga)})` : ''}</p>`).join('')}
+                </section>` : '';
+
+            const blocoReferencias = referenciasArr.length ? `
+                <section>
+                    <div class="cv2-bar-h">Referência Pessoal</div>
+                    ${referenciasArr.map(x => `<p class="cv2-texto">Contato p/ Referência: ${(x.ddd || x.numero) ? `${escapeHtml(formatarTelefoneExibicao(`${x.ddd || ''}${x.numero || ''}`))} ` : ''}Falar com ${escapeHtml(titleCase(x.nome))}</p>`).join('')}
+                </section>` : '';
+
+            // Idiomas (2026-08-21) — seção própria só quando há pelo menos um
+            // idioma cadastrado (cadastro estruturado idioma+nível, ver
+            // curriculo-form.html); registro sem nenhum idioma adicionado
+            // simplesmente não gera a seção. Nível em minúsculo (fluente,
+            // intermediário, básico) — só cosmético, mesmo padrão já usado em
+            // "Ensino Médio em andamento" (montarTextoEscolaridade).
+            const blocoIdiomas = idiomasArr.length ? `
+                <section>
+                    <div class="cv2-bar-h">Idiomas</div>
+                    <p class="cv2-texto">${idiomasArr.map(x => `${escapeHtml(titleCase(x.idioma))}${x.nivel ? ' — ' + escapeHtml(x.nivel.toLowerCase()) : ''}`).join(', ')}</p>
+                </section>` : '';
+
+            const cargoDesejado = dados[CHAVE_CARGO_DESEJADO];
+            const blocoCargos = cargoDesejado ? `
+                <section>
+                    <div class="cv2-bar-h">Cargos Pretendidos</div>
+                    <p class="cv2-texto">${escapeHtml(cargoDesejado)}</p>
+                </section>` : '';
+
+            const ordemRestante = ['Formação', 'Habilidades', 'Preferências e Habilitação', 'Outras Informações'];
+            const dadosAdicionaisItens = ordemRestante.flatMap(s => secoes[s] || []);
+            const blocoDadosAdicionais = dadosAdicionaisItens.length ? `
+                <section>
+                    <div class="cv2-bar-h">Dados Adicionais</div>
+                    ${dadosAdicionaisItens.join('')}
+                </section>` : '';
+
+            const semConteudo = !blocoExperiencias && !blocoCursos && !blocoReferencias && !blocoIdiomas && !blocoCargos && !blocoDadosAdicionais;
+            const contentHtml = `
+                <div class="cv2-content">
+                    ${semConteudo ? '<p class="cv2-texto">Sem informações adicionais.</p>' : blocoExperiencias + blocoCursos + blocoReferencias + blocoIdiomas + blocoCargos + blocoDadosAdicionais}
+                </div>`;
+
+            return `<div class="cv2-doc">${sidebarHtml}${contentHtml}</div>`;
         }
 
         // Converte o markdown simples que a IA devolve (## títulos, listas com "-",
@@ -4667,7 +5071,7 @@
 
             if (!useIA) {
                 btnRegerar.style.display = 'none';
-                conteudo.innerHTML = cvHeaderHtml(c) + formatarCurriculoTemplate(c);
+                conteudo.innerHTML = formatarCurriculoLayout(c);
                 btnImprimir.style.display = '';
                 return;
             }

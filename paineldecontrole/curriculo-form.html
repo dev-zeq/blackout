@@ -63,6 +63,11 @@
     .btn-back { background: var(--surface-2); color: var(--text-dim); flex: 0 0 90px; }
     .btn:disabled { opacity: 0.5; cursor: default; }
     .error-msg { color: var(--danger); font-size: 12px; margin-top: 10px; display: none; }
+    /* Aviso não-bloqueante de período de estudo × disponibilidade (2026-08-21)
+       — âmbar, pra diferenciar de erro (vermelho) e de confirmação positiva
+       (verde), sem introduzir cor nova fora da paleta de status já usada. */
+    .aviso-disponibilidade { background: rgba(245,165,36,0.08); border: 1px solid rgba(245,165,36,0.35); border-radius: 14px; padding: 14px; margin-top: 4px; }
+    .aviso-disponibilidade p { font-size: 13px; line-height: 1.5; color: var(--text); margin: 0; }
     .review-item { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
     .review-item .rk { color: var(--text-dim); }
     .review-item .rv { color: var(--text); text-align: right; font-weight: 600; }
@@ -106,14 +111,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // que já existem no Supabase.
 const s = {
     nome: '', sobrenome: '', sexo: '', nascimento: '', nacionalidade: '', nacionalidade_outra: '',
-    naturalidade: '', estado_nascimento: '', estado_civil: '', tem_filhos: '', qtd_filhos: '', idade_filho_cacula: '',
-    ddd47: '', ddd_custom: '', telefone_numero: '', whatsapp_mesmo: '', ddd_whatsapp: '', whatsapp_numero: '',
-    contato_recado_nome: '', contato_recado_ddd: '', contato_recado_numero: '',
+    naturalidade: '', estado_nascimento: '', estado_civil: '', tem_filhos: '', qtd_filhos: '', situacao_filhos: '',
+    ddd: '', telefone_numero: '', whatsapp_mesmo: '', ddd_whatsapp: '', whatsapp_numero: '',
     tem_email: '', email: '',
     rua: '', numero: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado_residencia: '',
-    tem_superior: '', area_formacao: '', periodo_formacao: '', grau_escolar: '', processo_estudo: '', horario_estudo: '',
+    escolaridade: '', situacao_escolaridade: '', periodo_estudo: '',
     fez_curso: '', cursos: [],
-    informatica: '', outros_idiomas: '', quais_idiomas: '',
+    informatica: '', outros_idiomas: '', idiomas: [],
     tem_experiencia: '', empresas: [],
     referencias: [],
     fumante: '', disponibilidade: [], destacar_cargo: '', qual_cargo: '', tipo_cargo_busca: '',
@@ -264,10 +268,17 @@ function render() {
     bindStepEvents();
 }
 
-function goNext() {
+function goNext(ignorarAvisoDisponibilidade) {
     saveCurrentStep();
     const err = validateCurrentStep();
     if (err) { showError(err); return; }
+    // Confirmação não-bloqueante entre período de estudo × disponibilidade de
+    // horário (2026-08-21) — só intercepta o avanço na etapa de Preferências,
+    // e só quando não veio de "Manter informação" (que já pediu pra ignorar).
+    if (!ignorarAvisoDisponibilidade && steps[stepIndex] === stepPreferencias) {
+        const conflito = verificarConflitoDisponibilidade();
+        if (conflito) { mostrarAvisoDisponibilidade(conflito); return; }
+    }
     if (stepIndex < steps.length - 1) { stepIndex++; render(); window.scrollTo(0, 0); }
 }
 function goBack() {
@@ -278,12 +289,17 @@ function showError(msg) {
     if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
 
+// Nome completo é um campo só na UI (pedido do usuário, 2026-08-21), mas o
+// banco continua com `nome`/`sobrenome` separados (mesmas colunas de sempre,
+// mesma automação/edição) — esse helper só recompõe o valor pra mostrar no
+// input; a separação de volta em s.nome/s.sobrenome acontece em saveCurrentStep.
+function nomeCompletoAtual() { return `${s.nome} ${s.sobrenome}`.trim(); }
+
 // ---------- Etapa 1: Dados Pessoais ----------
 function stepDadosPessoais() {
     return `
     <h2>Dados Pessoais</h2>
-    <div class="field"><label>Somente o primeiro nome *</label><input type="text" id="f_nome" value="${esc(s.nome)}"></div>
-    <div class="field"><label>Restante do seu nome (sobrenome) *</label><input type="text" id="f_sobrenome" value="${esc(s.sobrenome)}"></div>
+    <div class="field"><label>Nome completo *</label><input type="text" id="f_nome_completo" value="${esc(nomeCompletoAtual())}"></div>
     <div class="field"><label>Qual foi o sexo atribuído no seu nascimento? *</label>
         <div class="radio-group">${pill('f_sexo', 'Masculino', s.sexo === 'Masculino')}${pill('f_sexo', 'Feminino', s.sexo === 'Feminino')}</div>
     </div>
@@ -300,6 +316,12 @@ function stepDadosPessoais() {
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
+// Naturalidade (cidade + UF onde nasceu) só faz sentido — e só é pedida —
+// pra quem é Brasileiro(a) (2026-08-21). Nacionalidade estrangeira já é a
+// própria informação de origem; pedir "naturalidade" nesse caso duplicava o
+// que a Nacionalidade selecionada acima já diz, então o espaço fica só com o
+// que já existia pra esse caso (o país de origem, quando "Outra Nacionalidade"),
+// sem nenhum campo novo.
 function renderCondNacionalidade() {
     const el = document.getElementById('condNacionalidade');
     if (!el) return;
@@ -307,11 +329,9 @@ function renderCondNacionalidade() {
     if (s.nacionalidade === 'Outra Nacionalidade') {
         html += `<div class="field"><label>Qual sua nacionalidade? (seu país de origem) *</label><input type="text" id="f_nac_outra" value="${esc(s.nacionalidade_outra)}"></div>`;
     }
-    if (s.nacionalidade && s.nacionalidade !== 'Brasileiro(a)') {
-        html += `<div class="field"><label>Naturalidade (cidade onde você nasceu) *</label><input type="text" id="f_naturalidade" value="${esc(s.naturalidade)}"></div>`;
-    }
     if (s.nacionalidade === 'Brasileiro(a)') {
-        html += `<div class="field"><label>Em qual estado você nasceu? *</label><select id="f_estado_nasc"><option value="">Selecione</option>${estadoOptions(s.estado_nascimento)}</select></div>`;
+        html += `<div class="field"><label>Naturalidade — Cidade onde nasceu *</label><input type="text" id="f_naturalidade" value="${esc(s.naturalidade)}"></div>`;
+        html += `<div class="field"><label>Naturalidade — Estado (UF) *</label><select id="f_estado_nasc"><option value="">Selecione</option>${estadoOptions(s.estado_nascimento)}</select></div>`;
     }
     el.innerHTML = html;
 }
@@ -333,44 +353,95 @@ function stepFamilia() {
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
+// Situação dos filhos (2026-08-21) substitui o campo livre "idade do filho
+// caçula" que existia antes — vira uma das 2 opções fixas abaixo, o
+// suficiente pra montar o texto do currículo (ver montarTextoFilhos em
+// index.html) sem expor idade específica de menores de idade.
 function renderCondFilhos() {
     const el = document.getElementById('condFilhos');
     if (!el) return;
     el.innerHTML = s.tem_filhos === 'Sim' ? `
-        <div class="field"><label>Quantos filhos?</label><input type="number" min="1" id="f_qtd_filhos" value="${esc(s.qtd_filhos)}"></div>
-        <div class="field"><label>Sobre a idade do seu filho caçula</label><input type="text" id="f_idade_cacula" value="${esc(s.idade_filho_cacula)}"></div>` : '';
+        <div class="field"><label>Quantos filhos? *</label><input type="number" min="1" id="f_qtd_filhos" value="${esc(s.qtd_filhos)}"></div>
+        <div class="field"><label>Situação dos filhos *</label>
+            <div class="radio-group">
+                ${pill('f_situacao_filhos', 'Todos maiores de 18 anos', s.situacao_filhos === 'Todos maiores de 18 anos')}
+                ${pill('f_situacao_filhos', 'Possui pelo menos um filho menor de 18', s.situacao_filhos === 'Possui pelo menos um filho menor de 18')}
+            </div>
+        </div>` : '';
 }
 
 // ---------- Etapa 3: Contato ----------
+// Reformulado em 2026-08-21: lista de DDD (todos os 67 oficiais do Brasil, ver
+// DDDS_BR) no lugar do atalho "é DDD 47?"/"qual o seu DDD?", e o número já
+// validado/normalizado na hora (8 ou 9 dígitos — 8 dígitos ganha o "9" na
+// frente automaticamente, característica de celular; qualquer outro tamanho
+// é rejeitado com mensagem de correção). Continua salvando `telefone`/
+// `whatsapp` como DDD+9 dígitos concatenado, sem separador — mesmo formato
+// de sempre no banco, então não muda nada pra quem já lê esses campos.
+const DDDS_BR = [
+    ['11', 'SP'], ['12', 'SP'], ['13', 'SP'], ['14', 'SP'], ['15', 'SP'], ['16', 'SP'], ['17', 'SP'], ['18', 'SP'], ['19', 'SP'],
+    ['21', 'RJ'], ['22', 'RJ'], ['24', 'RJ'],
+    ['27', 'ES'], ['28', 'ES'],
+    ['31', 'MG'], ['32', 'MG'], ['33', 'MG'], ['34', 'MG'], ['35', 'MG'], ['37', 'MG'], ['38', 'MG'],
+    ['41', 'PR'], ['42', 'PR'], ['43', 'PR'], ['44', 'PR'], ['45', 'PR'], ['46', 'PR'],
+    ['47', 'SC'], ['48', 'SC'], ['49', 'SC'],
+    ['51', 'RS'], ['53', 'RS'], ['54', 'RS'], ['55', 'RS'],
+    ['61', 'DF'],
+    ['62', 'GO'], ['64', 'GO'],
+    ['63', 'TO'],
+    ['65', 'MT'], ['66', 'MT'],
+    ['67', 'MS'],
+    ['68', 'AC'],
+    ['69', 'RO'],
+    ['71', 'BA'], ['73', 'BA'], ['74', 'BA'], ['75', 'BA'], ['77', 'BA'],
+    ['79', 'SE'],
+    ['81', 'PE'], ['87', 'PE'],
+    ['82', 'AL'],
+    ['83', 'PB'],
+    ['84', 'RN'],
+    ['85', 'CE'], ['88', 'CE'],
+    ['86', 'PI'], ['89', 'PI'],
+    ['91', 'PA'], ['93', 'PA'], ['94', 'PA'],
+    ['92', 'AM'], ['97', 'AM'],
+    ['95', 'RR'],
+    ['96', 'AP'],
+    ['98', 'MA'], ['99', 'MA'],
+];
+function dddOptions(selecionado) {
+    return DDDS_BR.map(([ddd, uf]) => `<option value="${ddd}" ${selecionado === ddd ? 'selected' : ''}>${ddd} — ${uf}</option>`).join('');
+}
+// 8 dígitos = número de celular sem o "9" (formato antigo/como muita gente
+// ainda digita) — ganha o 9 na frente automaticamente. 9 dígitos = já
+// completo, mantém como está. Qualquer outro tamanho é inválido. Retorna
+// `null` quando inválido (nunca lança erro — quem chama decide a mensagem).
+function normalizarTelefoneBR(numero) {
+    const d = (numero || '').replace(/\D/g, '');
+    if (d.length === 8) return '9' + d;
+    if (d.length === 9) return d;
+    return null;
+}
 function stepContato() {
     return `
     <h2>Contato</h2>
-    <div class="field"><label>Seu telefone pra ligação possui o DDD 47? *</label>
-        <div class="radio-group">${pill('f_ddd47', 'Sim', s.ddd47 === 'Sim')}${pill('f_ddd47', 'Não', s.ddd47 === 'Não')}</div>
+    <div class="field"><label>DDD *</label>
+        <select id="f_ddd"><option value="">Selecione</option>${dddOptions(s.ddd)}</select>
     </div>
-    <div id="condDdd"></div>
-    <div class="field"><label>Número do seu telefone pra ligação (sem o DDD) *</label><input type="tel" id="f_telefone_numero" value="${esc(s.telefone_numero)}"></div>
-    <div class="field"><label>Esse número é o mesmo que você utiliza pro WhatsApp? *</label>
+    <div class="field"><label>Telefone de contato *</label>
+        <input type="tel" id="f_telefone_numero" value="${esc(s.telefone_numero)}" placeholder="8 ou 9 dígitos">
+    </div>
+    <div class="field"><label>Este mesmo número também é utilizado no WhatsApp? *</label>
         <div class="radio-group">${pill('f_whatsapp_mesmo', 'Sim', s.whatsapp_mesmo === 'Sim')}${pill('f_whatsapp_mesmo', 'Não', s.whatsapp_mesmo === 'Não')}</div>
     </div>
     <div id="condWhatsapp"></div>
-    <div class="field"><label>Nome de alguém que você tem contato frequente (contato de recado)</label><input type="text" id="f_recado_nome" value="${esc(s.contato_recado_nome)}"></div>
-    <div class="field"><label>DDD do telefone desse contato de recado</label><input type="text" id="f_recado_ddd" value="${esc(s.contato_recado_ddd)}" maxlength="3"></div>
-    <div class="field"><label>Número do telefone desse contato de recado (sem DDD)</label><input type="tel" id="f_recado_numero" value="${esc(s.contato_recado_numero)}"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
-}
-function renderCondDdd() {
-    const el = document.getElementById('condDdd');
-    if (!el) return;
-    el.innerHTML = s.ddd47 === 'Não' ? `<div class="field"><label>Qual o código de DDD do seu telefone?</label><input type="text" id="f_ddd_custom" value="${esc(s.ddd_custom)}" maxlength="3"></div>` : '';
 }
 function renderCondWhatsapp() {
     const el = document.getElementById('condWhatsapp');
     if (!el) return;
     el.innerHTML = s.whatsapp_mesmo === 'Não' ? `
-        <div class="field"><label>DDD do WhatsApp</label><input type="text" id="f_ddd_whatsapp" value="${esc(s.ddd_whatsapp)}" maxlength="3"></div>
-        <div class="field"><label>Número do WhatsApp (sem DDD)</label><input type="tel" id="f_whatsapp_numero" value="${esc(s.whatsapp_numero)}"></div>` : '';
+        <div class="field"><label>DDD do WhatsApp *</label><select id="f_ddd_whatsapp"><option value="">Selecione</option>${dddOptions(s.ddd_whatsapp)}</select></div>
+        <div class="field"><label>Número do WhatsApp *</label><input type="tel" id="f_whatsapp_numero" value="${esc(s.whatsapp_numero)}" placeholder="8 ou 9 dígitos"></div>` : '';
 }
 
 // ---------- Etapa 4: Email / Endereço ----------
@@ -397,40 +468,56 @@ function renderCondEmail() {
 }
 
 // ---------- Etapa 5: Formação ----------
+// Escolaridade reestruturada em 2026-08-21 (só no Painel de Controle — não
+// mexe em Google Forms/Sheets) num campo único de nível + situação + período
+// em cascata, substituindo os campos separados que existiam antes (grau
+// escolar com nível+situação já embutidos no mesmo texto, processo de estudo
+// e horário de estudo isolados, formação superior à parte). Texto final
+// (nível + situação) é montado dinamicamente em index.html (montarTextoEscolaridade),
+// não fica pré-composto aqui.
+const ESCOLARIDADE_NIVEIS = ['Analfabeto', 'Alfabetizado (sem escolaridade formal)', 'Ensino Fundamental', 'Ensino Médio', 'Ensino Técnico', 'Ensino Superior', 'Pós-graduação', 'Mestrado', 'Doutorado'];
+// Analfabeto/Alfabetizado não têm "situação" (não faz sentido perguntar se
+// está "em andamento/incompleto/completo") — a partir de Ensino Fundamental sim.
+const ESCOLARIDADE_SEM_SITUACAO = new Set(['Analfabeto', 'Alfabetizado (sem escolaridade formal)']);
 function stepFormacao() {
     return `
     <h2>Formação</h2>
-    <div class="field"><label>Você possui formação técnica ou de ensino superior?</label>
-        <div class="radio-group">${pill('f_tem_superior', 'Sim', s.tem_superior === 'Sim')}${pill('f_tem_superior', 'Não', s.tem_superior === 'Não')}</div>
-    </div>
-    <div id="condSuperior"></div>
-    <div class="field"><label>Qual seria o seu grau escolar? *</label>
-        <select id="f_grau_escolar">
+    <div class="field"><label>Escolaridade *</label>
+        <select id="f_escolaridade">
             <option value="">Selecione</option>
-            ${['Ensino Fundamental Incompleto','Ensino Fundamental Completo','Ensino Médio Incompleto','Ensino Médio Completo','Ensino Superior Incompleto','Ensino Superior Completo','Pós-graduação'].map(o => `<option value="${o}" ${s.grau_escolar === o ? 'selected' : ''}>${o}</option>`).join('')}
+            ${ESCOLARIDADE_NIVEIS.map(o => `<option value="${o}" ${s.escolaridade === o ? 'selected' : ''}>${o}</option>`).join('')}
         </select>
     </div>
-    <div class="field"><label>Referente ao seu estudo, em que processo você está atualmente?</label>
-        <select id="f_processo_estudo">
-            <option value="">Selecione</option>
-            ${['Concluído','Cursando','Trancado','Não estou estudando'].map(o => `<option value="${o}" ${s.processo_estudo === o ? 'selected' : ''}>${o}</option>`).join('')}
-        </select>
-    </div>
-    <div class="field"><label>Em qual horário você estuda?</label>
-        <select id="f_horario_estudo">
-            <option value="">Selecione</option>
-            ${['Manhã','Tarde','Noite','Não estudo'].map(o => `<option value="${o}" ${s.horario_estudo === o ? 'selected' : ''}>${o}</option>`).join('')}
-        </select>
-    </div>
+    <div id="condEscolaridade"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
-function renderCondSuperior() {
-    const el = document.getElementById('condSuperior');
+function renderCondEscolaridade() {
+    const el = document.getElementById('condEscolaridade');
     if (!el) return;
-    el.innerHTML = s.tem_superior === 'Sim' ? `
-        <div class="field"><label>Qual sua área de formação superior?</label><input type="text" id="f_area_formacao" value="${esc(s.area_formacao)}"></div>
-        <div class="field"><label>Qual período de formação você está atualmente?</label><input type="text" id="f_periodo_formacao" value="${esc(s.periodo_formacao)}"></div>` : '';
+    if (!s.escolaridade || ESCOLARIDADE_SEM_SITUACAO.has(s.escolaridade)) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+        <div class="field"><label>Situação da Escolaridade *</label>
+            <select id="f_situacao_escolaridade">
+                <option value="">Selecione</option>
+                ${['Em andamento', 'Incompleto', 'Completo'].map(o => `<option value="${o}" ${s.situacao_escolaridade === o ? 'selected' : ''}>${o}</option>`).join('')}
+            </select>
+        </div>
+        <div id="condPeriodoEstudo"></div>`;
+    const selSituacao = document.getElementById('f_situacao_escolaridade');
+    if (selSituacao) selSituacao.addEventListener('change', () => { s.situacao_escolaridade = selSituacao.value; s.periodo_estudo = ''; renderCondPeriodoEstudo(); });
+    renderCondPeriodoEstudo();
+}
+function renderCondPeriodoEstudo() {
+    const el = document.getElementById('condPeriodoEstudo');
+    if (!el) return;
+    el.innerHTML = s.situacao_escolaridade === 'Em andamento' ? `
+        <div class="field"><label>Período em que estuda *</label>
+            <select id="f_periodo_estudo">
+                <option value="">Selecione</option>
+                ${['Manhã', 'Tarde', 'Noite', 'Integral', 'EAD', 'Horário Variável'].map(o => `<option value="${o}" ${s.periodo_estudo === o ? 'selected' : ''}>${o}</option>`).join('')}
+            </select>
+        </div>` : '';
 }
 
 // ---------- Etapa 6: Cursos ----------
@@ -463,6 +550,20 @@ function renderCursosArea() {
 }
 
 // ---------- Etapa 7: Informática / Idiomas ----------
+// Reestruturado em 2026-08-21: a pergunta "outros idiomas" adapta o texto
+// pela nacionalidade já informada na etapa 1 (idioma nativo certo pra cada
+// caso, em vez de um genérico "seu idioma nativo" sempre) e o campo de texto
+// livre "escreva aqui os demais idiomas" virou um cadastro estruturado
+// repetível (idioma + nível), mesmo padrão já usado em Cursos/Empresas/
+// Referências (repeat-block + "+ adicionar" + remover, até 5 idiomas).
+function perguntaIdiomaBase() {
+    const nac = s.nacionalidade;
+    if (nac === 'Brasileiro(a)') return 'Além do português, você fala outro idioma?';
+    if (nac === 'Haitiano(a)') return 'Além do crioulo e do francês, você fala outro idioma?';
+    const outraEhArgentina = nac === 'Outra Nacionalidade' && /argentin/i.test(s.nacionalidade_outra || '');
+    if (nac === 'Venezuelano(a)' || outraEhArgentina) return 'Além do espanhol, você fala outro idioma?';
+    return 'Além do seu idioma nativo, você fala outro idioma?';
+}
 function stepInformaticaIdiomas() {
     return `
     <h2>Informática e Idiomas</h2>
@@ -472,7 +573,7 @@ function stepInformaticaIdiomas() {
             ${['Nenhum','Básico','Intermediário','Avançado'].map(o => `<option value="${o}" ${s.informatica === o ? 'selected' : ''}>${o}</option>`).join('')}
         </select>
     </div>
-    <div class="field"><label>Além do seu idioma nativo, você possui conhecimento de outros idiomas?</label>
+    <div class="field"><label>${perguntaIdiomaBase()}</label>
         <div class="radio-group">${pill('f_outros_idiomas', 'Sim', s.outros_idiomas === 'Sim')}${pill('f_outros_idiomas', 'Não', s.outros_idiomas === 'Não')}</div>
     </div>
     <div id="condIdiomas"></div>
@@ -482,8 +583,25 @@ function stepInformaticaIdiomas() {
 function renderCondIdiomas() {
     const el = document.getElementById('condIdiomas');
     if (!el) return;
-    el.innerHTML = s.outros_idiomas === 'Sim' ? `<div class="field"><label>Escreva aqui os demais idiomas que você tem conhecimento</label><input type="text" id="f_quais_idiomas" value="${esc(s.quais_idiomas)}"></div>` : '';
+    if (s.outros_idiomas !== 'Sim') { el.innerHTML = ''; return; }
+    if (s.idiomas.length === 0) s.idiomas.push({ idioma: '', nivel: '' });
+    el.innerHTML = s.idiomas.map((it, i) => `
+        <div class="repeat-block">
+            ${s.idiomas.length > 1 ? `<button type="button" class="btn-remove" data-remove-idioma="${i}">remover</button>` : ''}
+            <div class="repeat-title">Idioma ${i + 1}</div>
+            <div class="field"><label>Qual idioma?</label><input type="text" data-idioma="${i}" data-field="idioma" value="${esc(it.idioma)}"></div>
+            <div class="field"><label>Nível de conhecimento</label>
+                <select data-idioma="${i}" data-field="nivel">
+                    <option value="">Selecione</option>
+                    ${['Básico', 'Intermediário', 'Avançado', 'Fluente'].map(o => `<option value="${o}" ${it.nivel === o ? 'selected' : ''}>${o}</option>`).join('')}
+                </select>
+            </div>
+        </div>`).join('') + (s.idiomas.length < 5 ? `<button type="button" class="btn-add" id="btnAddIdioma">+ Adicionar outro idioma</button>` : '');
+    const btnAdd = document.getElementById('btnAddIdioma');
+    if (btnAdd) btnAdd.addEventListener('click', () => { saveIdioma(); s.idiomas.push({ idioma: '', nivel: '' }); renderCondIdiomas(); });
+    el.querySelectorAll('[data-remove-idioma]').forEach(b => b.addEventListener('click', () => { saveIdioma(); s.idiomas.splice(+b.dataset.removeIdioma, 1); renderCondIdiomas(); }));
 }
+function saveIdioma() { document.querySelectorAll('[data-idioma]').forEach(inp => { const i = +inp.dataset.idioma, f = inp.dataset.field; if (s.idiomas[i]) s.idiomas[i][f] = inp.value; }); }
 
 // ---------- Etapa 8: Experiência ----------
 function stepExperiencia() {
@@ -545,6 +663,56 @@ function renderReferenciasArea() {
 
 // ---------- Etapa 10: Preferências ----------
 const DISPONIBILIDADE_OPTS = ['Período Integral', 'Meio Período - Manhã', 'Meio Período - Tarde', 'Meio Período - Noite', 'Fins de Semana', 'Qualquer Horário'];
+
+// Validação inteligente período de estudo × disponibilidade (2026-08-21) —
+// só roda quando a escolaridade está "Em andamento" (Completo/Incompleto não
+// entra em conflito nenhum, já são situações definitivas) e o período de
+// estudo é um horário fixo real (Manhã/Tarde/Noite/Integral); EAD e Horário
+// Variável nunca validam, porque não ocupam um horário fixo do dia. Pra cada
+// período de meio turno, lista as opções de disponibilidade que colidem
+// (o próprio turno, Período Integral e Qualquer Horário — todas cobririam o
+// mesmo horário em que a pessoa já disse que estuda) e a sugestão de
+// substituição, usando só as opções que já existem em DISPONIBILIDADE_OPTS
+// (não foram inventadas opções novas tipo "comercial"/"vespertino").
+const DISPONIBILIDADE_CONFLITOS = {
+    'Manhã': { opcoes: ['Meio Período - Manhã', 'Período Integral', 'Qualquer Horário'], sugestao: 'Meio Período - Tarde, Meio Período - Noite ou Fins de Semana' },
+    'Tarde': { opcoes: ['Meio Período - Tarde', 'Período Integral', 'Qualquer Horário'], sugestao: 'Meio Período - Manhã ou Meio Período - Noite' },
+    'Noite': { opcoes: ['Meio Período - Noite', 'Período Integral', 'Qualquer Horário'], sugestao: 'Meio Período - Manhã ou Meio Período - Tarde' },
+};
+// Retorna `null` (sem conflito, avança normal) ou `{ mensagem }` — nunca
+// bloqueia, só descreve o que foi encontrado pra mostrarAvisoDisponibilidade().
+function verificarConflitoDisponibilidade() {
+    if (s.situacao_escolaridade !== 'Em andamento') return null;
+    const periodo = s.periodo_estudo;
+    if (!periodo || periodo === 'EAD' || periodo === 'Horário Variável') return null;
+    if (!s.disponibilidade.length) return null;
+
+    if (periodo === 'Integral') {
+        return { mensagem: 'Atenção: você estuda em período integral. Tem certeza que deseja manter a disponibilidade selecionada? Confirme se ela é compatível com sua rotina de estudos.' };
+    }
+    const regra = DISPONIBILIDADE_CONFLITOS[periodo];
+    if (!regra || !s.disponibilidade.some(d => regra.opcoes.includes(d))) return null;
+    return { mensagem: `Atenção: você estuda no período da ${periodo.toLowerCase()}. Tem certeza que deseja manter a disponibilidade igual? Recomendado: ${regra.sugestao}.` };
+}
+// Caixa de confirmação não-bloqueante — some assim que o usuário escolhe
+// "Manter informação" (aí sim avança, sem rodar a validação de novo pra essa
+// mesma etapa) ou "Alterar disponibilidade" (só fecha a caixa, formulário
+// continua exatamente onde estava, pra pessoa editar a marcação).
+function mostrarAvisoDisponibilidade(conflito) {
+    const el = document.getElementById('avisoDisponibilidade');
+    if (!el) return;
+    el.innerHTML = `
+        <div class="aviso-disponibilidade">
+            <p>${esc(conflito.mensagem)}</p>
+            <div class="nav-row" style="margin-top:10px;">
+                <button type="button" class="btn btn-back" id="btnAvisoAlterar">Alterar disponibilidade</button>
+                <button type="button" class="btn btn-next" id="btnAvisoManter">Manter informação</button>
+            </div>
+        </div>`;
+    document.getElementById('btnAvisoManter').addEventListener('click', () => { el.innerHTML = ''; goNext(true); });
+    document.getElementById('btnAvisoAlterar').addEventListener('click', () => { el.innerHTML = ''; });
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 function stepPreferencias() {
     return `
     <h2>Preferências de Trabalho</h2>
@@ -556,6 +724,7 @@ function stepPreferencias() {
             ${DISPONIBILIDADE_OPTS.map(o => `<label class="radio-pill"><input type="checkbox" id="disp_${o.replace(/\W/g,'')}" value="${esc(o)}" ${s.disponibilidade.includes(o) ? 'checked' : ''} data-disp><span class="pill-label">${o}</span></label>`).join('')}
         </div>
     </div>
+    <div id="avisoDisponibilidade"></div>
     <div class="field"><label>Gostaria de destacar em seu currículo algum cargo de preferência?</label>
         <div class="radio-group">${pill('f_destacar_cargo', 'Sim', s.destacar_cargo === 'Sim')}${pill('f_destacar_cargo', 'Não', s.destacar_cargo === 'Não')}</div>
     </div>
@@ -627,7 +796,7 @@ function stepRevisao() {
     const rows = [
         ['Nome', `${s.nome} ${s.sobrenome}`.trim()],
         ['Nascimento', s.nascimento], ['Nacionalidade', s.nacionalidade],
-        ['Estado civil', s.estado_civil], ['Telefone', s.telefone_numero],
+        ['Estado civil', s.estado_civil], ['Telefone', s.ddd ? `(${s.ddd}) ${s.telefone_numero}` : s.telefone_numero],
         ['Email', s.tem_email === 'Sim' ? s.email : '—'],
         ['Endereço', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoResidenciaFinal()}`],
         ['Cursos', s.fez_curso === 'Sim' ? s.cursos.filter(c => c.curso).map(c => c.curso).join(', ') || '—' : '—'],
@@ -646,22 +815,30 @@ function stepRevisao() {
 function validateCurrentStep() {
     switch (stepIndex) {
         case 0:
-            if (!s.nome || !s.sobrenome || !s.sexo || !s.nascimento || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
+            if (!s.nome || !s.sobrenome) return 'Informe seu nome completo (nome e sobrenome).';
+            if (!s.sexo || !s.nascimento || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
             if (s.nacionalidade === 'Outra Nacionalidade' && !s.nacionalidade_outra) return 'Informe sua nacionalidade.';
-            if (s.nacionalidade !== 'Brasileiro(a)' && s.nacionalidade && !s.naturalidade) return 'Informe sua naturalidade.';
-            if (s.nacionalidade === 'Brasileiro(a)' && !s.estado_nascimento) return 'Selecione o estado de nascimento.';
+            if (s.nacionalidade === 'Brasileiro(a)' && (!s.naturalidade || !s.estado_nascimento)) return 'Informe sua naturalidade (cidade e estado).';
             return null;
         case 1:
             if (!s.estado_civil || !s.tem_filhos) return 'Preencha todos os campos obrigatórios (*).';
+            if (s.tem_filhos === 'Sim' && (!s.qtd_filhos || !s.situacao_filhos)) return 'Informe a quantidade e a situação dos filhos.';
             return null;
         case 2:
-            if (!s.ddd47 || !s.telefone_numero || !s.whatsapp_mesmo) return 'Preencha todos os campos obrigatórios (*).';
+            if (!s.ddd || !s.telefone_numero || !s.whatsapp_mesmo) return 'Preencha todos os campos obrigatórios (*).';
+            if (!normalizarTelefoneBR(s.telefone_numero)) return 'Telefone inválido — informe 8 ou 9 dígitos (sem o DDD).';
+            if (s.whatsapp_mesmo === 'Não') {
+                if (!s.ddd_whatsapp || !s.whatsapp_numero) return 'Preencha o DDD e o número do WhatsApp.';
+                if (!normalizarTelefoneBR(s.whatsapp_numero)) return 'WhatsApp inválido — informe 8 ou 9 dígitos (sem o DDD).';
+            }
             return null;
         case 3:
             if (!s.rua || !s.numero || !cidadeFinal() || !bairroFinal() || !estadoResidenciaFinal()) return 'Preencha todos os campos obrigatórios (*).';
             return null;
         case 4:
-            if (!s.grau_escolar) return 'Selecione seu grau escolar.';
+            if (!s.escolaridade) return 'Selecione sua escolaridade.';
+            if (!ESCOLARIDADE_SEM_SITUACAO.has(s.escolaridade) && !s.situacao_escolaridade) return 'Selecione a situação da sua escolaridade.';
+            if (s.situacao_escolaridade === 'Em andamento' && !s.periodo_estudo) return 'Selecione o período em que estuda.';
             return null;
         default: return null;
     }
@@ -669,7 +846,11 @@ function validateCurrentStep() {
 function saveCurrentStep() {
     switch (stepIndex) {
         case 0:
-            s.nome = val('f_nome'); s.sobrenome = val('f_sobrenome');
+            // Campo único "Nome completo" na UI, separado aqui em nome (1ª
+            // palavra) + sobrenome (resto) pra manter s.nome/s.sobrenome —
+            // usados sem mudança no resto do arquivo, no envio e na edição.
+            { const partes = val('f_nome_completo').trim().replace(/\s+/g, ' ').split(' ').filter(Boolean);
+              s.nome = partes[0] || ''; s.sobrenome = partes.slice(1).join(' '); }
             s.sexo = checkedVal('f_sexo');
             { const dd = val('f_nasc_dia'), mm = val('f_nasc_mes'), yy = val('f_nasc_ano'); s.nascimento = (dd && mm && yy) ? `${yy}-${mm}-${dd}` : ''; }
             s.nacionalidade = checkedVal('f_nacionalidade');
@@ -678,14 +859,12 @@ function saveCurrentStep() {
             break;
         case 1:
             s.estado_civil = val('f_estado_civil'); s.tem_filhos = checkedVal('f_tem_filhos');
-            s.qtd_filhos = val('f_qtd_filhos'); s.idade_filho_cacula = val('f_idade_cacula');
+            s.qtd_filhos = val('f_qtd_filhos'); s.situacao_filhos = checkedVal('f_situacao_filhos');
             break;
         case 2:
-            s.ddd47 = checkedVal('f_ddd47'); s.ddd_custom = val('f_ddd_custom');
+            s.ddd = val('f_ddd');
             s.telefone_numero = val('f_telefone_numero'); s.whatsapp_mesmo = checkedVal('f_whatsapp_mesmo');
             s.ddd_whatsapp = val('f_ddd_whatsapp'); s.whatsapp_numero = val('f_whatsapp_numero');
-            s.contato_recado_nome = val('f_recado_nome'); s.contato_recado_ddd = val('f_recado_ddd');
-            s.contato_recado_numero = val('f_recado_numero');
             break;
         case 3:
             s.tem_email = checkedVal('f_tem_email'); s.email = val('f_email');
@@ -694,9 +873,9 @@ function saveCurrentStep() {
             if (!estadoForcadoSC()) s.estado_residencia = val('f_estado_res');
             break;
         case 4:
-            s.tem_superior = checkedVal('f_tem_superior'); s.area_formacao = val('f_area_formacao');
-            s.periodo_formacao = val('f_periodo_formacao'); s.grau_escolar = val('f_grau_escolar');
-            s.processo_estudo = val('f_processo_estudo'); s.horario_estudo = val('f_horario_estudo');
+            s.escolaridade = val('f_escolaridade');
+            s.situacao_escolaridade = val('f_situacao_escolaridade');
+            s.periodo_estudo = val('f_periodo_estudo');
             break;
         case 5:
             s.fez_curso = checkedVal('f_fez_curso');
@@ -707,7 +886,10 @@ function saveCurrentStep() {
             break;
         case 6:
             s.informatica = val('f_informatica'); s.outros_idiomas = checkedVal('f_outros_idiomas');
-            s.quais_idiomas = val('f_quais_idiomas');
+            document.querySelectorAll('[data-idioma]').forEach(inp => {
+                const i = +inp.dataset.idioma, f = inp.dataset.field;
+                if (s.idiomas[i]) s.idiomas[i][f] = inp.value;
+            });
             break;
         case 7:
             s.tem_experiencia = checkedVal('f_tem_experiencia');
@@ -740,12 +922,12 @@ function bindStepEvents() {
     // re-render blocos condicionais quando o rádio pai muda
     document.querySelectorAll('input[name="f_nacionalidade"]').forEach(r => r.addEventListener('change', () => { s.nacionalidade = checkedVal('f_nacionalidade'); renderCondNacionalidade(); }));
     document.querySelectorAll('input[name="f_tem_filhos"]').forEach(r => r.addEventListener('change', () => { s.tem_filhos = checkedVal('f_tem_filhos'); renderCondFilhos(); }));
-    document.querySelectorAll('input[name="f_ddd47"]').forEach(r => r.addEventListener('change', () => { s.ddd47 = checkedVal('f_ddd47'); renderCondDdd(); }));
     document.querySelectorAll('input[name="f_whatsapp_mesmo"]').forEach(r => r.addEventListener('change', () => { s.whatsapp_mesmo = checkedVal('f_whatsapp_mesmo'); renderCondWhatsapp(); }));
     document.querySelectorAll('input[name="f_tem_email"]').forEach(r => r.addEventListener('change', () => { s.tem_email = checkedVal('f_tem_email'); renderCondEmail(); }));
     const selCidade = document.getElementById('f_cidade');
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado_residencia = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstadoResidencia(); });
-    document.querySelectorAll('input[name="f_tem_superior"]').forEach(r => r.addEventListener('change', () => { s.tem_superior = checkedVal('f_tem_superior'); renderCondSuperior(); }));
+    const selEscolaridade = document.getElementById('f_escolaridade');
+    if (selEscolaridade) selEscolaridade.addEventListener('change', () => { s.escolaridade = selEscolaridade.value; s.situacao_escolaridade = ''; s.periodo_estudo = ''; renderCondEscolaridade(); });
     document.querySelectorAll('input[name="f_fez_curso"]').forEach(r => r.addEventListener('change', () => { s.fez_curso = checkedVal('f_fez_curso'); renderCursosArea(); }));
     document.querySelectorAll('input[name="f_outros_idiomas"]').forEach(r => r.addEventListener('change', () => { s.outros_idiomas = checkedVal('f_outros_idiomas'); renderCondIdiomas(); }));
     document.querySelectorAll('input[name="f_tem_experiencia"]').forEach(r => r.addEventListener('change', () => { s.tem_experiencia = checkedVal('f_tem_experiencia'); renderEmpresasArea(); }));
@@ -765,8 +947,8 @@ function bindStepEvents() {
     if (btnSubmit) btnSubmit.addEventListener('click', submitForm);
 
     // renders iniciais dos blocos condicionais/repetíveis da etapa atual
-    renderCondNacionalidade(); renderCondFilhos(); renderCondDdd(); renderCondWhatsapp();
-    renderCondEmail(); renderCondCidade(); renderCondEstadoResidencia(); renderCondSuperior(); renderCursosArea(); renderCondIdiomas();
+    renderCondNacionalidade(); renderCondFilhos(); renderCondWhatsapp();
+    renderCondEmail(); renderCondCidade(); renderCondEstadoResidencia(); renderCondEscolaridade(); renderCursosArea(); renderCondIdiomas();
     renderEmpresasArea(); renderReferenciasArea(); renderCondCargo(); renderCondCnh();
     renderFotoPreview();
 }
@@ -779,8 +961,13 @@ async function submitForm() {
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true; btn.textContent = 'Enviando...';
 
-    const telefone = s.telefone_numero ? (s.ddd47 === 'Sim' ? '47' : s.ddd_custom) + s.telefone_numero : null;
-    const whatsapp = s.whatsapp_mesmo === 'Sim' ? telefone : (s.whatsapp_numero ? (s.ddd_whatsapp || '') + s.whatsapp_numero : null);
+    // Continua salvando DDD+9 dígitos concatenado, sem separador — mesmo
+    // formato de sempre nas colunas `telefone`/`whatsapp` (normalizarTelefoneBR
+    // garante os 9 dígitos mesmo se a pessoa digitou só 8, sem o "9" na frente).
+    const telNormalizado = normalizarTelefoneBR(s.telefone_numero);
+    const telefone = telNormalizado ? (s.ddd || '') + telNormalizado : null;
+    const waNormalizado = s.whatsapp_mesmo === 'Sim' ? telNormalizado : normalizarTelefoneBR(s.whatsapp_numero);
+    const whatsapp = s.whatsapp_mesmo === 'Sim' ? telefone : (waNormalizado ? (s.ddd_whatsapp || '') + waNormalizado : null);
 
     const dados = {};
     const put = (k, v) => { if (v !== '' && v != null) dados[k] = v; };
@@ -794,16 +981,10 @@ async function submitForm() {
     put('EM QUAL ESTADO?', s.estado_nascimento);
     put('VOCÊ TEM FILHOS?', s.tem_filhos);
     put('QUANTOS FILHOS?', s.qtd_filhos);
-    put('SOBRE A IDADE DO SEU FILHO CAÇULA', s.idade_filho_cacula);
-    put('ESCREVA O NOME DE ALGUEM QUE VOCÊ TEM CONTATO FREQUENTIMENTE! (essa pessoa vai servir como seu contato de recado)', s.contato_recado_nome);
-    put('E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO DE RECADO?', s.contato_recado_ddd);
-    put('AGORA O NUMERO DO SEU TELEFONE DO SEU CONTATO DE RECADO? (sem o DDD)', s.contato_recado_numero);
-    put('VOCÊ POSSUI ALGUMA FORMAÇÃO TÉCNICA DE ENSINO SUPERIOR?', s.tem_superior);
-    put('QUAL SUA ÁREA DE FORMAÇÃO SUPERIOR?', s.area_formacao);
-    put('E QUAL PERÍODO DE FORMAÇÃO VOCÊ ESTÁ ATUALMENTE?', s.periodo_formacao);
-    put('E QUAL SERIA O SEU GRAU ESCOLAR?', s.grau_escolar);
-    put('REFERENTE AO SEU ESTUDO EM QUE PROCESSO VOCÊ ESTÁ ATUALMENTE?', s.processo_estudo);
-    put('EM QUAL HORÁRIO VOCÊ ESTUDA?', s.horario_estudo);
+    put('QUAL A SITUAÇÃO DOS SEUS FILHOS?', s.situacao_filhos);
+    put('QUAL A SUA ESCOLARIDADE?', s.escolaridade);
+    put('QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?', s.situacao_escolaridade);
+    put('EM QUE PERÍODO VOCÊ ESTUDA?', s.periodo_estudo);
     put('VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?', s.fez_curso);
     if (s.fez_curso === 'Sim') {
         s.cursos.forEach((c, i) => {
@@ -815,7 +996,13 @@ async function submitForm() {
     }
     put('MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)', s.informatica);
     put('ALÉM DO SEU IDIOMA NATIVO (natural da sua Região) VOCÊ POSSSUI CONHECIMENTO DE OUTROS IDIOMAS?', s.outros_idiomas);
-    put('ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO!', s.quais_idiomas);
+    if (s.outros_idiomas === 'Sim') {
+        s.idiomas.forEach((it, i) => {
+            const n = i + 1;
+            put(`QUAL IDIOMA VOCÊ FALA? (${n})`, it.idioma);
+            put(`QUAL O NÍVEL DE CONHECIMENTO NESSE IDIOMA? (${n})`, it.nivel);
+        });
+    }
     put('VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?', s.tem_experiencia);
     if (s.tem_experiencia === 'Tenho experiência') {
         s.empresas.forEach((e, i) => {
@@ -960,16 +1147,14 @@ function carregarParaEdicao(row) {
 
     s.tem_filhos = get('VOCÊ TEM FILHOS?');
     s.qtd_filhos = get('QUANTOS FILHOS?');
-    s.idade_filho_cacula = get('SOBRE A IDADE DO SEU FILHO CAÇULA');
+    s.situacao_filhos = get('QUAL A SITUAÇÃO DOS SEUS FILHOS?');
 
     // Telefone/whatsapp são salvos como DDD+número concatenado, sem separador
     // — só dá pra separar de volta porque DDD brasileiro é sempre 2 dígitos.
     const tel = row.telefone || '';
     if (tel.length >= 2) {
-        const ddd = tel.slice(0, 2);
+        s.ddd = tel.slice(0, 2);
         s.telefone_numero = tel.slice(2);
-        s.ddd47 = ddd === '47' ? 'Sim' : 'Não';
-        s.ddd_custom = ddd === '47' ? '' : ddd;
     }
     const wa = row.whatsapp || '';
     if (wa && wa === tel) {
@@ -981,22 +1166,15 @@ function carregarParaEdicao(row) {
     } else if (tel) {
         s.whatsapp_mesmo = 'Não';
     }
-    s.contato_recado_nome = get('ESCREVA O NOME DE ALGUEM QUE VOCÊ TEM CONTATO FREQUENTIMENTE! (essa pessoa vai servir como seu contato de recado)');
-    s.contato_recado_ddd = get('E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO DE RECADO?');
-    s.contato_recado_numero = get('AGORA O NUMERO DO SEU TELEFONE DO SEU CONTATO DE RECADO? (sem o DDD)');
-
     s.tem_email = row.email ? 'Sim' : 'Não';
     s.email = row.email || '';
     carregarEnderecoSolto(get('rua'), get('numero'), get('complemento'), row.endereco);
     carregarCidadeBairro(row.cidade, row.bairro);
     s.estado_residencia = row.estado || '';
 
-    s.tem_superior = get('VOCÊ POSSUI ALGUMA FORMAÇÃO TÉCNICA DE ENSINO SUPERIOR?');
-    s.area_formacao = get('QUAL SUA ÁREA DE FORMAÇÃO SUPERIOR?');
-    s.periodo_formacao = get('E QUAL PERÍODO DE FORMAÇÃO VOCÊ ESTÁ ATUALMENTE?');
-    s.grau_escolar = get('E QUAL SERIA O SEU GRAU ESCOLAR?');
-    s.processo_estudo = get('REFERENTE AO SEU ESTUDO EM QUE PROCESSO VOCÊ ESTÁ ATUALMENTE?');
-    s.horario_estudo = get('EM QUAL HORÁRIO VOCÊ ESTUDA?');
+    s.escolaridade = get('QUAL A SUA ESCOLARIDADE?');
+    s.situacao_escolaridade = get('QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?');
+    s.periodo_estudo = get('EM QUE PERÍODO VOCÊ ESTUDA?');
 
     s.fez_curso = get('VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?');
     s.cursos = [];
@@ -1009,7 +1187,12 @@ function carregarParaEdicao(row) {
 
     s.informatica = get('MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)');
     s.outros_idiomas = get('ALÉM DO SEU IDIOMA NATIVO (natural da sua Região) VOCÊ POSSSUI CONHECIMENTO DE OUTROS IDIOMAS?');
-    s.quais_idiomas = get('ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO!');
+    s.idiomas = [];
+    for (let n = 1; n <= 5; n++) {
+        const idioma = get(`QUAL IDIOMA VOCÊ FALA? (${n})`);
+        const nivel = get(`QUAL O NÍVEL DE CONHECIMENTO NESSE IDIOMA? (${n})`);
+        if (idioma || nivel) s.idiomas.push({ idioma, nivel });
+    }
 
     s.tem_experiencia = get('VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?');
     s.empresas = [];
