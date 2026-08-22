@@ -292,34 +292,96 @@
            barras de título. Sempre claro (papel), igual ao .recibo-doc —
            cores fixas, não var(--...), pra não herdar o tema escuro do painel
            nem no modal nem na impressão. */
-        .cv2-doc { display: flex; align-items: stretch; background: #fff; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        .cv2-sidebar { width: 240px; flex-shrink: 0; background: #3b4a5c; color: #fff; padding: 24px 18px; }
-        .cv2-foto-wrap { text-align: center; margin-bottom: 14px; }
-        .cv2-foto-wrap img { width: 118px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; border: 2px solid rgba(255,255,255,0.25); }
-        .cv2-foto-placeholder { width: 118px; aspect-ratio: 3 / 4; margin: 0 auto; border-radius: 4px; background: rgba(255,255,255,0.08); border: 2px dashed rgba(255,255,255,0.25); }
-        .cv2-nome { text-align: center; margin-bottom: 14px; }
-        .cv2-nome-linha { display: block; font-size: 17px; font-weight: 800; line-height: 1.3; }
-        .cv2-pessoal { text-align: center; font-size: 11.5px; line-height: 1.7; color: #dbe1e8; margin-bottom: 6px; }
-        .cv2-bar { background: #2c3948; font-size: 11px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; padding: 6px 8px; margin: 14px -18px 8px; }
-        .cv2-bar-content { font-size: 12px; line-height: 1.65; text-align: center; color: #eef1f4; word-break: break-word; }
-        .cv2-bar-content a { color: #eef1f4; }
-        .cv2-content { flex: 1; min-width: 0; padding: 26px 28px; }
-        .cv2-content section { margin-bottom: 20px; }
+        .cv2-doc { display: flex; align-items: stretch; width: 100%; background: #fff; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        /* Barra lateral em % (não px fixo) — 2026-08-22, pedido do usuário pra
+           ocupar ~30% da largura do documento em vez de um valor fixo em
+           pixels, e escalar junto com a área maior liberada na impressão (ver
+           @media print abaixo). Cor trocada de azul-marinho escuro (#3b4a5c)
+           pra um cinza suave (#e5e5e5) — mais leve/elegante, texto passa de
+           branco pra escuro. As barrinhas de título dentro da lateral
+           (.cv2-bar/.cv2-bar-content) continuam no azul-marinho da marca com
+           texto claro, agora como blocos de contraste sobre o cinza — é o que
+           preserva a identidade visual pedida, só o fundo geral que mudou. */
+        .cv2-sidebar { width: 30%; flex-shrink: 0; background: #e5e5e5; color: #2c3948; padding: 30px 22px; }
+        .cv2-foto-wrap { text-align: center; margin-bottom: 16px; }
+        .cv2-foto-wrap img { width: 136px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(44,57,72,0.2); }
+        .cv2-foto-placeholder { width: 136px; aspect-ratio: 3 / 4; margin: 0 auto; border-radius: 4px; background: rgba(44,57,72,0.05); border: 2px dashed rgba(44,57,72,0.25); }
+        /* Caixas de título da lateral (2026-08-22) — todas no mesmo tom de
+           azul-petróleo (#0b2e42, uma cor só, sem misturar com o azul-marinho
+           #2c3948 que existia antes da padronização) e a mesma "família"
+           visual (fundo escuro, texto branco, centralizado, mesmo padrão de
+           sangria/espaçamento entre caixas — margin-top 16/bottom 8 batendo
+           com o padding de 22px do .cv2-sidebar). A única exceção
+           intencional é o Nome: fonte maior (ver .cv2-nome-linha/
+           montarNomeCv2Html) e padding próprio, pra manter o destaque que
+           tinha antes da padronização — testado com o usuário via
+           AskUserQuestion numa rodada e revertido nesta (só a fonte do nome
+           volta a ser diferente; cor/altura/espaçamento/alinhamento das
+           barrinhas de dados abaixo continuam idênticos entre si). */
+        .cv2-nome { background: #0b2e42; color: #fff; text-align: center; margin: 0 -22px 16px; padding: 12px 14px; }
+        .cv2-nome-linha { display: block; font-size: 19px; font-weight: 800; line-height: 1.3; }
+        .cv2-pessoal { text-align: center; font-size: 12.5px; line-height: 1.75; color: #55606c; margin-bottom: 8px; }
+        /* Fonte dos títulos aumentada de 11,5 pra 13px (2026-08-22, pedido de
+           legibilidade) — conferido por medição via canvas que o título mais
+           longo ("DATA DE NASCIMENTO", com o letter-spacing de 0.6px somado)
+           fica em ~173px, com folga confortável dentro dos ~204-230px úteis
+           da caixa (sangrada, .cv2-sidebar em 30% da largura do documento —
+           ver CV2_LARGURA_NOME/comentário mais abaixo), então cabe numa
+           linha só em qualquer largura de documento testada, sem estourar a
+           margem. */
+        .cv2-bar { background: #0b2e42; color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; padding: 7px 8px; margin: 16px -22px 8px; }
+        /* .cv2-bar-content fica direto sobre o cinza claro da lateral (não tem
+           fundo escuro próprio, só o título .cv2-bar acima dele tem) — cor
+           escura aqui, não clara (bug de contraste corrigido em 2026-08-22:
+           antes herdava o texto claro de quando a lateral inteira era escura;
+           com o fundo virando #e5e5e5 na sessão anterior, texto claro sobre
+           cinza claro ficava praticamente ilegível). Fonte também aumentada
+           levemente (13→14px, mesmo pedido de legibilidade) — o e-mail (só
+           conteúdo que pode ficar largo demais numa linha só) continua com a
+           redução automática própria (ver montarEmailCv2Html/
+           CV2_EMAIL_FONTE_PADRAO, já em 14px, sem precisar mudar); o resto do
+           conteúdo (datas, endereço etc.) já quebra em várias linhas
+           normalmente quando não cabe (`word-break`), então nunca estoura o
+           layout mesmo sem redução automática de fonte. */
+        .cv2-bar-content { font-size: 14px; line-height: 1.65; text-align: center; color: #3a4550; word-break: break-word; }
+        /* E-mail sem "cara de link" (2026-08-22, pedido do usuário) — mesma
+           cor do resto do conteúdo (herda de .cv2-bar-content, sem cor de
+           destaque própria) e sem sublinhado; continua clicável (mailto:),
+           só não parece visualmente diferente do texto ao redor. */
+        .cv2-bar-content a { color: inherit; text-decoration: none; }
+        .cv2-content { flex: 1; min-width: 0; padding: 34px 38px; }
+        .cv2-content section { margin-bottom: 22px; }
         .cv2-content section:last-child { margin-bottom: 0; }
-        .cv2-bar-h { background: #ececec; color: #2c3948; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; padding: 7px 10px; margin: 0 0 12px; }
-        .cv2-content .cv2-item { margin-bottom: 12px; }
+        .cv2-bar-h { background: #ececec; color: #2c3948; font-size: 14px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; padding: 8px 10px; margin: 0 0 13px; }
+        .cv2-content .cv2-item { margin-bottom: 13px; }
         .cv2-content .cv2-item:last-child { margin-bottom: 0; }
-        .cv2-content .cv2-item p { margin: 0 0 2px; font-size: 12.5px; color: #1a1a1a; line-height: 1.5; }
+        .cv2-content .cv2-item p { margin: 0 0 2px; font-size: 13.5px; color: #1a1a1a; line-height: 1.55; }
         .cv2-content .cv2-item p b { color: #2c3948; }
-        .cv2-content p.cv2-texto { font-size: 12.5px; line-height: 1.7; color: #1a1a1a; margin: 0 0 6px; }
+        .cv2-content p.cv2-texto { font-size: 13.5px; line-height: 1.75; color: #1a1a1a; margin: 0 0 6px; }
         .cv2-content p.cv2-texto:last-child { margin-bottom: 0; }
         @media (max-width: 620px) {
             .cv2-doc { flex-direction: column; }
             .cv2-sidebar { width: 100%; }
         }
+        /* Impressão em escala cheia de A4 (2026-08-22) — o #printArea padrão
+           (usado por Contratos/Declarações/Recibo também, ver regra genérica
+           acima) tem padding:24px próprio + a página tem 12mm de margem; pro
+           Currículo isso sobrava muita borda em branco. printCurriculo() (ver
+           JS) embrulha a saída num <div class="cv2-print-page"> só na hora de
+           imprimir; a margin negativa aqui cancela exatamente o padding do
+           #printArea (mesmo truque de escopo por classe já usado em
+           .locacao-imovel-print/@page acima, sem tocar no #printArea
+           genérico), e a regra @page própria troca os 12mm padrão por 8mm —
+           resultado: quase toda a folha A4 útil fica pro documento. min-height
+           faz a barra lateral cinza esticar do topo ao rodapé da folha mesmo
+           quando o conteúdo é curto (pedido do usuário), não só até a altura
+           do próprio conteúdo. */
         @media print {
             #printArea .cv2-doc { border-radius: 0; box-shadow: none; flex-direction: row; }
             #printArea .cv2-doc, #printArea .cv2-doc * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            @page cv2-curriculo { size: A4 portrait; margin: 8mm; }
+            .cv2-print-page { page: cv2-curriculo; margin: -24px; }
+            .cv2-print-page .cv2-doc { min-height: calc(297mm - 16mm); }
         }
 
         /* Recibo timbrado — sempre claro (papel), mesmo com o resto do painel
@@ -4586,7 +4648,11 @@
                 const header = cvHeaderHtml(c.ia_header ? { ...c, ...c.ia_header } : c);
                 document.getElementById('printArea').innerHTML = header + markdownSimplesParaHtml(c.ia_texto);
             } else {
-                document.getElementById('printArea').innerHTML = formatarCurriculoLayout(c);
+                // Embrulho .cv2-print-page só na impressão (o modal/prévia em
+                // tela usa formatarCurriculoLayout(c) puro, sem esse wrapper —
+                // ver abrirFormatado) — é o que aciona o @page/margin negativa
+                // de escala cheia em A4 (ver CSS .cv2-print-page acima).
+                document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayout(c)}</div>`;
             }
             setTimeout(() => window.print(), 100);
         }
@@ -4711,21 +4777,57 @@
                 </div>`;
         }
 
+        // Idade calculada automaticamente a partir da Data de Nascimento
+        // (2026-08-22, pedido do usuário — mostrada como 2ª linha na barra
+        // "Data de Nascimento" da lateral) — nunca salva em lugar nenhum,
+        // calculada na hora a partir da data de hoje real do navegador toda
+        // vez que o currículo é exibido/impresso.
+        function calcularIdadeCv2(dataISO) {
+            const nasc = new Date(dataISO + 'T00:00:00');
+            if (isNaN(nasc.getTime())) return null;
+            const hoje = new Date();
+            let idade = hoje.getFullYear() - nasc.getFullYear();
+            const aniversarioEsteAno = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
+            if (hoje < aniversarioEsteAno) idade--;
+            return idade;
+        }
+
         // Formata telefone salvo cru (DDD + número, sem máscara nenhuma no
         // banco) só pra exibição no layout novo — não altera o valor salvo,
-        // só como o currículo mostra em tela/impressão.
+        // só como o currículo mostra em tela/impressão. Espaço entre o DDD e
+        // o número é NBSP ( ), não espaço normal (2026-08-22, pedido de
+        // legibilidade) — impede o navegador de quebrar linha bem no meio do
+        // telefone (ex: "(47)" numa linha e "99988-1234" na linha de baixo);
+        // se a linha inteira ("Telefone: (47) 99988-1234") não couber, a
+        // quebra acontece só no espaço normal depois do rótulo, levando o
+        // telefone completo pra linha seguinte.
         function formatarTelefoneExibicao(tel) {
             if (!tel) return '';
             const d = String(tel).replace(/\D/g, '');
-            if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-            if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+            if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+            if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
             return tel;
         }
 
-        // Largura útil da barra lateral pro nome (240px de .cv2-sidebar menos
-        // os 18px de padding de cada lado, ver CSS .cv2-sidebar/.cv2-nome).
-        const CV2_LARGURA_NOME = 204;
-        const CV2_NOME_FONTE_MAX = 17, CV2_NOME_FONTE_MIN = 11;
+        // Largura útil da barra lateral pro nome/e-mail (2026-08-22: .cv2-sidebar
+        // virou % da largura do documento, não mais um px fixo — ver CSS —,
+        // então esse valor é uma aproximação, não um cálculo exato. O
+        // documento renderiza numa faixa parecida de largura tanto na prévia
+        // em tela (modal, até 820px) quanto na impressão (A4 com margens
+        // reduzidas, ~733px úteis — ver @media print), então 30% menos os
+        // ~2×22-28px de padding/sangria dos elementos que usam essa
+        // constante (nome e e-mail) fica perto de 190px nos dois casos. Só
+        // afeta a decisão de quebra/tamanho de fonte — no pior caso de um
+        // documento bem mais largo/estreito que o normal, o texto só fica um
+        // pouco mais folgado ou levemente estourado, nunca cortado (ver
+        // montarNomeCv2Html/montarEmailCv2Html).
+        const CV2_LARGURA_NOME = 190;
+        // Nome com destaque maior que as demais caixas de título (2026-08-22
+        // — restaurado depois de 1 rodada em que ficou padronizado no mesmo
+        // tamanho pequeno das outras; ver CSS .cv2-nome/.cv2-nome-linha e
+        // histórico em PROGRESS.md). 19px é o tamanho padrão, reduz até 12px
+        // só se o nome não couber nem quebrado em 2 linhas.
+        const CV2_NOME_FONTE_MAX = 19, CV2_NOME_FONTE_MIN = 12;
 
         // Mede largura de texto sem precisar que o elemento esteja visível no
         // DOM (o cabeçalho é montado como string de HTML antes de entrar em
@@ -4790,23 +4892,74 @@
             return linhaHtml(linhas, tamanhoFinal);
         }
 
-        // Fonte do e-mail na barra lateral (2026-08-21) — 13px é o padrão;
-        // só reduz (12, depois 11) se o e-mail não couber numa linha só na
-        // largura da barra lateral. Nunca quebra linha, nunca corta o texto,
-        // nunca usa reticências — no pior caso (e-mail extremamente longo,
-        // nem 11px é suficiente) fica em 11px mesmo com um leve estouro
-        // visual, mesmo critério já usado pra reduzir a fonte do nome. Afeta
-        // só esta linha (`style` inline no próprio <a>) — o resto da barra
-        // lateral continua no tamanho de sempre (12px, `.cv2-bar-content`).
-        const CV2_EMAIL_FONTE_PADRAO = 13, CV2_EMAIL_FONTE_MIN = 11;
+        // Fonte do e-mail na barra lateral (2026-08-21, reforçado em
+        // 2026-08-22 pra NUNCA vazar da coluna, custe o que custar) — 14px é
+        // o padrão, reduz (13, depois 12) se não couber numa linha só. Se nem
+        // no tamanho mínimo couber numa linha, quebra em várias linhas nos
+        // pontos naturais de um e-mail (logo depois de "@", "." ou "-" —
+        // nunca no meio de um "pedaço" como "gmail" ou "com"), cada linha
+        // centralizada como as demais barras. Se mesmo assim sobrar um
+        // trecho sem nenhum ponto de quebra natural (ex: um domínio gigante
+        // sem ponto) que sozinho já é mais largo que a coluna, essa rede de
+        // segurança final quebra caractere a caractere só nesse trecho — a
+        // única situação em que corta uma "palavra" no meio, e só existe pra
+        // garantir a regra absoluta: nenhum e-mail invade a coluna da
+        // direita, nunca. Sempre um `<a>` só (clicável do início ao fim),
+        // mesmo quando quebrado em várias linhas.
+        const CV2_EMAIL_FONTE_PADRAO = 14, CV2_EMAIL_FONTE_MIN = 12;
         function montarEmailCv2Html(email) {
             if (!email) return '';
-            let tamanhoFinal = CV2_EMAIL_FONTE_MIN;
+
+            // 1) Cabe numa linha só, reduzindo a fonte até o mínimo?
             for (let tamanho = CV2_EMAIL_FONTE_PADRAO; tamanho >= CV2_EMAIL_FONTE_MIN; tamanho--) {
-                tamanhoFinal = tamanho;
-                if (medirTextoCv2(email, tamanho, '400') <= CV2_LARGURA_NOME) break;
+                if (medirTextoCv2(email, tamanho, '400') <= CV2_LARGURA_NOME) {
+                    return `<a href="mailto:${escapeHtml(email)}" style="font-size:${tamanho}px; white-space:nowrap;">${escapeHtml(email)}</a>`;
+                }
             }
-            return `<a href="mailto:${escapeHtml(email)}" style="font-size:${tamanhoFinal}px; white-space:nowrap;">${escapeHtml(email)}</a>`;
+
+            // 2) Nem no tamanho mínimo coube numa linha — quebra nos pontos
+            // naturais (mantém o delimitador grudado no fim do pedaço
+            // anterior: "usuario@", "sub.", "dominio.", "com") e empacota
+            // gulosamente em quantas linhas forem necessárias, sempre no
+            // tamanho mínimo.
+            const pedacos = email.split(/(?<=[@.\-])/).filter(Boolean);
+            const linhas = [];
+            let atual = '';
+            for (const p of pedacos) {
+                const candidato = atual + p;
+                if (!atual || medirTextoCv2(candidato, CV2_EMAIL_FONTE_MIN, '400') <= CV2_LARGURA_NOME) {
+                    atual = candidato;
+                } else {
+                    linhas.push(atual);
+                    atual = p;
+                }
+            }
+            if (atual) linhas.push(atual);
+
+            // 3) Rede de segurança: algum pedaço isolado (sem "@"/"."/"-" nas
+            // posições certas) ainda é mais largo que a coluna sozinho —
+            // quebra caractere a caractere só esse pedaço.
+            const linhasFinais = linhas.flatMap(l => {
+                if (medirTextoCv2(l, CV2_EMAIL_FONTE_MIN, '400') <= CV2_LARGURA_NOME) return [l];
+                const partes = [];
+                let buffer = '';
+                for (const ch of l) {
+                    const candidato = buffer + ch;
+                    if (!buffer || medirTextoCv2(candidato, CV2_EMAIL_FONTE_MIN, '400') <= CV2_LARGURA_NOME) {
+                        buffer = candidato;
+                    } else {
+                        partes.push(buffer);
+                        buffer = ch;
+                    }
+                }
+                if (buffer) partes.push(buffer);
+                return partes;
+            });
+
+            const linhasHtml = linhasFinais
+                .map(l => `<span style="display:block; white-space:nowrap;">${escapeHtml(l)}</span>`)
+                .join('');
+            return `<a href="mailto:${escapeHtml(email)}" style="font-size:${CV2_EMAIL_FONTE_MIN}px;">${linhasHtml}</a>`;
         }
 
         // Chaves de `dados` que ganham bloco próprio no layout novo (barra
@@ -4849,22 +5002,22 @@
             CHAVE_ESCOLARIDADE, CHAVE_SITUACAO_ESCOLARIDADE, CHAVE_PERIODO_ESTUDO, CHAVE_CARGO_DESEJADO,
         ]);
 
-        // Texto do currículo pra filhos (2026-08-21) — "Sem Filhos" segue igual
-        // a sempre; com filhos, o texto NUNCA expõe idade específica: se todos
-        // forem maiores de 18, entra "maior(es) de idade"; se houver pelo menos
-        // um menor, fica só a quantidade, sem nenhum detalhe de idade — pedido
-        // explícito do usuário pra manter o currículo "limpo e profissional".
-        // Registro salvo antes desta mudança (sem `situacao` — só "idade do
-        // filho caçula" em texto livre, nunca usada aqui) cai no texto genérico
-        // de sempre, sem inventar uma situação que não foi informada.
-        function montarTextoFilhos(temFilhos, qtd, situacao) {
-            if (temFilhos === 'Não') return 'Sem Filhos';
+        // Texto do currículo pra filhos (2026-08-22, redação simplificada —
+        // "com N filho(a)/filhos" ou "sem filhos", pedido explícito do
+        // usuário com esses exemplos exatos; substitui a versão anterior de
+        // 2026-08-21 que citava "maior/menor de idade" — a distinção por
+        // `situacao` some do texto exibido, mas o campo continua salvo no
+        // formulário e escondido de "Dados Adicionais" (CHAVES_BARRA_LATERAL
+        // continua com CHAVE_SITUACAO_FILHOS, só não é mais lido aqui). Sem
+        // dado de gênero dos filhos no formulário, singular usa "filho(a)"
+        // (não presume) e plural usa "filhos" (padrão da língua pra grupos
+        // mistos/desconhecidos).
+        function montarTextoFilhos(temFilhos, qtd) {
+            if (temFilhos === 'Não') return 'sem filhos';
             if (temFilhos !== 'Sim') return null;
             const n = parseInt(qtd, 10);
-            const singular = n === 1;
-            if (situacao === 'Todos maiores de 18 anos') return `${qtd || ''} ${singular ? 'filho maior de idade' : 'filhos maiores de idade'}`.trim();
-            if (situacao === 'Possui pelo menos um filho menor de 18') return `${qtd || ''} ${singular ? 'filho' : 'filhos'}`.trim();
-            return `${qtd || ''} Filho(s)`.trim();
+            if (!n) return null;
+            return n === 1 ? `com ${n} filho(a)` : `com ${n} filhos`;
         }
 
         // Combina nível + situação num texto só (ex: "Ensino Médio Completo",
@@ -4923,30 +5076,37 @@
             // ponto fixo entre nome e sobrenome.
             const nomeCompleto = titleCase(`${c.nome || ''} ${c.sobrenome || ''}`.trim());
             const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : null;
+            const idade = c.data_nascimento ? calcularIdadeCv2(c.data_nascimento) : null;
             const foto = c.foto_url ? `<img src="${escapeHtml(c.foto_url)}" alt="Foto">` : '<div class="cv2-foto-placeholder"></div>';
 
             const pessoalLinhas = [
                 c.nacionalidade ? `Nacionalidade: ${escapeHtml(titleCase(c.nacionalidade))}` : null,
                 c.estado_civil ? `Estado Civil: ${escapeHtml(c.estado_civil)}` : null,
-                escapeHtml(montarTextoFilhos(dados[CHAVE_TEM_FILHOS], dados[CHAVE_QTD_FILHOS], dados[CHAVE_SITUACAO_FILHOS]) || '') || null,
+                escapeHtml(montarTextoFilhos(dados[CHAVE_TEM_FILHOS], dados[CHAVE_QTD_FILHOS]) || '') || null,
             ].filter(Boolean);
 
             const naturalidade = [dados[CHAVE_NATURALIDADE] ? titleCase(dados[CHAVE_NATURALIDADE]) : null, dados[CHAVE_ESTADO_NASCIMENTO]].filter(Boolean).map(escapeHtml).join(' /');
 
-            // Telefone e WhatsApp idênticos (2026-08-21) — vira uma linha só
-            // ("Telefone ou WhatsApp"), sem repetir o mesmo número duas vezes;
-            // diferentes continuam em duas linhas separadas, como sempre.
+            // Telefone e WhatsApp idênticos (2026-08-21, rótulo ajustado em
+            // 2026-08-22 de "Telefone ou WhatsApp" pra "Telefone e WhatsApp",
+            // pedido do usuário) — vira uma linha só, sem repetir o mesmo
+            // número duas vezes. Diferentes (rótulos também ajustados em
+            // 2026-08-22: "Ligação"→"Telefone") continuam em duas linhas
+            // separadas, telefone primeiro e WhatsApp embaixo.
             const contatoLinhas = (c.telefone && c.whatsapp && c.telefone === c.whatsapp)
-                ? [`Telefone ou WhatsApp: ${escapeHtml(formatarTelefoneExibicao(c.telefone))}`]
+                ? [`Telefone e WhatsApp: ${escapeHtml(formatarTelefoneExibicao(c.telefone))}`]
                 : [
-                    c.telefone ? `Ligação: ${escapeHtml(formatarTelefoneExibicao(c.telefone))}` : null,
-                    c.whatsapp ? `Whatsapp: ${escapeHtml(formatarTelefoneExibicao(c.whatsapp))}` : null,
+                    c.telefone ? `Telefone: ${escapeHtml(formatarTelefoneExibicao(c.telefone))}` : null,
+                    c.whatsapp ? `WhatsApp: ${escapeHtml(formatarTelefoneExibicao(c.whatsapp))}` : null,
                   ].filter(Boolean);
 
+            // Três linhas simples, sem conectivos ("no Bairro"/"Cidade de" —
+            // removidos em 2026-08-22, pedido do usuário): rua e número,
+            // bairro, cidade/UF.
             const enderecoLinhas = [
                 c.endereco ? escapeHtml(titleCase(c.endereco)) : null,
-                c.bairro ? `no Bairro ${escapeHtml(titleCase(c.bairro))}` : null,
-                c.cidade ? `Cidade de ${escapeHtml(titleCase(c.cidade))}${c.estado ? '/' + escapeHtml(c.estado) : ''}` : null,
+                c.bairro ? escapeHtml(titleCase(c.bairro)) : null,
+                c.cidade ? `${escapeHtml(titleCase(c.cidade))}${c.estado ? '/' + escapeHtml(c.estado) : ''}` : null,
             ].filter(Boolean);
 
             const escolaridadeLinhas = [
@@ -4963,7 +5123,7 @@
                     <div class="cv2-foto-wrap">${foto}</div>
                     <div class="cv2-nome">${montarNomeCv2Html(nomeCompleto)}</div>
                     ${pessoalLinhas.length ? `<div class="cv2-pessoal">${pessoalLinhas.join('<br>')}</div>` : ''}
-                    ${nascimento ? barraLateral('Data de Nascimento', [escapeHtml(nascimento)]) : ''}
+                    ${nascimento ? barraLateral('Data de Nascimento', [escapeHtml(nascimento), (idade !== null && idade >= 0) ? `${idade} ${idade === 1 ? 'ano' : 'anos'}` : null].filter(Boolean)) : ''}
                     ${naturalidade ? barraLateral('Naturalidade', [naturalidade]) : ''}
                     ${contatoLinhas.length ? barraLateral('Contato/Fone', contatoLinhas) : ''}
                     ${c.email ? barraLateral('E-mail', [montarEmailCv2Html(c.email)]) : ''}
