@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- PWA instalável (2026-08-23, pedido do usuário) — só o painel
+         (index.html) ganha manifest/ícone/nome de app; o formulário público
+         (curriculo-form.html) continua exatamente como sempre foi, sem
+         nenhuma dessas tags. Ver manifest.json, sw.js e o aviso de instalação
+         mais abaixo (function inicializarPwa). -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#05170c">
+    <meta name="apple-mobile-web-app-title" content="Blackout Painel">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <title>Painel de Controle</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <style>
@@ -522,6 +531,21 @@
         .flatpickr-day.selected, .flatpickr-day.selected:hover, .flatpickr-day.selected:focus { background: var(--accent); border-color: var(--accent); }
         .flatpickr-day.today { border-color: var(--accent); }
         .flatpickr-calendar { background: var(--bg-elev); border: 1px solid var(--border); }
+
+        /* Aviso de instalação do PWA (2026-08-23, pedido do usuário) — aparece
+           só uma vez (controlado via localStorage, ver inicializarPwa), acima
+           de tudo mas sem bloquear o uso do painel por trás. */
+        .pwa-aviso { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 9999; max-width: 420px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 16px; padding: 16px 18px; box-shadow: 0 12px 36px rgba(0,0,0,0.45); display: flex; gap: 12px; align-items: flex-start; animation: pwaAvisoSobe .25s ease-out; }
+        @keyframes pwaAvisoSobe { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .pwa-aviso-icone { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
+        .pwa-aviso-corpo { flex: 1; min-width: 0; }
+        .pwa-aviso-titulo { font-size: 13.5px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+        .pwa-aviso-texto { font-size: 12.5px; line-height: 1.55; color: var(--text-dim); }
+        .pwa-aviso-texto b { color: var(--accent-bright); font-weight: 700; }
+        .pwa-aviso-botoes { display: flex; gap: 8px; margin-top: 10px; }
+        .pwa-aviso-botoes button { flex: 1; padding: 8px 10px; border-radius: 10px; border: none; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+        .pwa-aviso-instalar { background: var(--accent); color: #05170c; }
+        .pwa-aviso-fechar { background: transparent; color: var(--text-faint); border: none; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 2px; }
     </style>
 </head>
 <body>
@@ -6216,9 +6240,84 @@
             if (e.target.id === 'reciboModal') closeReciboModal();
         });
 
+        // ===== PWA — instalar o Painel como app (2026-08-23, pedido do usuário) =====
+        // Registra o service worker (ver sw.js — só cuida do app shell, não
+        // muda nada no funcionamento do resto do painel) e mostra, uma única
+        // vez, um aviso explicando como instalar: no Android/Chrome aparece
+        // um botão que dispara o prompt nativo do navegador (beforeinstallprompt);
+        // no iPhone não existe esse prompt (a Apple não oferece essa API),
+        // então o aviso só explica o caminho manual (Compartilhar > Adicionar
+        // à Tela de Início). Se o painel já está rodando instalado (modo
+        // standalone) ou a pessoa já dispensou o aviso antes, nada aparece.
+        let pwaPromptEvento = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            pwaPromptEvento = e;
+            atualizarBotaoInstalarPwa();
+        });
+
+        function pwaJaInstalado() {
+            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        }
+
+        function atualizarBotaoInstalarPwa() {
+            const btn = document.getElementById('pwaAvisoBtnInstalar');
+            if (btn) btn.style.display = pwaPromptEvento ? '' : 'none';
+        }
+
+        function fecharAvisoPwa() {
+            const el = document.getElementById('pwaAviso');
+            if (el) el.remove();
+            localStorage.setItem('blackoutPwaAvisoVisto', '1');
+        }
+        window.fecharAvisoPwa = fecharAvisoPwa;
+
+        window.instalarPwa = async function instalarPwa() {
+            if (!pwaPromptEvento) return;
+            pwaPromptEvento.prompt();
+            await pwaPromptEvento.userChoice;
+            pwaPromptEvento = null;
+            fecharAvisoPwa();
+        };
+
+        function mostrarAvisoPwa() {
+            if (pwaJaInstalado()) return;
+            if (localStorage.getItem('blackoutPwaAvisoVisto')) return;
+            if (document.getElementById('pwaAviso')) return;
+
+            const ehIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const textoInstrucao = ehIOS
+                ? 'No iPhone: toque em <b>Compartilhar</b> (o ícone com a seta) e depois em <b>"Adicionar à Tela de Início"</b>.'
+                : 'No Android: toque no menu do navegador (⋮) e escolha <b>"Adicionar à tela inicial"</b> — ou use o botão abaixo.';
+
+            document.body.insertAdjacentHTML('beforeend', `
+                <div class="pwa-aviso" id="pwaAviso">
+                    <img class="pwa-aviso-icone" src="assets/icon-192.png" alt="Blackout">
+                    <div class="pwa-aviso-corpo">
+                        <div class="pwa-aviso-titulo">Instale o Painel como aplicativo</div>
+                        <div class="pwa-aviso-texto">${textoInstrucao} Depois é só abrir pelo ícone na tela inicial, sem precisar do navegador.</div>
+                        <div class="pwa-aviso-botoes">
+                            <button type="button" class="pwa-aviso-instalar" id="pwaAvisoBtnInstalar" style="display:none;" onclick="window.instalarPwa()">Instalar agora</button>
+                        </div>
+                    </div>
+                    <button type="button" class="pwa-aviso-fechar" onclick="window.fecharAvisoPwa()" aria-label="Fechar">✕</button>
+                </div>`);
+            atualizarBotaoInstalarPwa();
+        }
+
+        function inicializarPwa() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            }
+            // pequeno atraso — deixa a pessoa ver o painel carregando antes de
+            // empilhar um aviso por cima, sem competir com o desbloqueio inicial
+            setTimeout(mostrarAvisoPwa, 1200);
+        }
+
         // Inicia o dashboard (após desbloqueio)
         console.log('🚀 Iniciando Painel de Controle...');
         initLock();
+        inicializarPwa();
 
         // Atualiza a cada 30 segundos (só a tela ativa, quando desbloqueado)
         setInterval(() => {
