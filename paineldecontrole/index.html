@@ -4683,7 +4683,7 @@
         // Imprime sempre a melhor versão disponível: se já gerou com IA antes
         // (salvo em ia_texto), usa ela; senão usa o Formatado por template —
         // nunca a lista crua de pergunta:resposta.
-        function printCurriculo(id) {
+        async function printCurriculo(id) {
             const c = curriculosCache.find(x => x.id === id);
             if (!c) return;
             if (c.ia_texto) {
@@ -4697,8 +4697,13 @@
                 // .cv2-print-page acima). formatarCurriculoLayoutAjustado (não
                 // o formatarCurriculoLayout cru) garante que o que sai na
                 // impressão é a mesma versão de 1 página já ajustada que a
-                // pessoa viu no modal.
-                document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayoutAjustado(c)}</div>`;
+                // pessoa viu no modal. dadosRevisados (2026-08-23, revisão
+                // ortográfica automática — ver revisarOrtografiaCurriculo)
+                // roda de novo aqui, mas fica em cache no próprio `c` (ver
+                // _revisaoAssinatura) — imprimir logo depois de abrir a
+                // prévia não gasta token duas vezes.
+                const dadosRevisados = await revisarOrtografiaCurriculo(c);
+                document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayoutAjustado({ ...c, dados: dadosRevisados })}</div>`;
             }
             setTimeout(() => window.print(), 100);
         }
@@ -4918,6 +4923,26 @@
             return `<a href="mailto:${escapeHtml(email)}" style="font-size:${CV2_EMAIL_FONTE_MIN}px;">${linhasHtml}</a>`;
         }
 
+        // Nacionalidade/Estado Civil na barra lateral (2026-08-23, pedido do
+        // usuário) — sem rótulo, só o valor já flexionado no gênero certo
+        // (flexGenero, a partir de c.genero) e capitalizado (ex: "Brasileira",
+        // "Solteiro"), no mesmo tamanho de fonte do valor da Data de
+        // Nascimento (CV2_PESSOAL_FONTE_PADRAO = 14px, igual .cv2-bar-content).
+        // Reduz a fonte (até CV2_PESSOAL_FONTE_MIN) só se o valor não coube
+        // numa linha só — mesmo padrão de medição de montarEmailCv2Html,
+        // sem tocar em mais nada do layout.
+        const CV2_PESSOAL_FONTE_PADRAO = 14, CV2_PESSOAL_FONTE_MIN = 11;
+        function montarValorPessoalCv2(valor, fem) {
+            const texto = titleCase(flexGenero(valor, fem));
+            if (!texto) return '';
+            for (let tamanho = CV2_PESSOAL_FONTE_PADRAO; tamanho >= CV2_PESSOAL_FONTE_MIN; tamanho--) {
+                if (medirTextoCv2(texto, tamanho, '400') <= CV2_LARGURA_NOME) {
+                    return `<span style="font-size:${tamanho}px;">${escapeHtml(texto)}</span>`;
+                }
+            }
+            return `<span style="font-size:${CV2_PESSOAL_FONTE_MIN}px;">${escapeHtml(texto)}</span>`;
+        }
+
         // Chaves de `dados` que ganham bloco próprio no layout novo (barra
         // lateral: Naturalidade, Filhos, Escolaridade; e a seção "Cargos
         // Pretendidos" na coluna de conteúdo) — extraídas direto e excluídas
@@ -4932,6 +4957,15 @@
         // usada só pra decidir a redação do texto (ver montarTextoFilhos),
         // nunca exibida como pergunta/resposta crua em lugar nenhum.
         const CHAVE_SITUACAO_FILHOS = 'QUAL A SITUAÇÃO DOS SEUS FILHOS?';
+        // Consentimento pra exibir a informação de filhos no currículo
+        // (2026-08-23, pedido do usuário) — só perguntado no formulário
+        // quando tem_filhos === 'Sim' (ver curriculo-form.html). "Não" aqui
+        // faz a linha de filhos sumir do currículo por completo (nem
+        // espaço em branco, nem traço, nem "Não informado" — ver
+        // montarTextoFilhos), sem afetar a pergunta "Você tem filhos?" em
+        // si nem o caso de quem respondeu "Não" pra ela (que continua
+        // sempre exibindo "sem filhos", como já era).
+        const CHAVE_MOSTRAR_FILHOS = 'DESEJA EXIBIR ESSA INFORMAÇÃO NO CURRÍCULO?';
         // "Contato p/ Recado" foi removido do formulário e do layout em
         // 2026-08-21 (simplificação, não correção) — as 3 chaves continuam
         // listadas aqui só pra registros antigos que já tinham esse dado
@@ -4969,7 +5003,7 @@
         const CHAVE_TIPO_VEICULO = 'QUAL TIPO DE VEÍCULO?';
         const CHAVE_DISPONIBILIDADE_VIAGEM = 'VOCÊ POSSUI DISPONIBILIDADE PARA VIAGENS?';
         const CHAVES_BARRA_LATERAL = new Set([
-            CHAVE_NATURALIDADE, CHAVE_ESTADO_NASCIMENTO, CHAVE_TEM_FILHOS, CHAVE_QTD_FILHOS, CHAVE_SITUACAO_FILHOS,
+            CHAVE_NATURALIDADE, CHAVE_ESTADO_NASCIMENTO, CHAVE_TEM_FILHOS, CHAVE_QTD_FILHOS, CHAVE_SITUACAO_FILHOS, CHAVE_MOSTRAR_FILHOS,
             CHAVE_RECADO_NOME, CHAVE_RECADO_DDD, CHAVE_RECADO_NUMERO,
             CHAVE_ESCOLARIDADE, CHAVE_SITUACAO_ESCOLARIDADE, CHAVE_PERIODO_ESTUDO, CHAVE_CARGO_DESEJADO,
             CHAVE_FUMANTE, CHAVE_DISPONIBILIDADE_HORARIO, CHAVE_TEM_CNH, CHAVE_CATEGORIA_CNH, CHAVE_TEM_EAR,
@@ -4986,9 +5020,10 @@
         // dado de gênero dos filhos no formulário, singular usa "filho(a)"
         // (não presume) e plural usa "filhos" (padrão da língua pra grupos
         // mistos/desconhecidos).
-        function montarTextoFilhos(temFilhos, qtd) {
+        function montarTextoFilhos(temFilhos, qtd, mostrar) {
             if (temFilhos === 'Não') return 'sem filhos';
             if (temFilhos !== 'Sim') return null;
+            if (mostrar === 'Não') return null;
             const n = parseInt(qtd, 10);
             if (!n) return null;
             return n === 1 ? `com ${n} filho(a)` : `com ${n} filhos`;
@@ -5083,6 +5118,70 @@
             return `${nivel} ${situacao === 'Em andamento' ? 'em andamento' : situacao}`;
         }
 
+        // Revisão ortográfica automática (2026-08-23, pedido do usuário) — roda
+        // sozinha, sem botão, sempre logo antes de montar o layout final
+        // (ver abrirFormatado/printCurriculo). Só ortografia/acentuação/erros
+        // de digitação óbvios + palavras em espanhol usadas por engano +
+        // padronização de maiúsculas/minúsculas em nomes próprios, cidades,
+        // empresas e cargos — nunca reescreve frase nem muda sentido (ver
+        // prompt da Edge Function `curriculo-revisao`).
+        //
+        // Escopo deliberadamente restrito: só os campos de texto livre que um
+        // candidato digita com as próprias palavras (curso, instituição, nome
+        // da empresa, cargo exercido, cargo pretendido, naturalidade) entram
+        // na revisão. Nome/sobrenome, endereço, telefone, e-mail, cidade/
+        // estado de residência, nacionalidade/estado civil (selects fixos) e
+        // o nome da referência pessoal NUNCA são enviados pra IA — ficam de
+        // fora por construção, não por checagem depois.
+        const CAMPOS_REVISAO_PREFIXOS = ['INFORME O CURSO', 'EM QUAL INSTITUIÇÃO', 'NOME DA EMPRESA', 'QUAL ERA O SEU CARGO'];
+        function extrairCamposRevisaoCv2(dados) {
+            const campos = {};
+            Object.entries(dados || {}).forEach(([k, v]) => {
+                if (!v) return;
+                const base = baseKey(k);
+                const elegivel = CAMPOS_REVISAO_PREFIXOS.some(p => base.startsWith(p)) || base === CHAVE_CARGO_DESEJADO || base === CHAVE_NATURALIDADE;
+                if (elegivel) campos[k] = v;
+            });
+            return campos;
+        }
+        // Aplica a correção só nas chaves que a IA devolveu de fato — qualquer
+        // chave ausente na resposta (falha parcial, campo que a IA decidiu não
+        // tocar) mantém o valor original de `dados`, nunca fica em branco.
+        function aplicarRevisaoCv2(dados, corrigidos) {
+            if (!corrigidos) return dados;
+            const novo = { ...dados };
+            Object.entries(corrigidos).forEach(([k, v]) => {
+                if (typeof v === 'string' && v.trim() && k in novo) novo[k] = v;
+            });
+            return novo;
+        }
+        // Chama a Edge Function e devolve um `dados` já corrigido — nunca
+        // lança erro pra fora: qualquer falha (rede, IA fora do ar, chave não
+        // configurada) é registrada só no console e a função devolve o
+        // `dados` original sem correção, pra revisão nunca travar a geração
+        // do currículo (é uma melhoria discreta, não uma etapa obrigatória).
+        // Cacheia o resultado no próprio objeto `c` (em memória, nunca salvo
+        // no banco) pra não gastar token de novo quando a pessoa abre a
+        // prévia e manda imprimir em seguida, na mesma sessão.
+        async function revisarOrtografiaCurriculo(c) {
+            const dados = c.dados || {};
+            const campos = extrairCamposRevisaoCv2(dados);
+            if (!Object.keys(campos).length) return dados;
+            const assinatura = JSON.stringify(campos);
+            if (c._revisaoAssinatura === assinatura && c._dadosRevisados) return c._dadosRevisados;
+            try {
+                const { data, error } = await supabase.functions.invoke('curriculo-revisao', { body: { campos } });
+                if (error || !data || !data.campos) throw new Error((error && error.message) || 'IA não retornou correção');
+                const dadosRevisados = aplicarRevisaoCv2(dados, data.campos);
+                c._dadosRevisados = dadosRevisados;
+                c._revisaoAssinatura = assinatura;
+                return dadosRevisados;
+            } catch (err) {
+                console.warn('Revisão ortográfica automática indisponível — currículo segue com o texto original, sem correção:', err.message);
+                return dados;
+            }
+        }
+
         // Monta o documento completo do currículo (barra lateral + coluna de
         // conteúdo), layout A4 de duas colunas fiel ao modelo visual da
         // gráfica (2026-08-21) — substitui cvHeaderHtml()+formatarCurriculoTemplate()
@@ -5138,10 +5237,11 @@
             const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : null;
             const foto = c.foto_url ? `<img src="${escapeHtml(c.foto_url)}" alt="Foto">` : '<div class="cv2-foto-placeholder"></div>';
 
+            const femPessoal = c.genero === 'Feminino';
             const pessoalLinhas = [
-                c.nacionalidade ? `Nacionalidade: ${escapeHtml(titleCase(c.nacionalidade))}` : null,
-                c.estado_civil ? `Estado Civil: ${escapeHtml(c.estado_civil)}` : null,
-                escapeHtml(montarTextoFilhos(dados[CHAVE_TEM_FILHOS], dados[CHAVE_QTD_FILHOS]) || '') || null,
+                c.nacionalidade ? montarValorPessoalCv2(c.nacionalidade, femPessoal) : null,
+                c.estado_civil ? montarValorPessoalCv2(c.estado_civil, femPessoal) : null,
+                escapeHtml(montarTextoFilhos(dados[CHAVE_TEM_FILHOS], dados[CHAVE_QTD_FILHOS], dados[CHAVE_MOSTRAR_FILHOS]) || '') || null,
             ].filter(Boolean);
 
             const naturalidade = [dados[CHAVE_NATURALIDADE] ? titleCase(dados[CHAVE_NATURALIDADE]) : null, dados[CHAVE_ESTADO_NASCIMENTO]].filter(Boolean).map(escapeHtml).join(' /');
@@ -5414,7 +5514,14 @@
 
             if (!useIA) {
                 btnRegerar.style.display = 'none';
-                conteudo.innerHTML = formatarCurriculoLayoutAjustado(c);
+                btnImprimir.style.display = 'none';
+                conteudo.innerHTML = '<p>⏳ Preparando currículo...</p>';
+                // Revisão ortográfica automática (2026-08-23) — roda sozinha
+                // aqui, imediatamente antes de montar o layout final; discreta
+                // (sem botão, sem indicação visual do que mudou) e nunca
+                // bloqueia a renderização (ver revisarOrtografiaCurriculo).
+                const dadosRevisados = await revisarOrtografiaCurriculo(c);
+                conteudo.innerHTML = formatarCurriculoLayoutAjustado({ ...c, dados: dadosRevisados });
                 btnImprimir.style.display = '';
                 return;
             }

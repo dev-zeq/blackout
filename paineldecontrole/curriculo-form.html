@@ -118,7 +118,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // que já existem no Supabase.
 const s = {
     nome: '', sobrenome: '', sexo: '', nascimento: '', nacionalidade: '', nacionalidade_outra: '',
-    naturalidade: '', estado_nascimento: '', estado_civil: '', tem_filhos: '', qtd_filhos: '', situacao_filhos: '',
+    naturalidade: '', estado_nascimento: '', estado_civil: '', tem_filhos: '', qtd_filhos: '', situacao_filhos: '', mostrar_filhos: '',
     ddd: '', telefone_numero: '', whatsapp_mesmo: '', ddd_whatsapp: '', whatsapp_numero: '',
     tem_email: '', email: '',
     rua: '', numero: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado_residencia: '',
@@ -364,6 +364,11 @@ function stepFamilia() {
 // caçula" que existia antes — vira uma das 2 opções fixas abaixo, o
 // suficiente pra montar o texto do currículo (ver montarTextoFilhos em
 // index.html) sem expor idade específica de menores de idade.
+// Consentimento de exibição (2026-08-23, pedido do usuário) — pergunta
+// extra só quando tem_filhos === 'Sim', depois de quantidade/situação;
+// "Não" faz a informação de filhos sumir do currículo por completo (ver
+// montarTextoFilhos em index.html), sem alterar em nada a pergunta "Você
+// tem filhos?" nem o caso de quem não tem filhos.
 function renderCondFilhos() {
     const el = document.getElementById('condFilhos');
     if (!el) return;
@@ -373,6 +378,12 @@ function renderCondFilhos() {
             <div class="radio-group">
                 ${pill('f_situacao_filhos', 'Todos maiores de 18 anos', s.situacao_filhos === 'Todos maiores de 18 anos')}
                 ${pill('f_situacao_filhos', 'Possui pelo menos um filho menor de 18', s.situacao_filhos === 'Possui pelo menos um filho menor de 18')}
+            </div>
+        </div>
+        <div class="field"><label>Deseja exibir essa informação no currículo? *</label>
+            <div class="radio-group">
+                ${pill('f_mostrar_filhos', 'Sim', s.mostrar_filhos === 'Sim')}
+                ${pill('f_mostrar_filhos', 'Não', s.mostrar_filhos === 'Não')}
             </div>
         </div>` : '';
 }
@@ -939,7 +950,7 @@ function validateCurrentStep() {
             return null;
         case 1:
             if (!s.estado_civil || !s.tem_filhos) return 'Preencha todos os campos obrigatórios (*).';
-            if (s.tem_filhos === 'Sim' && (!s.qtd_filhos || !s.situacao_filhos)) return 'Informe a quantidade e a situação dos filhos.';
+            if (s.tem_filhos === 'Sim' && (!s.qtd_filhos || !s.situacao_filhos || !s.mostrar_filhos)) return 'Informe a quantidade, a situação dos filhos e se deseja exibir essa informação no currículo.';
             return null;
         case 2:
             if (!s.ddd || !s.telefone_numero || !s.whatsapp_mesmo) return 'Preencha todos os campos obrigatórios (*).';
@@ -977,6 +988,7 @@ function saveCurrentStep() {
         case 1:
             s.estado_civil = val('f_estado_civil'); s.tem_filhos = checkedVal('f_tem_filhos');
             s.qtd_filhos = val('f_qtd_filhos'); s.situacao_filhos = checkedVal('f_situacao_filhos');
+            s.mostrar_filhos = checkedVal('f_mostrar_filhos');
             break;
         case 2:
             s.ddd = val('f_ddd');
@@ -1108,6 +1120,7 @@ async function submitForm() {
     put('VOCÊ TEM FILHOS?', s.tem_filhos);
     put('QUANTOS FILHOS?', s.qtd_filhos);
     put('QUAL A SITUAÇÃO DOS SEUS FILHOS?', s.situacao_filhos);
+    put('DESEJA EXIBIR ESSA INFORMAÇÃO NO CURRÍCULO?', s.mostrar_filhos);
     put('QUAL A SUA ESCOLARIDADE?', s.escolaridade);
     put('QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?', s.situacao_escolaridade);
     put('EM QUE PERÍODO VOCÊ ESTUDA?', s.periodo_estudo);
@@ -1277,6 +1290,11 @@ function carregarParaEdicao(row) {
     s.tem_filhos = get('VOCÊ TEM FILHOS?');
     s.qtd_filhos = get('QUANTOS FILHOS?');
     s.situacao_filhos = get('QUAL A SITUAÇÃO DOS SEUS FILHOS?');
+    // Fallback pra registro salvo antes dessa pergunta existir: preserva o
+    // comportamento antigo (currículo sempre mostrava a informação de
+    // filhos) em vez de deixar o campo em branco e travar "Avançar" com uma
+    // validação nova que a pessoa nunca respondeu.
+    s.mostrar_filhos = get('DESEJA EXIBIR ESSA INFORMAÇÃO NO CURRÍCULO?') || (s.tem_filhos === 'Sim' ? 'Sim' : '');
 
     // Telefone/whatsapp são salvos como DDD+número concatenado, sem separador
     // — só dá pra separar de volta porque DDD brasileiro é sempre 2 dígitos.
