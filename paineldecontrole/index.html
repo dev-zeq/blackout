@@ -377,6 +377,15 @@
         .cv2-content .cv2-item p b { color: #2c3948; }
         .cv2-content p.cv2-texto { font-size: 13.5px; line-height: 1.5; color: #1a1a1a; margin: 0 0 4px; }
         .cv2-content p.cv2-texto:last-child { margin-bottom: 0; }
+        /* Idiomas em 2 colunas (2026-08-23, pedido do usuário) — a ordem dos
+           itens no HTML já é a ordem de leitura desejada (esquerda pra
+           direita, depois de cima pra baixo); grid-auto-flow padrão (row) já
+           entrega isso sozinho. Os <p class="cv2-texto"> dentro do grid usam
+           a MESMA fonte/tamanho/cor de sempre — só a margem inferior
+           individual vira gap do grid, pra manter o mesmo espaçamento
+           vertical sem duplicar espaço entre as duas colunas. */
+        .cv2-idiomas-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; row-gap: 4px; }
+        .cv2-idiomas-grid .cv2-texto { margin: 0; }
         @media (max-width: 620px) {
             .cv2-doc { flex-direction: column; }
             .cv2-sidebar { width: 100%; }
@@ -4695,86 +4704,11 @@
         }
         window.printCurriculo = printCurriculo;
 
-        // Agrupa as respostas cruas de `dados` em seções de currículo de verdade.
-        // As chaves batem com o texto original das perguntas (mesmo padrão usado
-        // pelo Apps Script antigo e pelo formulário novo em curriculo-form.html),
-        // com sufixo " (N)" nos blocos repetíveis (cursos/empresas/referências).
-        const CAMPOS_POR_SECAO = {
-            'Formação': [
-                'VOCÊ POSSUI ALGUMA FORMAÇÃO TÉCNICA DE ENSINO SUPERIOR?', 'QUAL SUA ÁREA DE FORMAÇÃO SUPERIOR?',
-                'E QUAL PERÍODO DE FORMAÇÃO VOCÊ ESTÁ ATUALMENTE?', 'E QUAL SERIA O SEU GRAU ESCOLAR?',
-                'REFERENTE AO SEU ESTUDO EM QUE PROCESSO VOCÊ ESTÁ ATUALMENTE?', 'EM QUAL HORÁRIO VOCÊ ESTUDA?',
-            ],
-            'Cursos': [
-                'VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?', 'INFORME O CURSO VOCÊ CONCLUIU?',
-                'EM QUAL INSTITUIÇÃO? (Caso você não se lembrar, deixe a resposta em branco)', 'EM QUAL INSTITUIÇÃO?',
-                'TOTAL DA CARGA HORÁRIA? (Caso você não se lembrar, deixe a resposta em branco)', 'TOTAL DA CARGA HORÁRIA?',
-            ],
-            'Habilidades': [
-                'MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)',
-                'ALÉM DO SEU IDIOMA NATIVO (natural da sua Região) VOCÊ POSSSUI CONHECIMENTO DE OUTROS IDIOMAS?',
-                'ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO!', 'ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO\\!',
-            ],
-            'Experiência Profissional': [
-                'VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?',
-                'NOME DA EMPRESA QUE VOCÊ JA PRESTOU SERVIÇO', 'QUAL ERA O SEU CARGO NESSA EMPRESA?',
-                'QUAL FOI O PERÍODO QUE VOCÊ TRABALHOU NESSA EMPRESA?',
-                'GOSTARIA DE ADICIONAR INFORMAÇÃO DE MAIS EMPRESA QUE VOCÊ TRABALHOU?',
-            ],
-            'Referências Pessoais': [
-                'QUAL SERIA O NOME DA REFERÊNCIA', 'QUAL SERIA O NOME DESSA PESSOA?', 'QUAL SERIA O NOME DA OUTRA PESSOA?',
-                'E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO', 'AGORA O NUMERO DO SEU TELEFONE DA REFERÊNCIA',
-                'AGORA O NUMERO DO SEU TELEFONE? (sem DDD)',
-                'GOSTARIA DE ADICIONAR O NOME E O TELEFONE DE ALGUÉM PRA SERVIR COMO UMA REFERÊNCIA PESSOAL? (Um amigo, ex-colega de trabalho ou seu Ex-Patrão)',
-                'GOSTARIA DE ADICIONAR O NOME DE UMA OUTRA PESSOA PRA REFERENCIA PESSOAL? (Um outro amigo, ex-colega de trabalho ou seu Ex-Patrão)',
-            ],
-            'Preferências e Habilitação': [
-                'VOCÊ FUMANTE?', 'VOCÊ  FUMANTE?',
-                'MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?',
-                'GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?', 'QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?',
-                'VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?', 'QUAL CATEGORIA DA SUA CNH?',
-                'SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)',
-            ],
-        };
-        // Rótulos curtos pras perguntas mais comuns — evita mostrar a pergunta
-        // inteira do formulário como se fosse o texto do currículo.
-        const LABEL_AMIGAVEL = {
-            'VOCÊ POSSUI ALGUMA FORMAÇÃO TÉCNICA DE ENSINO SUPERIOR?': 'Formação superior',
-            'QUAL SUA ÁREA DE FORMAÇÃO SUPERIOR?': 'Área de formação',
-            'E QUAL PERÍODO DE FORMAÇÃO VOCÊ ESTÁ ATUALMENTE?': 'Período atual',
-            'E QUAL SERIA O SEU GRAU ESCOLAR?': 'Grau escolar',
-            'REFERENTE AO SEU ESTUDO EM QUE PROCESSO VOCÊ ESTÁ ATUALMENTE?': 'Situação dos estudos',
-            'EM QUAL HORÁRIO VOCÊ ESTUDA?': 'Horário de estudo',
-            'VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?': 'Fez curso profissionalizante',
-            'MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)': 'Informática',
-            'ALÉM DO SEU IDIOMA NATIVO (natural da sua Região) VOCÊ POSSSUI CONHECIMENTO DE OUTROS IDIOMAS?': 'Outros idiomas',
-            'ESCREVA AQUI OS DEMAIS IDIOMAS QUE VOCÊ TEM CONHECIMENTO!': 'Idiomas',
-            'VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?': 'Situação profissional',
-            'VOCÊ FUMANTE?': 'Fumante', 'VOCÊ  FUMANTE?': 'Fumante',
-            'MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?': 'Disponibilidade',
-            'GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?': 'Cargo de destaque',
-            'QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?': 'Cargo desejado',
-            'VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?': 'Possui CNH',
-            'QUAL CATEGORIA DA SUA CNH?': 'Categoria CNH',
-            'SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)': 'CNH com EAR',
-        };
         // Perguntas de controle/branching que não agregam nada pro currículo final.
         const CAMPOS_IGNORAR = /^GOSTARIA DE ADICIONAR/;
 
         function baseKey(k) { return k.replace(/\s*\(\d+\)\s*$/, '').trim(); }
         function indiceKey(k) { const m = k.match(/\((\d+)\)\s*$/); return m ? m[1] : '1'; }
-        function labelAmigavel(k) {
-            const base = baseKey(k);
-            if (LABEL_AMIGAVEL[base]) return LABEL_AMIGAVEL[base];
-            return base.replace(/\?$/, '').replace(/^./, ch => ch.toUpperCase());
-        }
-        function secaoDaChave(k) {
-            const base = baseKey(k);
-            for (const [secao, chaves] of Object.entries(CAMPOS_POR_SECAO)) {
-                if (chaves.some(c => base === c || base.startsWith(c))) return secao;
-            }
-            return 'Outras Informações';
-        }
 
         // Capitaliza pra exibição nos formatados/impressão (nome próprio, cada
         // palavra maiúscula, preposições minúsculas) — corrige o caso de
@@ -4986,9 +4920,9 @@
 
         // Chaves de `dados` que ganham bloco próprio no layout novo (barra
         // lateral: Naturalidade, Filhos, Escolaridade; e a seção "Cargos
-        // Pretendidos" na coluna de conteúdo) — extraídas direto, sem entrar
-        // no agrupamento genérico de `secoes` por CAMPOS_POR_SECAO, pra não
-        // duplicar a mesma informação em dois lugares do documento.
+        // Pretendidos" na coluna de conteúdo) — extraídas direto e excluídas
+        // aqui via CHAVES_BARRA_LATERAL, pra não duplicar a mesma informação
+        // em dois lugares do documento.
         const CHAVE_NATURALIDADE = 'NATURALIDADE? (Apenas o nome da da cidade onde você nasceu)';
         const CHAVE_ESTADO_NASCIMENTO = 'EM QUAL ESTADO?';
         const CHAVE_TEM_FILHOS = 'VOCÊ TEM FILHOS?';
@@ -5009,11 +4943,11 @@
         // Escolaridade reestruturada em 2026-08-21 (nível + situação + período
         // em cascata, só no Painel — não mexe em Google Forms/Sheets, ver
         // curriculo-form.html). Chaves antigas (grau escolar/processo de
-        // estudo/formação superior) foram tiradas daqui de propósito — não
-        // ficam mais escondidas, caem no fluxo genérico de `secoes` (bucket
-        // "Formação", já em CAMPOS_POR_SECAO) igual a antes desta mudança,
-        // então um currículo salvo com o formulário antigo continua exibindo
-        // esses dados normalmente em "Dados Adicionais".
+        // estudo/formação superior) de registros salvos com o formulário
+        // antigo simplesmente não têm mais lugar nenhum no documento desde
+        // 2026-08-23 — "Dados Adicionais" virou uma lista fechada de 4 linhas
+        // (ver blocoDadosAdicionais) e não exibe mais pergunta/resposta crua
+        // de nenhum campo fora dessa lista.
         const CHAVE_ESCOLARIDADE = 'QUAL A SUA ESCOLARIDADE?';
         const CHAVE_SITUACAO_ESCOLARIDADE = 'QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?';
         const CHAVE_PERIODO_ESTUDO = 'EM QUE PERÍODO VOCÊ ESTUDA?';
@@ -5102,12 +5036,17 @@
                 : 'Comunicativo, dinâmico, responsável e pontual.';
         }
 
-        // Texto de fechamento da seção "Cargo Pretendido" (2026-08-22, pedido
-        // do usuário) — curto e automático, mesmo padrão de gênero das outras
-        // montarTexto*Cv2 (sem adjetivo com marca de gênero nesse texto, então
-        // fica igual pros dois casos; o parâmetro é mantido pra consistência).
-        function montarTextoFechamentoCargoCv2(genero) {
-            return 'Fico à disposição da empresa e agradeço pela oportunidade, colocando-me à disposição para uma eventual entrevista ou contratação.';
+        // Texto de fechamento da seção "Cargo Pretendido" (2026-08-23, pedido
+        // do usuário) — dois textos fixos, escolhidos conforme há ou não
+        // cargo informado (nunca os dois juntos): com cargo, reforça
+        // flexibilidade pra outras funções; sem cargo, é o texto neutro
+        // completo. Nenhum dos dois tem adjetivo com marca de gênero, então
+        // fica igual pros dois casos; o parâmetro é mantido pra consistência
+        // com as outras montarTexto*Cv2.
+        function montarTextoFechamentoCargoCv2(genero, temCargo) {
+            return temCargo
+                ? 'Mesmo assim, coloco-me à disposição da empresa para exercer outras funções compatíveis com o meu perfil, agradecendo pela oportunidade e permanecendo à disposição para uma eventual entrevista ou contratação.'
+                : 'Coloco-me à disposição da empresa para a função que melhor atender às suas necessidades, agradecendo pela oportunidade e permanecendo à disposição para uma entrevista.';
         }
 
         // Junta uma lista de termos em português com vírgula entre os itens e
@@ -5154,16 +5093,20 @@
             const { ocultarObjetivo, ocultarCargo } = opts || {};
             const dados = c.dados || {};
             const cursos = {}, empresas = {}, referencias = {}, idiomas = {};
-            const secoes = {};
 
+            // Só extrai o que tem seção própria no currículo (cursos, empresas,
+            // referências, idiomas) — qualquer outra resposta do formulário
+            // (rua/número/complemento, sexo, "outros idiomas" sim/não, "cargo
+            // de destaque" sim/não etc.) é ignorada aqui de propósito
+            // (2026-08-23, pedido do usuário): "Dados Adicionais" agora é uma
+            // lista fechada de 4 linhas (fumante/características/
+            // disponibilidade/CNH, ver blocoDadosAdicionais mais abaixo) e não
+            // deve ganhar nenhum dado extra vazando de outra pergunta.
             Object.entries(dados).forEach(([k, v]) => {
                 if (!k.trim() || !v) return;
                 const base = baseKey(k);
                 if (CAMPOS_IGNORAR.test(base)) return;
                 if (CHAVES_BARRA_LATERAL.has(base)) return;
-                // Informática (2026-08-22) não entra mais em "Dados Adicionais" —
-                // vira conteúdo da própria seção "Cursos Profissionalizantes"
-                // (ver blocoCursos), só quando não há curso cadastrado.
                 if (base === CHAVE_INFORMATICA) return;
                 const i = indiceKey(k);
                 if (base.startsWith('INFORME O CURSO')) { (cursos[i] = cursos[i] || {}).curso = v; return; }
@@ -5177,9 +5120,6 @@
                 if (base.startsWith('AGORA O NUMERO DO SEU TELEFONE')) { (referencias[i] = referencias[i] || {}).numero = v; return; }
                 if (base.startsWith('QUAL IDIOMA VOCÊ FALA?')) { (idiomas[i] = idiomas[i] || {}).idioma = v; return; }
                 if (base.startsWith('QUAL O NÍVEL DE CONHECIMENTO NESSE IDIOMA?')) { (idiomas[i] = idiomas[i] || {}).nivel = v; return; }
-
-                const secao = secaoDaChave(k);
-                (secoes[secao] = secoes[secao] || []).push(`<p><b>${escapeHtml(labelAmigavel(k))}:</b> ${escapeHtml(String(v))}</p>`);
             });
 
             const empresasArr = Object.values(empresas).filter(x => x.nome || x.cargo);
@@ -5290,51 +5230,66 @@
                     ${referenciasArr.map(x => `<p class="cv2-texto">Contato p/ Referência: ${(x.ddd || x.numero) ? `${escapeHtml(formatarTelefoneExibicao(`${x.ddd || ''}${x.numero || ''}`))} ` : ''}Falar com ${escapeHtml(titleCase(x.nome))}</p>`).join('')}
                 </section>` : '';
 
-            // Idiomas (2026-08-21) — seção própria só quando há pelo menos um
-            // idioma cadastrado (cadastro estruturado idioma+nível, ver
-            // curriculo-form.html); registro sem nenhum idioma adicionado
-            // simplesmente não gera a seção. Nível em minúsculo (fluente,
-            // intermediário, básico) — só cosmético, mesmo padrão já usado em
-            // "Ensino Médio em andamento" (montarTextoEscolaridade).
+            // Idiomas (2026-08-23, pedido do usuário) — seção própria só quando
+            // há pelo menos um idioma cadastrado (cadastro estruturado
+            // idioma+nível, ver curriculo-form.html); registro sem nenhum
+            // idioma adicionado simplesmente não gera a seção. Grade de 2
+            // colunas via CSS Grid (ver .cv2-idiomas-grid): a ordem no HTML já
+            // é a ordem de preenchimento — esquerda pra direita, depois de
+            // cima pra baixo — então o grid resolve sozinho todos os casos
+            // (1 idioma só ocupa a coluna esquerda; 3 deixam o 3º sozinho
+            // numa linha nova começando na esquerda), sem precisar calcular
+            // nada em JS. Nível em minúsculo (fluente, intermediário,
+            // básico) — só cosmético, mesmo padrão já usado em "Ensino Médio
+            // em andamento" (montarTextoEscolaridade), sem mudança aqui.
             const blocoIdiomas = idiomasArr.length ? `
                 <section>
                     <div class="cv2-bar-h">Idiomas</div>
-                    <p class="cv2-texto">${idiomasArr.map(x => `${escapeHtml(titleCase(x.idioma))}${x.nivel ? ' — ' + escapeHtml(x.nivel.toLowerCase()) : ''}`).join(', ')}</p>
+                    <div class="cv2-idiomas-grid">
+                        ${idiomasArr.map(x => `<p class="cv2-texto">${escapeHtml(titleCase(x.idioma))}${x.nivel ? ' — ' + escapeHtml(x.nivel.toLowerCase()) : ''}</p>`).join('')}
+                    </div>
                 </section>` : '';
 
-            // Cargo Pretendido (2026-08-22, pedido do usuário) — o próprio cargo
-            // vira o título da seção (em vez do rótulo fixo "Cargos
-            // Pretendidos"), com um texto de fechamento curto montado
-            // automaticamente logo abaixo (ver montarTextoFechamentoCargoCv2).
-            // Sem cargo informado, a seção some inteira — sempre a última do
-            // lado direito, logo abaixo de Dados Adicionais.
+            // Cargo Pretendido (2026-08-23, pedido do usuário) — título fixo
+            // "Cargo Pretendido", nunca substituído pelo cargo digitado; o(s)
+            // cargo(s) do candidato viram uma linha de conteúdo logo abaixo
+            // ("Cargo Pretendido: X, Y, Z"), seguida do texto de fechamento
+            // (ver montarTextoFechamentoCargoCv2, que muda conforme há ou não
+            // cargo informado). A seção agora é sempre exibida — mesmo sem
+            // cargo informado ela mostra só o texto neutro — e continua
+            // sempre a última do lado direito, logo abaixo de Dados
+            // Adicionais (só some quando `ocultarCargo`, do ajuste automático
+            // de 1 página).
             const cargoDesejado = dados[CHAVE_CARGO_DESEJADO];
-            const blocoCargos = (cargoDesejado && !ocultarCargo) ? `
+            const blocoCargos = ocultarCargo ? '' : `
                 <section>
-                    <div class="cv2-bar-h">${escapeHtml(cargoDesejado)}</div>
-                    <p class="cv2-texto">${escapeHtml(montarTextoFechamentoCargoCv2(c.genero))}</p>
-                </section>` : '';
+                    <div class="cv2-bar-h">Cargo Pretendido</div>
+                    ${cargoDesejado ? `<p class="cv2-texto">Cargo Pretendido: ${escapeHtml(cargoDesejado)}</p>` : ''}
+                    <p class="cv2-texto">${escapeHtml(montarTextoFechamentoCargoCv2(c.genero, !!cargoDesejado))}</p>
+                </section>`;
 
-            // Dados Adicionais (2026-08-22, pedido do usuário) — cada informação
-            // numa linha só, montadas nesta ordem fixa: fumante (só quando
-            // "Não" — "Sim" não mostra nada sobre tabagismo), características
-            // pessoais por gênero (sempre), disponibilidade de horário (só
-            // quando o candidato marcou alguma), qualquer sobra genérica de
-            // Formação/Habilidades/Preferências/Outras Informações, e por
-            // último a frase de CNH (sempre, ver montarLinhaCnhCv2). Linhas
-            // ausentes (ex: sem disponibilidade marcada) simplesmente não
-            // entram no array, então as seguintes sobem sem espaço em branco.
+            // Dados Adicionais (2026-08-23, pedido do usuário) — lista fechada
+            // de exatamente 4 linhas possíveis, nesta ordem fixa: fumante (só
+            // quando "Não" — "Sim" não mostra nada sobre tabagismo),
+            // características pessoais por gênero (sempre), disponibilidade
+            // de horário (só quando o candidato marcou alguma) e a frase de
+            // CNH (sempre, ver montarLinhaCnhCv2). Não entra mais nenhuma
+            // sobra genérica de outras perguntas do formulário (rua/número/
+            // complemento, sexo, "outros idiomas", "cargo de destaque" etc.)
+            // — cada uma dessas já aparece em outra seção do currículo (ou
+            // nunca deveria aparecer), então incluir de novo aqui era
+            // duplicação. Linha ausente (ex: sem disponibilidade marcada)
+            // simplesmente não entra no array, e as seguintes sobem sem
+            // espaço em branco.
             const linhaFumante = dados[CHAVE_FUMANTE] === 'Não'
                 ? '<p class="cv2-texto">Não sou fumante e não possuo nenhum tipo de vício.</p>' : '';
             const linhaCaracteristicas = `<p class="cv2-texto">${escapeHtml(montarTextoCaracteristicasCv2(c.genero))}</p>`;
             const disponibilidadeHorario = dados[CHAVE_DISPONIBILIDADE_HORARIO];
             const linhaDisponibilidade = disponibilidadeHorario
-                ? `<p class="cv2-texto">Disponibilidade: ${escapeHtml(disponibilidadeHorario)}</p>` : '';
+                ? `<p class="cv2-texto">Disponibilidade de horário: ${escapeHtml(disponibilidadeHorario)}</p>` : '';
             const linhaCnh = `<p class="cv2-texto">${escapeHtml(montarLinhaCnhCv2(dados[CHAVE_TEM_CNH], dados[CHAVE_CATEGORIA_CNH], dados[CHAVE_TEM_EAR], dados[CHAVE_VEICULO_PROPRIO], dados[CHAVE_TIPO_VEICULO], dados[CHAVE_DISPONIBILIDADE_VIAGEM]))}</p>`;
 
-            const ordemRestante = ['Formação', 'Habilidades', 'Preferências e Habilitação', 'Outras Informações'];
-            const dadosAdicionaisItens = ordemRestante.flatMap(s => secoes[s] || []);
-            const linhasDadosAdicionais = [linhaFumante, linhaCaracteristicas, linhaDisponibilidade, ...dadosAdicionaisItens, linhaCnh].filter(Boolean);
+            const linhasDadosAdicionais = [linhaFumante, linhaCaracteristicas, linhaDisponibilidade, linhaCnh].filter(Boolean);
             const blocoDadosAdicionais = `
                 <section>
                     <div class="cv2-bar-h">Dados Adicionais</div>

@@ -648,7 +648,7 @@ function renderEmpresasArea() {
             <div class="repeat-title">Empresa ${i + 1}</div>
             <div class="field"><label>Nome da empresa que você já prestou serviço</label><input type="text" data-empresa="${i}" data-field="nome" value="${esc(emp.nome)}"></div>
             <div class="field"><label>Qual era o seu cargo nessa empresa?</label><input type="text" data-empresa="${i}" data-field="cargo" value="${esc(emp.cargo)}"></div>
-            <div class="field"><label>Qual foi o período que você trabalhou nessa empresa?</label><input type="text" data-empresa="${i}" data-field="periodo" value="${esc(emp.periodo)}" placeholder="ex: 2020 a 2022"></div>
+            <div class="field"><label>Qual foi o período que você trabalhou nessa empresa?</label><input type="text" data-empresa="${i}" data-field="periodo" value="${esc(emp.periodo)}" placeholder="ex: 2 anos e 6 meses, 1 ano e 3 meses, 5 anos"></div>
         </div>`).join('') + (s.empresas.length < 4 ? `<button type="button" class="btn-add" id="btnAddEmpresa">+ Adicionar outra empresa</button>` : '');
     const btnAdd = document.getElementById('btnAddEmpresa');
     if (btnAdd) btnAdd.addEventListener('click', () => { saveEmpresa(); s.empresas.push({ nome: '', cargo: '', periodo: '' }); renderEmpresasArea(); });
