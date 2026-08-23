@@ -63,6 +63,13 @@
     .btn-back { background: var(--surface-2); color: var(--text-dim); flex: 0 0 90px; }
     .btn:disabled { opacity: 0.5; cursor: default; }
     .error-msg { color: var(--danger); font-size: 12px; margin-top: 10px; display: none; }
+    /* Botões de escolha de foto (2026-08-23) — mesmo visual dos radio-pill,
+       mas são <button> de verdade (cada um abre um <input type=file>
+       escondido diferente), não radio — não existe "selecionado" permanente,
+       é só disparar a câmera ou a galeria. */
+    .foto-opcoes { display: flex; gap: 10px; flex-wrap: wrap; }
+    .foto-opcoes button { flex: 1 1 140px; padding: 13px 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 13.5px; font-weight: 700; cursor: pointer; }
+    .foto-opcoes button:active { border-color: var(--accent); }
     /* Aviso não-bloqueante de período de estudo × disponibilidade (2026-08-21)
        — âmbar, pra diferenciar de erro (vermelho) e de confirmação positiva
        (verde), sem introduzir cor nova fora da paleta de status já usada. */
@@ -121,7 +128,7 @@ const s = {
     tem_experiencia: '', empresas: [],
     referencias: [],
     fumante: '', disponibilidade: [], destacar_cargo: '', qual_cargo: '', tipo_cargo_busca: '',
-    tem_cnh: '', categoria_cnh: '', tem_ear: '',
+    tem_cnh: '', categoria_cnh: '', tem_ear: '', veiculo_proprio: '', tipo_veiculo: '', disponibilidade_viagem: '',
 };
 let fotoFile = null; // File object, fica fora de `s` (não é serializável do mesmo jeito)
 let fotoPreviewUrl = null;
@@ -521,6 +528,11 @@ function renderCondPeriodoEstudo() {
 }
 
 // ---------- Etapa 6: Cursos ----------
+// A pergunta de informática (2026-08-22, pedido do usuário) virou condicional
+// à resposta desta etapa: "Sim" mostra só os cursos, sem perguntar nada de
+// informática; "Não" oculta o campo de cursos e pergunta o nível de
+// informática — as duas coisas nunca aparecem juntas nem ficam vazias na
+// mesma etapa (ver renderCondInformatica abaixo).
 function stepCursos() {
     return `
     <h2>Cursos Profissionalizantes</h2>
@@ -528,6 +540,7 @@ function stepCursos() {
         <div class="radio-group">${pill('f_fez_curso', 'Sim', s.fez_curso === 'Sim')}${pill('f_fez_curso', 'Não', s.fez_curso === 'Não')}</div>
     </div>
     <div id="cursosArea"></div>
+    <div id="condInformatica"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -548,6 +561,19 @@ function renderCursosArea() {
     if (btnAdd) btnAdd.addEventListener('click', () => { saveCurso(); s.cursos.push({ curso: '', instituicao: '', carga: '' }); renderCursosArea(); });
     el.querySelectorAll('[data-remove-curso]').forEach(b => b.addEventListener('click', () => { saveCurso(); s.cursos.splice(+b.dataset.removeCurso, 1); renderCursosArea(); }));
 }
+const INFORMATICA_OPTS = ['Não possui', 'Conhecimentos básicos', 'Conhecimentos avançados'];
+function renderCondInformatica() {
+    const el = document.getElementById('condInformatica');
+    if (!el) return;
+    if (s.fez_curso !== 'Não') { el.innerHTML = ''; return; }
+    el.innerHTML = `
+    <div class="field"><label>Você possui conhecimentos em informática?</label>
+        <select id="f_informatica">
+            <option value="">Selecione</option>
+            ${INFORMATICA_OPTS.map(o => `<option value="${o}" ${s.informatica === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+    </div>`;
+}
 
 // ---------- Etapa 7: Informática / Idiomas ----------
 // Reestruturado em 2026-08-21: a pergunta "outros idiomas" adapta o texto
@@ -566,13 +592,7 @@ function perguntaIdiomaBase() {
 }
 function stepInformaticaIdiomas() {
     return `
-    <h2>Informática e Idiomas</h2>
-    <div class="field"><label>Mesmo sem curso, você teria algum conhecimento em informática (computadores)?</label>
-        <select id="f_informatica">
-            <option value="">Selecione</option>
-            ${['Nenhum','Básico','Intermediário','Avançado'].map(o => `<option value="${o}" ${s.informatica === o ? 'selected' : ''}>${o}</option>`).join('')}
-        </select>
-    </div>
+    <h2>Idiomas</h2>
     <div class="field"><label>${perguntaIdiomaBase()}</label>
         <div class="radio-group">${pill('f_outros_idiomas', 'Sim', s.outros_idiomas === 'Sim')}${pill('f_outros_idiomas', 'Não', s.outros_idiomas === 'Não')}</div>
     </div>
@@ -753,22 +773,58 @@ function stepCnh() {
 function renderCondCnh() {
     const el = document.getElementById('condCnh');
     if (!el) return;
-    el.innerHTML = s.tem_cnh === 'Sim' ? `
+    if (s.tem_cnh !== 'Sim') { el.innerHTML = ''; return; }
+    el.innerHTML = `
         <div class="field"><label>Qual categoria da sua CNH?</label>
             <select id="f_categoria_cnh"><option value="">Selecione</option>${['A','B','AB','C','D','E'].map(o => `<option value="${o}" ${s.categoria_cnh === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
         </div>
         <div class="field"><label>Sua habilitação possui extensão pra EAR? (autorização pra serviços de motorista com remuneração, tipo Uber)</label>
             <div class="radio-group">${pill('f_tem_ear', 'Sim', s.tem_ear === 'Sim')}${pill('f_tem_ear', 'Não', s.tem_ear === 'Não')}</div>
-        </div>` : '';
+        </div>
+        <div class="field"><label>Você possui veículo próprio?</label>
+            <div class="radio-group">${pill('f_veiculo_proprio', 'Sim', s.veiculo_proprio === 'Sim')}${pill('f_veiculo_proprio', 'Não', s.veiculo_proprio === 'Não')}</div>
+        </div>
+        <div id="condTipoVeiculo"></div>
+        <div class="field"><label>Você possui disponibilidade para viagens?</label>
+            <div class="radio-group">${pill('f_disponibilidade_viagem', 'Sim', s.disponibilidade_viagem === 'Sim')}${pill('f_disponibilidade_viagem', 'Não', s.disponibilidade_viagem === 'Não')}</div>
+        </div>`;
+    document.querySelectorAll('input[name="f_veiculo_proprio"]').forEach(r => r.addEventListener('change', () => { s.veiculo_proprio = checkedVal('f_veiculo_proprio'); if (s.veiculo_proprio !== 'Sim') s.tipo_veiculo = ''; renderCondTipoVeiculo(); }));
+    renderCondTipoVeiculo();
+}
+function renderCondTipoVeiculo() {
+    const el = document.getElementById('condTipoVeiculo');
+    if (!el) return;
+    if (s.veiculo_proprio !== 'Sim') { el.innerHTML = ''; return; }
+    el.innerHTML = `
+        <div class="field"><label>Qual tipo de veículo?</label>
+            <div class="radio-group">
+                ${pill('f_tipo_veiculo', 'Carro', s.tipo_veiculo === 'Carro')}
+                ${pill('f_tipo_veiculo', 'Moto', s.tipo_veiculo === 'Moto')}
+                ${pill('f_tipo_veiculo', 'Carro e Moto', s.tipo_veiculo === 'Carro e Moto')}
+            </div>
+        </div>`;
 }
 
 // ---------- Etapa 12: Foto (opcional) ----------
+// Duas entradas escondidas (2026-08-23, pedido do usuário): uma abre a
+// câmera frontal na hora (capture="user", pra selfie) e outra é o seletor de
+// arquivo comum (sem `capture`, mostra a galeria/arquivos do aparelho). Em
+// celular (detectado via `pointer: coarse`, tela sensível ao toque) os 2
+// botões aparecem; em desktop só existe o de galeria — não tem câmera nativa
+// pra acionar nesse contexto, então o comportamento continua sendo a seleção
+// de arquivo simples de sempre.
 function stepFoto() {
+    const ehTelaTouch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     return `
     <h2>Foto (opcional)</h2>
-    <p style="font-size:12.5px;color:var(--text-dim);margin-top:-8px;">Se quiser, mande uma foto sua pro currículo. Não é obrigatório — pode pular sem problema.</p>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-top:-8px;">Se quiser, mande uma foto sua pro currículo. Não é obrigatório — pode pular sem problema. A foto é recortada automaticamente no formato 3x4.</p>
     <div class="field">
-        <input type="file" id="f_foto" accept="image/*" capture="environment">
+        <div class="foto-opcoes">
+            ${ehTelaTouch ? `<button type="button" id="btnFotoCamera">📷 Tirar selfie</button>` : ''}
+            <button type="button" id="btnFotoGaleria">${ehTelaTouch ? '🖼️ Escolher da galeria' : '📁 Escolher imagem'}</button>
+        </div>
+        <input type="file" id="f_foto_camera" accept="image/jpeg,image/png,image/webp" capture="user" style="display:none;">
+        <input type="file" id="f_foto_galeria" accept="image/jpeg,image/png,image/webp" style="display:none;">
     </div>
     <div id="fotoPreviewArea"></div>
     <div id="errorMsg" class="error-msg"></div>
@@ -780,15 +836,76 @@ function renderFotoPreview() {
     if (!fotoPreviewUrl) { el.innerHTML = ''; return; }
     el.innerHTML = `
         <div style="display:flex; align-items:center; gap:12px; margin-top:8px;">
-            <img src="${fotoPreviewUrl}" alt="Prévia" style="width:72px; height:72px; border-radius:12px; object-fit:cover; border:1px solid var(--border);">
+            <img src="${fotoPreviewUrl}" alt="Prévia" style="width:72px; aspect-ratio:3/4; border-radius:12px; object-fit:cover; border:1px solid var(--border);">
             <button type="button" class="btn-remove" id="btnRemoverFoto" style="position:static;">remover foto</button>
         </div>`;
     const btnRemover = document.getElementById('btnRemoverFoto');
     if (btnRemover) btnRemover.addEventListener('click', () => {
         fotoFile = null; fotoPreviewUrl = null; fotoRemovida = true;
-        const inp = document.getElementById('f_foto'); if (inp) inp.value = '';
+        const inpCamera = document.getElementById('f_foto_camera'); if (inpCamera) inpCamera.value = '';
+        const inpGaleria = document.getElementById('f_foto_galeria'); if (inpGaleria) inpGaleria.value = '';
         renderFotoPreview();
     });
+}
+
+// Corte automático 3x4 (2026-08-23, pedido do usuário) — sem detecção de
+// rosto de verdade (exigiria uma biblioteca externa, fora do escopo aqui):
+// usa um recorte central, com viés pra cima só quando precisa cortar altura
+// (fotos verticais tendem a ter o rosto na metade de cima, não no centro
+// geométrico — cortar simetricamente de cima e de baixo arriscaria cortar o
+// queixo ou a testa). Sempre devolve um JPEG (formatos de entrada comuns —
+// JPG, PNG, WEBP — todos aceitos via `accept` do input; a normalização de
+// saída simplifica o upload e o `contentType` já usado em enviarFormulario).
+// Se a imagem não carregar por algum motivo, devolve o arquivo original sem
+// travar o fluxo — melhor mandar sem corte do que impedir o envio.
+function cortarFotoCv2(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const urlOriginal = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(urlOriginal);
+            try {
+                const RAZAO = 3 / 4; // largura / altura
+                const razaoOriginal = img.width / img.height;
+                let sx, sy, sw, sh;
+                if (razaoOriginal > RAZAO) {
+                    // imagem relativamente mais larga que 3x4 — corta só a largura
+                    sh = img.height; sw = sh * RAZAO; sy = 0; sx = (img.width - sw) / 2;
+                } else {
+                    // imagem relativamente mais alta que 3x4 — corta a altura, com
+                    // a janela começando um pouco acima do centro geométrico
+                    sw = img.width; sh = sw / RAZAO; sx = 0;
+                    sy = Math.min(Math.max(0, (img.height - sh) * 0.35), img.height - sh);
+                }
+                const LARGURA_SAIDA = 480;
+                const canvas = document.createElement('canvas');
+                canvas.width = LARGURA_SAIDA;
+                canvas.height = Math.round(LARGURA_SAIDA / RAZAO);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob((blob) => {
+                    if (!blob) { resolve(file); return; }
+                    resolve(new File([blob], 'foto-3x4.jpg', { type: 'image/jpeg' }));
+                }, 'image/jpeg', 0.87);
+            } catch (e) {
+                resolve(file);
+            }
+        };
+        img.onerror = () => { URL.revokeObjectURL(urlOriginal); resolve(file); };
+        img.src = urlOriginal;
+    });
+}
+
+// Ponto único de entrada pra foto escolhida (câmera ou galeria, 2026-08-23) —
+// corta em 3x4, atualiza a prévia e limpa `fotoRemovida` (voltar a escolher
+// uma foto depois de ter clicado "remover" precisa desfazer aquele estado).
+async function receberFotoEscolhida(file) {
+    if (!file) return;
+    const arquivoFinal = await cortarFotoCv2(file);
+    fotoFile = arquivoFinal;
+    fotoPreviewUrl = URL.createObjectURL(arquivoFinal);
+    fotoRemovida = false;
+    renderFotoPreview();
 }
 
 // ---------- Etapa 13: Revisão ----------
@@ -883,9 +1000,10 @@ function saveCurrentStep() {
                 const i = +inp.dataset.curso, f = inp.dataset.field;
                 if (s.cursos[i]) s.cursos[i][f] = inp.value;
             });
+            s.informatica = val('f_informatica');
             break;
         case 6:
-            s.informatica = val('f_informatica'); s.outros_idiomas = checkedVal('f_outros_idiomas');
+            s.outros_idiomas = checkedVal('f_outros_idiomas');
             document.querySelectorAll('[data-idioma]').forEach(inp => {
                 const i = +inp.dataset.idioma, f = inp.dataset.field;
                 if (s.idiomas[i]) s.idiomas[i][f] = inp.value;
@@ -912,6 +1030,8 @@ function saveCurrentStep() {
             break;
         case 10:
             s.tem_cnh = checkedVal('f_tem_cnh'); s.categoria_cnh = val('f_categoria_cnh'); s.tem_ear = checkedVal('f_tem_ear');
+            s.veiculo_proprio = checkedVal('f_veiculo_proprio'); s.tipo_veiculo = checkedVal('f_tipo_veiculo');
+            s.disponibilidade_viagem = checkedVal('f_disponibilidade_viagem');
             break;
     }
 }
@@ -928,19 +1048,25 @@ function bindStepEvents() {
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado_residencia = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstadoResidencia(); });
     const selEscolaridade = document.getElementById('f_escolaridade');
     if (selEscolaridade) selEscolaridade.addEventListener('change', () => { s.escolaridade = selEscolaridade.value; s.situacao_escolaridade = ''; s.periodo_estudo = ''; renderCondEscolaridade(); });
-    document.querySelectorAll('input[name="f_fez_curso"]').forEach(r => r.addEventListener('change', () => { s.fez_curso = checkedVal('f_fez_curso'); renderCursosArea(); }));
+    document.querySelectorAll('input[name="f_fez_curso"]').forEach(r => r.addEventListener('change', () => { s.fez_curso = checkedVal('f_fez_curso'); if (s.fez_curso === 'Sim') s.informatica = ''; renderCursosArea(); renderCondInformatica(); }));
     document.querySelectorAll('input[name="f_outros_idiomas"]').forEach(r => r.addEventListener('change', () => { s.outros_idiomas = checkedVal('f_outros_idiomas'); renderCondIdiomas(); }));
     document.querySelectorAll('input[name="f_tem_experiencia"]').forEach(r => r.addEventListener('change', () => { s.tem_experiencia = checkedVal('f_tem_experiencia'); renderEmpresasArea(); }));
     document.querySelectorAll('input[name="f_destacar_cargo"]').forEach(r => r.addEventListener('change', () => { s.destacar_cargo = checkedVal('f_destacar_cargo'); renderCondCargo(); }));
     document.querySelectorAll('input[name="f_tem_cnh"]').forEach(r => r.addEventListener('change', () => { s.tem_cnh = checkedVal('f_tem_cnh'); renderCondCnh(); }));
 
-    const fotoInput = document.getElementById('f_foto');
-    if (fotoInput) fotoInput.addEventListener('change', () => {
-        const file = fotoInput.files && fotoInput.files[0];
-        if (!file) return;
-        fotoFile = file;
-        fotoPreviewUrl = URL.createObjectURL(file);
-        renderFotoPreview();
+    const fotoInputCamera = document.getElementById('f_foto_camera');
+    const fotoInputGaleria = document.getElementById('f_foto_galeria');
+    const btnFotoCamera = document.getElementById('btnFotoCamera');
+    const btnFotoGaleria = document.getElementById('btnFotoGaleria');
+    if (btnFotoCamera && fotoInputCamera) btnFotoCamera.addEventListener('click', () => fotoInputCamera.click());
+    if (btnFotoGaleria && fotoInputGaleria) btnFotoGaleria.addEventListener('click', () => fotoInputGaleria.click());
+    if (fotoInputCamera) fotoInputCamera.addEventListener('change', () => {
+        receberFotoEscolhida(fotoInputCamera.files && fotoInputCamera.files[0]);
+        fotoInputCamera.value = '';
+    });
+    if (fotoInputGaleria) fotoInputGaleria.addEventListener('change', () => {
+        receberFotoEscolhida(fotoInputGaleria.files && fotoInputGaleria.files[0]);
+        fotoInputGaleria.value = '';
     });
 
     const btnSubmit = document.getElementById('btnSubmit');
@@ -948,7 +1074,7 @@ function bindStepEvents() {
 
     // renders iniciais dos blocos condicionais/repetíveis da etapa atual
     renderCondNacionalidade(); renderCondFilhos(); renderCondWhatsapp();
-    renderCondEmail(); renderCondCidade(); renderCondEstadoResidencia(); renderCondEscolaridade(); renderCursosArea(); renderCondIdiomas();
+    renderCondEmail(); renderCondCidade(); renderCondEstadoResidencia(); renderCondEscolaridade(); renderCursosArea(); renderCondInformatica(); renderCondIdiomas();
     renderEmpresasArea(); renderReferenciasArea(); renderCondCargo(); renderCondCnh();
     renderFotoPreview();
 }
@@ -1026,6 +1152,9 @@ async function submitForm() {
     put('VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?', s.tem_cnh);
     put('QUAL CATEGORIA DA SUA CNH?', s.categoria_cnh);
     put('SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)', s.tem_ear);
+    put('VOCÊ POSSUI VEÍCULO PRÓPRIO?', s.veiculo_proprio);
+    put('QUAL TIPO DE VEÍCULO?', s.tipo_veiculo);
+    put('VOCÊ POSSUI DISPONIBILIDADE PARA VIAGENS?', s.disponibilidade_viagem);
 
     // Se não mexeu na foto, preserva a que já existia (edição) — só troca se
     // escolheu um arquivo novo, só limpa se clicou em "remover foto".
@@ -1223,6 +1352,9 @@ function carregarParaEdicao(row) {
     s.tem_cnh = get('VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?');
     s.categoria_cnh = get('QUAL CATEGORIA DA SUA CNH?');
     s.tem_ear = get('SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)');
+    s.veiculo_proprio = get('VOCÊ POSSUI VEÍCULO PRÓPRIO?');
+    s.tipo_veiculo = get('QUAL TIPO DE VEÍCULO?');
+    s.disponibilidade_viagem = get('VOCÊ POSSUI DISPONIBILIDADE PARA VIAGENS?');
 
     if (row.foto_url) { fotoUrlOriginal = row.foto_url; fotoPreviewUrl = row.foto_url; }
 }

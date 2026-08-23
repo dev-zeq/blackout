@@ -349,15 +349,24 @@
            destaque própria) e sem sublinhado; continua clicável (mailto:),
            só não parece visualmente diferente do texto ao redor. */
         .cv2-bar-content a { color: inherit; text-decoration: none; }
-        .cv2-content { flex: 1; min-width: 0; padding: 34px 38px; }
-        .cv2-content section { margin-bottom: 22px; }
+        /* Diagramação da coluna de conteúdo compactada (2026-08-23, pedido do
+           usuário) — padding horizontal reduzido (38px→26px) libera largura
+           útil de verdade pro texto quebrar menos cedo, e as entrelinhas
+           (item/texto/bar-h) encolheram pra deixar o bloco menos "esticado"
+           verticalmente. O espaço ENTRE seções (Experiência, Objetivo, Dados
+           Adicionais, Cargo Pretendido etc.) é o único que ficou maior que
+           antes — de propósito, pra continuar separando os blocos com
+           clareza agora que o texto dentro de cada um ficou mais denso.
+           Tamanho de fonte e cores não mudaram, só espaçamento/largura. */
+        .cv2-content { flex: 1; min-width: 0; padding: 30px 26px; }
+        .cv2-content section { margin-bottom: 26px; }
         .cv2-content section:last-child { margin-bottom: 0; }
-        .cv2-bar-h { background: #ececec; color: #2c3948; font-size: 14px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; padding: 8px 10px; margin: 0 0 13px; }
-        .cv2-content .cv2-item { margin-bottom: 13px; }
+        .cv2-bar-h { background: #ececec; color: #2c3948; font-size: 14px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; padding: 8px 10px; margin: 0 0 11px; }
+        .cv2-content .cv2-item { margin-bottom: 10px; }
         .cv2-content .cv2-item:last-child { margin-bottom: 0; }
-        .cv2-content .cv2-item p { margin: 0 0 2px; font-size: 13.5px; color: #1a1a1a; line-height: 1.55; }
+        .cv2-content .cv2-item p { margin: 0 0 2px; font-size: 13.5px; color: #1a1a1a; line-height: 1.42; }
         .cv2-content .cv2-item p b { color: #2c3948; }
-        .cv2-content p.cv2-texto { font-size: 13.5px; line-height: 1.75; color: #1a1a1a; margin: 0 0 6px; }
+        .cv2-content p.cv2-texto { font-size: 13.5px; line-height: 1.5; color: #1a1a1a; margin: 0 0 4px; }
         .cv2-content p.cv2-texto:last-child { margin-bottom: 0; }
         @media (max-width: 620px) {
             .cv2-doc { flex-direction: column; }
@@ -4649,10 +4658,14 @@
                 document.getElementById('printArea').innerHTML = header + markdownSimplesParaHtml(c.ia_texto);
             } else {
                 // Embrulho .cv2-print-page só na impressão (o modal/prévia em
-                // tela usa formatarCurriculoLayout(c) puro, sem esse wrapper —
-                // ver abrirFormatado) — é o que aciona o @page/margin negativa
-                // de escala cheia em A4 (ver CSS .cv2-print-page acima).
-                document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayout(c)}</div>`;
+                // tela usa formatarCurriculoLayoutAjustado(c) puro, sem esse
+                // wrapper — ver abrirFormatado) — é o que aciona o
+                // @page/margin negativa de escala cheia em A4 (ver CSS
+                // .cv2-print-page acima). formatarCurriculoLayoutAjustado (não
+                // o formatarCurriculoLayout cru) garante que o que sai na
+                // impressão é a mesma versão de 1 página já ajustada que a
+                // pessoa viu no modal.
+                document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayoutAjustado(c)}</div>`;
             }
             setTimeout(() => window.print(), 100);
         }
@@ -4775,21 +4788,6 @@
                         ${endereco ? `<p class="cv-sub">${escapeHtml(endereco)}</p>` : ''}
                     </div>
                 </div>`;
-        }
-
-        // Idade calculada automaticamente a partir da Data de Nascimento
-        // (2026-08-22, pedido do usuário — mostrada como 2ª linha na barra
-        // "Data de Nascimento" da lateral) — nunca salva em lugar nenhum,
-        // calculada na hora a partir da data de hoje real do navegador toda
-        // vez que o currículo é exibido/impresso.
-        function calcularIdadeCv2(dataISO) {
-            const nasc = new Date(dataISO + 'T00:00:00');
-            if (isNaN(nasc.getTime())) return null;
-            const hoje = new Date();
-            let idade = hoje.getFullYear() - nasc.getFullYear();
-            const aniversarioEsteAno = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
-            if (hoje < aniversarioEsteAno) idade--;
-            return idade;
         }
 
         // Formata telefone salvo cru (DDD + número, sem máscara nenhuma no
@@ -4996,10 +4994,28 @@
         const CHAVE_SITUACAO_ESCOLARIDADE = 'QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?';
         const CHAVE_PERIODO_ESTUDO = 'EM QUE PERÍODO VOCÊ ESTUDA?';
         const CHAVE_CARGO_DESEJADO = 'QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?';
+        const CHAVE_TEM_EXPERIENCIA = 'VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?';
+        const CHAVE_INFORMATICA = 'MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)';
+        // Dados Adicionais (2026-08-22, pedido do usuário) — essas chaves saem
+        // do bucket genérico de "Dados Adicionais" porque cada uma virou uma
+        // linha própria, montada automaticamente (ver blocoDadosAdicionais em
+        // formatarCurriculoLayout): fumante, disponibilidade de horário e o
+        // grupo inteiro de CNH (categoria/EAR/veículo/viagens) resumidos numa
+        // única frase.
+        const CHAVE_FUMANTE = 'VOCÊ FUMANTE?';
+        const CHAVE_DISPONIBILIDADE_HORARIO = 'MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?';
+        const CHAVE_TEM_CNH = 'VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?';
+        const CHAVE_CATEGORIA_CNH = 'QUAL CATEGORIA DA SUA CNH?';
+        const CHAVE_TEM_EAR = 'SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)';
+        const CHAVE_VEICULO_PROPRIO = 'VOCÊ POSSUI VEÍCULO PRÓPRIO?';
+        const CHAVE_TIPO_VEICULO = 'QUAL TIPO DE VEÍCULO?';
+        const CHAVE_DISPONIBILIDADE_VIAGEM = 'VOCÊ POSSUI DISPONIBILIDADE PARA VIAGENS?';
         const CHAVES_BARRA_LATERAL = new Set([
             CHAVE_NATURALIDADE, CHAVE_ESTADO_NASCIMENTO, CHAVE_TEM_FILHOS, CHAVE_QTD_FILHOS, CHAVE_SITUACAO_FILHOS,
             CHAVE_RECADO_NOME, CHAVE_RECADO_DDD, CHAVE_RECADO_NUMERO,
             CHAVE_ESCOLARIDADE, CHAVE_SITUACAO_ESCOLARIDADE, CHAVE_PERIODO_ESTUDO, CHAVE_CARGO_DESEJADO,
+            CHAVE_FUMANTE, CHAVE_DISPONIBILIDADE_HORARIO, CHAVE_TEM_CNH, CHAVE_CATEGORIA_CNH, CHAVE_TEM_EAR,
+            CHAVE_VEICULO_PROPRIO, CHAVE_TIPO_VEICULO, CHAVE_DISPONIBILIDADE_VIAGEM,
         ]);
 
         // Texto do currículo pra filhos (2026-08-22, redação simplificada —
@@ -5020,6 +5036,81 @@
             return n === 1 ? `com ${n} filho(a)` : `com ${n} filhos`;
         }
 
+        // Texto padrão pra quem está buscando o primeiro emprego (2026-08-22,
+        // pedido do usuário) — substitui a seção "Experiências Profissionais"
+        // quando o candidato marcou "Primeiro emprego" no formulário e não
+        // cadastrou nenhuma empresa. Só ajusta a concordância de gênero
+        // (masculino/feminino) a partir de c.genero; sem gênero informado,
+        // cai no masculino (mesma convenção já usada nos contratos via g()).
+        function montarTextoPrimeiroEmpregoCv2(genero) {
+            const fem = genero === 'Feminino';
+            return fem
+                ? 'Estou em busca da minha primeira oportunidade no mercado de trabalho, com grande disposição para aprender, desenvolver novas habilidades e contribuir com dedicação, responsabilidade e comprometimento. Tenho facilidade para aprender, boa vontade para enfrentar novos desafios e interesse em crescer profissionalmente, colocando-me à disposição para iniciar minha carreira e agregar valor à empresa.'
+                : 'Estou em busca da minha primeira oportunidade no mercado de trabalho, com grande disposição para aprender, desenvolver novas habilidades e contribuir com dedicação, responsabilidade e comprometimento. Tenho facilidade para aprender, boa vontade para enfrentar novos desafios e interesse em crescer profissionalmente, colocando-me à disposição para iniciar minha carreira e agregar valor à empresa.';
+        }
+
+        // Texto do "Objetivo" gerado automaticamente (2026-08-22, pedido do
+        // usuário) a partir da situação de experiência já informada — nunca
+        // digitado pelo candidato, sempre montado na hora, mesmo padrão de
+        // montarTextoPrimeiroEmpregoCv2. Prioridade: empresa cadastrada conta
+        // mais que a resposta "Primeiro emprego" (dado concreto > resposta de
+        // rádio), depois primeiro emprego, senão um texto neutro pra quem não
+        // informou nada. Nenhum dos 3 textos tem adjetivo com marca de gênero
+        // (só possessivos que concordam com o substantivo, não com quem fala)
+        // — o parâmetro `genero` fica reservado seguindo o mesmo padrão das
+        // outras funções montarTexto*Cv2, caso o texto mude no futuro.
+        function montarTextoObjetivoCv2(genero, temEmpresaCadastrada, ehPrimeiroEmprego) {
+            if (temEmpresaCadastrada) {
+                return 'Busco oportunidade para aplicar minha experiência e conhecimentos, contribuindo com comprometimento, responsabilidade, qualidade e trabalho em equipe.';
+            }
+            if (ehPrimeiroEmprego) {
+                return 'Busco minha primeira oportunidade no mercado de trabalho para desenvolver minhas habilidades, adquirir experiência profissional e contribuir com dedicação, responsabilidade e disposição para aprender.';
+            }
+            return 'Busco uma oportunidade para integrar a equipe da empresa, contribuindo com dedicação, responsabilidade e comprometimento, enquanto desenvolvo minhas habilidades profissionais.';
+        }
+
+        // Características pessoais (2026-08-22, pedido do usuário) — texto fixo
+        // por gênero, sempre presente na 1ª/2ª linha de "Dados Adicionais" (ver
+        // blocoDadosAdicionais), mesmo padrão de gênero das outras montarTexto*Cv2.
+        function montarTextoCaracteristicasCv2(genero) {
+            return genero === 'Feminino'
+                ? 'Comunicativa, dinâmica, responsável e pontual.'
+                : 'Comunicativo, dinâmico, responsável e pontual.';
+        }
+
+        // Texto de fechamento da seção "Cargo Pretendido" (2026-08-22, pedido
+        // do usuário) — curto e automático, mesmo padrão de gênero das outras
+        // montarTexto*Cv2 (sem adjetivo com marca de gênero nesse texto, então
+        // fica igual pros dois casos; o parâmetro é mantido pra consistência).
+        function montarTextoFechamentoCargoCv2(genero) {
+            return 'Fico à disposição da empresa e agradeço pela oportunidade, colocando-me à disposição para uma eventual entrevista ou contratação.';
+        }
+
+        // Junta uma lista de termos em português com vírgula entre os itens e
+        // " e " antes do último (ex: ["A","B","C"] -> "A, B e C") — usado pra
+        // montar a frase de CNH sem deixar conector sobrando ou faltando.
+        function joinListaEComVirgula(itens) {
+            if (itens.length <= 1) return itens.join('');
+            return itens.slice(0, -1).join(', ') + ' e ' + itens[itens.length - 1];
+        }
+
+        // Última linha de "Dados Adicionais": resume toda a situação de CNH numa
+        // frase só (2026-08-22, pedido do usuário) — "Não possuo..." quando a
+        // resposta não é "Sim", senão monta "Possuo CNH categoria X com EAR,
+        // veículo próprio (tipo) e disponibilidade para viagens", omitindo cada
+        // pedaço que não se aplica sem deixar frase quebrada (ver exemplo do
+        // pedido: só entra "com <extras>" quando existe pelo menos um extra).
+        function montarLinhaCnhCv2(temCnh, categoria, temEar, veiculoProprio, tipoVeiculo, dispViagem) {
+            if (temCnh !== 'Sim') return 'Não possuo Carteira Nacional de Habilitação (CNH).';
+            let frase = categoria ? `Possuo CNH categoria ${categoria}` : 'Possuo Carteira Nacional de Habilitação (CNH)';
+            const extras = [];
+            if (temEar === 'Sim') extras.push('EAR');
+            if (veiculoProprio === 'Sim') extras.push(`veículo próprio${tipoVeiculo ? ` (${tipoVeiculo.toLowerCase()})` : ''}`);
+            if (dispViagem === 'Sim') extras.push('disponibilidade para viagens');
+            if (extras.length) frase += ' com ' + joinListaEComVirgula(extras);
+            return frase + '.';
+        }
+
         // Combina nível + situação num texto só (ex: "Ensino Médio Completo",
         // "Ensino Superior em andamento") — nunca fica pré-composto no banco,
         // sempre montado na hora a partir dos 2 campos separados.
@@ -5035,7 +5126,8 @@
         // no caminho "Formatado" (sem IA). O caminho com IA (texto livre da
         // Edge Function) continua usando cvHeaderHtml() + markdown, sem
         // mudança — não dá pra encaixar texto corrido nas barras fixas.
-        function formatarCurriculoLayout(c) {
+        function formatarCurriculoLayout(c, opts) {
+            const { ocultarObjetivo, ocultarCargo } = opts || {};
             const dados = c.dados || {};
             const cursos = {}, empresas = {}, referencias = {}, idiomas = {};
             const secoes = {};
@@ -5045,6 +5137,10 @@
                 const base = baseKey(k);
                 if (CAMPOS_IGNORAR.test(base)) return;
                 if (CHAVES_BARRA_LATERAL.has(base)) return;
+                // Informática (2026-08-22) não entra mais em "Dados Adicionais" —
+                // vira conteúdo da própria seção "Cursos Profissionalizantes"
+                // (ver blocoCursos), só quando não há curso cadastrado.
+                if (base === CHAVE_INFORMATICA) return;
                 const i = indiceKey(k);
                 if (base.startsWith('INFORME O CURSO')) { (cursos[i] = cursos[i] || {}).curso = v; return; }
                 if (base.startsWith('EM QUAL INSTITUIÇÃO')) { (cursos[i] = cursos[i] || {}).instituicao = v; return; }
@@ -5076,7 +5172,6 @@
             // ponto fixo entre nome e sobrenome.
             const nomeCompleto = titleCase(`${c.nome || ''} ${c.sobrenome || ''}`.trim());
             const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : null;
-            const idade = c.data_nascimento ? calcularIdadeCv2(c.data_nascimento) : null;
             const foto = c.foto_url ? `<img src="${escapeHtml(c.foto_url)}" alt="Foto">` : '<div class="cv2-foto-placeholder"></div>';
 
             const pessoalLinhas = [
@@ -5123,7 +5218,7 @@
                     <div class="cv2-foto-wrap">${foto}</div>
                     <div class="cv2-nome">${montarNomeCv2Html(nomeCompleto)}</div>
                     ${pessoalLinhas.length ? `<div class="cv2-pessoal">${pessoalLinhas.join('<br>')}</div>` : ''}
-                    ${nascimento ? barraLateral('Data de Nascimento', [escapeHtml(nascimento), (idade !== null && idade >= 0) ? `${idade} ${idade === 1 ? 'ano' : 'anos'}` : null].filter(Boolean)) : ''}
+                    ${nascimento ? barraLateral('Data de Nascimento', [escapeHtml(nascimento)]) : ''}
                     ${naturalidade ? barraLateral('Naturalidade', [naturalidade]) : ''}
                     ${contatoLinhas.length ? barraLateral('Contato/Fone', contatoLinhas) : ''}
                     ${c.email ? barraLateral('E-mail', [montarEmailCv2Html(c.email)]) : ''}
@@ -5132,6 +5227,7 @@
                 </div>`;
 
             // --- Coluna de conteúdo: seções em barra de título ---
+            const primeiroEmprego = !empresasArr.length && dados[CHAVE_TEM_EXPERIENCIA] === 'Primeiro emprego';
             const blocoExperiencias = empresasArr.length ? `
                 <section>
                     <div class="cv2-bar-h">Experiências Profissionais</div>
@@ -5141,13 +5237,28 @@
                             ${x.cargo ? `<p>Cargo: ${escapeHtml(x.cargo)}</p>` : ''}
                             ${x.periodo ? `<p>Período: ${escapeHtml(x.periodo)}</p>` : ''}
                         </div>`).join('')}
-                </section>` : '';
+                </section>` : (primeiroEmprego ? `
+                <section>
+                    <div class="cv2-bar-h">Experiências Profissionais</div>
+                    <p class="cv2-texto">${escapeHtml(montarTextoPrimeiroEmpregoCv2(c.genero))}</p>
+                </section>` : '');
 
+            // Sem curso cadastrado, a seção usa a resposta de informática como
+            // conteúdo (2026-08-22, pedido do usuário) — "Não possui" (ou sem
+            // resposta) não preenche nada, e a seção inteira some do currículo
+            // nesse caso, sem deixar espaço em branco (as seções seguintes se
+            // reposicionam sozinhas, já que o bloco é só uma string vazia).
+            const informaticaResposta = dados[CHAVE_INFORMATICA];
+            const temInformatica = informaticaResposta && informaticaResposta !== 'Não possui';
             const blocoCursos = cursosArr.length ? `
                 <section>
                     <div class="cv2-bar-h">Cursos Profissionalizantes</div>
                     ${cursosArr.map(x => `<p class="cv2-texto">${escapeHtml(x.curso)}${x.instituicao ? ' — ' + escapeHtml(x.instituicao) : ''}${x.carga ? ` (${escapeHtml(x.carga)})` : ''}</p>`).join('')}
-                </section>` : '';
+                </section>` : (temInformatica ? `
+                <section>
+                    <div class="cv2-bar-h">Cursos Profissionalizantes</div>
+                    <p class="cv2-texto">Informática: ${escapeHtml(informaticaResposta)}</p>
+                </section>` : '');
 
             const blocoReferencias = referenciasArr.length ? `
                 <section>
@@ -5167,28 +5278,121 @@
                     <p class="cv2-texto">${idiomasArr.map(x => `${escapeHtml(titleCase(x.idioma))}${x.nivel ? ' — ' + escapeHtml(x.nivel.toLowerCase()) : ''}`).join(', ')}</p>
                 </section>` : '';
 
+            // Cargo Pretendido (2026-08-22, pedido do usuário) — o próprio cargo
+            // vira o título da seção (em vez do rótulo fixo "Cargos
+            // Pretendidos"), com um texto de fechamento curto montado
+            // automaticamente logo abaixo (ver montarTextoFechamentoCargoCv2).
+            // Sem cargo informado, a seção some inteira — sempre a última do
+            // lado direito, logo abaixo de Dados Adicionais.
             const cargoDesejado = dados[CHAVE_CARGO_DESEJADO];
-            const blocoCargos = cargoDesejado ? `
+            const blocoCargos = (cargoDesejado && !ocultarCargo) ? `
                 <section>
-                    <div class="cv2-bar-h">Cargos Pretendidos</div>
-                    <p class="cv2-texto">${escapeHtml(cargoDesejado)}</p>
+                    <div class="cv2-bar-h">${escapeHtml(cargoDesejado)}</div>
+                    <p class="cv2-texto">${escapeHtml(montarTextoFechamentoCargoCv2(c.genero))}</p>
                 </section>` : '';
+
+            // Dados Adicionais (2026-08-22, pedido do usuário) — cada informação
+            // numa linha só, montadas nesta ordem fixa: fumante (só quando
+            // "Não" — "Sim" não mostra nada sobre tabagismo), características
+            // pessoais por gênero (sempre), disponibilidade de horário (só
+            // quando o candidato marcou alguma), qualquer sobra genérica de
+            // Formação/Habilidades/Preferências/Outras Informações, e por
+            // último a frase de CNH (sempre, ver montarLinhaCnhCv2). Linhas
+            // ausentes (ex: sem disponibilidade marcada) simplesmente não
+            // entram no array, então as seguintes sobem sem espaço em branco.
+            const linhaFumante = dados[CHAVE_FUMANTE] === 'Não'
+                ? '<p class="cv2-texto">Não sou fumante e não possuo nenhum tipo de vício.</p>' : '';
+            const linhaCaracteristicas = `<p class="cv2-texto">${escapeHtml(montarTextoCaracteristicasCv2(c.genero))}</p>`;
+            const disponibilidadeHorario = dados[CHAVE_DISPONIBILIDADE_HORARIO];
+            const linhaDisponibilidade = disponibilidadeHorario
+                ? `<p class="cv2-texto">Disponibilidade: ${escapeHtml(disponibilidadeHorario)}</p>` : '';
+            const linhaCnh = `<p class="cv2-texto">${escapeHtml(montarLinhaCnhCv2(dados[CHAVE_TEM_CNH], dados[CHAVE_CATEGORIA_CNH], dados[CHAVE_TEM_EAR], dados[CHAVE_VEICULO_PROPRIO], dados[CHAVE_TIPO_VEICULO], dados[CHAVE_DISPONIBILIDADE_VIAGEM]))}</p>`;
 
             const ordemRestante = ['Formação', 'Habilidades', 'Preferências e Habilitação', 'Outras Informações'];
             const dadosAdicionaisItens = ordemRestante.flatMap(s => secoes[s] || []);
-            const blocoDadosAdicionais = dadosAdicionaisItens.length ? `
+            const linhasDadosAdicionais = [linhaFumante, linhaCaracteristicas, linhaDisponibilidade, ...dadosAdicionaisItens, linhaCnh].filter(Boolean);
+            const blocoDadosAdicionais = `
                 <section>
                     <div class="cv2-bar-h">Dados Adicionais</div>
-                    ${dadosAdicionaisItens.join('')}
-                </section>` : '';
+                    ${linhasDadosAdicionais.join('')}
+                </section>`;
 
-            const semConteudo = !blocoExperiencias && !blocoCursos && !blocoReferencias && !blocoIdiomas && !blocoCargos && !blocoDadosAdicionais;
+            // "Objetivo" (2026-08-22, pedido do usuário) é sempre gerado — nunca
+            // fica em branco nem depende de resposta específica do candidato —
+            // por isso a coluna de conteúdo nunca fica realmente vazia a partir
+            // de agora, e o placeholder "Sem informações adicionais" (que só
+            // fazia sentido quando TODAS as seções podiam faltar) deixou de
+            // existir. `ocultarObjetivo` (2026-08-23) é a única forma de tirar
+            // essa seção — usado só pelo ajuste automático de 1 página (ver
+            // formatarCurriculoLayoutAjustado), nunca por falta de dado.
+            const blocoObjetivo = ocultarObjetivo ? '' : `
+                <section>
+                    <div class="cv2-bar-h">Objetivo</div>
+                    <p class="cv2-texto">${escapeHtml(montarTextoObjetivoCv2(c.genero, !!empresasArr.length, primeiroEmprego))}</p>
+                </section>`;
+
+            // Ordem fixa das seções (2026-08-22, pedido do usuário): Experiência,
+            // Cursos, Idiomas, Referências, Objetivo, Dados Adicionais, Cargo
+            // Pretendido — cada bloco só existe como string não-vazia quando tem
+            // conteúdo, então uma seção ausente (ex: sem idioma cadastrado)
+            // simplesmente não deixa espaço nenhum e as seguintes sobem sozinhas
+            // na concatenação abaixo.
             const contentHtml = `
                 <div class="cv2-content">
-                    ${semConteudo ? '<p class="cv2-texto">Sem informações adicionais.</p>' : blocoExperiencias + blocoCursos + blocoReferencias + blocoIdiomas + blocoCargos + blocoDadosAdicionais}
+                    ${blocoExperiencias + blocoCursos + blocoIdiomas + blocoReferencias + blocoObjetivo + blocoDadosAdicionais + blocoCargos}
                 </div>`;
 
             return `<div class="cv2-doc">${sidebarHtml}${contentHtml}</div>`;
+        }
+
+        // Largura/altura úteis de 1 página A4 impressa (2026-08-23) — mesma
+        // conta do @page cv2-curriculo (margin: 8mm) já usado em
+        // printCurriculo(): 210mm/297mm menos 8mm de cada lado, convertidos
+        // pra px CSS (1mm = 96/25.4px). Como todo o layout usa font-size em
+        // px (não vw/%), a altura renderizada numa largura X prevê fielmente
+        // a altura na hora de imprimir, mesmo fora da página — por isso dá
+        // pra medir isso escondido no meio da tela sem precisar imprimir de
+        // verdade.
+        const CV2_MM_PARA_PX = 96 / 25.4;
+        const CV2_PAGINA_LARGURA_PX = (210 - 16) * CV2_MM_PARA_PX;
+        const CV2_PAGINA_ALTURA_PX = (297 - 16) * CV2_MM_PARA_PX;
+
+        // Renderiza o HTML do currículo escondido fora da tela, na largura
+        // exata de 1 página impressa, e devolve a altura que ele ocupou —
+        // usado só pra decidir se cabe numa página só (ver
+        // formatarCurriculoLayoutAjustado abaixo), nunca mostrado ao usuário.
+        function medirAlturaCurriculoCv2(htmlCv2Doc) {
+            let probe = document.getElementById('cv2ProbeMedida');
+            if (!probe) {
+                probe = document.createElement('div');
+                probe.id = 'cv2ProbeMedida';
+                probe.style.cssText = `position:absolute; visibility:hidden; pointer-events:none; left:-99999px; top:0; width:${CV2_PAGINA_LARGURA_PX}px;`;
+                document.body.appendChild(probe);
+            }
+            probe.innerHTML = htmlCv2Doc;
+            return probe.firstElementChild ? probe.firstElementChild.scrollHeight : 0;
+        }
+
+        // Ajuste automático de 1 página (2026-08-23, pedido do usuário) — o
+        // currículo deve caber inteiro numa página impressa sem nunca perder
+        // uma informação que o candidato de fato preencheu. Como todo o
+        // conteúdo "de verdade" (experiências, cursos, idiomas, referências,
+        // dados adicionais) já é obrigatoriamente exibido, a única forma de
+        // encurtar a página é remover seções 100% automáticas — Objetivo e,
+        // se ainda não bastar, o texto de fechamento de Cargo Pretendido
+        // (nessa ordem de prioridade, a menos importante primeiro). Mede o
+        // resultado de cada tentativa e para na primeira que couber; se nem
+        // removendo as duas couber (currículo genuinamente extenso), fica
+        // com as duas já removidas — nunca chega a cortar uma seção com dado
+        // informado pelo candidato.
+        function formatarCurriculoLayoutAjustado(c) {
+            let html = formatarCurriculoLayout(c);
+            if (medirAlturaCurriculoCv2(html) <= CV2_PAGINA_ALTURA_PX) return html;
+
+            html = formatarCurriculoLayout(c, { ocultarObjetivo: true });
+            if (medirAlturaCurriculoCv2(html) <= CV2_PAGINA_ALTURA_PX) return html;
+
+            return formatarCurriculoLayout(c, { ocultarObjetivo: true, ocultarCargo: true });
         }
 
         // Converte o markdown simples que a IA devolve (## títulos, listas com "-",
@@ -5231,7 +5435,7 @@
 
             if (!useIA) {
                 btnRegerar.style.display = 'none';
-                conteudo.innerHTML = formatarCurriculoLayout(c);
+                conteudo.innerHTML = formatarCurriculoLayoutAjustado(c);
                 btnImprimir.style.display = '';
                 return;
             }
