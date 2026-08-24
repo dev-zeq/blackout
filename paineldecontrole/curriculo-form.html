@@ -121,7 +121,7 @@ const s = {
     naturalidade: '', estado_nascimento: '', estado_civil: '', tem_filhos: '', qtd_filhos: '', situacao_filhos: '', mostrar_filhos: '',
     ddd: '', telefone_numero: '', whatsapp_mesmo: '', ddd_whatsapp: '', whatsapp_numero: '',
     tem_email: '', email: '',
-    rua: '', numero: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado_residencia: '',
+    rua: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado_residencia: '',
     escolaridade: '', situacao_escolaridade: '', periodo_estudo: '',
     formacao_curso: '', formacao_situacao: '', formacao_periodo: '',
     fez_curso: '', cursos: [],
@@ -197,17 +197,15 @@ function renderCondBairroOutro() {
 }
 function cidadeFinal() { return s.cidade === 'Outra' ? s.cidade_outra : s.cidade; }
 function bairroFinal() { return (s.cidade === 'Outra' || s.bairro === '__outro__') ? s.bairro_outro : s.bairro; }
-// Rua/Número/Complemento entram separados e são compostos num endereço só na
-// hora de enviar/exibir.
+// Rua e número (2026-08-24, campo único — o próprio candidato já escreve o
+// número junto, ex: "Rua das Flores, 123"; pode deixar só o nome da rua se
+// não houver número) + Complemento, ainda separado, compostos num endereço
+// só na hora de enviar/exibir.
 function enderecoFinal() {
     const rua = (s.rua || '').trim();
-    const numero = (s.numero || '').trim();
     const complemento = (s.complemento || '').trim();
-    if (!rua && !numero) return '';
-    let out = rua;
-    if (numero) out += (out ? ', nº ' : 'nº ') + numero;
-    if (complemento) out += ', ' + complemento;
-    return out;
+    if (!rua) return '';
+    return complemento ? `${rua}, ${complemento}` : rua;
 }
 // Camboriú, Balneário Camboriú, Itapema e Itajaí são sempre SC — nesses casos
 // nem mostra o campo de Estado, já assume a sigla sozinho.
@@ -439,15 +437,37 @@ function normalizarTelefoneBR(numero) {
     if (d.length === 9) return d;
     return null;
 }
+// Campo de telefone centralizado (2026-08-23, pedido do usuário) — mesma
+// lista de DDD, mesmo placeholder e mesma regra de validação/normalização
+// (normalizarTelefoneBR) usadas pelo Contato Principal, agora reutilizadas
+// em QUALQUER campo de telefone do formulário (WhatsApp, Referências, e
+// qualquer campo novo que vier a pedir telefone) — um só lugar pra gerar o
+// HTML do par DDD+Número, em vez de cada campo remontar o `<select>`/
+// `<input>` na mão. `attrsDdd`/`attrsNumero` levam os atributos que mudam
+// por campo (`id="..."` nos campos fixos, `data-ref="i" data-field="..."`
+// nos campos repetíveis como Referências) — o resto (lista de DDD, tipo do
+// input, placeholder) é sempre idêntico.
+function campoTelefoneBR(labelDdd, labelNumero, attrsDdd, attrsNumero, valorDdd, valorNumero, obrigatorio) {
+    const marcador = obrigatorio ? ' *' : '';
+    return `
+        <div class="field"><label>${esc(labelDdd)}${marcador}</label><select ${attrsDdd}><option value="">Selecione</option>${dddOptions(valorDdd)}</select></div>
+        <div class="field"><label>${esc(labelNumero)}${marcador}</label><input type="tel" ${attrsNumero} value="${esc(valorNumero)}" placeholder="8 ou 9 dígitos"></div>`;
+}
+// Validação centralizada — mesma regra de dígitos (8 ou 9, sem o DDD) usada
+// pelo Contato Principal, reutilizada em qualquer telefone do formulário.
+// `obrigatorio` decide se DDD/número vazios são erro (Contato Principal,
+// WhatsApp) ou apenas "nada a validar" (Referências, que continua opcional —
+// só valida o formato quando a pessoa já começou a preencher).
+function validarTelefoneBR(ddd, numero, obrigatorio) {
+    if (!ddd && !numero) return obrigatorio ? 'Preencha o DDD e o número do telefone.' : null;
+    if (!ddd || !numero) return 'Preencha o DDD e o número do telefone.';
+    if (!normalizarTelefoneBR(numero)) return 'Telefone inválido — informe 8 ou 9 dígitos (sem o DDD).';
+    return null;
+}
 function stepContato() {
     return `
     <h2>Contato</h2>
-    <div class="field"><label>DDD *</label>
-        <select id="f_ddd"><option value="">Selecione</option>${dddOptions(s.ddd)}</select>
-    </div>
-    <div class="field"><label>Telefone de contato *</label>
-        <input type="tel" id="f_telefone_numero" value="${esc(s.telefone_numero)}" placeholder="8 ou 9 dígitos">
-    </div>
+    ${campoTelefoneBR('DDD', 'Telefone de contato', 'id="f_ddd"', 'id="f_telefone_numero"', s.ddd, s.telefone_numero, true)}
     <div class="field"><label>Este mesmo número também é utilizado no WhatsApp? *</label>
         <div class="radio-group">${pill('f_whatsapp_mesmo', 'Sim', s.whatsapp_mesmo === 'Sim')}${pill('f_whatsapp_mesmo', 'Não', s.whatsapp_mesmo === 'Não')}</div>
     </div>
@@ -458,9 +478,9 @@ function stepContato() {
 function renderCondWhatsapp() {
     const el = document.getElementById('condWhatsapp');
     if (!el) return;
-    el.innerHTML = s.whatsapp_mesmo === 'Não' ? `
-        <div class="field"><label>DDD do WhatsApp *</label><select id="f_ddd_whatsapp"><option value="">Selecione</option>${dddOptions(s.ddd_whatsapp)}</select></div>
-        <div class="field"><label>Número do WhatsApp *</label><input type="tel" id="f_whatsapp_numero" value="${esc(s.whatsapp_numero)}" placeholder="8 ou 9 dígitos"></div>` : '';
+    el.innerHTML = s.whatsapp_mesmo === 'Não'
+        ? campoTelefoneBR('DDD do WhatsApp', 'Número do WhatsApp', 'id="f_ddd_whatsapp"', 'id="f_whatsapp_numero"', s.ddd_whatsapp, s.whatsapp_numero, true)
+        : '';
 }
 
 // ---------- Etapa 4: Email / Endereço ----------
@@ -471,8 +491,7 @@ function stepEmailEndereco() {
         <div class="radio-group">${pill('f_tem_email', 'Sim', s.tem_email === 'Sim')}${pill('f_tem_email', 'Não', s.tem_email === 'Não')}</div>
     </div>
     <div id="condEmail"></div>
-    <div class="field"><label>Rua (endereço atual) *</label><input type="text" id="f_rua" value="${esc(s.rua)}"></div>
-    <div class="field"><label>Número *</label><input type="text" id="f_numero" value="${esc(s.numero)}"></div>
+    <div class="field"><label>Rua e número *</label><input type="text" id="f_rua" value="${esc(s.rua)}" placeholder="ex: Rua das Flores, 123 (ou só o nome da rua, se não houver número)"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
     <div class="field"><label>Cidade *</label><select id="f_cidade">${cidadeOptions(s.cidade)}</select></div>
     <div id="condCidade"></div>
@@ -737,8 +756,7 @@ function renderReferenciasArea() {
             ${s.referencias.length > 1 ? `<button type="button" class="btn-remove" data-remove-ref="${i}">remover</button>` : ''}
             <div class="repeat-title">Referência ${i + 1}</div>
             <div class="field"><label>Nome dessa pessoa</label><input type="text" data-ref="${i}" data-field="nome" value="${esc(r.nome)}"></div>
-            <div class="field"><label>DDD do telefone</label><input type="text" data-ref="${i}" data-field="ddd" value="${esc(r.ddd)}" maxlength="3"></div>
-            <div class="field"><label>Número do telefone (sem DDD)</label><input type="tel" data-ref="${i}" data-field="numero" value="${esc(r.numero)}"></div>
+            ${campoTelefoneBR('DDD do telefone', 'Número do telefone (sem DDD)', `data-ref="${i}" data-field="ddd"`, `data-ref="${i}" data-field="numero"`, r.ddd, r.numero, false)}
         </div>`).join('') + (s.referencias.length < 2 ? `<button type="button" class="btn-add" id="btnAddRef">+ Adicionar outra referência</button>` : '');
     const btnAdd = document.getElementById('btnAddRef');
     if (btnAdd) btnAdd.addEventListener('click', () => { saveRef(); s.referencias.push({ nome: '', ddd: '', numero: '' }); renderReferenciasArea(); });
@@ -1013,16 +1031,18 @@ function validateCurrentStep() {
             if (!s.estado_civil || !s.tem_filhos) return 'Preencha todos os campos obrigatórios (*).';
             if (s.tem_filhos === 'Sim' && (!s.qtd_filhos || !s.situacao_filhos || !s.mostrar_filhos)) return 'Informe a quantidade, a situação dos filhos e se deseja exibir essa informação no currículo.';
             return null;
-        case 2:
-            if (!s.ddd || !s.telefone_numero || !s.whatsapp_mesmo) return 'Preencha todos os campos obrigatórios (*).';
-            if (!normalizarTelefoneBR(s.telefone_numero)) return 'Telefone inválido — informe 8 ou 9 dígitos (sem o DDD).';
+        case 2: {
+            if (!s.whatsapp_mesmo) return 'Preencha todos os campos obrigatórios (*).';
+            const erroTel = validarTelefoneBR(s.ddd, s.telefone_numero, true);
+            if (erroTel) return erroTel;
             if (s.whatsapp_mesmo === 'Não') {
-                if (!s.ddd_whatsapp || !s.whatsapp_numero) return 'Preencha o DDD e o número do WhatsApp.';
-                if (!normalizarTelefoneBR(s.whatsapp_numero)) return 'WhatsApp inválido — informe 8 ou 9 dígitos (sem o DDD).';
+                const erroWa = validarTelefoneBR(s.ddd_whatsapp, s.whatsapp_numero, true);
+                if (erroWa) return erroWa;
             }
             return null;
+        }
         case 3:
-            if (!s.rua || !s.numero || !cidadeFinal() || !bairroFinal() || !estadoResidenciaFinal()) return 'Preencha todos os campos obrigatórios (*).';
+            if (!s.rua || !cidadeFinal() || !bairroFinal() || !estadoResidenciaFinal()) return 'Preencha todos os campos obrigatórios (*).';
             return null;
         case 4:
             if (!s.escolaridade) return 'Selecione sua escolaridade.';
@@ -1035,6 +1055,18 @@ function validateCurrentStep() {
             if (!ESCOLARIDADE_SEM_SITUACAO.has(s.escolaridade) && !s.situacao_escolaridade) return 'Selecione a situação da sua escolaridade.';
             if (s.situacao_escolaridade === 'Em andamento' && !s.periodo_estudo) return 'Selecione o período em que estuda.';
             return null;
+        case 8: {
+            // Referência continua opcional (não exige nome/telefone) — só
+            // valida o formato do telefone quando a pessoa já começou a
+            // preencher um dos dois campos, mesma regra de dígitos usada no
+            // Contato Principal (ver validarTelefoneBR).
+            if (s.tem_referencia !== 'Sim') return null;
+            for (let i = 0; i < s.referencias.length; i++) {
+                const erro = validarTelefoneBR(s.referencias[i].ddd, s.referencias[i].numero, false);
+                if (erro) return `Referência ${i + 1}: ${erro}`;
+            }
+            return null;
+        }
         default: return null;
     }
 }
@@ -1064,7 +1096,7 @@ function saveCurrentStep() {
             break;
         case 3:
             s.tem_email = checkedVal('f_tem_email'); s.email = val('f_email');
-            s.rua = val('f_rua'); s.numero = val('f_numero'); s.complemento = val('f_complemento');
+            s.rua = val('f_rua'); s.complemento = val('f_complemento');
             s.cidade = val('f_cidade');
             if (!estadoForcadoSC()) s.estado_residencia = val('f_estado_res');
             break;
@@ -1181,10 +1213,11 @@ async function submitForm() {
 
     const dados = {};
     const put = (k, v) => { if (v !== '' && v != null) dados[k] = v; };
-    // Rua/Número/Complemento não têm coluna própria na tabela curriculos (só
-    // "endereco" já composto) — ficam soltos aqui dentro de `dados` só pra dar
-    // pra recarregar certinho no modo de edição (ver carregarParaEdicao).
-    put('rua', s.rua); put('numero', s.numero); put('complemento', s.complemento);
+    // Rua (já com o número, campo único desde 2026-08-24) e Complemento não
+    // têm coluna própria na tabela curriculos (só "endereco" já composto) —
+    // ficam soltos aqui dentro de `dados` só pra dar pra recarregar certinho
+    // no modo de edição (ver carregarParaEdicao/carregarEnderecoSolto).
+    put('rua', s.rua); put('complemento', s.complemento);
     put('QUAL FOI O SEXO ATRIBUÍDO NO SEU NASCIMENTO?', s.sexo);
     put('QUAL SUA NACIONALIDADE? (Seu País de Origem)', s.nacionalidade_outra);
     put('NATURALIDADE? (Apenas o nome da da cidade onde você nasceu)', s.naturalidade);
@@ -1232,7 +1265,9 @@ async function submitForm() {
         const n = i + 1;
         put(`QUAL SERIA O NOME DA REFERÊNCIA (${n})`, r.nome);
         put(`E QUAL SERIA O CODIGO DE DDD DO TELEFONE DESSE CONTATO (${n})`, r.ddd);
-        put(`AGORA O NUMERO DO SEU TELEFONE DA REFERÊNCIA (${n})? (sem DDD)`, r.numero);
+        // Mesmo "9" automático do Contato Principal (normalizarTelefoneBR) —
+        // 8 dígitos digitados ganham o 9 na frente antes de salvar.
+        put(`AGORA O NUMERO DO SEU TELEFONE DA REFERÊNCIA (${n})? (sem DDD)`, normalizarTelefoneBR(r.numero) || r.numero);
     });
     put('VOCÊ FUMANTE?', s.fumante);
     put('MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?', s.disponibilidade.join(', '));
@@ -1340,14 +1375,19 @@ window.__cancelarEdicao = cancelarEdicao;
 // `dados` guarda cada resposta com a pergunta inteira como chave (compatível
 // com os registros antigos da planilha) — put()/get() aqui é só o caminho
 // inverso do put() usado no submitForm, campo por campo, mesma chave exata.
-// Registro salvo antes dessa versão do formulário — só tinha o endereço já
-// junto. Não dá pra separar com segurança, então joga tudo em "Rua" e deixa
-// Número/Complemento em branco pro usuário ajustar.
+// Registro salvo antes da fusão Rua+Número num campo só (2026-08-24) ainda
+// tem os dois separados em `dados` — junta os dois de volta no campo novo
+// (ex: "Rua das Flores" + "123" -> "Rua das Flores, 123") sem perder o
+// número. Registro salvo antes até da separação Rua/Número/Complemento
+// (versão mais antiga ainda) só tinha o endereço já composto — não dá pra
+// separar com segurança, então joga tudo em "Rua" e deixa Complemento em
+// branco pro usuário ajustar.
 function carregarEnderecoSolto(rua, numero, complemento, enderecoComposto) {
     if (rua || numero || complemento) {
-        s.rua = rua || ''; s.numero = numero || ''; s.complemento = complemento || '';
+        s.rua = numero ? `${rua || ''}${rua ? ', ' : ''}${numero}` : (rua || '');
+        s.complemento = complemento || '';
     } else if (enderecoComposto) {
-        s.rua = enderecoComposto; s.numero = ''; s.complemento = '';
+        s.rua = enderecoComposto; s.complemento = '';
     }
 }
 function carregarParaEdicao(row) {

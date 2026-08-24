@@ -148,6 +148,29 @@
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 13px; color: var(--text-dim); }
         .checkbox-row input { width: auto; }
+
+        /* ===== Notificações em tempo real (2026-08-24, pedido do usuário) =====
+           Bloco isolado — todo o CSS da funcionalidade (botão do sino, modal
+           de configuração, toast) fica aqui dentro, sem misturar com nenhuma
+           outra classe do painel; remover essa funcionalidade é só apagar
+           este bloco + o equivalente em HTML/JS (ver comentário no <script>,
+           função notificarNovoRegistro). */
+        .notif-config-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 40px; height: 40px; font-size: 17px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .notif-config-btn:hover { border-color: var(--accent); }
+        .notif-config-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+        .notif-config-row:last-of-type { border-bottom: none; }
+        .notif-config-row b { font-size: 14px; }
+        .notif-config-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+        .notif-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+        .notif-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .notif-switch-track { position: absolute; inset: 0; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+        .notif-switch-track::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 2px; background: var(--text-dim); border-radius: 50%; transition: transform .15s ease, background .15s ease; }
+        .notif-switch input:checked + .notif-switch-track { background: var(--accent-dim); border-color: var(--accent); }
+        .notif-switch input:checked + .notif-switch-track::before { transform: translateX(20px); background: var(--accent-bright); }
+        .toast-container { position: fixed; top: 16px; right: 16px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; max-width: min(340px, calc(100vw - 32px)); pointer-events: none; }
+        .toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: linear-gradient(180deg, #0d0d0f, #000); border: 1px solid var(--border-strong); border-left: 3px solid var(--accent); border-radius: 14px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 13.5px; color: var(--text); opacity: 0; transform: translateX(24px); transition: opacity .25s ease, transform .25s ease; }
+        .toast.mostrar { opacity: 1; transform: translateX(0); }
+        .toast .toast-icone { font-size: 19px; flex-shrink: 0; }
         .contrato-card { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
         .contrato-info b { color: var(--text); }
         .contrato-info .subtext { display: block; margin-top: 2px; }
@@ -559,6 +582,10 @@
 </head>
 <body>
     <div id="printArea"></div>
+    <!-- Notificações em tempo real (2026-08-24) — container do toast, fixo
+         no canto superior direito, fora de qualquer view/modal pra ficar
+         visível em cima de tudo. Ver bloco JS "notificarNovoRegistro". -->
+    <div class="toast-container" id="toastContainer"></div>
     <div class="lock-screen" id="lockScreen">
         <div class="lock-box" id="lockBox"></div>
     </div>
@@ -578,9 +605,14 @@
                     <div class="sub">BlackOut</div>
                 </div>
             </div>
-            <div class="status" id="status">
-                <span class="status-dot"></span>
-                <span id="statusText">Conectando...</span>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="status" id="status">
+                    <span class="status-dot"></span>
+                    <span id="statusText">Conectando...</span>
+                </div>
+                <!-- Notificações em tempo real (2026-08-24) — abre o modal de
+                     configuração (ativar/desativar toast e som). -->
+                <button type="button" class="notif-config-btn" id="notifConfigBtn" onclick="abrirNotificacoesConfig()" title="Configurar notificações">🔔</button>
             </div>
         </div>
 
@@ -1004,6 +1036,39 @@
             <div class="actions" style="margin-top:16px;">
                 <button class="btn-primary" id="orc_btn_exportar" onclick="exportarOrcamento()" disabled>📤 Exportar Orçamento</button>
                 <button class="btn-secondary" id="orc_btn_whatsapp" onclick="enviarOrcamentoWhatsapp()" disabled>➡️ Enviar pelo WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificações em tempo real (2026-08-24) — modal de configuração,
+         aberto pelo botão 🔔 no header. Bloco isolado: ver CSS
+         ".notif-config-*"/".notif-switch"/".toast*" e JS
+         "notificarNovoRegistro" mais abaixo. -->
+    <div class="modal" id="notifConfigModal">
+        <div class="modal-content">
+            <h2>🔔 Notificações</h2>
+            <div class="notif-config-row">
+                <div>
+                    <b>Notificações em tempo real</b>
+                    <div class="notif-config-desc">Mostra um aviso na tela quando chega currículo ou documento novo.</div>
+                </div>
+                <label class="notif-switch">
+                    <input type="checkbox" id="notifConfigAtivo" onchange="alternarNotificacoesAtivo()">
+                    <span class="notif-switch-track"></span>
+                </label>
+            </div>
+            <div class="notif-config-row">
+                <div>
+                    <b>Som de notificação</b>
+                    <div class="notif-config-desc">Toca um sininho curto junto com o aviso.</div>
+                </div>
+                <label class="notif-switch">
+                    <input type="checkbox" id="notifConfigSom" onchange="alternarNotificacoesSom()">
+                    <span class="notif-switch-track"></span>
+                </label>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="fecharNotificacoesConfig()">Fechar</button>
             </div>
         </div>
     </div>
@@ -1676,6 +1741,161 @@
         const dbUpdate = (table, payload, match) => callDbWrite({ table, action: 'update', payload, match });
         const dbDelete = (table, match) => callDbWrite({ table, action: 'delete', match });
 
+        // ===== Atualização em tempo real das listas (2026-08-24, pedido do
+        // usuário) =====
+        // Assina INSERT/UPDATE/DELETE via Supabase Realtime nas tabelas que
+        // alimentam listas do painel (currículos, contratos, declarações
+        // pendentes, recibos) — assim que um formulário público cria um
+        // registro novo, a lista correspondente recarrega sozinha (só o
+        // container daquela lista, via loadCurriculos/loadContratos/etc.,
+        // que já existiam e já fazem exatamente isso — nenhuma lógica de
+        // carregar/renderizar foi alterada, só passou a ser chamada
+        // automaticamente). Tabelas adicionadas à publication
+        // `supabase_realtime` do projeto (migration
+        // `enable_realtime_painel_listas`) — sem isso o canal conecta mas
+        // nunca recebe evento nenhum.
+        //
+        // Debounce curto (400ms) evita recarregar a lista várias vezes
+        // seguidas quando chegam vários eventos juntos (ex: um INSERT que
+        // dispara mais de uma notificação). Se o canal Realtime não
+        // conseguir conectar (CHANNEL_ERROR/TIMED_OUT/CLOSED — Realtime
+        // indisponível por rede, WebSocket bloqueado etc.), cai sozinho pra
+        // consulta periódica a cada 5 segundos na mesma tabela, sem
+        // recarregar a página e sem exigir nada manual — é só um `setInterval`
+        // chamando a mesma função de recarregar a lista.
+        // `onInsert` (opcional, 2026-08-24) — recebe a linha nova (`payload.new`)
+        // só nos eventos INSERT, usado pra disparar a notificação de "chegou
+        // documento novo" (ver notificarNovoRegistro) sem precisar de um
+        // canal/assinatura separado por tabela.
+        function assinarRealtimeTabela(table, onChange, onInsert) {
+            let debounceTimer = null;
+            const disparar = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(onChange, 400); };
+            let pollFallback = null;
+            const iniciarFallbackPolling = () => {
+                if (pollFallback) return;
+                console.warn(`Realtime indisponível pra "${table}" — usando consulta periódica (5s) como alternativa.`);
+                pollFallback = setInterval(onChange, 5000);
+            };
+            supabase
+                .channel(`realtime-painel-${table}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+                    disparar();
+                    if (onInsert && payload.eventType === 'INSERT') onInsert(payload.new);
+                })
+                .subscribe((status) => {
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') iniciarFallbackPolling();
+                });
+        }
+
+        // ===== Notificações em tempo real (toast + som) — 2026-08-24, pedido
+        // do usuário =====
+        // Módulo isolado, pensado pra ser fácil de desativar no futuro: toda
+        // a lógica (configuração em localStorage, toast visual, som
+        // sintetizado) fica dentro deste bloco, e o único ponto de contato
+        // com o resto do painel é notificarNovoRegistro(mensagem) — chamada
+        // só pelo `onInsert` de curriculos/declaracoes_pendentes logo abaixo
+        // (as duas tabelas alimentadas por formulário público; contratos e
+        // recibos são criados pela própria equipe dentro do painel, não
+        // fazem sentido gerar notificação de "chegou algo novo"). Pra
+        // desativar por completo: remover este bloco, os 2 argumentos extras
+        // de assinarRealtimeTabela nas chamadas de curriculos/declaracoes_
+        // pendentes, o botão 🔔 no header e o #notifConfigModal no HTML —
+        // nada mais no painel depende disso.
+        const NOTIF_CONFIG_KEY = 'blackoutNotifConfig';
+        // Padrão: as duas ligadas (`!== false` trata ausência/valor antigo
+        // como "ligado", só desliga se a pessoa desligou explicitamente).
+        function carregarConfigNotificacoes() {
+            try {
+                const salvo = JSON.parse(localStorage.getItem(NOTIF_CONFIG_KEY) || 'null');
+                return { ativo: salvo?.ativo !== false, som: salvo?.som !== false };
+            } catch {
+                return { ativo: true, som: true };
+            }
+        }
+        function salvarConfigNotificacoes(cfg) { localStorage.setItem(NOTIF_CONFIG_KEY, JSON.stringify(cfg)); }
+        function abrirNotificacoesConfig() {
+            const cfg = carregarConfigNotificacoes();
+            document.getElementById('notifConfigAtivo').checked = cfg.ativo;
+            document.getElementById('notifConfigSom').checked = cfg.som;
+            document.getElementById('notifConfigModal').classList.add('active');
+        }
+        window.abrirNotificacoesConfig = abrirNotificacoesConfig;
+        function fecharNotificacoesConfig() { document.getElementById('notifConfigModal').classList.remove('active'); }
+        window.fecharNotificacoesConfig = fecharNotificacoesConfig;
+        function alternarNotificacoesAtivo() {
+            const cfg = carregarConfigNotificacoes();
+            cfg.ativo = document.getElementById('notifConfigAtivo').checked;
+            salvarConfigNotificacoes(cfg);
+        }
+        window.alternarNotificacoesAtivo = alternarNotificacoesAtivo;
+        function alternarNotificacoesSom() {
+            const cfg = carregarConfigNotificacoes();
+            cfg.som = document.getElementById('notifConfigSom').checked;
+            salvarConfigNotificacoes(cfg);
+        }
+        window.alternarNotificacoesSom = alternarNotificacoesSom;
+
+        // Sino curto sintetizado via Web Audio API — dois tons rápidos com
+        // decaimento, sem depender de nenhum arquivo de áudio externo.
+        function tocarSomNotificacao() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const tocarTom = (freq, inicio, duracao) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0, ctx.currentTime + inicio);
+                    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + inicio + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + inicio + duracao);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + inicio);
+                    osc.stop(ctx.currentTime + inicio + duracao);
+                };
+                tocarTom(1318.5, 0, 0.22);
+                tocarTom(1760, 0.08, 0.25);
+                setTimeout(() => ctx.close(), 600);
+            } catch (err) {
+                console.warn('Som de notificação indisponível:', err.message);
+            }
+        }
+        // Toast visual no canto superior direito — some sozinho depois de
+        // ~5s (4.7s visível + 0.3s de transição de saída).
+        function mostrarToastNotificacao(mensagem) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.innerHTML = `<span class="toast-icone">🔔</span><span>${escapeHtml(mensagem)}</span>`;
+            container.appendChild(el);
+            requestAnimationFrame(() => el.classList.add('mostrar'));
+            setTimeout(() => {
+                el.classList.remove('mostrar');
+                setTimeout(() => el.remove(), 300);
+            }, 4700);
+        }
+        // Ponto de entrada único usado pelos listeners de Realtime — respeita
+        // as duas configurações (ativo/som) independentemente.
+        function notificarNovoRegistro(mensagem) {
+            const cfg = carregarConfigNotificacoes();
+            if (!cfg.ativo) return;
+            mostrarToastNotificacao(mensagem);
+            if (cfg.som) tocarSomNotificacao();
+        }
+
+        let _atualizacaoAutomaticaIniciada = false;
+        function iniciarAtualizacaoAutomaticaListas() {
+            if (_atualizacaoAutomaticaIniciada) return;
+            _atualizacaoAutomaticaIniciada = true;
+            assinarRealtimeTabela('curriculos', () => { loadCurriculos(); loadPendingCounts(); },
+                (row) => notificarNovoRegistro(`Chegou um currículo novo${row?.nome ? ' — ' + row.nome : ''}`));
+            assinarRealtimeTabela('declaracoes_pendentes', () => { loadDeclaracoesPendentes(); loadPendingCounts(); },
+                (row) => notificarNovoRegistro(`Chegou uma nova solicitação — ${TIPO_CONTRATO_LABELS[row?.tipo_contrato] || 'documento'}`));
+            assinarRealtimeTabela('contratos', () => { loadContratos(); });
+            assinarRealtimeTabela('recibos', () => { loadRecibos(); });
+        }
+
         // ===== Bloqueio de acesso (senha única da equipe + Face ID / Digital) =====
         // A senha é a mesma pra todo mundo (validada pela Edge Function acima),
         // não é mais "criada" por aparelho. Fica salva em texto puro só neste
@@ -1709,6 +1929,7 @@
             document.getElementById('appContainer').style.display = '';
             renderMenu();
             loadPendingCounts();
+            iniciarAtualizacaoAutomaticaListas();
         }
 
         async function registerBiometric() {
@@ -4698,12 +4919,15 @@
                 // o formatarCurriculoLayout cru) garante que o que sai na
                 // impressão é a mesma versão de 1 página já ajustada que a
                 // pessoa viu no modal. dadosRevisados (2026-08-23, revisão
-                // ortográfica automática — ver revisarOrtografiaCurriculo)
-                // roda de novo aqui, mas fica em cache no próprio `c` (ver
-                // _revisaoAssinatura) — imprimir logo depois de abrir a
-                // prévia não gasta token duas vezes.
+                // ortográfica automática — ver revisarOrtografiaCurriculo) e
+                // nomesReferencia (2026-08-24, primeiro nome da Referência
+                // Pessoal — ver identificarPrimeiroNomeReferencia) rodam de
+                // novo aqui, mas ficam em cache no próprio `c` — imprimir
+                // logo depois de abrir a prévia não gasta token duas vezes.
                 const dadosRevisados = await revisarOrtografiaCurriculo(c);
-                document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayoutAjustado({ ...c, dados: dadosRevisados })}</div>`;
+                const nomesReferencia = await identificarPrimeiroNomeReferencia(c);
+                const dadosFinais = aplicarRevisaoCv2(dadosRevisados, nomesReferencia);
+                document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayoutAjustado({ ...c, dados: dadosFinais })}</div>`;
             }
             setTimeout(() => window.print(), 100);
         }
@@ -5167,9 +5391,12 @@
         // candidato digita com as próprias palavras (curso, instituição, nome
         // da empresa, cargo exercido, cargo pretendido, naturalidade) entram
         // na revisão. Nome/sobrenome, endereço, telefone, e-mail, cidade/
-        // estado de residência, nacionalidade/estado civil (selects fixos) e
-        // o nome da referência pessoal NUNCA são enviados pra IA — ficam de
-        // fora por construção, não por checagem depois.
+        // estado de residência, nacionalidade/estado civil (selects fixos)
+        // NUNCA são enviados pra essa IA — ficam de fora por construção, não
+        // por checagem depois. O nome da referência pessoal também não entra
+        // aqui (não é ortografia que ele precisa) — vai pra uma IA separada,
+        // só pra identificar o primeiro nome (ver identificarPrimeiroNomeReferencia
+        // logo abaixo).
         const CAMPOS_REVISAO_PREFIXOS = ['INFORME O CURSO', 'EM QUAL INSTITUIÇÃO', 'NOME DA EMPRESA', 'QUAL ERA O SEU CARGO'];
         function extrairCamposRevisaoCv2(dados) {
             const campos = {};
@@ -5216,6 +5443,58 @@
             } catch (err) {
                 console.warn('Revisão ortográfica automática indisponível — currículo segue com o texto original, sem correção:', err.message);
                 return dados;
+            }
+        }
+
+        // Primeiro nome da Referência Pessoal (2026-08-24, pedido do usuário)
+        // — o formulário continua pedindo "Nome dessa pessoa" livremente
+        // (curriculo-form.html não muda em nada) e o candidato pode digitar
+        // qualquer coisa, inclusive com palavra de relação/tratamento
+        // misturada (ex: "Meu patrão Sr. Roberto"). Só na hora de montar o
+        // currículo formatado, uma IA dedicada (Edge Function
+        // `curriculo-referencia-nome`, prompt específico pra ignorar
+        // palavras como "patrão"/"chefe"/"senhor"/"dona" e devolver só o
+        // primeiro nome) identifica e devolve o primeiro nome — nunca o
+        // sobrenome, nunca inventa. Só esse único campo (nome da
+        // referência) é enviado; nenhum outro dado da referência ou do
+        // candidato passa por essa IA.
+        const CAMPOS_NOME_REFERENCIA_PREFIXO = 'QUAL SERIA O NOME DA REFERÊNCIA';
+        const CAMPOS_NOME_REFERENCIA_EXATOS = new Set(['QUAL SERIA O NOME DESSA PESSOA?', 'QUAL SERIA O NOME DA OUTRA PESSOA?']);
+        function extrairNomesReferenciaCv2(dados) {
+            const nomes = {};
+            Object.entries(dados || {}).forEach(([k, v]) => {
+                if (!v) return;
+                const base = baseKey(k);
+                if (base.startsWith(CAMPOS_NOME_REFERENCIA_PREFIXO) || CAMPOS_NOME_REFERENCIA_EXATOS.has(base)) nomes[k] = v;
+            });
+            return nomes;
+        }
+        // Devolve só o mapa {chave: primeiro nome} identificado pela IA (ou
+        // `null` se não havia nada pra identificar, ou se a chamada falhou)
+        // — quem chama aplica em cima do `dados` já revisado
+        // ortograficamente, reaproveitando `aplicarRevisaoCv2` (mesma forma
+        // "sobrescreve só as chaves que voltaram preenchidas" de sempre).
+        // Nunca lança erro pra fora e nunca bloqueia a geração do currículo
+        // — se a IA não identificar com segurança, a Edge Function já
+        // devolve o texto original (ver prompt); se a chamada falhar de
+        // vez (rede, IA fora do ar), o `dados` segue com o nome exatamente
+        // como o candidato digitou. Cacheia no próprio objeto `c`, mesmo
+        // padrão de `revisarOrtografiaCurriculo`.
+        async function identificarPrimeiroNomeReferencia(c) {
+            const dados = c.dados || {};
+            const nomes = extrairNomesReferenciaCv2(dados);
+            if (!Object.keys(nomes).length) return null;
+            const assinatura = JSON.stringify(nomes);
+            if (c._nomeReferenciaAssinatura === assinatura) return c._nomesReferenciaIdentificados || null;
+            try {
+                const { data, error } = await supabase.functions.invoke('curriculo-referencia-nome', { body: { nomes } });
+                if (error || !data || !data.nomes) throw new Error((error && error.message) || 'IA não retornou identificação');
+                c._nomesReferenciaIdentificados = data.nomes;
+                c._nomeReferenciaAssinatura = assinatura;
+                return data.nomes;
+            } catch (err) {
+                console.warn('Identificação automática do primeiro nome da referência indisponível — currículo segue com o nome original:', err.message);
+                return null;
             }
         }
 
@@ -5557,12 +5836,16 @@
                 btnRegerar.style.display = 'none';
                 btnImprimir.style.display = 'none';
                 conteudo.innerHTML = '<p>⏳ Preparando currículo...</p>';
-                // Revisão ortográfica automática (2026-08-23) — roda sozinha
-                // aqui, imediatamente antes de montar o layout final; discreta
+                // Revisão ortográfica automática (2026-08-23) e primeiro nome
+                // da Referência Pessoal (2026-08-24) — rodam sozinhas aqui,
+                // imediatamente antes de montar o layout final; discretas
                 // (sem botão, sem indicação visual do que mudou) e nunca
-                // bloqueia a renderização (ver revisarOrtografiaCurriculo).
+                // bloqueiam a renderização (ver revisarOrtografiaCurriculo/
+                // identificarPrimeiroNomeReferencia).
                 const dadosRevisados = await revisarOrtografiaCurriculo(c);
-                conteudo.innerHTML = formatarCurriculoLayoutAjustado({ ...c, dados: dadosRevisados });
+                const nomesReferencia = await identificarPrimeiroNomeReferencia(c);
+                const dadosFinais = aplicarRevisaoCv2(dadosRevisados, nomesReferencia);
+                conteudo.innerHTML = formatarCurriculoLayoutAjustado({ ...c, dados: dadosFinais });
                 btnImprimir.style.display = '';
                 return;
             }
