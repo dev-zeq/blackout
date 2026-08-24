@@ -123,11 +123,12 @@ const s = {
     tem_email: '', email: '',
     rua: '', numero: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado_residencia: '',
     escolaridade: '', situacao_escolaridade: '', periodo_estudo: '',
+    formacao_curso: '', formacao_situacao: '', formacao_periodo: '',
     fez_curso: '', cursos: [],
     informatica: '', outros_idiomas: '', idiomas: [],
     tem_experiencia: '', empresas: [],
-    referencias: [],
-    fumante: '', disponibilidade: [], destacar_cargo: '', qual_cargo: '', tipo_cargo_busca: '',
+    tem_referencia: '', referencias: [],
+    fumante: '', disponibilidade: [], destacar_cargo: '', tipo_cargo_busca: '',
     tem_cnh: '', categoria_cnh: '', tem_ear: '', veiculo_proprio: '', tipo_veiculo: '', disponibilidade_viagem: '',
 };
 let fotoFile = null; // File object, fica fora de `s` (não é serializável do mesmo jeito)
@@ -497,6 +498,20 @@ const ESCOLARIDADE_NIVEIS = ['Analfabeto', 'Alfabetizado (sem escolaridade forma
 // Analfabeto/Alfabetizado não têm "situação" (não faz sentido perguntar se
 // está "em andamento/incompleto/completo") — a partir de Ensino Fundamental sim.
 const ESCOLARIDADE_SEM_SITUACAO = new Set(['Analfabeto', 'Alfabetizado (sem escolaridade formal)']);
+// Fluxo novo (2026-08-23, pedido do usuário) — só a partir de Técnico: pede o
+// nome específico da formação, depois a situação atual (Concluído/Em
+// andamento/Incompleto) e, se não concluído, o período/semestre/nível em que
+// parou. Aditivo e isolado: Analfabeto/Alfabetizado/Fundamental/Médio
+// continuam 100% no fluxo antigo (ver renderCondEscolaridade abaixo) — nada
+// nessas opções foi tocado.
+const ESCOLARIDADE_NOVA_FLUXO = new Set(['Ensino Técnico', 'Ensino Superior', 'Pós-graduação', 'Mestrado', 'Doutorado']);
+const ESCOLARIDADE_LABEL_FORMACAO = {
+    'Ensino Técnico': 'Qual curso técnico?',
+    'Ensino Superior': 'Qual curso e faculdade?',
+    'Pós-graduação': 'Qual pós-graduação?',
+    'Mestrado': 'Qual mestrado?',
+    'Doutorado': 'Qual doutorado?',
+};
 function stepFormacao() {
     return `
     <h2>Formação</h2>
@@ -514,6 +529,7 @@ function renderCondEscolaridade() {
     const el = document.getElementById('condEscolaridade');
     if (!el) return;
     if (!s.escolaridade || ESCOLARIDADE_SEM_SITUACAO.has(s.escolaridade)) { el.innerHTML = ''; return; }
+    if (ESCOLARIDADE_NOVA_FLUXO.has(s.escolaridade)) { renderCondFormacao(el); return; }
     el.innerHTML = `
         <div class="field"><label>Situação da Escolaridade *</label>
             <select id="f_situacao_escolaridade">
@@ -536,6 +552,35 @@ function renderCondPeriodoEstudo() {
                 ${['Manhã', 'Tarde', 'Noite', 'Integral', 'EAD', 'Horário Variável'].map(o => `<option value="${o}" ${s.periodo_estudo === o ? 'selected' : ''}>${o}</option>`).join('')}
             </select>
         </div>` : '';
+}
+// Fluxo novo (Técnico e acima) — nome da formação + situação atual +
+// período/semestre quando não concluído. Isolado do fluxo antigo acima
+// (renderCondPeriodoEstudo/f_situacao_escolaridade/f_periodo_estudo não são
+// usados aqui, campos e ids próprios).
+function renderCondFormacao(el) {
+    el.innerHTML = `
+        <div class="field"><label>${esc(ESCOLARIDADE_LABEL_FORMACAO[s.escolaridade])} *</label>
+            <input type="text" id="f_formacao_curso" value="${esc(s.formacao_curso)}"></div>
+        <div class="field"><label>Qual a situação atual? *</label>
+            <select id="f_formacao_situacao">
+                <option value="">Selecione</option>
+                ${['Concluído', 'Em andamento', 'Incompleto'].map(o => `<option value="${o}" ${s.formacao_situacao === o ? 'selected' : ''}>${o}</option>`).join('')}
+            </select>
+        </div>
+        <div id="condFormacaoPeriodo"></div>`;
+    const inpCurso = document.getElementById('f_formacao_curso');
+    if (inpCurso) inpCurso.addEventListener('input', () => { s.formacao_curso = inpCurso.value; });
+    const selSituacao = document.getElementById('f_formacao_situacao');
+    if (selSituacao) selSituacao.addEventListener('change', () => { s.formacao_situacao = selSituacao.value; s.formacao_periodo = ''; renderCondFormacaoPeriodo(); });
+    renderCondFormacaoPeriodo();
+}
+function renderCondFormacaoPeriodo() {
+    const el = document.getElementById('condFormacaoPeriodo');
+    if (!el) return;
+    const precisaPeriodo = s.formacao_situacao === 'Em andamento' || s.formacao_situacao === 'Incompleto';
+    el.innerHTML = precisaPeriodo ? `
+        <div class="field"><label>Período, semestre ou nível atual (em que parou) *</label>
+            <input type="text" id="f_formacao_periodo" value="${esc(s.formacao_periodo)}" placeholder="ex: 3º semestre, 2º ano, módulo 4"></div>` : '';
 }
 
 // ---------- Etapa 6: Cursos ----------
@@ -667,11 +712,17 @@ function renderEmpresasArea() {
 }
 
 // ---------- Etapa 9: Referências ----------
+// Pergunta inicial Sim/Não (2026-08-23, pedido do usuário) — só decide se a
+// área de referência (repeat-block já existente, sem nenhuma mudança nos
+// campos/perguntas dela) aparece ou não; ver renderReferenciasArea abaixo,
+// mesmo padrão já usado em renderEmpresasArea (gate por s.tem_experiencia).
 function stepReferencias() {
-    if (s.referencias.length === 0) s.referencias.push({ nome: '', ddd: '', numero: '' });
     return `
     <h2>Referências Pessoais</h2>
     <p style="font-size:12.5px;color:var(--text-dim);margin-top:-8px;">Nome e telefone de alguém que possa servir de referência (amigo, ex-colega de trabalho ou ex-patrão). Opcional, mas ajuda bastante.</p>
+    <div class="field"><label>Deseja informar uma referência pessoal?</label>
+        <div class="radio-group">${pill('f_tem_referencia', 'Sim', s.tem_referencia === 'Sim')}${pill('f_tem_referencia', 'Não', s.tem_referencia === 'Não')}</div>
+    </div>
     <div id="referenciasArea"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
@@ -679,6 +730,8 @@ function stepReferencias() {
 function renderReferenciasArea() {
     const el = document.getElementById('referenciasArea');
     if (!el) return;
+    if (s.tem_referencia !== 'Sim') { el.innerHTML = ''; return; }
+    if (s.referencias.length === 0) s.referencias.push({ nome: '', ddd: '', numero: '' });
     el.innerHTML = s.referencias.map((r, i) => `
         <div class="repeat-block">
             ${s.referencias.length > 1 ? `<button type="button" class="btn-remove" data-remove-ref="${i}">remover</button>` : ''}
@@ -756,18 +809,26 @@ function stepPreferencias() {
         </div>
     </div>
     <div id="avisoDisponibilidade"></div>
-    <div class="field"><label>Gostaria de destacar em seu currículo algum cargo de preferência?</label>
+    <div class="field"><label>Gostaria de destacar em seu currículo algum cargo ou área de trabalho de sua preferência?</label>
         <div class="radio-group">${pill('f_destacar_cargo', 'Sim', s.destacar_cargo === 'Sim')}${pill('f_destacar_cargo', 'Não', s.destacar_cargo === 'Não')}</div>
     </div>
     <div id="condCargo"></div>
-    <div class="field"><label>Qual tipo de cargo você busca no mercado de trabalho?</label><input type="text" id="f_tipo_cargo" value="${esc(s.tipo_cargo_busca)}"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
+// Pergunta única (2026-08-23, pedido do usuário) — antes existiam 2 perguntas
+// Sim/Não com o mesmo significado ("destacar cargo" e "destacar área de
+// trabalho"), cada uma abrindo um campo de texto diferente, mas os dois
+// campos já caíam na mesma chave no envio (`s.qual_cargo || s.tipo_cargo_busca`,
+// ver submitForm) — pura duplicação. Consolidado numa pergunta só + 1 campo
+// só. Rótulo do campo e a chave de armazenamento continuam exatamente os
+// mesmos de sempre ("Qual tipo de cargo você busca no mercado de trabalho?"
+// / CHAVE_CARGO_DESEJADO em index.html), então a seção "Cargo Pretendido" no
+// currículo formatado não muda em nada.
 function renderCondCargo() {
     const el = document.getElementById('condCargo');
     if (!el) return;
-    el.innerHTML = s.destacar_cargo === 'Sim' ? `<div class="field"><label>Qual cargo?</label><input type="text" id="f_qual_cargo" value="${esc(s.qual_cargo)}"></div>` : '';
+    el.innerHTML = s.destacar_cargo === 'Sim' ? `<div class="field"><label>Qual tipo de cargo você busca no mercado de trabalho?</label><input type="text" id="f_tipo_cargo" value="${esc(s.tipo_cargo_busca)}"></div>` : '';
 }
 
 // ---------- Etapa 11: CNH ----------
@@ -965,6 +1026,12 @@ function validateCurrentStep() {
             return null;
         case 4:
             if (!s.escolaridade) return 'Selecione sua escolaridade.';
+            if (ESCOLARIDADE_NOVA_FLUXO.has(s.escolaridade)) {
+                if (!s.formacao_curso) return 'Informe o nome da sua formação.';
+                if (!s.formacao_situacao) return 'Selecione a situação atual da sua formação.';
+                if ((s.formacao_situacao === 'Em andamento' || s.formacao_situacao === 'Incompleto') && !s.formacao_periodo) return 'Informe o período, semestre ou nível atual.';
+                return null;
+            }
             if (!ESCOLARIDADE_SEM_SITUACAO.has(s.escolaridade) && !s.situacao_escolaridade) return 'Selecione a situação da sua escolaridade.';
             if (s.situacao_escolaridade === 'Em andamento' && !s.periodo_estudo) return 'Selecione o período em que estuda.';
             return null;
@@ -1005,6 +1072,9 @@ function saveCurrentStep() {
             s.escolaridade = val('f_escolaridade');
             s.situacao_escolaridade = val('f_situacao_escolaridade');
             s.periodo_estudo = val('f_periodo_estudo');
+            s.formacao_curso = val('f_formacao_curso');
+            s.formacao_situacao = val('f_formacao_situacao');
+            s.formacao_periodo = val('f_formacao_periodo');
             break;
         case 5:
             s.fez_curso = checkedVal('f_fez_curso');
@@ -1029,6 +1099,7 @@ function saveCurrentStep() {
             });
             break;
         case 8:
+            s.tem_referencia = checkedVal('f_tem_referencia');
             document.querySelectorAll('[data-ref]').forEach(inp => {
                 const i = +inp.dataset.ref, f = inp.dataset.field;
                 if (s.referencias[i]) s.referencias[i][f] = inp.value;
@@ -1037,7 +1108,7 @@ function saveCurrentStep() {
         case 9:
             s.fumante = checkedVal('f_fumante');
             s.disponibilidade = Array.from(document.querySelectorAll('[data-disp]:checked')).map(c => c.value);
-            s.destacar_cargo = checkedVal('f_destacar_cargo'); s.qual_cargo = val('f_qual_cargo');
+            s.destacar_cargo = checkedVal('f_destacar_cargo');
             s.tipo_cargo_busca = val('f_tipo_cargo');
             break;
         case 10:
@@ -1059,11 +1130,12 @@ function bindStepEvents() {
     const selCidade = document.getElementById('f_cidade');
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado_residencia = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstadoResidencia(); });
     const selEscolaridade = document.getElementById('f_escolaridade');
-    if (selEscolaridade) selEscolaridade.addEventListener('change', () => { s.escolaridade = selEscolaridade.value; s.situacao_escolaridade = ''; s.periodo_estudo = ''; renderCondEscolaridade(); });
+    if (selEscolaridade) selEscolaridade.addEventListener('change', () => { s.escolaridade = selEscolaridade.value; s.situacao_escolaridade = ''; s.periodo_estudo = ''; s.formacao_curso = ''; s.formacao_situacao = ''; s.formacao_periodo = ''; renderCondEscolaridade(); });
     document.querySelectorAll('input[name="f_fez_curso"]').forEach(r => r.addEventListener('change', () => { s.fez_curso = checkedVal('f_fez_curso'); if (s.fez_curso === 'Sim') s.informatica = ''; renderCursosArea(); renderCondInformatica(); }));
     document.querySelectorAll('input[name="f_outros_idiomas"]').forEach(r => r.addEventListener('change', () => { s.outros_idiomas = checkedVal('f_outros_idiomas'); renderCondIdiomas(); }));
     document.querySelectorAll('input[name="f_tem_experiencia"]').forEach(r => r.addEventListener('change', () => { s.tem_experiencia = checkedVal('f_tem_experiencia'); renderEmpresasArea(); }));
-    document.querySelectorAll('input[name="f_destacar_cargo"]').forEach(r => r.addEventListener('change', () => { s.destacar_cargo = checkedVal('f_destacar_cargo'); renderCondCargo(); }));
+    document.querySelectorAll('input[name="f_tem_referencia"]').forEach(r => r.addEventListener('change', () => { s.tem_referencia = checkedVal('f_tem_referencia'); if (s.tem_referencia !== 'Sim') s.referencias = []; renderReferenciasArea(); }));
+    document.querySelectorAll('input[name="f_destacar_cargo"]').forEach(r => r.addEventListener('change', () => { s.destacar_cargo = checkedVal('f_destacar_cargo'); if (s.destacar_cargo !== 'Sim') s.tipo_cargo_busca = ''; renderCondCargo(); }));
     document.querySelectorAll('input[name="f_tem_cnh"]').forEach(r => r.addEventListener('change', () => { s.tem_cnh = checkedVal('f_tem_cnh'); renderCondCnh(); }));
 
     const fotoInputCamera = document.getElementById('f_foto_camera');
@@ -1124,6 +1196,9 @@ async function submitForm() {
     put('QUAL A SUA ESCOLARIDADE?', s.escolaridade);
     put('QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?', s.situacao_escolaridade);
     put('EM QUE PERÍODO VOCÊ ESTUDA?', s.periodo_estudo);
+    put('QUAL O NOME DA SUA FORMAÇÃO?', s.formacao_curso);
+    put('QUAL A SITUAÇÃO ATUAL DA SUA FORMAÇÃO?', s.formacao_situacao);
+    put('QUAL O PERÍODO/SEMESTRE/NÍVEL ATUAL DA SUA FORMAÇÃO?', s.formacao_periodo);
     put('VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?', s.fez_curso);
     if (s.fez_curso === 'Sim') {
         s.cursos.forEach((c, i) => {
@@ -1151,6 +1226,7 @@ async function submitForm() {
             put(`QUAL FOI O PERÍODO QUE VOCÊ TRABALHOU NESSA EMPRESA? (${n})`, e.periodo);
         });
     }
+    put('DESEJA INFORMAR UMA REFERÊNCIA PESSOAL?', s.tem_referencia);
     s.referencias.forEach((r, i) => {
         if (!r.nome) return;
         const n = i + 1;
@@ -1161,7 +1237,7 @@ async function submitForm() {
     put('VOCÊ FUMANTE?', s.fumante);
     put('MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?', s.disponibilidade.join(', '));
     put('GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?', s.destacar_cargo);
-    put('QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?', s.qual_cargo || s.tipo_cargo_busca);
+    put('QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?', s.tipo_cargo_busca);
     put('VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?', s.tem_cnh);
     put('QUAL CATEGORIA DA SUA CNH?', s.categoria_cnh);
     put('SUA HABILITAÇÃO POSSUI EXTENSÃO PRA EAR? (Autorização pra serviços de motorista com remuneração tipo uber)', s.tem_ear);
@@ -1322,6 +1398,9 @@ function carregarParaEdicao(row) {
     s.escolaridade = get('QUAL A SUA ESCOLARIDADE?');
     s.situacao_escolaridade = get('QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?');
     s.periodo_estudo = get('EM QUE PERÍODO VOCÊ ESTUDA?');
+    s.formacao_curso = get('QUAL O NOME DA SUA FORMAÇÃO?');
+    s.formacao_situacao = get('QUAL A SITUAÇÃO ATUAL DA SUA FORMAÇÃO?');
+    s.formacao_periodo = get('QUAL O PERÍODO/SEMESTRE/NÍVEL ATUAL DA SUA FORMAÇÃO?');
 
     s.fez_curso = get('VOCÊ JÁ FEZ ALGUM TIPO DE CURSO PROFISSIONALIZANTE?');
     s.cursos = [];
@@ -1357,15 +1436,20 @@ function carregarParaEdicao(row) {
         const numero = get(`AGORA O NUMERO DO SEU TELEFONE DA REFERÊNCIA (${n})? (sem DDD)`);
         if (nomeRef || ddd || numero) s.referencias.push({ nome: nomeRef, ddd, numero });
     }
+    // Pergunta nova (2026-08-23) — registro salvo antes dela não tem essa
+    // chave; se já tinha referência preenchida, preserva o comportamento
+    // antigo (sempre mostrava) marcando o gate como "Sim" automaticamente.
+    s.tem_referencia = get('DESEJA INFORMAR UMA REFERÊNCIA PESSOAL?') || (s.referencias.length ? 'Sim' : '');
 
     s.fumante = get('VOCÊ FUMANTE?');
     s.disponibilidade = get('MEDIANTE A SUA DISPONIBILIDADE DE HORÁRIO, QUAL DESSAS OPÇÕES PODEMOS DEIXAR EM SEU CURRÍCULO?').split(', ').filter(Boolean);
-    s.destacar_cargo = get('GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?');
-    // No envio original esse campo mistura qual_cargo/tipo_cargo_busca num só
-    // (put(...,s.qual_cargo || s.tipo_cargo_busca)) — não dá pra saber qual dos
-    // dois gerou o valor salvo, então preenche os dois de volta com segurança.
-    const tipoCargo = get('QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?');
-    s.qual_cargo = tipoCargo; s.tipo_cargo_busca = tipoCargo;
+    // Pergunta única (2026-08-23) — antes existiam 2 perguntas/campos
+    // separados (ver histórico); registro salvo num formato antigo (só um
+    // dos dois preenchido, ou nenhuma resposta de gate salva) continua
+    // reconstruído certinho: cargo preenchido sem resposta de gate mantém o
+    // "Sim" (preserva o comportamento de sempre mostrar quando já tinha dado).
+    s.tipo_cargo_busca = get('QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?');
+    s.destacar_cargo = get('GOSTARIA DESTACAR EM SEU CURRÍCULO ALGUM CARGO DE PREFERÊNCIA?') || (s.tipo_cargo_busca ? 'Sim' : '');
 
     s.tem_cnh = get('VOCÊ POSSUI CARTEIRA DE HABILITAÇÃO?');
     s.categoria_cnh = get('QUAL CATEGORIA DA SUA CNH?');

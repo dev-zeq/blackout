@@ -329,7 +329,7 @@
            barrinhas de dados abaixo continuam idênticos entre si). */
         .cv2-nome { background: #0b2e42; color: #fff; text-align: center; margin: 0 -22px 16px; padding: 12px 14px; }
         .cv2-nome-linha { display: block; font-size: 19px; font-weight: 800; line-height: 1.3; }
-        .cv2-pessoal { text-align: center; font-size: 12.5px; line-height: 1.75; color: #55606c; margin-bottom: 8px; }
+        .cv2-pessoal { text-align: center; font-size: 14.5px; line-height: 1.75; color: #55606c; margin-bottom: 8px; }
         /* Fonte dos títulos aumentada de 11,5 pra 13px (2026-08-22, pedido de
            legibilidade) — conferido por medição via canvas que o título mais
            longo ("DATA DE NASCIMENTO", com o letter-spacing de 0.6px somado)
@@ -4985,6 +4985,14 @@
         const CHAVE_ESCOLARIDADE = 'QUAL A SUA ESCOLARIDADE?';
         const CHAVE_SITUACAO_ESCOLARIDADE = 'QUAL A SITUAÇÃO DA SUA ESCOLARIDADE?';
         const CHAVE_PERIODO_ESTUDO = 'EM QUE PERÍODO VOCÊ ESTUDA?';
+        // Fluxo novo de Formação Acadêmica (2026-08-23, pedido do usuário) — só
+        // existe a partir de Técnico (ver ESCOLARIDADE_NOVA_FLUXO em
+        // curriculo-form.html); aditivo, não substitui as 3 chaves acima, que
+        // continuam servindo Fundamental/Médio sem nenhuma mudança (ver
+        // blocoFormacaoAcademica mais abaixo).
+        const CHAVE_FORMACAO_CURSO = 'QUAL O NOME DA SUA FORMAÇÃO?';
+        const CHAVE_FORMACAO_SITUACAO = 'QUAL A SITUAÇÃO ATUAL DA SUA FORMAÇÃO?';
+        const CHAVE_FORMACAO_PERIODO = 'QUAL O PERÍODO/SEMESTRE/NÍVEL ATUAL DA SUA FORMAÇÃO?';
         const CHAVE_CARGO_DESEJADO = 'QUAL TIPO DE CARGO VOCÊ BUSCA NO MERCADO DE TRABALHO?';
         const CHAVE_TEM_EXPERIENCIA = 'VOCÊ TEM ALGUMA EXPERÊNCIA PROFISSIONAL OU ESTA BUSCANDO SEU PRIMEIRO EMPREGO?';
         const CHAVE_INFORMATICA = 'MESMO SEM CURSO VOCÊ TERIA ALGUM CONHECIMENTO OU NOÇÃO EM INFORMÁTICA (computadores)';
@@ -5006,6 +5014,7 @@
             CHAVE_NATURALIDADE, CHAVE_ESTADO_NASCIMENTO, CHAVE_TEM_FILHOS, CHAVE_QTD_FILHOS, CHAVE_SITUACAO_FILHOS, CHAVE_MOSTRAR_FILHOS,
             CHAVE_RECADO_NOME, CHAVE_RECADO_DDD, CHAVE_RECADO_NUMERO,
             CHAVE_ESCOLARIDADE, CHAVE_SITUACAO_ESCOLARIDADE, CHAVE_PERIODO_ESTUDO, CHAVE_CARGO_DESEJADO,
+            CHAVE_FORMACAO_CURSO, CHAVE_FORMACAO_SITUACAO, CHAVE_FORMACAO_PERIODO,
             CHAVE_FUMANTE, CHAVE_DISPONIBILIDADE_HORARIO, CHAVE_TEM_CNH, CHAVE_CATEGORIA_CNH, CHAVE_TEM_EAR,
             CHAVE_VEICULO_PROPRIO, CHAVE_TIPO_VEICULO, CHAVE_DISPONIBILIDADE_VIAGEM,
         ]);
@@ -5116,6 +5125,34 @@
             if (!nivel) return '';
             if (!situacao) return nivel;
             return `${nivel} ${situacao === 'Em andamento' ? 'em andamento' : situacao}`;
+        }
+
+        // Bloco "Formação Acadêmica" (2026-08-23, pedido do usuário) — só pra
+        // Técnico/Superior/Pós-graduação/Mestrado/Doutorado (ver
+        // ESCOLARIDADE_NOVA_FLUXO em curriculo-form.html). Rótulo do nível
+        // abreviado só aqui ("Técnico" em vez de "Ensino Técnico", igual ao
+        // exemplo pedido) — não afeta ESCOLARIDADE_NIVEIS nem a barra lateral
+        // "Escolaridade" de sempre (montarTextoEscolaridade acima, intocada).
+        const FORMACAO_NIVEL_LABEL = {
+            'Ensino Técnico': 'Técnico',
+            'Ensino Superior': 'Ensino Superior',
+            'Pós-graduação': 'Pós-graduação',
+            'Mestrado': 'Mestrado',
+            'Doutorado': 'Doutorado',
+        };
+        function montarBlocoFormacaoAcademicaCv2(nivel, curso, situacao, periodo) {
+            const rotuloNivel = FORMACAO_NIVEL_LABEL[nivel];
+            if (!rotuloNivel || !curso || !situacao) return '';
+            const situacaoTexto = situacao === 'Em andamento' ? 'em andamento' : situacao;
+            return `
+                <section style="page-break-inside:avoid; break-inside:avoid;">
+                    <div class="cv2-bar-h">Formação Acadêmica</div>
+                    <div class="cv2-item">
+                        <p class="cv2-texto"><b>${escapeHtml(rotuloNivel)} — ${escapeHtml(situacaoTexto)}</b></p>
+                        <p class="cv2-texto">${escapeHtml(curso)}</p>
+                        ${periodo ? `<p class="cv2-texto">${escapeHtml(periodo)}</p>` : ''}
+                    </div>
+                </section>`;
         }
 
         // Revisão ortográfica automática (2026-08-23, pedido do usuário) — roda
@@ -5307,6 +5344,10 @@
                     <p class="cv2-texto">${escapeHtml(montarTextoPrimeiroEmpregoCv2(c.genero))}</p>
                 </section>` : '');
 
+            const blocoFormacaoAcademica = montarBlocoFormacaoAcademicaCv2(
+                dados[CHAVE_ESCOLARIDADE], dados[CHAVE_FORMACAO_CURSO], dados[CHAVE_FORMACAO_SITUACAO], dados[CHAVE_FORMACAO_PERIODO]
+            );
+
             // Sem curso cadastrado, a seção usa a resposta de informática como
             // conteúdo (2026-08-22, pedido do usuário) — "Não possui" (ou sem
             // resposta) não preenche nada, e a seção inteira some do currículo
@@ -5418,7 +5459,7 @@
             // na concatenação abaixo.
             const contentHtml = `
                 <div class="cv2-content">
-                    ${blocoExperiencias + blocoCursos + blocoIdiomas + blocoReferencias + blocoObjetivo + blocoDadosAdicionais + blocoCargos}
+                    ${blocoExperiencias + blocoFormacaoAcademica + blocoCursos + blocoIdiomas + blocoReferencias + blocoObjetivo + blocoDadosAdicionais + blocoCargos}
                 </div>`;
 
             return `<div class="cv2-doc">${sidebarHtml}${contentHtml}</div>`;
