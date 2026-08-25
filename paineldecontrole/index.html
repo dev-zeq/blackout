@@ -3178,7 +3178,16 @@
                 titulo: '📝 Declarações',
                 tipos: ['DECLARACAO_RESIDENCIA', 'DECLARACAO_AUTONOMO', 'DECLARACAO_TRABALHO', 'DECLARACAO_UNIAO_ESTAVEL'],
                 links: [
-                    { label: '🏠 Declaração de Residência', url: 'declaracao-residencia-form.html', tipoModelo: 'DECLARACAO_RESIDENCIA' },
+                    // Declaração de Residência tem 2 modelos em branco distintos
+                    // (pedido do usuário, 2026-08-25) — a redação muda conforme
+                    // é o próprio declarante ou um terceiro quem vai residir no
+                    // imóvel, então não dá pra ter um modelo genérico só. Os
+                    // outros 3 tipos abaixo continuam com `tipoModelo` (um único
+                    // modelo cada), sem nenhuma mudança de comportamento.
+                    { label: '🏠 Declaração de Residência', url: 'declaracao-residencia-form.html', modelosEmBranco: [
+                        { tipo: 'DECLARACAO_RESIDENCIA_PROPRIO', label: '📄 Modelo — Para mim' },
+                        { tipo: 'DECLARACAO_RESIDENCIA_TERCEIROS', label: '📄 Modelo — Para terceiros' },
+                    ] },
                     { label: '📝 Declaração de Trabalho Autônomo', url: 'declaracao-autonomo-form.html', tipoModelo: 'DECLARACAO_AUTONOMO' },
                     { label: '📝 Declaração de Trabalho para Empresa', url: 'declaracao-trabalho-form.html', tipoModelo: 'DECLARACAO_TRABALHO' },
                     { label: '💍 Declaração de União Estável', url: 'declaracao-uniao-estavel-form.html', tipoModelo: 'DECLARACAO_UNIAO_ESTAVEL' },
@@ -3214,18 +3223,52 @@
         // isso, texto/estrutura/ordem das linhas em branco seguem exatamente a
         // aba correspondente.
         const MODELOS_EM_BRANCO = {
-            DECLARACAO_RESIDENCIA: {
+            // Declaração de Residência tem 2 modelos em branco (pedido do
+            // usuário, 2026-08-25) — a redação preenchida em TIPOS.DECLARACAO_
+            // RESIDENCIA.corpo() muda inteira conforme é o próprio declarante ou
+            // um terceiro quem reside no imóvel (ver aquele corpo() pra
+            // referência), então cada modelo em branco segue exatamente a
+            // redação da sua respectiva versão preenchida — só troca cada dado
+            // por uma linha própria pro cliente preencher à mão, sem juntar
+            // vários dados numa linha só. Mesmo `pStyle` (fonte/entrelinha/
+            // justificação) e mesmo fecho centralizado com respiro da versão
+            // preenchida, e `tituloFontSize` igual (30px) — ver abrirModeloEmBranco().
+            // Terceiros não leva linha de assinatura da pessoa declarada (só o
+            // proprietário assina, igual à versão preenchida).
+            DECLARACAO_RESIDENCIA_PROPRIO: {
                 titulo: 'DECLARAÇÃO DE RESIDÊNCIA',
-                corpo: () => `
-                    <p>Eu, ________________________________________, portador(a) do RG nº ________________________________________</p>
-                    <p>e inscrito(a) sob CPF de nº ________________________________________ DECLARO para devidos fins</p>
-                    <p>de comprovação de residência, que ________________________________________</p>
-                    <p>________________________________________ inscrito(a) sob CPF de nº ________________________________________</p>
-                    <p>é residente e domiciliado(a) à Rua ________________________________________</p>
-                    <p>________________________________________ Bairro: ________________________________________ Cidade: ________________________________________.</p>
-                    <p>Por ser a expressão da verdade, firmo a presente para efeitos legais.</p>
-                    <p>________________________________________, _____ de ________________________________________ de 20___</p>
-                    <p style="margin-top:36px; text-align:center;">________________________________________<br>Declarante</p>`,
+                // labelModal: só pra abrirModeloEmBranco montar um título de
+                // modal legível — TIPO_CONTRATO_LABELS não tem entrada pra essas
+                // chaves sintéticas (não são tipo_contrato de verdade, só
+                // identificam qual dos 2 modelos abrir).
+                labelModal: '🏠 Declaração de Residência — Para mim',
+                tituloFontSize: 30,
+                corpo: () => {
+                    const p = 'font-size:16.5px; line-height:2.05; margin:16px 0; text-align:justify;';
+                    return `
+                    <p style="${p}">Eu, ________________________________________, nacionalidade ________________________, estado civil ________________________, portador(a) do CPF nº ________________________, residente e domiciliado(a) na ________________________________________, bairro ________________________, ________________________/____, DECLARO, para os devidos fins e a quem possa interessar, que sou residente e domiciliado(a) no endereço acima qualificado.</p>
+                    <p style="${p}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>
+                    <div style="text-align:center; margin-top:72px;">
+                        <p style="font-size:16.5px; margin:0 0 8px;">________________________________________, _____ de ________________________________________ de 20___.</p>
+                        <p style="margin-top:36px;">________________________________________<br>Declarante</p>
+                    </div>`;
+                },
+            },
+            DECLARACAO_RESIDENCIA_TERCEIROS: {
+                titulo: 'DECLARAÇÃO DE RESIDÊNCIA',
+                labelModal: '🏠 Declaração de Residência — Para terceiros',
+                tituloFontSize: 30,
+                corpo: () => {
+                    const p = 'font-size:16.5px; line-height:2.05; margin:16px 0; text-align:justify;';
+                    return `
+                    <p style="${p}">Eu, ________________________________________, nacionalidade ________________________, estado civil ________________________, portador(a) do CPF nº ________________________, na qualidade de proprietário(a), locador(a) ou responsável pelo imóvel abaixo descrito, DECLARO, para os devidos fins de direito e a quem possa interessar, o que segue:</p>
+                    <p style="${p}">________________________________________, nacionalidade ________________________, estado civil ________________________, portador(a) do CPF nº ________________________, reside e é domiciliado(a) no imóvel de minha responsabilidade, situado na ________________________________________, bairro ________________________, na cidade de ________________________/____.</p>
+                    <p style="${p}">Declaro, sob as penas da lei, que as informações acima são verdadeiras, assumindo integral responsabilidade civil e criminal por sua veracidade, e firmo a presente declaração para que produza os efeitos legais.</p>
+                    <div style="text-align:center; margin-top:72px;">
+                        <p style="font-size:16.5px; margin:0 0 8px;">________________________________________, _____ de ________________________________________ de 20___.</p>
+                        <p style="margin-top:36px;">________________________________________<br>Declarante (proprietário/responsável)</p>
+                    </div>`;
+                },
             },
             DECLARACAO_AUTONOMO: {
                 titulo: 'DECLARAÇÃO DE TRABALHO AUTÔNOMO',
@@ -3293,8 +3336,13 @@
         function abrirModeloEmBranco(tipo) {
             const cfg = MODELOS_EM_BRANCO[tipo];
             if (!cfg) return;
-            document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[tipo] || tipo) + ' — modelo em branco';
-            document.getElementById('declFormatadoConteudo').innerHTML = `<h1 style="text-align:center; font-size:18px; letter-spacing:1px; margin-bottom:22px;">${cfg.titulo}</h1>${cfg.corpo()}`;
+            document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (cfg.labelModal || TIPO_CONTRATO_LABELS[tipo] || tipo) + ' — modelo em branco';
+            // tituloFontSize opcional por modelo (só os 2 de Declaração de
+            // Residência definem, pra bater com o título maior da versão
+            // preenchida — ver TIPOS.DECLARACAO_RESIDENCIA.tituloFontSize) —
+            // os demais continuam em 18px, como sempre.
+            const tituloFontSize = cfg.tituloFontSize || 18;
+            document.getElementById('declFormatadoConteudo').innerHTML = `<h1 style="text-align:center; font-size:${tituloFontSize}px; letter-spacing:1px; margin-bottom:22px;">${cfg.titulo}</h1>${cfg.corpo()}`;
             document.getElementById('declFormatadoModal').classList.add('active');
             declFormatadoAtual = null;
             document.getElementById('declFormatadoBtnEditar').style.display = 'none';
@@ -3309,9 +3357,26 @@
             document.getElementById('declProcTitulo').textContent = cfg.titulo;
             document.getElementById('declProcLinkRows').innerHTML = cfg.links.map(item => {
                 // Só os tipos com modelo em branco de verdade (ver MODELOS_EM_BRANCO,
-                // extraído das abas "Em Branco" da planilha) ganham as duas ações —
-                // os demais (Procurações, que não têm aba "Em Branco" na planilha)
-                // continuam com a linha simples de sempre, sem nenhuma mudança.
+                // extraído das abas "Em Branco" da planilha) ganham as ações
+                // extras — os demais (Procurações, que não têm aba "Em Branco" na
+                // planilha) continuam com a linha simples de sempre, sem mudança.
+                // `modelosEmBranco` (array) é pra quando um tipo tem mais de um
+                // modelo (hoje só Declaração de Residência: Para mim/Para
+                // terceiros) — segunda linha de botões, um por modelo. Um só
+                // `tipoModelo` continua no layout antigo de 3 botões numa linha.
+                if (item.modelosEmBranco) {
+                    return `
+                    <div class="link-row" style="cursor:default; flex-direction:column; align-items:stretch; gap:10px;">
+                        <span>${item.label}</span>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="window.open('${item.url}', '_blank', 'noopener')">🖥️ Preencher pelo Sistema</button>
+                            <button class="btn-copy-link" onclick="copyLinkToClipboard('${item.url}', this)" title="Copiar link do sistema">📋</button>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            ${item.modelosEmBranco.map(m => `<button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirModeloEmBranco('${m.tipo}')">${m.label}</button>`).join('')}
+                        </div>
+                    </div>`;
+                }
                 if (item.tipoModelo && MODELOS_EM_BRANCO[item.tipoModelo]) {
                     return `
                     <div class="link-row" style="cursor:default; flex-direction:column; align-items:stretch; gap:10px;">
@@ -3443,10 +3508,17 @@
 
         function qualificar(p) {
             if (!p) return '';
+            // Nacionalidade/estado civil flexionados pelo gênero da própria
+            // pessoa (pedido do usuário, 2026-08-25) — antes saía cru o rótulo
+            // neutro do <select> ("Brasileiro(a)", "Casado(a)"...), que não é
+            // português correto num documento formal. Mesma flexão que
+            // qualificarCV()/qualificarTermo() já usavam (flexGenero), só que
+            // esta função ainda não usava.
+            const fem = p.genero === 'Feminino';
             const partes = [
                 escapeHtml(p.nome),
-                p.nacionalidade ? escapeHtml(p.nacionalidade) : null,
-                p.estado_civil ? escapeHtml(p.estado_civil) : null,
+                p.nacionalidade ? escapeHtml(flexGenero(p.nacionalidade, fem)) : null,
+                p.estado_civil ? escapeHtml(flexGenero(p.estado_civil, fem)) : null,
                 p.profissao ? escapeHtml(p.profissao) : null,
                 `portador${g(p.genero, '', 'a')} do CPF nº ${escapeHtml(p.cpf)}` + (p.rg ? `, RG nº ${escapeHtml(p.rg)}` : ''),
             ].filter(Boolean);
@@ -3745,20 +3817,78 @@
             },
             DECLARACAO_RESIDENCIA: {
                 titulo: 'DECLARAÇÃO',
+                // Layout exclusivo deste tipo (pedido do usuário, 2026-08-25):
+                // título bem maior que o padrão (18px) pra ter mais destaque —
+                // só essa propriedade opcional, lida por montarContrato(), sem
+                // tocar no h1 compartilhado por todos os outros tipos.
+                tituloFontSize: 30,
                 papeis: ['declarante', 'coabitante'],
+                // `especifico.declaracao_para` ('MIM'/'OUTRA') vem da etapa 3 do
+                // formulário (reestruturada em 2026-08-25). Registro salvo antes
+                // dessa mudança não tem esse campo — sem ele, cai sempre no texto
+                // antigo de coabitante (ramo "senão" abaixo), pra nunca quebrar
+                // declaração já processada.
                 corpo(d) {
                     const dados = d.dados || {};
                     const a = dados.pessoa_a || {};
                     const b = dados.pessoa_b || {};
-                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que resido no endereço acima qualificado.</p>`;
-                    if (b && b.nome) {
-                        corpo += `<p>Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(b.nome)}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
+                    const especifico = dados.especifico || {};
+                    // Fonte/espaçamento/justificação aplicados via `style` direto em
+                    // cada <p> (não numa div em volta) porque a regra de impressão
+                    // compartilhada `#printArea .doc-formatado-print p` já fixa
+                    // font-size/line-height em todo <p> — só um valor inline no
+                    // próprio elemento vence essa regra tanto na tela quanto no
+                    // papel. Escopado só a este tipo; os demais documentos
+                    // continuam exatamente com o tamanho/espaçamento de sempre.
+                    const pStyle = 'font-size:16.5px; line-height:2.05; margin:16px 0; text-align:justify;';
+                    // Qualificação do declarante sem a cláusula de residência que
+                    // qualificar() sempre anexa quando p.endereco existe — na
+                    // declaração "para terceiros" o endereço é do imóvel dele, não
+                    // necessariamente onde ele mora, então essa frase pronta não
+                    // serve aqui (ver corpo abaixo, que descreve o endereço à parte,
+                    // ligado à pessoa declarada, não ao declarante).
+                    function qualificarSemEndereco(p) {
+                        const fem = p.genero === 'Feminino';
+                        return [
+                            escapeHtml(p.nome),
+                            p.nacionalidade ? escapeHtml(flexGenero(p.nacionalidade, fem)) : null,
+                            p.estado_civil ? escapeHtml(flexGenero(p.estado_civil, fem)) : null,
+                            `portador${g(p.genero, '', 'a')} do CPF nº ${escapeHtml(p.cpf)}`,
+                        ].filter(Boolean).join(', ');
                     }
-                    corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                    corpo += `<p>${dataExtenso()}.</p>`;
-                    corpo += assinatura(a);
-                    if (b && b.nome) corpo += assinatura(b);
-                    return corpo;
+                    let miolo;
+                    if (especifico.declaracao_para === 'OUTRA' && b && b.nome) {
+                        // Redação em 3 parágrafos (pedido do usuário, 2026-08-25):
+                        // (1) identifica o declarante e sua qualidade de proprietário/
+                        // locador/responsável; (2) identifica a pessoa declarada e
+                        // afirma que ela reside no imóvel do declarante, com o
+                        // endereço completo; (3) frase de responsabilidade formal
+                        // pelas informações. Só este ramo — a versão "para mim"
+                        // (ramo "senão" abaixo) continua exatamente como estava.
+                        // "proprietário(a)/locador(a)" flexionados pelo gênero do
+                        // declarante (a) — "responsável" já é neutro, não flexiona.
+                        miolo = `<p style="${pStyle}">Eu, ${qualificarSemEndereco(a)}, na qualidade de proprietári${g(a.genero, 'o', 'a')}, locador${g(a.genero, '', 'a')} ou responsável pelo imóvel abaixo descrito, DECLARO, para os devidos fins de direito e a quem possa interessar, o que segue:</p>`;
+                        miolo += `<p style="${pStyle}">${qualificarSemEndereco(b)} reside e é domiciliad${g(b.genero, 'o', 'a')} no imóvel de minha responsabilidade, situado na ${escapeHtml(a.endereco || '')}, bairro ${escapeHtml(a.bairro || '')}, na cidade de ${escapeHtml(a.cidade || '')}/${escapeHtml(a.estado || '')}.</p>`;
+                        miolo += `<p style="${pStyle}">Declaro, sob as penas da lei, que as informações acima são verdadeiras, assumindo integral responsabilidade civil e criminal por sua veracidade, e firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    } else {
+                        miolo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que sou residente e domiciliad${g(a.genero, 'o', 'a')} no endereço acima qualificado.</p>`;
+                        if (b && b.nome) {
+                            miolo += `<p style="${pStyle}">Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(b.nome)}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
+                        }
+                        miolo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    }
+                    // Fecho (cidade/data + assinaturas) centralizado e com respiro
+                    // maior antes dele, pra não ficar tudo empilhado no topo da
+                    // folha — mesma lógica de style inline pelo motivo acima.
+                    // Assinatura da pessoa declarada (b) só sai no ramo "para mim"
+                    // com coabitante (pedido do usuário, 2026-08-25) — na declaração
+                    // "para terceiros" só o declarante (proprietário/responsável)
+                    // assina; a pessoa declarada não assina em nenhuma hipótese,
+                    // nem na tela nem na impressão.
+                    let fecho = `<div style="text-align:center; margin-top:72px;"><p style="font-size:16.5px; margin:0 0 8px;">${dataExtenso()}.</p>${assinatura(a)}`;
+                    if (especifico.declaracao_para !== 'OUTRA' && b && b.nome) fecho += assinatura(b);
+                    fecho += `</div>`;
+                    return miolo + fecho;
                 }
             },
             DECLARACAO_UNIAO_ESTAVEL: {

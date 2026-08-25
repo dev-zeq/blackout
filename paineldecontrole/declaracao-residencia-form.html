@@ -95,10 +95,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const s = {
-    nome: '', cpf: '', rg: '', genero: '', estado_civil: '', nacionalidade: 'Brasileiro(a)', profissao: '',
+    nome: '', cpf: '', genero: '', estado_civil: '', nacionalidade: 'Brasileiro(a)',
     rua: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado: '',
-    tem_pessoa_b: '',
-    b_nome: '', b_cpf: '', b_rg: '', b_genero: '', b_estado_civil: '', b_nacionalidade: 'Brasileiro(a)', b_profissao: '',
+    declaracao_para: '',
+    pd_nome: '', pd_cpf: '', pd_genero: '', pd_estado_civil: '', pd_nacionalidade: 'Brasileiro(a)',
 };
 
 const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
@@ -201,7 +201,7 @@ function carregarCidadeBairro(cidadeSalva, bairroSalvo) {
 }
 
 let stepIndex = 0;
-let steps = [stepDados, stepEndereco, stepPessoaB, stepRevisao];
+let steps = [stepDados, stepEndereco, stepDeclaracaoPara, stepRevisao];
 
 function render() {
     const total = steps.length;
@@ -228,10 +228,9 @@ function checkedVal(name) { const e = document.querySelector(`input[name="${name
 // ---------- Etapa 1: Dados pessoais ----------
 function stepDados() {
     return `
-    <h2>Seus dados</h2>
+    <h2>Dados do declarante, proprietário, locador ou responsável pelo imóvel</h2>
     <div class="field"><label>Nome completo *</label><input type="text" id="f_nome" value="${esc(s.nome)}"></div>
     <div class="field"><label>CPF *</label><input type="text" id="f_cpf" value="${esc(s.cpf)}" placeholder="000.000.000-00"></div>
-    <div class="field"><label>RG</label><input type="text" id="f_rg" value="${esc(s.rg)}"></div>
     <div class="field"><label>Gênero *</label>
         <div class="radio-group">${pill('f_genero', 'Masculino', s.genero === 'Masculino')}${pill('f_genero', 'Feminino', s.genero === 'Feminino')}</div>
     </div>
@@ -239,7 +238,6 @@ function stepDados() {
         <select id="f_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
     <div class="field"><label>Nacionalidade *</label><input type="text" id="f_nacionalidade" value="${esc(s.nacionalidade)}"></div>
-    <div class="field"><label>Profissão</label><input type="text" id="f_profissao" value="${esc(s.profissao)}"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -247,7 +245,7 @@ function stepDados() {
 // ---------- Etapa 2: Endereço ----------
 function stepEndereco() {
     return `
-    <h2>Endereço onde mora</h2>
+    <h2>Endereço da Residência</h2>
     <div class="field"><label>Rua e número *</label><input type="text" id="f_rua" value="${esc(s.rua)}" placeholder="ex: Rua das Flores, 123 (ou só o nome da rua, se não houver número)"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
     <div class="field"><label>Cidade *</label><select id="f_cidade">${cidadeOptions(s.cidade)}</select></div>
@@ -257,34 +255,31 @@ function stepEndereco() {
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 
-// ---------- Etapa 3: Segunda pessoa (opcional) ----------
-function stepPessoaB() {
+// ---------- Etapa 3: Para quem é a declaração ----------
+function stepDeclaracaoPara() {
     return `
-    <h2>Mais alguém confirma?</h2>
-    <p style="font-size:12.5px;color:var(--text-dim);margin-top:-8px;">Se alguém mais precisa aparecer na declaração confirmando que mora com você (ex: dono do imóvel, cônjuge), preencha abaixo. Se não, pode pular.</p>
-    <div class="field"><label>Tem uma segunda pessoa na declaração?</label>
-        <div class="radio-group">${pill('f_tem_pessoa_b', 'SIM', s.tem_pessoa_b === 'SIM')}${pill('f_tem_pessoa_b', 'NAO', s.tem_pessoa_b === 'NAO', 'Não')}</div>
+    <h2>Para quem será emitida esta declaração de residência?</h2>
+    <div class="field">
+        <div class="radio-group">${pill('f_declaracao_para', 'MIM', s.declaracao_para === 'MIM', 'A declaração é para mim')}${pill('f_declaracao_para', 'OUTRA', s.declaracao_para === 'OUTRA', 'A declaração é para outra pessoa')}</div>
     </div>
-    <div id="condPessoaB"></div>
+    <div id="condDeclaracaoPara"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
-function renderCondPessoaB() {
-    const el = document.getElementById('condPessoaB');
+function renderCondDeclaracaoPara() {
+    const el = document.getElementById('condDeclaracaoPara');
     if (!el) return;
-    if (s.tem_pessoa_b !== 'SIM') { el.innerHTML = ''; return; }
+    if (s.declaracao_para !== 'OUTRA') { el.innerHTML = ''; return; }
     el.innerHTML = `
-        <div class="field"><label>Nome completo *</label><input type="text" id="f_b_nome" value="${esc(s.b_nome)}"></div>
-        <div class="field"><label>CPF *</label><input type="text" id="f_b_cpf" value="${esc(s.b_cpf)}"></div>
-        <div class="field"><label>RG</label><input type="text" id="f_b_rg" value="${esc(s.b_rg)}"></div>
-        <div class="field"><label>Gênero</label>
-            <div class="radio-group">${pill('f_b_genero', 'Masculino', s.b_genero === 'Masculino')}${pill('f_b_genero', 'Feminino', s.b_genero === 'Feminino')}</div>
+        <div class="field"><label>Nome completo *</label><input type="text" id="f_pd_nome" value="${esc(s.pd_nome)}"></div>
+        <div class="field"><label>CPF *</label><input type="text" id="f_pd_cpf" value="${esc(s.pd_cpf)}"></div>
+        <div class="field"><label>Gênero *</label>
+            <div class="radio-group">${pill('f_pd_genero', 'Masculino', s.pd_genero === 'Masculino')}${pill('f_pd_genero', 'Feminino', s.pd_genero === 'Feminino')}</div>
         </div>
-        <div class="field"><label>Estado civil</label>
-            <select id="f_b_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.b_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+        <div class="field"><label>Estado civil *</label>
+            <select id="f_pd_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.pd_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Nacionalidade</label><input type="text" id="f_b_nacionalidade" value="${esc(s.b_nacionalidade)}"></div>
-        <div class="field"><label>Profissão</label><input type="text" id="f_b_profissao" value="${esc(s.b_profissao)}"></div>`;
+        <div class="field"><label>Nacionalidade *</label><input type="text" id="f_pd_nacionalidade" value="${esc(s.pd_nacionalidade)}"></div>`;
 }
 
 // ---------- Etapa 4: Revisão ----------
@@ -292,7 +287,7 @@ function stepRevisao() {
     const rows = [
         ['Nome', s.nome], ['CPF', s.cpf],
         ['Endereço', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoFinal()}`],
-        ['2ª pessoa', s.tem_pessoa_b === 'SIM' ? s.b_nome : 'não'],
+        ['Declaração para', s.declaracao_para === 'OUTRA' ? s.pd_nome : 'Para mim'],
     ];
     return `
     <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
@@ -312,8 +307,8 @@ function validateCurrentStep() {
             if (!s.rua || !cidadeFinal() || !bairroFinal() || !estadoFinal()) return 'Preencha todos os campos obrigatórios (*).';
             return null;
         case 2:
-            if (!s.tem_pessoa_b) return 'Selecione uma opção.';
-            if (s.tem_pessoa_b === 'SIM' && (!s.b_nome || !s.b_cpf)) return 'Preencha nome e CPF da segunda pessoa.';
+            if (!s.declaracao_para) return 'Selecione uma opção.';
+            if (s.declaracao_para === 'OUTRA' && (!s.pd_nome || !s.pd_cpf || !s.pd_genero || !s.pd_estado_civil || !s.pd_nacionalidade)) return 'Preencha todos os campos obrigatórios (*) da pessoa cuja residência será declarada.';
             return null;
         default: return null;
     }
@@ -321,9 +316,9 @@ function validateCurrentStep() {
 function saveCurrentStep() {
     switch (stepIndex) {
         case 0:
-            s.nome = val('f_nome'); s.cpf = val('f_cpf'); s.rg = val('f_rg');
+            s.nome = val('f_nome'); s.cpf = val('f_cpf');
             s.genero = checkedVal('f_genero'); s.estado_civil = val('f_estado_civil');
-            s.nacionalidade = val('f_nacionalidade'); s.profissao = val('f_profissao');
+            s.nacionalidade = val('f_nacionalidade');
             break;
         case 1:
             s.rua = val('f_rua'); s.complemento = val('f_complemento');
@@ -331,11 +326,11 @@ function saveCurrentStep() {
             if (!estadoForcadoSC()) s.estado = val('f_estado');
             break;
         case 2:
-            s.tem_pessoa_b = checkedVal('f_tem_pessoa_b');
-            if (s.tem_pessoa_b === 'SIM') {
-                s.b_nome = val('f_b_nome'); s.b_cpf = val('f_b_cpf'); s.b_rg = val('f_b_rg');
-                s.b_genero = checkedVal('f_b_genero'); s.b_estado_civil = val('f_b_estado_civil');
-                s.b_nacionalidade = val('f_b_nacionalidade'); s.b_profissao = val('f_b_profissao');
+            s.declaracao_para = checkedVal('f_declaracao_para');
+            if (s.declaracao_para === 'OUTRA') {
+                s.pd_nome = val('f_pd_nome'); s.pd_cpf = val('f_pd_cpf');
+                s.pd_genero = checkedVal('f_pd_genero'); s.pd_estado_civil = val('f_pd_estado_civil');
+                s.pd_nacionalidade = val('f_pd_nacionalidade');
             }
             break;
     }
@@ -345,8 +340,8 @@ function bindStepEvents() {
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstado(); });
     renderCondCidade();
     renderCondEstado();
-    document.querySelectorAll('input[name="f_tem_pessoa_b"]').forEach(r => r.addEventListener('change', () => { s.tem_pessoa_b = checkedVal('f_tem_pessoa_b'); renderCondPessoaB(); }));
-    renderCondPessoaB();
+    document.querySelectorAll('input[name="f_declaracao_para"]').forEach(r => r.addEventListener('change', () => { s.declaracao_para = checkedVal('f_declaracao_para'); renderCondDeclaracaoPara(); }));
+    renderCondDeclaracaoPara();
     const btnSubmit = document.getElementById('btnSubmit');
     if (btnSubmit) btnSubmit.addEventListener('click', submitForm);
 }
@@ -358,17 +353,17 @@ async function submitForm() {
 
     const dados = {
         pessoa_a: {
-            nome: s.nome, cpf: s.cpf, rg: s.rg || null, genero: s.genero,
-            estado_civil: s.estado_civil, nacionalidade: s.nacionalidade, profissao: s.profissao || null,
+            nome: s.nome, cpf: s.cpf, genero: s.genero,
+            estado_civil: s.estado_civil, nacionalidade: s.nacionalidade,
             endereco: enderecoFinal(), rua: s.rua || null, complemento: s.complemento || null,
             bairro: bairroFinal(), cidade: cidadeFinal(), estado: estadoFinal(),
         },
-        especifico: {},
+        especifico: { declaracao_para: s.declaracao_para },
     };
-    if (s.tem_pessoa_b === 'SIM') {
+    if (s.declaracao_para === 'OUTRA') {
         dados.pessoa_b = {
-            nome: s.b_nome, cpf: s.b_cpf, rg: s.b_rg || null, genero: s.b_genero || null,
-            estado_civil: s.b_estado_civil || null, nacionalidade: s.b_nacionalidade || null, profissao: s.b_profissao || null,
+            nome: s.pd_nome, cpf: s.pd_cpf, genero: s.pd_genero || null,
+            estado_civil: s.pd_estado_civil || null, nacionalidade: s.pd_nacionalidade || null,
         };
     }
 
@@ -448,21 +443,27 @@ function carregarEnderecoSolto(rua, numero, complemento, enderecoComposto) {
         s.rua = enderecoComposto; s.complemento = '';
     }
 }
+// Registro salvo antes desta reestruturação não tem `especifico.declaracao_para`
+// — se já tinha uma segunda pessoa (antigo "mora comigo"/coabitante), reabre
+// como "OUTRA" reaproveitando nome/CPF/gênero/estado civil/nacionalidade
+// (RG e profissão daquele fluxo antigo são descartados, igual ao restante do
+// formulário); sem segunda pessoa, reabre como "MIM" (mesmo padrão de
+// fallback de compatibilidade já usado em outros campos do painel).
 function carregarParaEdicao(row) {
     const dados = row.dados || {};
     const a = dados.pessoa_a || {};
-    s.nome = a.nome || ''; s.cpf = a.cpf || ''; s.rg = a.rg || ''; s.genero = a.genero || '';
+    const especifico = dados.especifico || {};
+    s.nome = a.nome || ''; s.cpf = a.cpf || ''; s.genero = a.genero || '';
     s.estado_civil = a.estado_civil || ''; s.nacionalidade = a.nacionalidade || 'Brasileiro(a)';
-    s.profissao = a.profissao || '';
     carregarEnderecoSolto(a.rua, a.numero, a.complemento, a.endereco);
     carregarCidadeBairro(a.cidade, a.bairro);
     s.estado = a.estado || '';
-    s.tem_pessoa_b = dados.pessoa_b ? 'SIM' : 'NAO';
+    s.declaracao_para = especifico.declaracao_para || (dados.pessoa_b ? 'OUTRA' : 'MIM');
     if (dados.pessoa_b) {
         const b = dados.pessoa_b;
-        s.b_nome = b.nome || ''; s.b_cpf = b.cpf || ''; s.b_rg = b.rg || '';
-        s.b_genero = b.genero || ''; s.b_estado_civil = b.estado_civil || '';
-        s.b_nacionalidade = b.nacionalidade || 'Brasileiro(a)'; s.b_profissao = b.profissao || '';
+        s.pd_nome = b.nome || ''; s.pd_cpf = b.cpf || '';
+        s.pd_genero = b.genero || ''; s.pd_estado_civil = b.estado_civil || '';
+        s.pd_nacionalidade = b.nacionalidade || 'Brasileiro(a)';
     }
 }
 
