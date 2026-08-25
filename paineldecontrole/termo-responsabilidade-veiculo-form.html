@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Termo de Responsabilidade de Veículo — Blackout</title>
+<style>
+    :root {
+        --bg: #05170c;
+        --surface: #0c1f14;
+        --surface-2: #0f2818;
+        --border: rgba(255,255,255,0.08);
+        --text: #eafff1;
+        --text-dim: #8fa89a;
+        --text-faint: #5c7568;
+        --accent: #22c55e;
+        --accent-bright: #4ade80;
+        --accent-dim: rgba(34,197,94,0.12);
+        --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #0a2415 0%, var(--bg) 55%); color: var(--text);
+        padding: 24px 16px 60px;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 22px; }
+    .header .logo { width: 52px; height: 52px; margin: 0 auto 10px; }
+    .header h1 { font-size: 19px; margin: 0 0 4px; }
+    .header p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+    .progress-track { height: 5px; background: var(--surface); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); border-radius: 10px; transition: width .25s ease; }
+    .step-label { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-bright); margin-bottom: 18px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 22px 18px; }
+    .card h2 { font-size: 15px; margin: 0 0 16px; color: var(--text); }
+    .card h3 { font-size: 13px; margin: 22px 0 12px; color: var(--accent-bright); text-transform: uppercase; letter-spacing: 0.4px; }
+    .card h3:first-child { margin-top: 0; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+    .field .hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+    input[type=text], input[type=tel], input[type=email], input[type=date], input[type=time], input[type=number], select, textarea {
+        width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); color: var(--text); font-size: 14.5px; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .radio-group, .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-pill { flex: 1 1 auto; min-width: 90px; }
+    .radio-pill input { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-pill .pill-label {
+        display: block; text-align: center; padding: 11px 10px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .12s;
+    }
+    .radio-pill input:checked + .pill-label { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+    .nav-row { display: flex; gap: 10px; margin-top: 22px; }
+    .btn { flex: 1; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn-next { background: linear-gradient(135deg, var(--accent-bright), var(--accent)); color: #05170c; box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
+    .btn-back { background: var(--surface-2); color: var(--text-dim); flex: 0 0 90px; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .error-msg { color: var(--danger); font-size: 12px; margin-top: 10px; display: none; }
+    .review-item { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+    .review-item .rk { color: var(--text-dim); }
+    .review-item .rv { color: var(--text); text-align: right; font-weight: 600; }
+    .success-box { text-align: center; padding: 40px 10px; }
+    .success-box .check { width: 64px; height: 64px; margin: 0 auto 18px; }
+    .success-box h2 { font-size: 18px; margin-bottom: 8px; }
+    .success-box p { color: var(--text-dim); font-size: 13.5px; }
+    @media (max-width: 380px) { .card { padding: 18px 14px; } }
+
+    /* Ler Documento (leitura de veículo por IA) — mesmo padrão visual/CSS já
+       usado no piloto de Locação de Imóvel (contrato-form.html), copiado
+       verbatim (nada aqui é específico de veículo). */
+    .btn-ler-doc {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; padding: 13px; margin-bottom: 18px; border-radius: 14px;
+        border: 1px dashed rgba(34,197,94,0.45); background: var(--accent-dim); color: var(--accent-bright);
+        font-size: 13.5px; font-weight: 700; cursor: pointer;
+    }
+    .doc-overlay {
+        position: fixed; inset: 0; background: rgba(2,10,5,0.72); backdrop-filter: blur(2px);
+        display: flex; align-items: flex-end; justify-content: center; z-index: 100; padding: 0;
+    }
+    .doc-overlay .doc-sheet {
+        width: 100%; max-width: 520px; background: var(--surface); border: 1px solid var(--border);
+        border-radius: 20px 20px 0 0; padding: 22px 18px 26px; max-height: 88vh; overflow-y: auto;
+    }
+    @media (min-width: 560px) {
+        .doc-overlay { align-items: center; }
+        .doc-overlay .doc-sheet { border-radius: 20px; max-height: 84vh; }
+    }
+    .doc-sheet h3 { font-size: 16px; margin: 0 0 4px; }
+    .doc-sheet .doc-sub { font-size: 12.5px; color: var(--text-dim); margin: 0 0 18px; }
+    .doc-action-btn {
+        display: block; width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 14px; border: 1px solid var(--border);
+        background: var(--surface-2); color: var(--text); font-size: 14.5px; font-weight: 700; cursor: pointer; text-align: center;
+    }
+    .doc-action-btn.primary { background: linear-gradient(135deg, var(--accent-bright), var(--accent)); color: #05170c; border: none; }
+    .doc-action-btn.cancel { color: var(--text-dim); background: transparent; border: none; margin-bottom: 0; }
+    .doc-loading { text-align: center; padding: 30px 10px; color: var(--text-dim); font-size: 14px; }
+    .doc-loading .spin {
+        width: 34px; height: 34px; margin: 0 auto 16px; border-radius: 50%;
+        border: 3px solid var(--border); border-top-color: var(--accent); animation: doc-spin 0.8s linear infinite;
+    }
+    @keyframes doc-spin { to { transform: rotate(360deg); } }
+    .doc-erro { text-align: center; padding: 10px; }
+    .doc-erro p { color: var(--danger); font-size: 13.5px; margin: 10px 0 20px; }
+    .doc-confirma .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 5px; }
+    .doc-confirma .field { margin-bottom: 12px; }
+    .doc-confirma .field input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 14px; font-family: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="46" fill="#05170c" stroke="#22C55E" stroke-width="4"/>
+            <g fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round">
+                <path d="M 50 10 A 40 40 0 1 1 12 60"/>
+            </g>
+            <polygon points="50,8 42,22 58,22" fill="#22C55E"/>
+            <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
+        </svg>
+        <h1>Termo de Responsabilidade de Veículo</h1>
+        <p>Pra transferir a responsabilidade pelo veículo a outra pessoa. Leva poucos minutos.</p>
+    </div>
+
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="step-label" id="stepLabel"></div>
+
+    <div class="card" id="cardArea"></div>
+</div>
+
+<!-- Ler Documento (leitura do CRLV do veículo por IA) — mesmo padrão já usado
+     no piloto de Locação de Imóvel (contrato-form.html): inputs escondidos +
+     overlay genérico, sem nada específico de veículo aqui. -->
+<input type="file" id="docInputCamera" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="docInputGaleria" accept="image/*" style="display:none">
+<div id="docOverlay" class="doc-overlay" style="display:none"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const s = {
+    // Proprietário
+    a_nome: '', a_cpf: '', a_rg: '', a_genero: '', a_estado_civil: '', a_nacionalidade: 'Brasileiro(a)', a_profissao: '',
+    a_rua: '', a_complemento: '', a_bairro: '', a_cidade: '', a_cidade_outra: '', a_bairro_outro: '', a_estado: '',
+    // Responsável (condutor temporário / novo usuário)
+    mesmo_responsavel: 'Sim',
+    b_nome: '', b_cpf: '', b_rg: '', b_genero: '', b_estado_civil: '', b_nacionalidade: 'Brasileiro(a)', b_profissao: '',
+    b_rua: '', b_complemento: '', b_bairro: '', b_cidade: '', b_cidade_outra: '', b_bairro_outro: '', b_estado: '',
+    // Veículo
+    tipo_veiculo: 'Automóvel', v_fabricante: '', v_modelo: '', v_ano: '', v_placa: '', v_cor: '', v_chassi: '', v_renavam: '',
+    // Foro (opcional — padrão é a cidade do proprietário) e testemunhas (opcional)
+    foro_cidade: '', foro_estado: '',
+    test1_nome: '', test1_cpf: '', test2_nome: '', test2_cpf: '',
+};
+
+const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pill(name, value, checked, label) {
+    const id = name + '_' + value.replace(/\W/g, '');
+    return `<label class="radio-pill"><input type="radio" name="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''}><span class="pill-label" for="${id}">${esc(label || value)}</span></label>`;
+}
+function estadoOptions(selected) {
+    return ESTADOS_BR.map(u => `<option value="${u}" ${selected === u ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+const CIDADES_BAIRROS = {
+    'Camboriú': ['Areias', 'Cedro', 'Centro', 'Conde Vila Verde', 'Lídia Duarte', 'Monte Alegre', 'Rio Pequeno', 'Santa Regina', 'São Francisco de Assis', 'Tabuleiro', 'Várzea do Ranchinho'],
+    'Balneário Camboriú': ['Ariribá', 'Barra', 'Barra Norte', 'Barra Sul', 'Centro', 'Estados', 'Estaleiro', 'Estaleirinho', 'Interpraias', 'Jardim Iate Clube', 'Laranjeiras', 'Municípios', 'Nações', 'Nova Esperança', 'Pioneiros', 'Praia dos Amores', 'São Judas', 'Vila Real'],
+    'Itapema': ['Alto do São Bento', 'Andorinha', 'Canto da Praia', 'Casa Branca', 'Castelo Branco', 'Centro', 'Ilhota', 'Meia Praia', 'Morretes', 'Sertãozinho', 'Tabuleiro dos Oliveiras', 'Várzea'],
+    'Itajaí': ['Centro', 'Cabeçudas', 'Praia Brava', 'Fazenda', 'Cordeiros', 'São Vicente', 'Barra do Rio', 'Dom Bosco', 'São João', 'Espinheiros', 'Ressacada', 'Salseiros', 'Vila Operária', 'Murta', 'Rio Bonito'],
+};
+const CIDADES_OPTS = [...Object.keys(CIDADES_BAIRROS), 'Outra'];
+const CIDADES_SC = ['Camboriú', 'Balneário Camboriú', 'Itapema', 'Itajaí'];
+function cidadeOptions(selected) {
+    return '<option value="">Selecione</option>' + CIDADES_OPTS.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
+}
+function bairroOptions(cidade, selected) {
+    const lista = CIDADES_BAIRROS[cidade] || [];
+    return '<option value="">Selecione</option>' + lista.map(b => `<option value="${b}" ${selected === b ? 'selected' : ''}>${b}</option>`).join('') + `<option value="__outro__" ${selected === '__outro__' ? 'selected' : ''}>Outro</option>`;
+}
+
+function renderCondCidade(p) {
+    const el = document.getElementById(`cond_${p}_cidade`);
+    if (!el) return;
+    let html = '';
+    if (s[p + '_cidade'] === 'Outra') {
+        html += `<div class="field"><label>Qual cidade? *</label><input type="text" id="f_${p}_cidade_outra" value="${esc(s[p + '_cidade_outra'])}"></div>`;
+        html += `<div class="field"><label>Bairro *</label><input type="text" id="f_${p}_bairro_livre" value="${esc(s[p + '_bairro_outro'])}"></div>`;
+    } else if (s[p + '_cidade']) {
+        html += `<div class="field"><label>Bairro *</label><select id="f_${p}_bairro">${bairroOptions(s[p + '_cidade'], s[p + '_bairro'])}</select></div>`;
+        html += `<div id="cond_${p}_bairro_outro"></div>`;
+    }
+    el.innerHTML = html;
+    const selCidadeOutra = document.getElementById(`f_${p}_cidade_outra`);
+    if (selCidadeOutra) selCidadeOutra.addEventListener('input', () => { s[p + '_cidade_outra'] = selCidadeOutra.value; });
+    const inpBairroLivre = document.getElementById(`f_${p}_bairro_livre`);
+    if (inpBairroLivre) inpBairroLivre.addEventListener('input', () => { s[p + '_bairro_outro'] = inpBairroLivre.value; });
+    const selBairro = document.getElementById(`f_${p}_bairro`);
+    if (selBairro) selBairro.addEventListener('change', () => { s[p + '_bairro'] = selBairro.value; renderCondBairroOutro(p); });
+    renderCondBairroOutro(p);
+}
+function renderCondBairroOutro(p) {
+    const el = document.getElementById(`cond_${p}_bairro_outro`);
+    if (!el) return;
+    el.innerHTML = s[p + '_bairro'] === '__outro__' ? `<div class="field"><label>Qual bairro? *</label><input type="text" id="f_${p}_bairro_livre_outro" value="${esc(s[p + '_bairro_outro'])}"></div>` : '';
+    const inp = document.getElementById(`f_${p}_bairro_livre_outro`);
+    if (inp) inp.addEventListener('input', () => { s[p + '_bairro_outro'] = inp.value; });
+}
+function cidadeFinal(p) { return s[p + '_cidade'] === 'Outra' ? s[p + '_cidade_outra'] : s[p + '_cidade']; }
+function bairroFinal(p) { return (s[p + '_cidade'] === 'Outra' || s[p + '_bairro'] === '__outro__') ? s[p + '_bairro_outro'] : s[p + '_bairro']; }
+// Rua e número num campo só (a pessoa já escreve o número junto, ex: "Rua das
+// Flores, 123"; pode deixar só o nome da rua se não houver número) +
+// Complemento, ainda separado, compostos num endereço só na hora de
+// enviar/exibir.
+function enderecoFinal(p) {
+    const rua = (s[p + '_rua'] || '').trim();
+    const complemento = (s[p + '_complemento'] || '').trim();
+    if (!rua) return '';
+    return complemento ? `${rua}, ${complemento}` : rua;
+}
+function estadoForcadoSC(p) { return CIDADES_SC.includes(s[p + '_cidade']); }
+function estadoFinal(p) { return estadoForcadoSC(p) ? 'SC' : s[p + '_estado']; }
+function estadoCampoHtml(p) {
+    if (estadoForcadoSC(p)) { s[p + '_estado'] = 'SC'; return ''; }
+    return `<div class="field"><label>Estado *</label><select id="f_${p}_estado"><option value="">Selecione</option>${estadoOptions(s[p + '_estado'])}</select></div>`;
+}
+function renderCondEstado(p) {
+    const el = document.getElementById(`cond_${p}_estado`);
+    if (!el) return;
+    el.innerHTML = estadoCampoHtml(p);
+}
+function carregarCidadeBairro(p, cidadeSalva, bairroSalvo) {
+    if (cidadeSalva && CIDADES_OPTS.includes(cidadeSalva) && cidadeSalva !== 'Outra') {
+        s[p + '_cidade'] = cidadeSalva;
+        const lista = CIDADES_BAIRROS[cidadeSalva] || [];
+        if (bairroSalvo && lista.includes(bairroSalvo)) { s[p + '_bairro'] = bairroSalvo; }
+        else { s[p + '_bairro'] = '__outro__'; s[p + '_bairro_outro'] = bairroSalvo || ''; }
+    } else {
+        s[p + '_cidade'] = cidadeSalva ? 'Outra' : '';
+        s[p + '_cidade_outra'] = cidadeSalva || '';
+        s[p + '_bairro_outro'] = bairroSalvo || '';
+    }
+}
+// Registro salvo antes do campo único "Rua e número" ainda tinha
+// Rua/Número separados — junta os dois de volta num "Rua e número" só (ex:
+// "Rua das Flores" + "123" -> "Rua das Flores, 123") sem perder o número.
+function carregarEnderecoSolto(p, rua, numero, complemento, enderecoComposto) {
+    if (rua || numero || complemento) {
+        s[p + '_rua'] = numero ? `${rua || ''}${rua ? ', ' : ''}${numero}` : (rua || '');
+        s[p + '_complemento'] = complemento || '';
+    } else if (enderecoComposto) {
+        s[p + '_rua'] = enderecoComposto; s[p + '_complemento'] = '';
+    }
+}
+
+let stepIndex = 0;
+let steps = [stepProprietarioDados, stepProprietarioEndereco, stepResponsavel, stepVeiculo, stepForoTestemunhas, stepRevisao];
+
+function render() {
+    const total = steps.length;
+    document.getElementById('progressFill').style.width = Math.round((stepIndex / (total - 1)) * 100) + '%';
+    document.getElementById('stepLabel').textContent = `Etapa ${stepIndex + 1} de ${total}`;
+    const card = document.getElementById('cardArea');
+    card.innerHTML = steps[stepIndex]();
+    bindStepEvents();
+}
+function goNext() {
+    saveCurrentStep();
+    const err = validateCurrentStep();
+    if (err) { showError(err); return; }
+    if (stepIndex < steps.length - 1) { stepIndex++; render(); window.scrollTo(0, 0); }
+}
+function goBack() { if (stepIndex > 0) { stepIndex--; render(); window.scrollTo(0, 0); } }
+function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+function checkedVal(name) { const e = document.querySelector(`input[name="${name}"]:checked`); return e ? e.value : ''; }
+
+// ---------- Etapa 1: dados do proprietário ----------
+function stepProprietarioDados() {
+    return `
+    <h2>Dados do Proprietário</h2>
+    <div class="field"><label>Nome completo *</label><input type="text" id="f_a_nome" value="${esc(s.a_nome)}"></div>
+    <div class="field"><label>CPF *</label><input type="text" id="f_a_cpf" value="${esc(s.a_cpf)}" placeholder="000.000.000-00"></div>
+    <div class="field"><label>RG *</label><input type="text" id="f_a_rg" value="${esc(s.a_rg)}"></div>
+    <div class="field"><label>Gênero *</label>
+        <div class="radio-group">${pill('f_a_genero', 'Masculino', s.a_genero === 'Masculino')}${pill('f_a_genero', 'Feminino', s.a_genero === 'Feminino')}</div>
+    </div>
+    <div class="field"><label>Nacionalidade *</label><input type="text" id="f_a_nacionalidade" value="${esc(s.a_nacionalidade)}"></div>
+    <div class="field"><label>Estado civil *</label>
+        <select id="f_a_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.a_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Profissão *</label><input type="text" id="f_a_profissao" value="${esc(s.a_profissao)}"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa 2: endereço do proprietário ----------
+function stepProprietarioEndereco() {
+    return `
+    <h2>Endereço do Proprietário</h2>
+    <div class="field"><label>Rua e número *</label><input type="text" id="f_a_rua" value="${esc(s.a_rua)}" placeholder="ex: Rua das Flores, 123 (ou só o nome da rua, se não houver número)"></div>
+    <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_a_complemento" value="${esc(s.a_complemento)}"></div>
+    <div class="field"><label>Cidade *</label><select id="f_a_cidade">${cidadeOptions(s.a_cidade)}</select></div>
+    <div id="cond_a_cidade"></div>
+    <div id="cond_a_estado">${estadoCampoHtml('a')}</div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa 3: responsável (condutor temporário / novo usuário) ----------
+function stepResponsavel() {
+    const diferente = s.mesmo_responsavel === 'Não';
+    return `
+    <h2>Responsável pelo veículo</h2>
+    <div class="field"><label>O responsável é o próprio proprietário? *</label>
+        <div class="radio-group">${pill('f_mesmo_responsavel', 'Sim', s.mesmo_responsavel === 'Sim')}${pill('f_mesmo_responsavel', 'Não', s.mesmo_responsavel === 'Não')}</div>
+        <p class="hint">Se "Não", quem for dirigir/usar o veículo assume a responsabilidade a partir da assinatura.</p>
+    </div>
+    <div id="condResponsavelDados">${diferente ? responsavelDadosHtml() : ''}</div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function responsavelDadosHtml() {
+    return `
+    <div class="field"><label>Nome completo *</label><input type="text" id="f_b_nome" value="${esc(s.b_nome)}"></div>
+    <div class="field"><label>CPF *</label><input type="text" id="f_b_cpf" value="${esc(s.b_cpf)}" placeholder="000.000.000-00"></div>
+    <div class="field"><label>RG *</label><input type="text" id="f_b_rg" value="${esc(s.b_rg)}"></div>
+    <div class="field"><label>Gênero *</label>
+        <div class="radio-group">${pill('f_b_genero', 'Masculino', s.b_genero === 'Masculino')}${pill('f_b_genero', 'Feminino', s.b_genero === 'Feminino')}</div>
+    </div>
+    <div class="field"><label>Nacionalidade *</label><input type="text" id="f_b_nacionalidade" value="${esc(s.b_nacionalidade)}"></div>
+    <div class="field"><label>Estado civil *</label>
+        <select id="f_b_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.b_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Profissão *</label><input type="text" id="f_b_profissao" value="${esc(s.b_profissao)}"></div>
+    <div class="field"><label>Rua e número *</label><input type="text" id="f_b_rua" value="${esc(s.b_rua)}" placeholder="ex: Rua das Flores, 123 (ou só o nome da rua, se não houver número)"></div>
+    <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_b_complemento" value="${esc(s.b_complemento)}"></div>
+    <div class="field"><label>Cidade *</label><select id="f_b_cidade">${cidadeOptions(s.b_cidade)}</select></div>
+    <div id="cond_b_cidade"></div>
+    <div id="cond_b_estado">${estadoCampoHtml('b')}</div>`;
+}
+
+// ---------- Etapa 4: veículo ----------
+function stepVeiculo() {
+    return `
+    <h2>Dados do veículo</h2>
+    <button type="button" class="btn-ler-doc" data-action="ler-documento-veiculo">📷 Ler Documento do Veículo (CRLV)</button>
+    <div class="field"><label>Tipo de veículo *</label><input type="text" id="f_tipo_veiculo" value="${esc(s.tipo_veiculo)}" placeholder="Automóvel, Motocicleta..."></div>
+    <div class="field"><label>Fabricante *</label><input type="text" id="f_v_fabricante" value="${esc(s.v_fabricante)}"></div>
+    <div class="field"><label>Modelo *</label><input type="text" id="f_v_modelo" value="${esc(s.v_modelo)}"></div>
+    <div class="field"><label>Ano fabricação/modelo *</label><input type="text" id="f_v_ano" value="${esc(s.v_ano)}" placeholder="ex: 2020/2021"></div>
+    <div class="field"><label>Placa *</label><input type="text" id="f_v_placa" value="${esc(s.v_placa)}"></div>
+    <div class="field"><label>Cor *</label><input type="text" id="f_v_cor" value="${esc(s.v_cor)}"></div>
+    <div class="field"><label>Chassi *</label><input type="text" id="f_v_chassi" value="${esc(s.v_chassi)}"></div>
+    <div class="field"><label>Renavam *</label><input type="text" id="f_v_renavam" value="${esc(s.v_renavam)}" inputmode="numeric"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Ler Documento do Veículo (CRLV) por IA ----------
+// Mesmo padrão/arquitetura já usado no piloto de Locação de Imóvel
+// (contrato-form.html: abrirLeituraDocumento/renderDocOverlay/comprimirImagem/
+// mostrarDocConfirmacao/aplicarDadosDocumento) — câmera ou galeria, imagem
+// comprimida no <canvas> (nunca sobe pro Storage, só existe em memória
+// durante a leitura), Edge Function própria (`veiculo-documento-ia`, prompt
+// voltado a CRLV em vez de RG/CNH), e uma tela de conferência onde todo campo
+// lido continua editável antes de aplicar no formulário — nada é preenchido
+// direto sem o usuário confirmar. Só um bloco de veículo aqui (sem
+// proprietário/responsável 'a'/'b' pra escopar), então não precisa do
+// `docAlvo` do piloto original — só um flag simples de "leitura em andamento".
+let lendoDocumentoVeiculo = false;
+
+function abrirLeituraDocumentoVeiculo() {
+    lendoDocumentoVeiculo = true;
+    renderDocOverlay(`
+        <h3>Ler Documento do Veículo</h3>
+        <p class="doc-sub">Tire uma foto do CRLV (documento do veículo), ou escolha uma imagem já salva.</p>
+        <button type="button" class="doc-action-btn primary" data-doc-action="camera">📷 Tirar foto</button>
+        <button type="button" class="doc-action-btn" data-doc-action="galeria">🖼️ Escolher da galeria</button>
+        <button type="button" class="doc-action-btn cancel" data-doc-action="fechar">Cancelar</button>`);
+}
+function renderDocOverlay(innerHtml) {
+    const overlay = document.getElementById('docOverlay');
+    overlay.innerHTML = `<div class="doc-sheet">${innerHtml}</div>`;
+    overlay.style.display = 'flex';
+}
+function fecharDocOverlay() {
+    const overlay = document.getElementById('docOverlay');
+    overlay.style.display = 'none';
+    overlay.innerHTML = '';
+    lendoDocumentoVeiculo = false;
+}
+function mostrarDocCarregando() {
+    renderDocOverlay(`<div class="doc-loading"><div class="spin"></div>Lendo documento...</div>`);
+}
+// Mensagem fixa sempre aparece — o "motivo" específico da IA (quando existe)
+// só entra como detalhe menor abaixo, nunca substituindo o texto principal.
+function mostrarDocErro(motivoDetalhe) {
+    renderDocOverlay(`
+        <div class="doc-erro">
+            <h3>Não foi possível ler</h3>
+            <p>Não foi possível realizar uma leitura confiável. Verifique a nitidez ou preencha manualmente.</p>
+            ${motivoDetalhe ? `<p style="color:var(--text-faint); font-size:12px; margin-top:-14px;">${esc(motivoDetalhe)}</p>` : ''}
+            <button type="button" class="doc-action-btn primary" data-doc-action="fechar">Entendi</button>
+        </div>`);
+}
+// Redimensiona/comprime no <canvas> (API nativa, sem lib nova) antes de mandar
+// pra IA — reduz custo/latência e o tamanho do payload da Edge Function.
+function comprimirImagem(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            const maxLado = 1600;
+            let { width, height } = img;
+            if (width > maxLado || height > maxLado) {
+                const escala = maxLado / Math.max(width, height);
+                width = Math.round(width * escala); height = Math.round(height * escala);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            URL.revokeObjectURL(url);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível abrir a imagem.')); };
+        img.src = url;
+    });
+}
+async function processarImagemDocumentoVeiculo(file) {
+    if (!file || !lendoDocumentoVeiculo) return;
+    mostrarDocCarregando();
+    let imagem_base64;
+    try {
+        imagem_base64 = await comprimirImagem(file);
+    } catch {
+        mostrarDocErro('Não foi possível abrir essa imagem. Tenta outra ou preencha manualmente.');
+        return;
+    }
+    const { data, error } = await supabase.functions.invoke('veiculo-documento-ia', { body: { imagem_base64 } });
+    imagem_base64 = null; // descarta a referência assim que a chamada termina
+    if (!lendoDocumentoVeiculo) return; // usuário fechou o overlay enquanto a IA respondia
+    if (error || !data) {
+        mostrarDocErro('Não foi possível ler agora. Tenta de novo ou preencha manualmente.');
+        return;
+    }
+    if (!data.legivel) {
+        mostrarDocErro(data.motivo_nao_legivel || null);
+        return;
+    }
+    mostrarDocConfirmacaoVeiculo(data.dados);
+}
+function mostrarDocConfirmacaoVeiculo(dados) {
+    const campos = [
+        ['marca', 'Marca/Fabricante', dados.marca],
+        ['modelo', 'Modelo', dados.modelo],
+        ['ano_fabricacao', 'Ano de fabricação', dados.ano_fabricacao],
+        ['ano_modelo', 'Ano do modelo', dados.ano_modelo],
+        ['placa', 'Placa', dados.placa],
+        ['cor', 'Cor', dados.cor],
+        ['chassi', 'Chassi', dados.chassi],
+        ['renavam', 'Renavam', dados.renavam],
+    ];
+    renderDocOverlay(`
+        <h3>Confira os dados lidos</h3>
+        <p class="doc-sub">Corrija o que estiver errado antes de preencher o formulário.</p>
+        <div class="doc-confirma">
+            ${campos.map(([k, label, v]) => `<div class="field"><label>${esc(label)}</label><input type="text" data-doc-campo="${k}" value="${esc(v || '')}"></div>`).join('')}
+        </div>
+        <button type="button" class="doc-action-btn primary" data-doc-action="usar">Usar estes dados</button>
+        <button type="button" class="doc-action-btn cancel" data-doc-action="fechar">Descartar</button>`);
+}
+function aplicarDadosDocumentoVeiculo() {
+    const overlay = document.getElementById('docOverlay');
+    const campo = k => (overlay.querySelector(`[data-doc-campo="${k}"]`)?.value || '').trim();
+    if (campo('marca')) s.v_fabricante = campo('marca');
+    if (campo('modelo')) s.v_modelo = campo('modelo');
+    const anoFab = campo('ano_fabricacao'), anoMod = campo('ano_modelo');
+    if (anoFab || anoMod) s.v_ano = (anoFab && anoMod) ? `${anoFab}/${anoMod}` : (anoFab || anoMod);
+    if (campo('placa')) s.v_placa = campo('placa');
+    if (campo('cor')) s.v_cor = campo('cor');
+    if (campo('chassi')) s.v_chassi = campo('chassi');
+    if (campo('renavam')) s.v_renavam = campo('renavam');
+    fecharDocOverlay();
+    render();
+}
+document.getElementById('docOverlay').addEventListener('click', e => {
+    const btn = e.target.closest('[data-doc-action]');
+    if (!btn) return;
+    const action = btn.dataset.docAction;
+    if (action === 'camera') document.getElementById('docInputCamera').click();
+    else if (action === 'galeria') document.getElementById('docInputGaleria').click();
+    else if (action === 'fechar') fecharDocOverlay();
+    else if (action === 'usar') aplicarDadosDocumentoVeiculo();
+});
+document.getElementById('docInputCamera').addEventListener('change', e => {
+    const file = e.target.files[0]; e.target.value = '';
+    processarImagemDocumentoVeiculo(file);
+});
+document.getElementById('docInputGaleria').addEventListener('change', e => {
+    const file = e.target.files[0]; e.target.value = '';
+    processarImagemDocumentoVeiculo(file);
+});
+
+// ---------- Etapa 5: foro (opcional) + testemunhas (opcional) ----------
+function stepForoTestemunhas() {
+    return `
+    <h3>Foro (opcional)</h3>
+    <p class="hint" style="margin:-8px 0 14px;">Por padrão usa a cidade do Proprietário. Só preencha se precisar de um foro diferente.</p>
+    <div class="field"><label>Cidade do foro</label><select id="f_foro_cidade"><option value="">Mesma do Proprietário</option>${cidadeOptions(s.foro_cidade).replace('<option value="">Selecione</option>', '')}</select></div>
+    <div id="cond_foro_estado"></div>
+    <h3>Testemunhas (opcional)</h3>
+    <p class="hint" style="margin:-8px 0 14px;">Se não souber agora, deixe em branco — sai linha pra assinar à mão no documento.</p>
+    <div class="field"><label>Testemunha 1 — nome</label><input type="text" id="f_test1_nome" value="${esc(s.test1_nome)}"></div>
+    <div class="field"><label>Testemunha 1 — CPF</label><input type="text" id="f_test1_cpf" value="${esc(s.test1_cpf)}" inputmode="numeric"></div>
+    <div class="field"><label>Testemunha 2 — nome</label><input type="text" id="f_test2_nome" value="${esc(s.test2_nome)}"></div>
+    <div class="field"><label>Testemunha 2 — CPF</label><input type="text" id="f_test2_cpf" value="${esc(s.test2_cpf)}" inputmode="numeric"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondForoEstado() {
+    const el = document.getElementById('cond_foro_estado');
+    if (!el) return;
+    el.innerHTML = s.foro_cidade ? `<div class="field"><label>Estado do foro</label><select id="f_foro_estado"><option value="">Selecione</option>${estadoOptions(s.foro_estado || 'SC')}</select></div>` : '';
+    const sel = document.getElementById('f_foro_estado');
+    if (sel) sel.addEventListener('change', () => { s.foro_estado = sel.value; });
+}
+
+// ---------- Etapa 6: revisão ----------
+function stepRevisao() {
+    const rows = [
+        ['Proprietário', s.a_nome],
+        ['Responsável', s.mesmo_responsavel === 'Sim' ? s.a_nome + ' (mesmo do proprietário)' : s.b_nome],
+        ['Veículo', `${s.v_fabricante} ${s.v_modelo} — ${s.v_placa}`],
+        ['Foro', s.foro_cidade ? `${s.foro_cidade}/${s.foro_estado}` : 'mesmo do proprietário'],
+    ];
+    return `
+    <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
+    ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">${editMode ? 'Salvar alterações' : 'Enviar termo'}</button></div>
+    ${editMode ? `<p style="text-align:center; margin-top:14px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
+}
+
+// ---------- Validação e coleta ----------
+function validateCurrentStep() {
+    switch (stepIndex) {
+        case 0:
+            if (!s.a_nome || !s.a_cpf || !s.a_rg || !s.a_genero || !s.a_nacionalidade || !s.a_estado_civil || !s.a_profissao) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 1:
+            if (!s.a_rua || !cidadeFinal('a') || !bairroFinal('a') || !estadoFinal('a')) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        case 2:
+            if (s.mesmo_responsavel === 'Não') {
+                if (!s.b_nome || !s.b_cpf || !s.b_rg || !s.b_genero || !s.b_nacionalidade || !s.b_estado_civil || !s.b_profissao) return 'Preencha todos os campos obrigatórios (*) do responsável.';
+                if (!s.b_rua || !cidadeFinal('b') || !bairroFinal('b') || !estadoFinal('b')) return 'Preencha todos os campos obrigatórios (*) do endereço do responsável.';
+            } else if (!s.mesmo_responsavel) {
+                return 'Selecione se o responsável é o próprio proprietário.';
+            }
+            return null;
+        case 3:
+            if (!s.tipo_veiculo || !s.v_fabricante || !s.v_modelo || !s.v_ano || !s.v_placa || !s.v_cor || !s.v_chassi || !s.v_renavam) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        default: return null;
+    }
+}
+function saveCurrentStep() {
+    switch (stepIndex) {
+        case 0:
+            s.a_nome = val('f_a_nome'); s.a_cpf = val('f_a_cpf'); s.a_rg = val('f_a_rg');
+            s.a_genero = checkedVal('f_a_genero'); s.a_nacionalidade = val('f_a_nacionalidade');
+            s.a_estado_civil = val('f_a_estado_civil'); s.a_profissao = val('f_a_profissao');
+            break;
+        case 1:
+            s.a_rua = val('f_a_rua'); s.a_complemento = val('f_a_complemento');
+            s.a_cidade = val('f_a_cidade');
+            if (!estadoForcadoSC('a')) s.a_estado = val('f_a_estado');
+            break;
+        case 2:
+            s.mesmo_responsavel = checkedVal('f_mesmo_responsavel');
+            if (s.mesmo_responsavel === 'Não') {
+                s.b_nome = val('f_b_nome'); s.b_cpf = val('f_b_cpf'); s.b_rg = val('f_b_rg');
+                s.b_genero = checkedVal('f_b_genero'); s.b_nacionalidade = val('f_b_nacionalidade');
+                s.b_estado_civil = val('f_b_estado_civil'); s.b_profissao = val('f_b_profissao');
+                s.b_rua = val('f_b_rua'); s.b_complemento = val('f_b_complemento');
+                s.b_cidade = val('f_b_cidade');
+                if (!estadoForcadoSC('b')) s.b_estado = val('f_b_estado');
+            }
+            break;
+        case 3:
+            s.tipo_veiculo = val('f_tipo_veiculo'); s.v_fabricante = val('f_v_fabricante');
+            s.v_modelo = val('f_v_modelo'); s.v_ano = val('f_v_ano'); s.v_placa = val('f_v_placa');
+            s.v_cor = val('f_v_cor'); s.v_chassi = val('f_v_chassi'); s.v_renavam = val('f_v_renavam');
+            break;
+        case 4:
+            s.foro_cidade = val('f_foro_cidade'); s.foro_estado = s.foro_cidade ? val('f_foro_estado') : '';
+            s.test1_nome = val('f_test1_nome'); s.test1_cpf = val('f_test1_cpf');
+            s.test2_nome = val('f_test2_nome'); s.test2_cpf = val('f_test2_cpf');
+            break;
+    }
+}
+function bindStepEvents() {
+    const selCidadeA = document.getElementById('f_a_cidade');
+    if (selCidadeA) selCidadeA.addEventListener('change', () => { s.a_cidade = selCidadeA.value; s.a_bairro = ''; s.a_estado = estadoForcadoSC('a') ? 'SC' : ''; renderCondCidade('a'); renderCondEstado('a'); });
+    renderCondCidade('a'); renderCondEstado('a');
+
+    document.querySelectorAll('input[name="f_mesmo_responsavel"]').forEach(r => r.addEventListener('change', () => {
+        s.mesmo_responsavel = checkedVal('f_mesmo_responsavel');
+        const el = document.getElementById('condResponsavelDados');
+        if (el) el.innerHTML = s.mesmo_responsavel === 'Não' ? responsavelDadosHtml() : '';
+        bindResponsavelEvents();
+    }));
+    bindResponsavelEvents();
+
+    const btnLerDocVeiculo = document.querySelector('[data-action="ler-documento-veiculo"]');
+    if (btnLerDocVeiculo) btnLerDocVeiculo.addEventListener('click', abrirLeituraDocumentoVeiculo);
+
+    const selForoCidade = document.getElementById('f_foro_cidade');
+    if (selForoCidade) selForoCidade.addEventListener('change', () => { s.foro_cidade = selForoCidade.value; renderCondForoEstado(); });
+    renderCondForoEstado();
+
+    const btnSubmit = document.getElementById('btnSubmit');
+    if (btnSubmit) btnSubmit.addEventListener('click', submitForm);
+}
+function bindResponsavelEvents() {
+    const selCidadeB = document.getElementById('f_b_cidade');
+    if (selCidadeB) selCidadeB.addEventListener('change', () => { s.b_cidade = selCidadeB.value; s.b_bairro = ''; s.b_estado = estadoForcadoSC('b') ? 'SC' : ''; renderCondCidade('b'); renderCondEstado('b'); });
+    if (s.mesmo_responsavel === 'Não') { renderCondCidade('b'); renderCondEstado('b'); }
+}
+
+// ---------- Envio ----------
+function montarPessoa(p) {
+    return {
+        nome: s[p + '_nome'], cpf: s[p + '_cpf'], rg: s[p + '_rg'] || null, genero: s[p + '_genero'],
+        estado_civil: s[p + '_estado_civil'], nacionalidade: s[p + '_nacionalidade'], profissao: s[p + '_profissao'] || null,
+        endereco: enderecoFinal(p), rua: s[p + '_rua'] || null, complemento: s[p + '_complemento'] || null,
+        bairro: bairroFinal(p), cidade: cidadeFinal(p), estado: estadoFinal(p),
+    };
+}
+async function submitForm() {
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+
+    const pessoaA = montarPessoa('a');
+    const pessoaB = s.mesmo_responsavel === 'Não' ? montarPessoa('b') : pessoaA;
+
+    const registro = {
+        tipo_contrato: 'TERMO_RESPONSABILIDADE_VEICULO',
+        dados: {
+            pessoa_a: pessoaA,
+            pessoa_b: pessoaB,
+            especifico: {
+                tipo_veiculo: s.tipo_veiculo,
+                veiculo: {
+                    fabricante: s.v_fabricante, modelo: s.v_modelo, ano_fabricacao_modelo: s.v_ano,
+                    placa: s.v_placa, cor: s.v_cor, chassi: s.v_chassi, renavam: s.v_renavam,
+                },
+                foro_cidade: s.foro_cidade || null, foro_estado: s.foro_cidade ? (s.foro_estado || null) : null,
+                testemunha_1_nome: s.test1_nome || null, testemunha_1_cpf: s.test1_cpf || null,
+                testemunha_2_nome: s.test2_nome || null, testemunha_2_cpf: s.test2_cpf || null,
+            },
+        },
+    };
+
+    if (editMode) {
+        avisarPai({ type: 'form-salvar-pedido', table: 'declaracoes_pendentes', id: editId, registro });
+        return;
+    }
+
+    const { error } = await supabase.from('declaracoes_pendentes').insert(registro);
+    if (error) {
+        showError('Não deu pra enviar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        btn.disabled = false; btn.textContent = 'Enviar termo';
+        return;
+    }
+    document.getElementById('cardArea').innerHTML = `
+        <div class="success-box">
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+            <h2>Termo enviado!</h2>
+            <p>Recebemos suas informações. A equipe da Blackout vai preparar o documento.</p>
+        </div>`;
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('stepLabel').textContent = 'Concluído';
+}
+window.addEventListener('message', (ev) => {
+    if (ev.origin !== window.location.origin) return;
+    if (!ev.data || ev.data.type !== 'form-salvar-resultado') return;
+    const btn = document.getElementById('btnSubmit');
+    if (ev.data.ok) {
+        document.getElementById('cardArea').innerHTML = `
+            <div class="success-box">
+                <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+                <h2>Alterações salvas!</h2>
+                <p>O termo foi atualizado.</p>
+            </div>`;
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('stepLabel').textContent = 'Concluído';
+    } else {
+        showError(ev.data.error || 'Não deu pra salvar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
+    }
+});
+
+// ---------- Modo de edição ----------
+let editMode = false;
+let editId = null;
+
+function avisarPai(msg) {
+    if (window.parent && window.parent !== window) window.parent.postMessage(msg, window.location.origin);
+}
+function cancelarEdicao() {
+    avisarPai({ type: 'form-editar-cancelado' });
+    if (window.parent === window) history.back();
+}
+window.__cancelarEdicao = cancelarEdicao;
+
+function carregarPessoaEdicao(p, pessoa) {
+    if (!pessoa) return;
+    s[p + '_nome'] = pessoa.nome || ''; s[p + '_cpf'] = pessoa.cpf || ''; s[p + '_rg'] = pessoa.rg || '';
+    s[p + '_genero'] = pessoa.genero || ''; s[p + '_estado_civil'] = pessoa.estado_civil || '';
+    s[p + '_nacionalidade'] = pessoa.nacionalidade || 'Brasileiro(a)'; s[p + '_profissao'] = pessoa.profissao || '';
+    carregarEnderecoSolto(p, pessoa.rua, pessoa.numero, pessoa.complemento, pessoa.endereco);
+    carregarCidadeBairro(p, pessoa.cidade, pessoa.bairro);
+    s[p + '_estado'] = pessoa.estado || '';
+}
+function carregarParaEdicao(row) {
+    const dados = row.dados || {};
+    carregarPessoaEdicao('a', dados.pessoa_a);
+    const a = dados.pessoa_a || {};
+    const b = dados.pessoa_b || {};
+    // Registro antigo não tinha o gate — se as duas pessoas batem (mesmo CPF), assume "Sim".
+    s.mesmo_responsavel = (b.cpf && b.cpf === a.cpf) || !b.cpf ? 'Sim' : 'Não';
+    if (s.mesmo_responsavel === 'Não') carregarPessoaEdicao('b', b);
+    const e = dados.especifico || {};
+    s.tipo_veiculo = e.tipo_veiculo || 'Automóvel';
+    const v = e.veiculo || {};
+    s.v_fabricante = v.fabricante || ''; s.v_modelo = v.modelo || ''; s.v_ano = v.ano_fabricacao_modelo || '';
+    s.v_placa = v.placa || ''; s.v_cor = v.cor || ''; s.v_chassi = v.chassi || ''; s.v_renavam = v.renavam || '';
+    s.foro_cidade = e.foro_cidade || ''; s.foro_estado = e.foro_estado || '';
+    s.test1_nome = e.testemunha_1_nome || ''; s.test1_cpf = e.testemunha_1_cpf || '';
+    s.test2_nome = e.testemunha_2_nome || ''; s.test2_cpf = e.testemunha_2_cpf || '';
+}
+
+async function iniciar() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('editId');
+    if (!id) { render(); return; }
+    editMode = true; editId = id;
+    document.getElementById('cardArea').innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Carregando termo…</p>';
+    const { data, error } = await supabase.from('declaracoes_pendentes').select('*').eq('id', id).single();
+    if (error || !data || data.tipo_contrato !== 'TERMO_RESPONSABILIDADE_VEICULO') {
+        document.getElementById('cardArea').innerHTML = `
+            <h2>Não foi possível abrir este termo</h2>
+            <p style="color:var(--text-dim); font-size:13px;">O registro não foi encontrado ou não é desse tipo.</p>`;
+        return;
+    }
+    carregarParaEdicao(data);
+    const headerP = document.querySelector('.header p');
+    if (headerP) headerP.textContent = 'Corrija os dados abaixo e salve as alterações.';
+    render();
+}
+
+window.__goNext = goNext;
+window.__goBack = goBack;
+iniciar();
+</script>
+</body>
+</html>

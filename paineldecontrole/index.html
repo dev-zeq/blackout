@@ -851,6 +851,32 @@
             </div>
         </div>
 
+        <!-- Declarações e Procurações: mesmo padrão visual/funcional de
+             viewTermos (link-row + lista de pendentes), só que com um seletor
+             de categoria no topo (Declarações / Procurações) que filtra tanto
+             os links quanto a lista de pendentes exibidos abaixo. Reaproveita
+             loadDeclaracoesPendentes()/abrirDeclFormatado()/etc — ver
+             loadDeclProcPendentes() no script. -->
+        <div class="view" id="viewDeclProc">
+            <button class="back-btn" onclick="goHome()">← Menu</button>
+
+            <div style="display:flex; gap:10px; margin-bottom:16px;">
+                <div class="orc-tipo-btn" style="flex:1;" id="declProcCatDeclaracoes" onclick="selecionarCategoriaDeclProc('declaracoes')">📝<br>Declarações</div>
+                <div class="orc-tipo-btn" style="flex:1;" id="declProcCatProcuracoes" onclick="selecionarCategoriaDeclProc('procuracoes')">📜<br>Procurações</div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-header">
+                    <h3 id="declProcTitulo">📝 Declarações</h3>
+                    <span class="table-count" id="declProcCount">0 registros</span>
+                </div>
+                <div id="declProcLinkRows"></div>
+                <div id="declProcRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                </div>
+            </div>
+        </div>
+
         <div class="view" id="viewPlanejamento">
             <button class="back-btn" onclick="goHome()">← Menu</button>
 
@@ -2549,7 +2575,7 @@
             { icon: 'recibo', label: 'Emitir Recibo', action: { type: 'view', view: 'recibo' }, desc: 'Emita recibos de serviços prestados de forma rápida e personalizada.' },
             { icon: 'orcamento', label: 'Orçamento de Impressões', action: { type: 'view', view: 'orcamento' }, desc: 'Calcule orçamentos de impressão e encadernação com base na análise visual do arquivo do cliente.' },
             { icon: 'curriculo', label: 'Currículo', action: { type: 'view', view: 'curriculo' }, badgeKey: 'curriculo' },
-            { icon: 'declaracao', label: 'Declaração', action: { type: 'sub', key: 'declaracao' } },
+            { icon: 'declaracao', label: 'Declarações e Procurações', action: { type: 'view', view: 'declProc' }, badgeKey: 'declProc' },
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
             { icon: 'contratos', label: 'Contratos', action: { type: 'view', view: 'termos' }, badgeKey: 'termos' },
             { icon: 'exames', label: 'Exames', action: { type: 'sub', key: 'exames' } },
@@ -2574,16 +2600,6 @@
         const SUBPANELS = {
             curriculo: { title: '📄 Currículo', items: [
                 { label: 'Formulário do Cliente', url: 'https://forms.gle/davEvSQfJrXt7jxL6' },
-            ]},
-            declaracao: { title: '📝 Declaração', items: [
-                { label: 'Residência', url: 'declaracao-residencia-form.html' },
-                { label: 'Trabalho (c/ CNPJ)', url: 'declaracao-trabalho-form.html' },
-                { label: 'Trabalho (sem CNPJ)', url: 'https://forms.gle/FnKADnbqrArZLTy27' },
-                { label: 'Autônomo', url: 'declaracao-autonomo-form.html' },
-                { label: 'União Estável', url: 'declaracao-uniao-estavel-form.html' },
-                { label: 'Procuração', url: 'https://forms.gle/iGZMNDWaaU4zcfEk9' },
-                { label: 'Procuração Detran', url: 'https://forms.gle/JekGc5kXbSzszsmm6' },
-                { label: 'Termo de Responsabilidade (genérico)', url: 'https://forms.gle/GHAGj64EqjMdYyKE7' },
             ]},
             exames: { title: '🩺 Exames', items: [
                 { label: 'Lab. Camboriú', url: 'https://www.laboratoriocamboriu.com.br/' },
@@ -2672,11 +2688,12 @@
             ]},
         };
 
-        let viewsInitialized = { caixa: false, termos: false, recibo: false };
+        let viewsInitialized = { caixa: false, termos: false, recibo: false, declProc: false };
 
         // Contagem de itens pendentes pra mostrar como bolinha vermelha nos cards
-        // do menu (Currículo, Contratos) — atualizada em loadPendingCounts().
-        let pendingCounts = { curriculo: 0, termos: 0 };
+        // do menu (Currículo, Contratos, Declarações e Procurações) — atualizada
+        // em loadPendingCounts().
+        let pendingCounts = { curriculo: 0, termos: 0, declProc: 0 };
 
         function renderMenu() {
             const grid = document.getElementById('menuGrid');
@@ -2693,11 +2710,12 @@
 
         async function loadPendingCounts() {
             try {
-                const [curriculosRes, declRes] = await Promise.all([
+                const [curriculosRes, declRes, declProcRes] = await Promise.all([
                     supabase.from('curriculos').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
                     supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
+                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').in('tipo_contrato', DECL_PROC_TIPOS_TODOS),
                 ]);
-                pendingCounts = { curriculo: curriculosRes.count || 0, termos: declRes.count || 0 };
+                pendingCounts = { curriculo: curriculosRes.count || 0, termos: declRes.count || 0, declProc: declProcRes.count || 0 };
                 renderMenu();
             } catch (error) {
                 console.error('❌ Erro ao carregar contagem de pendentes:', error);
@@ -2740,6 +2758,7 @@
             document.getElementById('viewSub').classList.remove('active');
             document.getElementById('viewCaixa').classList.toggle('active', view === 'caixa');
             document.getElementById('viewTermos').classList.toggle('active', view === 'termos');
+            document.getElementById('viewDeclProc').classList.toggle('active', view === 'declProc');
             document.getElementById('viewCurriculo').classList.toggle('active', view === 'curriculo');
             document.getElementById('viewPlanejamento').classList.toggle('active', view === 'planejamento');
             document.getElementById('viewRecibo').classList.toggle('active', view === 'recibo');
@@ -2748,6 +2767,7 @@
                 viewsInitialized[view] = true;
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
                 else if (view === 'termos') { loadContratos(); loadDeclaracoesPendentes(); }
+                else if (view === 'declProc') { selecionarCategoriaDeclProc('declaracoes'); }
                 else if (view === 'curriculo') loadCurriculos();
                 else if (view === 'planejamento') loadPlanejamento();
                 else if (view === 'recibo') loadRecibos();
@@ -2777,6 +2797,7 @@
         function goHome() {
             document.getElementById('viewCaixa').classList.remove('active');
             document.getElementById('viewTermos').classList.remove('active');
+            document.getElementById('viewDeclProc').classList.remove('active');
             document.getElementById('viewSub').classList.remove('active');
             document.getElementById('viewCurriculo').classList.remove('active');
             document.getElementById('viewPlanejamento').classList.remove('active');
@@ -2953,6 +2974,7 @@
             DECLARACAO_UNIAO_ESTAVEL: '💍 Declaração de União Estável',
             PROCURACAO_DETRAN: '🚓 Procuração Detran',
             PROCURACAO_SIMPLES: '📜 Procuração Simples',
+            TERMO_RESPONSABILIDADE_VEICULO: '🚗 Termo de Responsabilidade de Veículo',
             CV_VEICULO_VISTA: '🚗 Compra e Venda de Veículo — à vista',
             CV_VEICULO_PRAZO_ENTRADA: '🚗 Compra e Venda de Veículo — a prazo c/ entrada',
             CV_VEICULO_PRAZO_SEM_ENTRADA: '🚗 Compra e Venda de Veículo — a prazo s/ entrada',
@@ -2977,6 +2999,9 @@
             DECLARACAO_TRABALHO: 'declaracao-trabalho-form.html',
             DECLARACAO_RESIDENCIA: 'declaracao-residencia-form.html',
             DECLARACAO_UNIAO_ESTAVEL: 'declaracao-uniao-estavel-form.html',
+            PROCURACAO_SIMPLES: 'procuracao-simples-form.html',
+            PROCURACAO_DETRAN: 'procuracao-detran-form.html',
+            TERMO_RESPONSABILIDADE_VEICULO: 'termo-responsabilidade-veiculo-form.html',
         };
         let declFormatadoAtual = null; // { id, tabela: 'declaracoes_pendentes', tipo } do contrato/declaração aberto no modal de formatação
 
@@ -3141,6 +3166,256 @@
             }
         }
         window.loadDeclaracoesPendentes = loadDeclaracoesPendentes;
+
+        // ===== Módulo "Declarações e Procurações" =====
+        // View independente de viewTermos (Contratos) — não toca em nenhuma
+        // função/elemento usado por ela. Os 7 tipos (4 Declarações + 3
+        // Procurações/Termo) continuam gravando na mesma tabela
+        // declaracoes_pendentes de sempre; essa seção só filtra e exibe um
+        // recorte próprio dessa tabela, com sua própria lista/DOM/cache.
+        const DECL_PROC_CATEGORIAS = {
+            declaracoes: {
+                titulo: '📝 Declarações',
+                tipos: ['DECLARACAO_RESIDENCIA', 'DECLARACAO_AUTONOMO', 'DECLARACAO_TRABALHO', 'DECLARACAO_UNIAO_ESTAVEL'],
+                links: [
+                    { label: '🏠 Declaração de Residência', url: 'declaracao-residencia-form.html', tipoModelo: 'DECLARACAO_RESIDENCIA' },
+                    { label: '📝 Declaração de Trabalho Autônomo', url: 'declaracao-autonomo-form.html', tipoModelo: 'DECLARACAO_AUTONOMO' },
+                    { label: '📝 Declaração de Trabalho para Empresa', url: 'declaracao-trabalho-form.html', tipoModelo: 'DECLARACAO_TRABALHO' },
+                    { label: '💍 Declaração de União Estável', url: 'declaracao-uniao-estavel-form.html', tipoModelo: 'DECLARACAO_UNIAO_ESTAVEL' },
+                ],
+            },
+            procuracoes: {
+                titulo: '📜 Procurações',
+                tipos: ['PROCURACAO_SIMPLES', 'PROCURACAO_DETRAN', 'TERMO_RESPONSABILIDADE_VEICULO'],
+                links: [
+                    { label: '📜 Link — Procuração Simples', url: 'procuracao-simples-form.html' },
+                    { label: '🚓 Link — Procuração para Detran', url: 'procuracao-detran-form.html' },
+                    { label: '🚗 Link — Termo de Responsabilidade para Veículo', url: 'termo-responsabilidade-veiculo-form.html' },
+                ],
+            },
+        };
+        const DECL_PROC_TIPOS_TODOS = [...DECL_PROC_CATEGORIAS.declaracoes.tipos, ...DECL_PROC_CATEGORIAS.procuracoes.tipos];
+        let declProcCategoriaAtiva = 'declaracoes';
+        let declProcPendentesCache = [];
+
+        // Modelos em branco (2026-08-24) — conteúdo/layout extraído das abas
+        // "Em Branco" da planilha "PAINEL DE CONTROLE" (Google Sheets, só como
+        // referência de leitura, nada sincronizado nem alterado lá). Só os 4
+        // tipos de Declaração têm aba "Em Branco" correspondente na planilha —
+        // nenhuma das 3 Procurações/Termo tem, por isso não aparecem aqui e o
+        // botão extra nunca é exibido pra elas (ver o `if (item.tipoModelo...)`
+        // em selecionarCategoriaDeclProc). Dois ajustes deliberados em cima do
+        // texto original da planilha: (1) "portador(a)"/"proprietário(a)" no
+        // lugar das formas fixas no masculino/feminino que a planilha tinha
+        // hora sim hora não (ex: "portadora" numa aba, "portador do RG" na
+        // outra) — sem isso o modelo em branco sairia com gênero errado pra
+        // metade dos clientes; (2) dois erros de digitação corrigidos
+        // ("Juricamente" → "Juridicamente", "Delcarante" → "Declarante"). Fora
+        // isso, texto/estrutura/ordem das linhas em branco seguem exatamente a
+        // aba correspondente.
+        const MODELOS_EM_BRANCO = {
+            DECLARACAO_RESIDENCIA: {
+                titulo: 'DECLARAÇÃO DE RESIDÊNCIA',
+                corpo: () => `
+                    <p>Eu, ________________________________________, portador(a) do RG nº ________________________________________</p>
+                    <p>e inscrito(a) sob CPF de nº ________________________________________ DECLARO para devidos fins</p>
+                    <p>de comprovação de residência, que ________________________________________</p>
+                    <p>________________________________________ inscrito(a) sob CPF de nº ________________________________________</p>
+                    <p>é residente e domiciliado(a) à Rua ________________________________________</p>
+                    <p>________________________________________ Bairro: ________________________________________ Cidade: ________________________________________.</p>
+                    <p>Por ser a expressão da verdade, firmo a presente para efeitos legais.</p>
+                    <p>________________________________________, _____ de ________________________________________ de 20___</p>
+                    <p style="margin-top:36px; text-align:center;">________________________________________<br>Declarante</p>`,
+            },
+            DECLARACAO_AUTONOMO: {
+                titulo: 'DECLARAÇÃO DE TRABALHO AUTÔNOMO',
+                corpo: () => `
+                    <p>Eu, ________________________________________, portador(a) do RG</p>
+                    <p>________________________________________ e inscrito(a) no CPF: ________________________________________</p>
+                    <p>residente e domiciliado(a) à Rua ________________________________________</p>
+                    <p>no bairro ________________________________________ da cidade de ________________________________________.</p>
+                    <p>DECLARO que sou trabalhador(a) autônomo(a), exercendo a atividade</p>
+                    <p>________________________________________ de <i>(dias da semana)</i> ________________________________________ a ________________________________________</p>
+                    <p>cumprindo a carga horária de ___:___ a ___:___.</p>
+                    <p>Por ser a expressão da verdade, firmo a presente para efeitos legais.</p>
+                    <p>________________________________________, _____ de ________________________________________ de 20___</p>
+                    <p style="margin-top:36px; text-align:center;">________________________________________<br>Declarante</p>`,
+            },
+            DECLARACAO_TRABALHO: {
+                titulo: 'DECLARAÇÃO DE TRABALHO',
+                corpo: () => `
+                    <p>Eu, ________________________________________ portador(a) do RG</p>
+                    <p>________________________________________ e inscrito(a) no CPF de nº ________________________________________</p>
+                    <p>proprietário(a) da Empresa ________________________________________ inscrita no CNPJ</p>
+                    <p>nº ________________________________________, situada na Rua ________________________________________</p>
+                    <p>no bairro ________________________________________ da cidade de ________________________________________.</p>
+                    <p>DECLARO para devidos fins de comprovação de trabalho que o(a) senhor(a)</p>
+                    <p>________________________________________ portador(a) do RG</p>
+                    <p>________________________________________ e inscrito(a) no CPF de nº ________________________________________</p>
+                    <p>trabalha em minha empresa exercendo a função de ________________________________________</p>
+                    <p>de <i>(dias da semana)</i> ________________________________________ a ________________________________________ cumprindo a carga</p>
+                    <p>horária de ___:___ a ___:___.</p>
+                    <p>Por ser a expressão da verdade, firmo a presente para efeitos legais.</p>
+                    <p>________________________________________, _____ de ________________________________________ de 20___</p>
+                    <p style="margin-top:36px; text-align:center;">________________________________________<br>Declarante</p>`,
+            },
+            DECLARACAO_UNIAO_ESTAVEL: {
+                titulo: 'DECLARAÇÃO DE UNIÃO ESTÁVEL',
+                corpo: () => `
+                    <p>Eu, ________________________________________, nacionalidade: ________________________________________</p>
+                    <p>estado civil: ________________________________________ profissão: ________________________________________ portador(a) do RG de nº</p>
+                    <p>________________________________________ e inscrito(a) no CPF de nº ________________________________________</p>
+                    <p>filho(a) de <i>(nome da mãe)</i>: ________________________________________ e <i>(nome do pai)</i>: ________________________________________</p>
+                    <p>________________________________________ e Cônjuge ________________________________________</p>
+                    <p>nacionalidade: ________________________________________ estado civil: ________________________________________ profissão: ________________________________________</p>
+                    <p>portador(a) do RG de nº ________________________________________ e inscrito(a) no CPF de nº</p>
+                    <p>________________________________________ filho(a) de <i>(nome da mãe)</i>: ________________________________________</p>
+                    <p>Residentes e domiciliados na Rua ________________________________________</p>
+                    <p>no bairro ________________________________________ da cidade de ________________________________________.</p>
+                    <p>Juridicamente capazes.</p>
+                    <p>DECLARAMOS, cientes das penalidades legais, que convivemos em UNIÃO ESTÁVEL no período de ________________________________________, de natureza familiar, pública e duradoura com o objetivo de constituição da família nos termos dos artigos 1723 e seguintes do Código Civil.</p>
+                    <p>Assim sendo, por ser o aqui declarado a mais pura expressão da verdade, assinamos esta Declaração para que surta seus efeitos legais.</p>
+                    <p>________________________________________, _____ de ________________________________________ de 20___</p>
+                    <table style="width:100%; border-collapse:collapse; margin-top:36px;"><tr>
+                        <td style="width:50%; text-align:center;">________________________________________<br>1º Declarante</td>
+                        <td style="width:50%; text-align:center;">________________________________________<br>2º Declarante</td>
+                    </tr></table>
+                    <p style="margin-top:28px;">________________________________________<br>Testemunha 1 - CPF: ________________________________________</p>
+                    <p style="margin-top:28px;">________________________________________<br>Testemunha 2 - CPF: ________________________________________</p>`,
+            },
+        };
+        // Mesmo modal/mecanismo de montarContrato()/abrirDeclFormatado() acima —
+        // só que sem registro nenhum por trás (não lê declaracoesPendentesCache,
+        // não seta declFormatadoAtual), porque não existe "id" nem dado real:
+        // é só o texto fixo do modelo, gerado na hora. Botão Editar nunca
+        // aparece aqui (não há o que editar — é o cliente que preenche à mão
+        // depois de impresso).
+        function abrirModeloEmBranco(tipo) {
+            const cfg = MODELOS_EM_BRANCO[tipo];
+            if (!cfg) return;
+            document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[tipo] || tipo) + ' — modelo em branco';
+            document.getElementById('declFormatadoConteudo').innerHTML = `<h1 style="text-align:center; font-size:18px; letter-spacing:1px; margin-bottom:22px;">${cfg.titulo}</h1>${cfg.corpo()}`;
+            document.getElementById('declFormatadoModal').classList.add('active');
+            declFormatadoAtual = null;
+            document.getElementById('declFormatadoBtnEditar').style.display = 'none';
+        }
+        window.abrirModeloEmBranco = abrirModeloEmBranco;
+
+        function selecionarCategoriaDeclProc(categoria) {
+            declProcCategoriaAtiva = categoria;
+            document.getElementById('declProcCatDeclaracoes').classList.toggle('selected', categoria === 'declaracoes');
+            document.getElementById('declProcCatProcuracoes').classList.toggle('selected', categoria === 'procuracoes');
+            const cfg = DECL_PROC_CATEGORIAS[categoria];
+            document.getElementById('declProcTitulo').textContent = cfg.titulo;
+            document.getElementById('declProcLinkRows').innerHTML = cfg.links.map(item => {
+                // Só os tipos com modelo em branco de verdade (ver MODELOS_EM_BRANCO,
+                // extraído das abas "Em Branco" da planilha) ganham as duas ações —
+                // os demais (Procurações, que não têm aba "Em Branco" na planilha)
+                // continuam com a linha simples de sempre, sem nenhuma mudança.
+                if (item.tipoModelo && MODELOS_EM_BRANCO[item.tipoModelo]) {
+                    return `
+                    <div class="link-row" style="cursor:default; flex-direction:column; align-items:stretch; gap:10px;">
+                        <span>${item.label}</span>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="window.open('${item.url}', '_blank', 'noopener')">🖥️ Preencher pelo Sistema</button>
+                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirModeloEmBranco('${item.tipoModelo}')">📄 Modelo em Branco</button>
+                            <button class="btn-copy-link" onclick="copyLinkToClipboard('${item.url}', this)" title="Copiar link do sistema">📋</button>
+                        </div>
+                    </div>`;
+                }
+                return `
+                <div class="link-row">
+                    <span style="cursor:pointer;" onclick="window.open('${item.url}', '_blank', 'noopener')">${item.label}</span>
+                    <span class="link-row-actions">
+                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('${item.url}', this)" title="Copiar link">📋</button>
+                        <span class="arrow" style="cursor:pointer;" onclick="window.open('${item.url}', '_blank', 'noopener')">↗</span>
+                    </span>
+                </div>`;
+            }).join('');
+            renderDeclProcRows();
+            loadDeclProcPendentes();
+        }
+        window.selecionarCategoriaDeclProc = selecionarCategoriaDeclProc;
+
+        function renderDeclProcRows() {
+            const container = document.getElementById('declProcRows');
+            if (!container) return;
+            const tiposAtivos = DECL_PROC_CATEGORIAS[declProcCategoriaAtiva].tipos;
+            const itens = declProcPendentesCache.filter(d => tiposAtivos.includes(d.tipo_contrato));
+            document.getElementById('declProcCount').textContent = itens.length + ' registro' + (itens.length !== 1 ? 's' : '');
+            if (itens.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum pendente nessa categoria</div></div>';
+                return;
+            }
+            container.innerHTML = itens.map(d => {
+                const dataFmt = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : '-';
+                const tipoLabel = TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato;
+                const nomeA = d.dados?.pessoa_a?.nome || '-';
+                return `<div class="contrato-card">
+                    <div class="contrato-info" style="cursor:pointer;" onclick="openDeclaracaoFicha('${d.id}')">
+                        <b>${tipoLabel}</b>
+                        <span class="subtext">👤 ${escapeHtml(nomeA)}</span>
+                        <span class="subtext">📅 ${dataFmt}</span>
+                    </div>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="abrirDeclFormatado('${d.id}')" title="Formatar">📄</button>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="declProcMarcarProcessada('${d.id}')" title="Marcar como processada">✅</button>
+                    <button class="btn-delete" onclick="declProcExcluir('${d.id}')" title="Excluir">🗑️</button>
+                </div>`;
+            }).join('');
+        }
+
+        // Busca própria (não reaproveita declaracoesPendentesCache de
+        // viewTermos) — mantém as duas views totalmente independentes uma da
+        // outra, cada uma com seu cache e seu próprio ciclo de atualização.
+        async function loadDeclProcPendentes() {
+            const container = document.getElementById('declProcRows');
+            if (!container) return;
+            try {
+                const { data, error } = await supabase
+                    .from('declaracoes_pendentes')
+                    .select('id, tipo_contrato, dados, status, data_pedido')
+                    .eq('status', 'PENDENTE')
+                    .in('tipo_contrato', DECL_PROC_TIPOS_TODOS)
+                    .order('data_pedido', { ascending: false });
+                if (error) throw new Error(error.message);
+                declProcPendentesCache = data || [];
+                // abrirDeclFormatado()/openDeclaracaoFicha() leem de
+                // declaracoesPendentesCache (cache global usado por viewTermos e
+                // pelo modal de formatação) — precisa ficar com os registros
+                // dessa categoria também, senão "Formatar"/a ficha abrem vazios
+                // quando só essa view foi visitada na sessão.
+                const idsJaNoCache = new Set(declaracoesPendentesCache.map(d => d.id));
+                declProcPendentesCache.forEach(d => { if (!idsJaNoCache.has(d.id)) declaracoesPendentesCache.push(d); });
+                renderDeclProcRows();
+            } catch (error) {
+                console.error('❌ Erro ao carregar declarações/procurações pendentes:', error);
+                container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}</div>`;
+            }
+        }
+        window.loadDeclProcPendentes = loadDeclProcPendentes;
+
+        async function declProcMarcarProcessada(id) {
+            try {
+                await dbUpdate('declaracoes_pendentes', { status: 'PROCESSADO', processado_em: new Date().toISOString() }, { id });
+                await loadDeclProcPendentes();
+                loadPendingCounts();
+            } catch (error) {
+                alert('Erro: ' + error.message);
+            }
+        }
+        window.declProcMarcarProcessada = declProcMarcarProcessada;
+
+        async function declProcExcluir(id) {
+            if (!confirm('Excluir este registro pendente? Essa ação não pode ser desfeita.')) return;
+            try {
+                await dbDelete('declaracoes_pendentes', { id });
+                await loadDeclProcPendentes();
+                loadPendingCounts();
+            } catch (error) {
+                alert('Erro ao excluir: ' + error.message);
+            }
+        }
+        window.declProcExcluir = declProcExcluir;
 
         // ===== Motor de contratos (blocos componíveis — ver CONTRATOS-SPEC.md) =====
         // g()/qualificar() são blocos puros reaproveitados por qualquer tipo de
@@ -3423,6 +3698,16 @@
         // if/else antigo — adicionar um tipo novo vira uma entrada aqui, não um
         // novo `else if`. TERMO_DE_RESPONSABILIDADE ainda não tem `corpo`: é o
         // próximo passo (motor aplicado a um tipo que nunca teve texto formatado).
+        // "Indeterminado (sem prazo de validade)" não cabe na frase "validade
+        // de X, contados a partir..." (leria "validade de indeterminado") —
+        // esse caso ganha frase própria; as opções em dias usam a frase padrão.
+        function textoPrazoValidade(prazo) {
+            if ((prazo || '').startsWith('Indeterminado')) {
+                return 'Esta procuração tem validade indeterminada, sem prazo de vencimento, a partir da data de assinatura deste instrumento.';
+            }
+            return `Esta procuração tem validade de ${escapeHtml((prazo || '').toLowerCase())}, contados a partir da data de assinatura deste instrumento.`;
+        }
+
         const TIPOS = {
             DECLARACAO_AUTONOMO: {
                 titulo: 'DECLARAÇÃO',
@@ -3555,6 +3840,129 @@
                             { nome: dados.testemunha_2_nome, cpf: dados.testemunha_2_cpf },
                         ]
                     );
+                    return out;
+                }
+            },
+
+            // Versão pública (formulário do cliente, tabela declaracoes_pendentes)
+            // do TERMO_DE_RESPONSABILIDADE acima — mesmo texto/cláusulas a-h,
+            // mesmos helpers (qualificarTermo/resolverForo/blocoAssinaturasDuasColunas),
+            // só a origem dos dados muda: dados.pessoa_a/pessoa_b/especifico.veiculo
+            // (shape solto do form público) em vez de d.proprietario/d.responsavel/
+            // d.ativo (FK de `contratos`, usado só pelo modal manual "Novo Termo").
+            // tipo_contrato próprio (sem "DE") pra não colidir com o modal/tabela
+            // `contratos` — são dois fluxos totalmente independentes.
+            TERMO_RESPONSABILIDADE_VEICULO: {
+                titulo: 'TERMO DE RESPONSABILIDADE PARA TRANSFERÊNCIA DE RESPONSABILIDADE DE VEÍCULO',
+                papeis: ['pessoa_a', 'pessoa_b'],
+                foro: 'parte_1',
+                corpo(d) {
+                    const dadosRow = d.dados || {};
+                    const prop = dadosRow.pessoa_a || {};
+                    const resp = dadosRow.pessoa_b || {};
+                    const especifico = dadosRow.especifico || {};
+                    const ativo = especifico.veiculo || {};
+                    const foro = resolverForo(this, { pessoa_a: prop, pessoa_b: resp }, especifico);
+                    const tipoVeiculo = especifico.tipo_veiculo || 'Automóvel';
+
+                    let out = '';
+                    out += `<p>Eu, ${qualificarTermo(prop)}, doravante denominado Proprietário, transfiro a responsabilidade integral pelo veículo de minha propriedade, descrito a seguir, ao condutor temporário ou novo usuário, conforme os termos deste documento:</p>`;
+
+                    out += `<h3>DADOS DO VEÍCULO</h3>`;
+                    out += `<p>Tipo de Veículo: ${up(tipoVeiculo)}&nbsp;&nbsp;&nbsp;Marca: ${up(ativo.fabricante)}&nbsp;&nbsp;&nbsp;Modelo: ${up(ativo.modelo)}<br>`
+                        + `Ano: ${escapeHtml(ativo.ano_fabricacao_modelo || '')}&nbsp;&nbsp;&nbsp;Placa: ${formatPlaca(ativo.placa)}&nbsp;&nbsp;&nbsp;Cor: ${up(ativo.cor)}<br>`
+                        + `Número do Chassi: ${up(ativo.chassi)}&nbsp;&nbsp;&nbsp;Número do Renavam: ${escapeHtml(ativo.renavam || '')}</p>`;
+
+                    out += `<h3>DADOS DO CONDUTOR TEMPORÁRIO OU NOVO USUÁRIO</h3>`;
+                    out += `<p>Nome: ${qualificarTermo(resp)}</p>`;
+
+                    out += `<h3>TRANSFERÊNCIA DE RESPONSABILIDADE</h3>`;
+                    out += `<p>a) O Proprietário transfere integralmente a responsabilidade sobre o veículo descrito acima ao Condutor Temporário ou Novo Usuário, a partir da data de assinatura deste Termo de Responsabilidade.</p>`;
+                    out += `<p>b) O Condutor Temporário ou Novo Usuário assume todas as responsabilidades legais, civis, administrativas, fiscais e criminais referentes ao veículo mencionado neste Termo de Responsabilidade.</p>`;
+                    out += `<p>c) O Condutor Temporário ou Novo Usuário deste veículo declara estar ciente e se responsabiliza integralmente por todas as infrações de trânsito e respectivas multas que possam ser cometidas durante o período em que estiver utilizando o veículo. O Condutor concorda em efetuar prontamente o pagamento das multas e demais despesas decorrentes das infrações cometidas, bem como em arcar com eventuais pontos na sua Carteira Nacional de Habilitação (CNH) relacionados a essas infrações.</p>`;
+                    out += `<p>d) O Condutor reconhece que qualquer transferência de pontuação da CNH, em decorrência das infrações cometidas enquanto estiver utilizando o veículo, será de sua inteira responsabilidade. O Condutor declara-se ciente de que a não transferência de pontos para sua CNH poderá acarretar em medidas administrativas, tais como a suspensão temporária ou definitiva do direito de dirigir, conforme estabelecido pelo Código de Trânsito Brasileiro e demais legislações aplicáveis.</p>`;
+                    out += `<p>e) O descumprimento desta cláusula acarretará a responsabilidade exclusiva do Condutor Temporário ou Novo Usuário, não eximindo o Proprietário de suas obrigações legais e contratuais. O Proprietário reserva-se o direito de adotar as medidas cabíveis em caso de descumprimento desta cláusula, inclusive o ressarcimento de eventuais prejuízos causados.</p>`;
+
+                    out += `<h3>VIGÊNCIA</h3>`;
+                    out += `<p>f) Este Termo de Responsabilidade tem validade a partir da data de assinatura e permanecerá em vigor até que ocorra a transferência formal da propriedade do veículo, de acordo com as normas estabelecidas pelas autoridades competentes.</p>`;
+
+                    out += `<h3>DISPOSIÇÕES GERAIS</h3>`;
+                    out += `<p>g) Este Termo de Responsabilidade é regido pelas leis brasileiras e quaisquer disputas decorrentes do mesmo deverão ser resolvidas no foro da comarca ${escapeHtml(foro.cidade)}/${escapeHtml(foro.estado)}.</p>`;
+                    out += `<p>h) Quaisquer modificações ou alterações neste Termo de Responsabilidade devem ser feitas por escrito e assinadas por ambas as partes envolvidas. O não cumprimento de qualquer cláusula deste Termo de Responsabilidade não implicará renúncia a qualquer direito ou cláusula estabelecida neste documento. Este Termo de Responsabilidade é vinculante e se estende aos herdeiros, sucessores e cessionários das partes envolvidas.</p>`;
+
+                    out += `<p>Por concordância das partes, assinam este Termo de Responsabilidade em duas vias de igual teor e forma, na presença de duas testemunhas.</p>`;
+                    out += `<p>${dataExtenso()}</p>`;
+
+                    out += blocoAssinaturasDuasColunas(
+                        [{ nome: prop.nome, label: 'Proprietário do Veículo' }, { nome: resp.nome, label: 'Responsável pelo Veículo' }],
+                        [
+                            { nome: especifico.testemunha_1_nome, cpf: especifico.testemunha_1_cpf },
+                            { nome: especifico.testemunha_2_nome, cpf: especifico.testemunha_2_cpf },
+                        ]
+                    );
+                    return out;
+                }
+            },
+
+            // Instrumento particular de procuração — texto original (não veio de
+            // nenhum contrato antigo da planilha, os Google Forms que existiam pra
+            // isso não geravam documento nenhum, só coletavam os dados). Só o
+            // Outorgante assina (quem concede os poderes); sem testemunhas, como
+            // é padrão numa procuração simples.
+            PROCURACAO_SIMPLES: {
+                titulo: 'INSTRUMENTO PARTICULAR DE PROCURAÇÃO',
+                papeis: ['pessoa_a', 'pessoa_b'],
+                foro: 'parte_1',
+                corpo(d) {
+                    const dadosRow = d.dados || {};
+                    const outorgante = dadosRow.pessoa_a || {};
+                    const outorgado = dadosRow.pessoa_b || {};
+                    const especifico = dadosRow.especifico || {};
+
+                    let out = '';
+                    out += `<p>${qualificarCV(outorgante, 'Outorgante')}</p>`;
+                    out += `<p>${qualificarCV(outorgado, 'Outorgado')}</p>`;
+                    out += `<h3>PODERES</h3>`;
+                    out += `<p>Pelo presente instrumento particular de procuração, o OUTORGANTE nomeia e constitui como seu bastante procurador o OUTORGADO acima qualificado, a quem confere amplos e gerais poderes para representá-lo perante ${escapeHtml(especifico.instituicao_nome || '')}, na cidade de ${escapeHtml(especifico.instituicao_cidade || '')}/${escapeHtml(especifico.instituicao_estado || '')}, podendo praticar todos os atos necessários ao fiel cumprimento deste mandato, assinar requerimentos e documentos, prestar informações, retirar e entregar documentos, e representar o OUTORGANTE em tudo o mais que se fizer necessário perante a instituição acima referida.</p>`;
+                    out += `<h3>PRAZO DE VALIDADE</h3>`;
+                    out += `<p>${textoPrazoValidade(especifico.prazo_validade)}</p>`;
+                    out += `<p>Por ser esta a expressão da vontade das partes, firma o presente instrumento.</p>`;
+                    out += `<p>${dataExtenso()}</p>`;
+                    out += assinatura(outorgante);
+                    return out;
+                }
+            },
+
+            // Mesma estrutura da Procuração Simples, com o bloco de veículo (igual
+            // ao já usado no Termo de Responsabilidade) e a finalidade fixada em
+            // representar o Outorgante perante o Detran da cidade informada.
+            PROCURACAO_DETRAN: {
+                titulo: 'INSTRUMENTO PARTICULAR DE PROCURAÇÃO PARA USO NO DETRAN',
+                papeis: ['pessoa_a', 'pessoa_b'],
+                foro: 'parte_1',
+                corpo(d) {
+                    const dadosRow = d.dados || {};
+                    const outorgante = dadosRow.pessoa_a || {};
+                    const outorgado = dadosRow.pessoa_b || {};
+                    const especifico = dadosRow.especifico || {};
+                    const ativo = especifico.veiculo || {};
+
+                    let out = '';
+                    out += `<p>${qualificarCV(outorgante, 'Outorgante')}</p>`;
+                    out += `<p>${qualificarCV(outorgado, 'Outorgado')}</p>`;
+
+                    out += `<h3>DADOS DO VEÍCULO</h3>`;
+                    out += `<p>Tipo de Veículo: ${up(ativo.tipo)}&nbsp;&nbsp;&nbsp;Marca: ${up(ativo.fabricante)}&nbsp;&nbsp;&nbsp;Modelo: ${up(ativo.modelo)}<br>`
+                        + `Ano: ${escapeHtml(ativo.ano_fabricacao_modelo || '')}&nbsp;&nbsp;&nbsp;Placa: ${formatPlaca(ativo.placa)}&nbsp;&nbsp;&nbsp;Cor: ${up(ativo.cor)}<br>`
+                        + `Número do Chassi: ${up(ativo.chassi)}&nbsp;&nbsp;&nbsp;Número do Renavam: ${escapeHtml(ativo.renavam || '')}</p>`;
+
+                    out += `<h3>PODERES</h3>`;
+                    out += `<p>Pelo presente instrumento particular de procuração, o OUTORGANTE nomeia e constitui como seu bastante procurador o OUTORGADO acima qualificado, a quem confere amplos e gerais poderes para representá-lo perante o Departamento Estadual de Trânsito (DETRAN) de ${escapeHtml(especifico.detran_cidade || '')}/${escapeHtml(especifico.detran_estado || '')}, em assuntos relacionados ao veículo acima descrito, podendo assinar requerimentos, formulários e documentos, retirar e entregar documentação, efetuar transferências, licenciamentos, comunicações de venda e demais atos necessários ao fiel cumprimento deste mandato.</p>`;
+                    out += `<h3>PRAZO DE VALIDADE</h3>`;
+                    out += `<p>${textoPrazoValidade(especifico.prazo_validade)}</p>`;
+                    out += `<p>Por ser esta a expressão da vontade das partes, firma o presente instrumento.</p>`;
+                    out += `<p>${dataExtenso()}</p>`;
+                    out += assinatura(outorgante);
                     return out;
                 }
             },
