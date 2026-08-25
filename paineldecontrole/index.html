@@ -3516,7 +3516,7 @@
             // esta função ainda não usava.
             const fem = p.genero === 'Feminino';
             const partes = [
-                escapeHtml(p.nome),
+                escapeHtml(titleCase(p.nome)),
                 p.nacionalidade ? escapeHtml(flexGenero(p.nacionalidade, fem)) : null,
                 p.estado_civil ? escapeHtml(flexGenero(p.estado_civil, fem)) : null,
                 p.profissao ? escapeHtml(p.profissao) : null,
@@ -3529,7 +3529,7 @@
             return texto;
         }
         function assinatura(p) {
-            return `<p style="margin-top:36px;">_________________________________________<br>${escapeHtml(p.nome)}<br>CPF: ${escapeHtml(p.cpf)}</p>`;
+            return `<p style="margin-top:36px;">_________________________________________<br>${escapeHtml(titleCase(p.nome))}<br>CPF: ${escapeHtml(p.cpf)}</p>`;
         }
 
         // ----- Blocos específicos do Termo de Responsabilidade -----
@@ -3572,7 +3572,7 @@
             const linhaPartes = partes.map(p => col(`_______________________________<br>${escapeHtml(titleCase(p.nome))}<br>${escapeHtml(p.label)}`)).join('');
             const linhaTestemunhas = testemunhas.map((t, i) => col(
                 `_______________________________<br>`
-                + (t && t.nome ? `${escapeHtml(t.nome)}<br>` : '')
+                + (t && t.nome ? `${escapeHtml(titleCase(t.nome))}<br>` : '')
                 + `CPF: ${escapeHtml((t && t.cpf) || '')}<br>Testemunha 0${i + 1}`
             )).join('');
             return `<table style="width:100%; border-collapse:collapse; margin-top:32px; page-break-inside:avoid; break-inside:avoid;">`
@@ -3699,7 +3699,7 @@
             let out = partes.map(p => `<p style="margin-top:28px;">_______________________________<br>${escapeHtml(p.label)}: ${escapeHtml(titleCase(p.nome))}</p>`).join('');
             out += testemunhas.map((t, i) => {
                 const n = i + 1;
-                if (t && t.nome) return `<p style="margin-top:28px;">_______________________________<br>Testemunha ${n}: ${escapeHtml(t.nome)} - CPF: ${escapeHtml(t.cpf || '')}</p>`;
+                if (t && t.nome) return `<p style="margin-top:28px;">_______________________________<br>Testemunha ${n}: ${escapeHtml(titleCase(t.nome))} - CPF: ${escapeHtml(t.cpf || '')}</p>`;
                 return `<p style="margin-top:28px;">_______________________________<br>Testemunha ${n} - CPF:</p>`;
             }).join('');
             // page-break-inside:avoid no wrapper, não nos <p> individuais —
@@ -3734,7 +3734,7 @@
             }
             out += testemunhas.map((t, i) => {
                 const n = i + 1;
-                const texto = (t && t.nome) ? `Testemunha ${n}: ${escapeHtml(t.nome)} - CPF: ${escapeHtml(t.cpf || '')}` : `Testemunha ${n} - CPF:`;
+                const texto = (t && t.nome) ? `Testemunha ${n}: ${escapeHtml(titleCase(t.nome))} - CPF: ${escapeHtml(t.cpf || '')}` : `Testemunha ${n} - CPF:`;
                 return linha(texto);
             }).join('');
             out += `</div>`;
@@ -3850,7 +3850,7 @@
                     function qualificarSemEndereco(p) {
                         const fem = p.genero === 'Feminino';
                         return [
-                            escapeHtml(p.nome),
+                            escapeHtml(titleCase(p.nome)),
                             p.nacionalidade ? escapeHtml(flexGenero(p.nacionalidade, fem)) : null,
                             p.estado_civil ? escapeHtml(flexGenero(p.estado_civil, fem)) : null,
                             `portador${g(p.genero, '', 'a')} do CPF nº ${escapeHtml(p.cpf)}`,
@@ -3873,7 +3873,7 @@
                     } else {
                         miolo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que sou residente e domiciliad${g(a.genero, 'o', 'a')} no endereço acima qualificado.</p>`;
                         if (b && b.nome) {
-                            miolo += `<p style="${pStyle}">Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(b.nome)}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
+                            miolo += `<p style="${pStyle}">Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(titleCase(b.nome))}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
                         }
                         miolo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
                     }
@@ -4686,23 +4686,93 @@
             },
         };
 
-        function montarContrato(d) {
+        // ----- Revisão automática de texto (Declarações/Procurações/Contratos)
+        // (pedido do usuário, 2026-08-25) — mesmo padrão já usado no Currículo
+        // (ver revisarOrtografiaCurriculo): roda sozinha, sem botão, sempre
+        // logo antes de montar o documento final; nunca trava a geração se
+        // falhar (fallback silencioso pros dados originais, sem correção); só
+        // ortografia/acentuação/erros comuns + maiúscula em nome próprio,
+        // nunca muda o conteúdo informado nem inventa dado. Como o corpo() de
+        // cada tipo em TIPOS lê de `d.dados`, a correção entra num ponto só
+        // (montarContrato, abaixo) — cobre Declarações, Procurações e
+        // Contratos (Compra e Venda, Locação, Termo) de uma vez, sem precisar
+        // mapear campo por campo de cada formulário.
+        //
+        // Escopo por lista de permissão (nome de campo contém alguma destas
+        // palavras) menos uma lista de bloqueio (nunca envia CPF/RG/CNPJ/
+        // placa/chassi/renavam/CEP/telefone/valor/data/hora/gênero/estado
+        // civil/UF — dado estruturado, não texto livre digitado à mão). Só
+        // olha um nível dentro de pessoa_a/pessoa_b/especifico — sub-objetos
+        // mais fundos (ex: especifico.veiculo.*, já tratado por leitura de
+        // CRLV/select fixo) ficam de fora por ora, risco baixo de erro de
+        // digitação manual.
+        const CAMPOS_REVISAO_DOC_PERMITIDOS = ['nome', 'endereco', 'rua', 'bairro', 'cidade', 'profiss', 'funcao', 'atividade', 'cargo', 'instituic', 'empresa', 'motivo', 'observ', 'testemunha', 'filiac', 'curso', 'naturalidade'];
+        const CAMPOS_REVISAO_DOC_BLOQUEADOS = ['cpf', 'rg', 'cnpj', 'renavam', 'chassi', 'placa', 'cep', 'telefone', 'ddd', 'numero', 'valor', 'data', 'horario', 'ano', 'estado', 'genero', 'civil', 'complemento'];
+        function elegivelRevisaoDoc(chave) {
+            const k = chave.toLowerCase();
+            if (CAMPOS_REVISAO_DOC_BLOQUEADOS.some(b => k.includes(b))) return false;
+            return CAMPOS_REVISAO_DOC_PERMITIDOS.some(p => k.includes(p));
+        }
+        function extrairCamposRevisaoDoc(dados) {
+            const campos = {};
+            ['pessoa_a', 'pessoa_b', 'especifico'].forEach(grupo => {
+                const obj = dados && dados[grupo];
+                if (!obj || typeof obj !== 'object') return;
+                Object.entries(obj).forEach(([k, v]) => {
+                    if (typeof v !== 'string' || !v.trim() || !elegivelRevisaoDoc(k)) return;
+                    campos[`${grupo}.${k}`] = v;
+                });
+            });
+            return campos;
+        }
+        // Só aplica de volta as chaves que a IA devolveu de fato — qualquer
+        // chave ausente na resposta mantém o valor original, nunca fica em branco.
+        function aplicarRevisaoDoc(dados, corrigidos) {
+            if (!corrigidos) return dados;
+            const novo = JSON.parse(JSON.stringify(dados || {}));
+            Object.entries(corrigidos).forEach(([chaveComposta, v]) => {
+                if (typeof v !== 'string' || !v.trim()) return;
+                const [grupo, campo] = chaveComposta.split('.');
+                if (novo[grupo] && campo in novo[grupo]) novo[grupo][campo] = v;
+            });
+            return novo;
+        }
+        // Nunca lança erro pra fora: qualquer falha (rede, IA fora do ar, chave
+        // não configurada) fica só no console e devolve `dados` sem correção,
+        // pra revisão nunca travar a geração do documento.
+        async function revisarTextoDocumento(d) {
+            const dados = d.dados || {};
+            const campos = extrairCamposRevisaoDoc(dados);
+            if (!Object.keys(campos).length) return dados;
+            try {
+                const { data, error } = await supabase.functions.invoke('documento-revisao', { body: { campos } });
+                if (error || !data || !data.campos) throw new Error((error && error.message) || 'IA não retornou correção');
+                return aplicarRevisaoDoc(dados, data.campos);
+            } catch (err) {
+                console.warn('Revisão automática de documento indisponível — segue com o texto original, sem correção:', err.message);
+                return dados;
+            }
+        }
+
+        async function montarContrato(d) {
             const cfg = TIPOS[d.tipo_contrato];
             const titulo = cfg ? cfg.titulo : 'DECLARAÇÃO';
-            const corpo = cfg && cfg.corpo ? cfg.corpo(d) : '<p>Tipo de declaração sem template de formatação ainda.</p>';
+            const dadosRevisados = await revisarTextoDocumento(d);
+            const corpo = cfg && cfg.corpo ? cfg.corpo({ ...d, dados: dadosRevisados }) : '<p>Tipo de declaração sem template de formatação ainda.</p>';
             // tituloFontSize é opcional por tipo (só a Locação de Imóvel define,
             // ver TIPOS.CONTRATO_LOCACAO_IMOVEL) — os demais continuam em 18px.
             const tituloFontSize = (cfg && cfg.tituloFontSize) || 18;
             return `<h1 style="text-align:center; font-size:${tituloFontSize}px; letter-spacing:1px; margin-bottom:22px;">${titulo}</h1>${corpo}`;
         }
-        function abrirDeclFormatado(id) {
+        async function abrirDeclFormatado(id) {
             const d = declaracoesPendentesCache.find(x => x.id === id);
             if (!d) return;
             document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato) + ' — formatada';
-            document.getElementById('declFormatadoConteudo').innerHTML = montarContrato(d);
+            document.getElementById('declFormatadoConteudo').innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Carregando…</p>';
             document.getElementById('declFormatadoModal').classList.add('active');
             declFormatadoAtual = { id: d.id, tabela: 'declaracoes_pendentes', tipo: d.tipo_contrato };
             document.getElementById('declFormatadoBtnEditar').style.display = EDICAO_FORMULARIO[d.tipo_contrato] ? '' : 'none';
+            document.getElementById('declFormatadoConteudo').innerHTML = await montarContrato(d);
         }
         window.abrirDeclFormatado = abrirDeclFormatado;
 
@@ -4710,14 +4780,15 @@
         // lendo de contratosCache (histórico já salvo) em vez de declaracoesPendentesCache.
         // Esses tipos (Termo, CV_* manuais) não têm formulário público equivalente
         // pra reabrir, então o botão Editar nunca aparece aqui.
-        function abrirContratoFormatado(id) {
+        async function abrirContratoFormatado(id) {
             const c = contratosCache.find(x => x.id === id);
             if (!c) return;
             document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[c.tipo_contrato] || c.tipo_contrato) + ' — formatada';
-            document.getElementById('declFormatadoConteudo').innerHTML = montarContrato(c);
+            document.getElementById('declFormatadoConteudo').innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Carregando…</p>';
             document.getElementById('declFormatadoModal').classList.add('active');
             declFormatadoAtual = { id: c.id, tabela: 'contratos', tipo: c.tipo_contrato };
             document.getElementById('declFormatadoBtnEditar').style.display = 'none';
+            document.getElementById('declFormatadoConteudo').innerHTML = await montarContrato(c);
         }
         window.abrirContratoFormatado = abrirContratoFormatado;
 
