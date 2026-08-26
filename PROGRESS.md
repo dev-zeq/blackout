@@ -1168,9 +1168,9 @@ Depois de publicar o módulo (commit `cecd5a1`), o usuário pediu pra aplicar as
 
 **Publicado e funcional** — diferente das seções acima (que ficaram só como rascunho até aqui), este módulo agora está ativo em produção e pronto pra uso real.
 
-## Ajustes finos no layout do PDF — Prestação de Serviço (2026-08-26, mesmo dia, rascunho pra revisão)
+## Ajustes finos no layout do PDF — Prestação de Serviço (2026-08-26, mesmo dia)
 
-Pedido de acompanhamento, só sobre o layout do PDF já publicado (item anterior) — **sem tocar em pergunta/etapa/lógica do formulário nenhuma**. Só `paineldecontrole/index.html` mudou (`prestador-form.html` sem nenhuma diferença, conferido por `git diff --stat`). **Ainda não publicado** — fica como rascunho até o usuário revisar, apesar do módulo em si já estar em produção.
+Pedido de acompanhamento, só sobre o layout do PDF já publicado (item anterior) — **sem tocar em pergunta/etapa/lógica do formulário nenhuma**. Só `paineldecontrole/index.html` mudou (`prestador-form.html` sem nenhuma diferença, conferido por `git diff --stat`).
 
 1. **Logo maior**: caixa do cabeçalho foi de 64×64px pra 150×110px (retangular, mais adequado a logos reais que geralmente não são quadradas), continua no canto superior esquerdo, `object-fit: contain` preservado (nunca distorce, só reduz/amplia mantendo proporção).
 2. **Nome da empresa em destaque**: fonte de 19px→27px, peso 800→900, `text-transform: uppercase` via CSS (não converte a string em si, só a exibição — mantém acentuação correta ao copiar o texto). **Número do orçamento removido por completo** (a linha "Nº XXXXXXXX" sumiu) — sobrou só a data. **Data por extenso** (`dataPorExtenso()`, novo helper): "26 de agosto de 2026", sempre nesse formato em pt-BR, substituindo o "DD/MM/AAAA" de antes.
@@ -1182,9 +1182,23 @@ Pedido de acompanhamento, só sobre o layout do PDF já publicado (item anterior
 
 **Testado ao vivo** (harness local, mesma técnica de exposição de debug temporária `window.__debugMontarContrato`, criada e **removida** antes de terminar — conferido por grep): 3 cenários renderizados e conferidos por screenshot — (1) Empresa + logo colorida (retângulo laranja sobre fundo branco, gerada via canvas) + CNPJ do prestador e do cliente digitados só com números (`12345678000190`/`98765432000111`) → os dois saíram mascarados certos (`12.345.678/0001-90`/`98.765.432/0001-11`), a cor de destaque (barras, cabeçalho da tabela, borda do total) mudou pra um tom de laranja escurecido extraído da logo, nome da empresa grande e em caixa alta, sem número do orçamento, data "26 de agosto de 2026", assinatura no final com "JOÃO DA SILVA" + telefone; (2) mesmo cenário sem logo → paleta neutra (azul-petróleo) mantida, layout sem espaço vazio; (3) conferido que CPF (do prestador Autônomo e do cliente Física) nunca leva máscara de CNPJ — continua exatamente como foi digitado. Sem erro de console em nenhum teste.
 
-**Não testado**: impressão física em papel de um orçamento com mais de 1 página (o `break-inside: avoid` foi só revisão de código/CSS, não dá pra confirmar visualmente sem imprimir de verdade); extração de cor com uma logo real do usuário (só testei com uma gerada sinteticamente); nenhuma mudança foi publicada, então nada disso está em produção ainda.
+**Não testado**: impressão física em papel de um orçamento com mais de 1 página (o `break-inside: avoid` foi só revisão de código/CSS, não dá pra confirmar visualmente sem imprimir de verdade); extração de cor com uma logo real do usuário (só testei com uma gerada sinteticamente).
 
-**Não publicado** — aguardando revisão do usuário antes de qualquer deploy.
+**Publicado** — commit `7912870`, deploy confirmado em produção via `curl` (presença de `extrairCorAccentLogo`, ausência do "Nº {numero}" antigo).
+
+### Compactação do layout — aproveitar melhor a folha A4 (2026-08-26, mesmo dia — pedido de acompanhamento)
+
+Pedido: reduzir margens/espaçamentos verticais (entre seções, entre linhas) pra caber tudo numa página A4 sempre que possível, só criando 2ª página quando realmente não sobrar espaço — mantendo boa legibilidade e a hierarquia visual profissional. **Nota**: esse pedido inverte uma instrução anterior da mesma sessão ("não reduzir espaços pra forçar caber em 1 página") — segui a mais recente, por ser explícita e específica sobre esse ponto. Só `index.html` mudou, mesmo escopo de sempre (layout do PDF, nada de pergunta/etapa/lógica).
+
+**O que mudou**:
+- Todos os `padding`/`margin`/`gap` verticais de `.presta-doc-*` reduzidos (cabeçalho, área do título, cards, grid de campos, linha do total, assinatura, rodapé) — tipicamente cortados pela metade ou mais (ex: espaço antes do título de 28px→14px, padding dos cards de 18px→12px, padding das células da tabela de 9px→6px). `line-height` da descrição livre também reduzido (1.7→1.45). **Tamanhos de fonte não foram reduzidos** (só espaçamento) — a instrução falava em espaço/entrelinha, não em fonte, e reduzir fonte iria contra o pedido anterior de "nome da empresa em destaque"/legibilidade.
+- **Margem de impressão própria**: seguindo o mesmo mecanismo já usado pelo Contrato de Locação de Imóvel (`@page locacao-imovel`/`.locacao-imovel-print`) e pelo Currículo (`@page cv2-curriculo`), criei `@page presta-servico { margin: 10mm; }` (era 12mm, o padrão genérico de `#printArea`) + a classe `.presta-servico-print` com `margin: -24px` (cancela o padding de 24px que `#printArea` aplica pra todo mundo) — ganha espaço útil de sobra na folha, sem afetar nenhum outro tipo de documento. `imprimirDeclFormatada()` ganhou 1 condição a mais (`ehPrestador`) pra aplicar essa classe só quando o tipo formatado é `PRESTACAO_SERVICO`, ao lado da condição que já existia pra Locação.
+
+**Testado ao vivo** (harness local, mesma técnica de debug temporário, criada e removida): não dá pra confirmar contagem de página real sem imprimir de verdade (a ferramenta de navegador não acessa o diálogo de impressão do SO), então medi de outro jeito — renderizei o documento completo (cenário mais cheio: logo, empresa, 2 serviços discriminados, material discriminado, observação, assinatura) dentro de um contêiner com a largura útil exata de A4 com a margem nova (190mm ≈ 718px) e medi a altura renderizada: **261mm de altura, contra 277mm úteis (297mm − 2×10mm)** — cabe em 1 página só, com ~16mm de folga. Conferido também por screenshot que nada ficou apertado/ilegível ou com sobreposição. Sem erro de console.
+
+**Não testado**: impressão física de verdade (só a estimativa geométrica acima); um orçamento muito mais longo que o cenário testado (ex: 10 itens discriminados) ainda pode passar de 1 página — nesse caso o `break-inside: avoid` já configurado garante que a quebra não corta um card/linha da tabela/a assinatura ao meio, mas não impede a 2ª página em si (comportamento esperado e pedido: "só gere 2ª página quando realmente não houver espaço").
+
+**Publicado** — usuário revisou por descrição (não pela ferramenta) e autorizou publicar, com ajustes ficando pra próxima sessão se necessário.
 
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
