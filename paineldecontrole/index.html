@@ -69,6 +69,22 @@
         .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .table-header h3 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); }
         .table-count { font-size: 11px; font-weight: 600; color: var(--accent-bright); background: var(--accent-dim); padding: 4px 12px; border-radius: 20px; }
+
+        /* ===== Seleção múltipla nas listas (2026-08-25, pedido do usuário) =====
+           Bloco isolado — barra "selecionar todos" + "excluir selecionados"
+           (sempre visível logo abaixo do cabeçalho da lista) e a caixinha de
+           seleção que cada item ganha à esquerda. Reaproveitado por toda
+           lista com exclusão em massa (ver criarSelecaoMultipla() no
+           <script>) — currículos, contratos, declarações/procurações,
+           recibos, e qualquer lista nova que vier depois. */
+        .bulk-select-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 20px; border-bottom: 1px solid var(--border); }
+        .bulk-select-all { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim); cursor: pointer; user-select: none; }
+        .bulk-select-all input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+        .bulk-select-acoes { display: flex; align-items: center; gap: 10px; }
+        .bulk-select-count { font-size: 12px; color: var(--text-dim); }
+        .btn-bulk-delete { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.12); color: #ef4444; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+        .btn-bulk-delete:hover { background: rgba(239,68,68,0.2); }
+        .card-select-checkbox { width: 16px; height: 16px; margin-top: 3px; cursor: pointer; flex-shrink: 0; accent-color: var(--accent); }
         /* Modo sanfona (Financeiro): cada bloco abre/fecha, só um resumo fica visível por padrão */
         details.acc { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
         details.acc > summary.acc-summary { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; user-select: none; }
@@ -172,6 +188,7 @@
         .toast.mostrar { opacity: 1; transform: translateX(0); }
         .toast .toast-icone { font-size: 19px; flex-shrink: 0; }
         .contrato-card { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .contrato-info { flex: 1; min-width: 0; }
         .contrato-info b { color: var(--text); }
         .contrato-info .subtext { display: block; margin-top: 2px; }
         /* Lista de Currículos (2026-08-21) — item mais baixo que o padrão
@@ -182,8 +199,9 @@
            candidato. Classe própria, não reaproveita/altera .contrato-card —
            as outras listas (Contratos, Declarações, Recibos) continuam
            exatamente como estavam. */
-        .curriculo-card { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .curriculo-card { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; align-items: flex-start; gap: 10px; }
         .curriculo-card:last-child { border-bottom: none; }
+        .curriculo-card-body { flex: 1; min-width: 0; }
         .curriculo-info b { color: var(--text); }
         .curriculo-info .subtext { display: block; margin-top: 2px; }
         .curriculo-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -789,36 +807,8 @@
 
             <div class="table-container">
                 <div class="table-header">
-                    <h3>📝 Declarações pendentes</h3>
+                    <h3>📃 Contratos pendentes</h3>
                     <span class="table-count" id="declPendCount">0 registros</span>
-                </div>
-                <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('declaracao-autonomo-form.html', '_blank', 'noopener')">📝 Link — Declaração de Autônomo</span>
-                    <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('declaracao-autonomo-form.html', this)" title="Copiar link">📋</button>
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('declaracao-autonomo-form.html', '_blank', 'noopener')">↗</span>
-                    </span>
-                </div>
-                <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('declaracao-trabalho-form.html', '_blank', 'noopener')">📝 Link — Declaração de Trabalho</span>
-                    <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('declaracao-trabalho-form.html', this)" title="Copiar link">📋</button>
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('declaracao-trabalho-form.html', '_blank', 'noopener')">↗</span>
-                    </span>
-                </div>
-                <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('declaracao-residencia-form.html', '_blank', 'noopener')">🏠 Link — Declaração de Residência</span>
-                    <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('declaracao-residencia-form.html', this)" title="Copiar link">📋</button>
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('declaracao-residencia-form.html', '_blank', 'noopener')">↗</span>
-                    </span>
-                </div>
-                <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('declaracao-uniao-estavel-form.html', '_blank', 'noopener')">💍 Link — Declaração de União Estável</span>
-                    <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('declaracao-uniao-estavel-form.html', this)" title="Copiar link">📋</button>
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('declaracao-uniao-estavel-form.html', '_blank', 'noopener')">↗</span>
-                    </span>
                 </div>
                 <div class="link-row">
                     <span style="cursor:pointer;" onclick="window.open('contrato-form.html', '_blank', 'noopener')">📃 Link — Contrato (cliente escolhe o tipo)</span>
@@ -826,6 +816,13 @@
                         <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('contrato-form.html', this)" title="Copiar link">📋</button>
                         <span class="arrow" style="cursor:pointer;" onclick="window.open('contrato-form.html', '_blank', 'noopener')">↗</span>
                     </span>
+                </div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="selDeclPendSelAll" onchange="selDeclPend.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="selDeclPendBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="selDeclPendBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="selDeclPend.excluirSelecionados('declaracoes_pendentes', async () => { await loadDeclaracoesPendentes(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
+                    </div>
                 </div>
                 <div id="declPendRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
@@ -841,6 +838,13 @@
                     <button class="btn-primary" onclick="openTermoModal()">＋ Novo Termo</button>
                     <button class="btn-primary" onclick="openCVModal()">＋ Novo Compra e Venda</button>
                     <button class="btn-secondary" onclick="loadContratos()">🔄 Atualizar</button>
+                </div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="selContratosSelAll" onchange="selContratos.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="selContratosBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="selContratosBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="selContratos.excluirSelecionados('contratos', loadContratos)">🗑️ Excluir selecionados</button>
+                    </div>
                 </div>
                 <div id="termoRows">
                     <div class="empty-state">
@@ -871,6 +875,13 @@
                     <span class="table-count" id="declProcCount">0 registros</span>
                 </div>
                 <div id="declProcLinkRows"></div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="selDeclProcSelAll" onchange="selDeclProc.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="selDeclProcBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="selDeclProcBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="selDeclProc.excluirSelecionados('declaracoes_pendentes', async () => { await loadDeclProcPendentes(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
+                    </div>
+                </div>
                 <div id="declProcRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                 </div>
@@ -991,6 +1002,13 @@
                     <input type="text" id="curriculoBusca" class="curriculo-busca-input" placeholder="Buscar por nome, telefone, e-mail, cidade..." oninput="filtrarCurriculos()">
                     <button type="button" id="curriculoBuscaLimpar" class="curriculo-busca-limpar" onclick="limparBuscaCurriculo()" style="display:none;" title="Limpar busca">✕</button>
                 </div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="selCurriculosSelAll" onchange="selCurriculos.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="selCurriculosBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="selCurriculosBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="selCurriculos.excluirSelecionados('curriculos', async () => { await loadCurriculos(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
+                    </div>
+                </div>
                 <div id="curriculoRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                 </div>
@@ -1009,6 +1027,13 @@
                 <div class="table-header">
                     <h3>🧾 Recibos Emitidos</h3>
                     <span class="table-count" id="reciboCount">0 registros</span>
+                </div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="selRecibosSelAll" onchange="selRecibos.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="selRecibosBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="selRecibosBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="selRecibos.excluirSelecionados('recibos', loadRecibos)">🗑️ Excluir selecionados</button>
+                    </div>
                 </div>
                 <div id="reciboRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
@@ -1766,6 +1791,100 @@
         const dbUpsert = (table, payload) => callDbWrite({ table, action: 'upsert', payload });
         const dbUpdate = (table, payload, match) => callDbWrite({ table, action: 'update', payload, match });
         const dbDelete = (table, match) => callDbWrite({ table, action: 'delete', match });
+
+        // ===== Seleção múltipla nas listas (2026-08-25, pedido do usuário) =====
+        // Um helper só, reaproveitado por toda lista com "excluir selecionados"
+        // (currículos, declarações pendentes, contratos, declarações/procurações,
+        // recibos) — e é pra ser reaproveitado do mesmo jeito por qualquer lista
+        // nova que vier depois. Não mexe em mais nada da lista (edição,
+        // formatação, marcar como processado etc.), só cuida de marcar/
+        // desmarcar itens e excluir em massa os que estiverem marcados.
+        //
+        // Como plugar numa lista nova:
+        //   1) `const selMinhaLista = criarSelecaoMultipla({ nome: 'selMinhaLista' });`
+        //      (o `nome` precisa bater com o nome da variável — é usado dentro
+        //      dos onchange dos checkboxes gerados) e `window.selMinhaLista = selMinhaLista;`
+        //   2) No HTML estático da view, logo abaixo do .table-header, uma
+        //      .bulk-select-bar com o checkbox "selecionar todos" e a área de
+        //      ações — copiar o bloco já usado em qualquer view existente
+        //      (ex: viewCurriculo) trocando os ids e os nomes de função.
+        //   3) Na função que renderiza os cards da lista: prefixar cada card
+        //      com `selMinhaLista.checkboxHtml(item.id)` (fora da div com
+        //      onclick de abrir o item, senão o clique do checkbox também abre
+        //      o item) e, no fim da renderização, chamar
+        //      `selMinhaLista.definirListaAtual(lista.map(i => i.id))`.
+        //   4) O botão "Excluir selecionados" da barra chama
+        //      `selMinhaLista.excluirSelecionados('nome_da_tabela', recarregarFn)`.
+        function criarSelecaoMultipla({ nome }) {
+            const selecionados = new Set();
+            let idsAtuais = [];
+
+            function elAcoes() { return document.getElementById(nome + 'BulkAcoes'); }
+            function elCount() { return document.getElementById(nome + 'BulkCount'); }
+            function elSelAll() { return document.getElementById(nome + 'SelAll'); }
+
+            function atualizarBarra() {
+                const visiveisSelecionados = idsAtuais.filter(id => selecionados.has(id)).length;
+                const acoes = elAcoes();
+                if (acoes) acoes.style.display = selecionados.size > 0 ? '' : 'none';
+                const count = elCount();
+                if (count) count.textContent = selecionados.size + ' selecionado' + (selecionados.size !== 1 ? 's' : '');
+                const selAll = elSelAll();
+                if (selAll) {
+                    selAll.checked = idsAtuais.length > 0 && visiveisSelecionados === idsAtuais.length;
+                    selAll.indeterminate = visiveisSelecionados > 0 && visiveisSelecionados < idsAtuais.length;
+                }
+            }
+
+            // Chamada toda vez que a lista é (re)renderizada — atualiza o total
+            // que o "selecionar todos"/contador consideram, respeitando filtro
+            // de busca/categoria ativo no momento (um id selecionado que saiu da
+            // lista visível não é perdido, só some da contagem até voltar a aparecer).
+            function definirListaAtual(ids) {
+                idsAtuais = ids;
+                atualizarBarra();
+            }
+            function estaSelecionado(id) { return selecionados.has(id); }
+            function toggle(id, marcado) {
+                if (marcado) selecionados.add(id); else selecionados.delete(id);
+                atualizarBarra();
+            }
+            function toggleTodos(marcado) {
+                idsAtuais.forEach(id => marcado ? selecionados.add(id) : selecionados.delete(id));
+                atualizarBarra();
+            }
+            function limpar() {
+                selecionados.clear();
+                atualizarBarra();
+            }
+            function checkboxHtml(id) {
+                return `<input type="checkbox" class="card-select-checkbox" ${estaSelecionado(id) ? 'checked' : ''} onchange="${nome}.toggle('${id}', this.checked)">`;
+            }
+            async function excluirSelecionados(tabela, recarregar) {
+                const ids = idsAtuais.filter(id => selecionados.has(id));
+                if (ids.length === 0) return;
+                const plural = ids.length !== 1;
+                if (!confirm(`Excluir ${ids.length} registro${plural ? 's' : ''} selecionado${plural ? 's' : ''}? Essa ação não pode ser desfeita.`)) return;
+                try {
+                    await Promise.all(ids.map(id => dbDelete(tabela, { id })));
+                } catch (error) {
+                    alert('Erro ao excluir em massa: ' + error.message);
+                }
+                limpar();
+                if (recarregar) await recarregar();
+            }
+            return { estaSelecionado, toggle, toggleTodos, definirListaAtual, limpar, excluirSelecionados, checkboxHtml };
+        }
+        const selCurriculos = criarSelecaoMultipla({ nome: 'selCurriculos' });
+        window.selCurriculos = selCurriculos;
+        const selDeclPend = criarSelecaoMultipla({ nome: 'selDeclPend' });
+        window.selDeclPend = selDeclPend;
+        const selContratos = criarSelecaoMultipla({ nome: 'selContratos' });
+        window.selContratos = selContratos;
+        const selDeclProc = criarSelecaoMultipla({ nome: 'selDeclProc' });
+        window.selDeclProc = selDeclProc;
+        const selRecibos = criarSelecaoMultipla({ nome: 'selRecibos' });
+        window.selRecibos = selRecibos;
 
         // ===== Atualização em tempo real das listas (2026-08-24, pedido do
         // usuário) =====
@@ -2712,7 +2831,11 @@
             try {
                 const [curriculosRes, declRes, declProcRes] = await Promise.all([
                     supabase.from('curriculos').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
-                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
+                    // Só conta pendentes que NÃO são Declaração/Procuração — esses já
+                    // têm o próprio badge (declProcRes abaixo); sem esse filtro os
+                    // mesmos registros pendentes eram contados duas vezes, uma no
+                    // menu Contratos e outra em Declarações e Procurações.
+                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').not('tipo_contrato', 'in', `(${DECL_PROC_TIPOS_TODOS.join(',')})`),
                     supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').in('tipo_contrato', DECL_PROC_TIPOS_TODOS),
                 ]);
                 pendingCounts = { curriculo: curriculosRes.count || 0, termos: declRes.count || 0, declProc: declProcRes.count || 0 };
@@ -3045,6 +3168,7 @@
                 contratosCache = contratos || [];
 
                 document.getElementById('termoCount').textContent = contratosCache.length + ' registro' + (contratosCache.length !== 1 ? 's' : '');
+                selContratos.definirListaAtual(contratosCache.map(c => c.id));
 
                 if (contratosCache.length === 0) {
                     container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum contrato registrado ainda</div></div>';
@@ -3061,6 +3185,7 @@
                     // só mostra "Formatar" aqui pros tipos marcados origem:'contratos'.
                     const temFormatacao = !!(TIPOS[c.tipo_contrato] && TIPOS[c.tipo_contrato].corpo && TIPOS[c.tipo_contrato].origem === 'contratos');
                     return `<div class="contrato-card">
+                        ${selContratos.checkboxHtml(c.id)}
                         <div class="contrato-info" style="cursor:pointer;" onclick="openContratoFicha('${c.id}')">
                             <b>${tipoLabel}</b>
                             <span class="subtext">👤 ${escapeHtml(c.proprietario?.nome) || '-'}${pessoaB}${veiculoTag}</span>
@@ -3129,27 +3254,43 @@
         async function loadDeclaracoesPendentes() {
             const container = document.getElementById('declPendRows');
             try {
+                // A view "Contratos" (menu Contratos) só mostra pedidos pendentes
+                // que são contrato de verdade (Compra e Venda, Locação — os únicos
+                // tipos que o contrato-form.html gera hoje); Declarações e
+                // Procurações (os 7 tipos de DECL_PROC_TIPOS_TODOS) têm sua própria
+                // view/lista dedicada (viewDeclProc) — por isso ficam de fora daqui,
+                // pra não duplicar o mesmo pedido pendente em dois lugares do menu.
                 const { data, error } = await supabase
                     .from('declaracoes_pendentes')
                     .select('id, tipo_contrato, dados, status, data_pedido')
                     .eq('status', 'PENDENTE')
+                    .not('tipo_contrato', 'in', `(${DECL_PROC_TIPOS_TODOS.join(',')})`)
                     .order('data_pedido', { ascending: false });
 
                 if (error) throw new Error(error.message);
-                declaracoesPendentesCache = data || [];
+                const contratosPendentes = data || [];
+                // declaracoesPendentesCache é compartilhado com a view Declarações e
+                // Procurações (openDeclaracaoFicha/abrirDeclFormatado leem dela) —
+                // preserva os itens de Declaração/Procuração que loadDeclProcPendentes()
+                // já tiver mesclado aqui antes, só substitui a fatia de contratos que
+                // esta função é responsável por manter atualizada.
+                const declProcJaNoCache = declaracoesPendentesCache.filter(d => DECL_PROC_TIPOS_TODOS.includes(d.tipo_contrato));
+                declaracoesPendentesCache = [...contratosPendentes, ...declProcJaNoCache];
 
-                document.getElementById('declPendCount').textContent = declaracoesPendentesCache.length + ' registro' + (declaracoesPendentesCache.length !== 1 ? 's' : '');
+                document.getElementById('declPendCount').textContent = contratosPendentes.length + ' registro' + (contratosPendentes.length !== 1 ? 's' : '');
+                selDeclPend.definirListaAtual(contratosPendentes.map(d => d.id));
 
-                if (declaracoesPendentesCache.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhuma declaração pendente</div></div>';
+                if (contratosPendentes.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum contrato pendente</div></div>';
                     return;
                 }
 
-                container.innerHTML = declaracoesPendentesCache.map(d => {
+                container.innerHTML = contratosPendentes.map(d => {
                     const dataFmt = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : '-';
                     const tipoLabel = TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato;
                     const nomeA = d.dados?.pessoa_a?.nome || '-';
                     return `<div class="contrato-card">
+                        ${selDeclPend.checkboxHtml(d.id)}
                         <div class="contrato-info" style="cursor:pointer;" onclick="openDeclaracaoFicha('${d.id}')">
                             <b>${tipoLabel}</b>
                             <span class="subtext">👤 ${escapeHtml(nomeA)}</span>
@@ -3408,6 +3549,7 @@
             const tiposAtivos = DECL_PROC_CATEGORIAS[declProcCategoriaAtiva].tipos;
             const itens = declProcPendentesCache.filter(d => tiposAtivos.includes(d.tipo_contrato));
             document.getElementById('declProcCount').textContent = itens.length + ' registro' + (itens.length !== 1 ? 's' : '');
+            selDeclProc.definirListaAtual(itens.map(d => d.id));
             if (itens.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum pendente nessa categoria</div></div>';
                 return;
@@ -3417,6 +3559,7 @@
                 const tipoLabel = TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato;
                 const nomeA = d.dados?.pessoa_a?.nome || '-';
                 return `<div class="contrato-card">
+                    ${selDeclProc.checkboxHtml(d.id)}
                     <div class="contrato-info" style="cursor:pointer;" onclick="openDeclaracaoFicha('${d.id}')">
                         <b>${tipoLabel}</b>
                         <span class="subtext">👤 ${escapeHtml(nomeA)}</span>
@@ -5462,6 +5605,8 @@
                 ? `${lista.length} de ${curriculosCache.length} registro${curriculosCache.length !== 1 ? 's' : ''}`
                 : `${curriculosCache.length} registro${curriculosCache.length !== 1 ? 's' : ''}`;
 
+            selCurriculos.definirListaAtual(lista.map(c => c.id));
+
             if (lista.length === 0) {
                 container.innerHTML = filtrando
                     ? '<div class="empty-state"><div class="empty-icon">🔍</div><div>Nenhum currículo encontrado</div></div>'
@@ -5473,17 +5618,20 @@
                 const feito = c.status === 'FEITO';
                 const dataFmt = c.data_pedido ? new Date(c.data_pedido).toLocaleDateString('pt-BR') : '-';
                 return `<div class="curriculo-card">
-                    <div class="curriculo-info" style="cursor:pointer;" onclick="openFichaModal('${c.id}')">
-                        <b>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</b>
-                        <span class="subtext">📱 ${escapeHtml(c.telefone) || '-'} · 📍 ${escapeHtml(c.cidade) || '-'} · 📅 ${dataFmt}</span>
-                        <span class="subtext">${feito ? '✅ Feito' : '⏳ Pendente'}</span>
-                    </div>
-                    <div class="curriculo-acoes">
-                        <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir (usa a versão com IA se já tiver, senão o formatado)">🖨️</button>
-                        <button class="btn-delete" onclick="abrirFormatado('${c.id}', false)" title="Formatado">📄</button>
-                        <button class="btn-delete" onclick="abrirFormatado('${c.id}', true)" title="Formatado com IA">🤖</button>
-                        <button class="btn-delete" onclick="toggleCurriculoStatus('${c.id}', '${feito ? 'PENDENTE' : 'FEITO'}')" title="${feito ? 'Marcar como pendente' : 'Marcar como feito'}">${feito ? '↩️' : '✅'}</button>
-                        <button class="btn-delete" onclick="deleteCurriculo('${c.id}')" title="Excluir">🗑️</button>
+                    ${selCurriculos.checkboxHtml(c.id)}
+                    <div class="curriculo-card-body">
+                        <div class="curriculo-info" style="cursor:pointer;" onclick="openFichaModal('${c.id}')">
+                            <b>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</b>
+                            <span class="subtext">📱 ${escapeHtml(c.telefone) || '-'} · 📍 ${escapeHtml(c.cidade) || '-'} · 📅 ${dataFmt}</span>
+                            <span class="subtext">${feito ? '✅ Feito' : '⏳ Pendente'}</span>
+                        </div>
+                        <div class="curriculo-acoes">
+                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir (usa a versão com IA se já tiver, senão o formatado)">🖨️</button>
+                            <button class="btn-delete" onclick="abrirFormatado('${c.id}', false)" title="Formatado">📄</button>
+                            <button class="btn-delete" onclick="abrirFormatado('${c.id}', true)" title="Formatado com IA">🤖</button>
+                            <button class="btn-delete" onclick="toggleCurriculoStatus('${c.id}', '${feito ? 'PENDENTE' : 'FEITO'}')" title="${feito ? 'Marcar como pendente' : 'Marcar como feito'}">${feito ? '↩️' : '✅'}</button>
+                            <button class="btn-delete" onclick="deleteCurriculo('${c.id}')" title="Excluir">🗑️</button>
+                        </div>
                     </div>
                 </div>`;
             }).join('');
@@ -6979,11 +7127,13 @@
                 if (error) throw new Error(error.message);
                 recibosCache = data || [];
                 document.getElementById('reciboCount').textContent = recibosCache.length + ' registro' + (recibosCache.length !== 1 ? 's' : '');
+                selRecibos.definirListaAtual(recibosCache.map(r => r.id));
                 if (recibosCache.length === 0) {
                     container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum recibo emitido ainda</div></div>';
                     return;
                 }
                 container.innerHTML = recibosCache.map(r => `<div class="contrato-card">
+                    ${selRecibos.checkboxHtml(r.id)}
                     <div class="contrato-info" style="cursor:pointer;" onclick="verRecibo('${r.id}')">
                         <b>Nº ${formatarNumeroRecibo(r.numero)}</b>
                         <span class="subtext">👤 ${escapeHtml(r.pagador_nome)}</span>
@@ -7300,10 +7450,47 @@
             atualizarBotaoInstalarPwa();
         }
 
+        // Garante que o app instalado sempre acabe carregando a versão mais
+        // nova depois de um deploy, sem precisar limpar cache nem reabrir manualmente
+        // (2026-08-25, pedido do usuário) — só recarrega a página; não muda layout,
+        // regra de negócio ou funcionalidade nenhuma.
+        //
+        // Passo 1: `updateViaCache: 'none'` faz o navegador buscar o próprio
+        // sw.js sempre ignorando o cache HTTP dele — sem isso, o navegador podia
+        // levar até 24h (o teto que os navegadores aplicam por padrão) pra sequer
+        // perceber que o arquivo mudou.
+        //
+        // Passo 2: como sw.js já chama self.skipWaiting() incondicionalmente (ver
+        // sw.js), assim que uma versão nova termina de instalar ela assume o
+        // controle na hora — o evento 'controllerchange' abaixo dispara nesse
+        // momento e recarrega a página uma única vez (a flag `jaRecarregou` evita
+        // um loop, já que trocar de controller de novo por qualquer motivo não
+        // deve recarregar outra vez).
+        //
+        // Passo 3: um app aberto e nunca navegado (o caso comum de um PWA
+        // instalado, que fica em primeiro plano por dias) não tem motivo pra o
+        // navegador rechecar sw.js sozinho — por isso força a checagem
+        // (`registration.update()`) sempre que a aba volta a ficar visível, e a
+        // cada 30 minutos enquanto estiver aberta.
         function inicializarPwa() {
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js').catch(() => {});
+                let jaRecarregou = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (jaRecarregou) return;
+                    jaRecarregou = true;
+                    window.location.reload();
+                });
+
+                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+                    .then((registration) => {
+                        document.addEventListener('visibilitychange', () => {
+                            if (document.visibilityState === 'visible') registration.update().catch(() => {});
+                        });
+                        setInterval(() => registration.update().catch(() => {}), 30 * 60 * 1000);
+                    })
+                    .catch(() => {});
             }
+
             // pequeno atraso — deixa a pessoa ver o painel carregando antes de
             // empilhar um aviso por cima, sem competir com o desbloqueio inicial
             setTimeout(mostrarAvisoPwa, 1200);

@@ -113,24 +113,6 @@
     .doc-confirma .field { margin-bottom: 12px; }
     .doc-confirma .field input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 14px; font-family: inherit; }
 
-    /* ---- Pré-visualização do contrato (só Locação de Imóvel, 2026-08-20) ----
-       "Paper" claro simulando o documento impresso — título, cláusulas, rodapé
-       e assinaturas com o mesmo tamanho de fonte/espaçamento usados de verdade
-       na impressão real (ver #printArea .doc-formatado-print em index.html). */
-    .preview-note { background: var(--accent-dim); border: 1px solid rgba(34,197,94,0.3); border-radius: 12px; padding: 12px 14px; font-size: 12.5px; color: var(--accent-bright); margin-bottom: 16px; line-height: 1.5; }
-    .preview-paper { background: #fff; color: #1a1a1a; border-radius: 10px; padding: 30px 20px 22px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); overflow-x: hidden; }
-    .preview-margin-hint { text-align: center; font-size: 10px; color: #999; margin: 0 0 16px; border-bottom: 1px dashed #ddd; padding-bottom: 12px; }
-    .preview-paper h1 { text-align: center; font-size: 20px; letter-spacing: 1px; margin: 0 0 22px; color: #111; }
-    .preview-paper h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.4px; margin: 22px 0 10px; color: #111; }
-    .preview-paper p { font-size: 14.5px; line-height: 1.8; margin: 8px 0; color: #1a1a1a; }
-    .preview-assinaturas { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 26px 0 6px; margin-top: 18px; border-top: 1px dashed #ccc; }
-    .preview-assinaturas::before { content: '· quebra de página — assinaturas ficam sozinhas na última página, centralizadas ·'; display: block; font-size: 9.5px; text-transform: none; letter-spacing: 0; color: #999; margin-bottom: 10px; }
-    .preview-assinaturas p { margin: 0; }
-    .preview-rodape { display: flex; align-items: center; gap: 8px; font-size: 8.5px; color: #595959; border-top: 0.5px solid #d9d9d9; padding-top: 8px; margin-top: 30px; }
-    .preview-rodape svg { flex-shrink: 0; }
-    .preview-actions { display: flex; gap: 10px; margin-top: 18px; }
-    .preview-actions .btn-back { flex: 1; } /* "Voltar e editar" é mais longo que o "Voltar" padrão (90px fixos) */
-
     /* Campos de data (flatpickr): sem digitação, cursor de "escolher" e cor do app */
     input[data-role="fp-data"], input[data-doc-campo="data_nascimento"] { cursor: pointer; caret-color: transparent; }
     .flatpickr-day.selected, .flatpickr-day.selected:hover, .flatpickr-day.selected:focus { background: var(--accent); border-color: var(--accent); }
@@ -169,10 +151,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import flatpickr from 'https://esm.sh/flatpickr@4.6.13';
 import { Portuguese } from 'https://esm.sh/flatpickr@4.6.13/dist/l10n/pt.js';
-// Só usado pela pré-visualização do Contrato de Locação de Imóvel (valores por
-// extenso nas cláusulas de aluguel/caução/multa) — mesma lib e mesmo padrão de
-// import já usado em index.html.
-import extenso from 'https://esm.sh/extenso@2';
 const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1008,20 +986,11 @@ function stepRevisao() {
         }
         if (s.valor_entrada) rows.push(['Entrada em dinheiro', `R$ ${s.valor_entrada}`]);
     }
-    // Pré-visualização (pedido do usuário, 2026-08-20) — só pro Contrato de
-    // Locação de Imóvel, e só na criação (não no modo de edição, que é um
-    // fluxo à parte, com senha da equipe e postMessage pro painel — ver
-    // abrirPreviaLocacao()/montarPreviaContratoLocacao() acima). Em vez de
-    // enviar direto, o botão vira "Pré-visualizar contrato" e abre o rascunho
-    // formatado antes de publicar.
-    const usaPrevia = s.tipo === 'imovel_locacao' && !editMode;
-    const idBotao = usaPrevia ? 'btnPreVisualizar' : 'btnSubmit';
-    const textoBotao = editMode ? 'Salvar alterações' : (usaPrevia ? 'Pré-visualizar contrato' : 'Enviar contrato');
     return `
     <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
     ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
     <div id="errorMsg" class="error-msg"></div>
-    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="${idBotao}">${textoBotao}</button></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">${editMode ? 'Salvar alterações' : 'Enviar contrato'}</button></div>
     ${editMode ? `<p style="text-align:center; margin-top:14px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
 }
 
@@ -1147,268 +1116,11 @@ cardEl.addEventListener('click', e => {
         document.querySelectorAll('.tipo-card').forEach(c => c.classList.toggle('selected', c === card));
     }
     if (e.target.id === 'btnSubmit') submitForm();
-    if (e.target.id === 'btnPreVisualizar') abrirPreviaLocacao();
-    // "Voltar e editar" da pré-visualização só descarta o rascunho em tela e
-    // volta pra etapa de revisão (mesmo state `s`, nada é perdido) — não mexe
-    // no stepIndex, então dá pra seguir usando "Voltar" normal a partir dali
-    // pra chegar em qualquer etapa anterior.
-    if (e.target.id === 'btnPreviaVoltar') { render(); window.scrollTo(0, 0); }
 });
 
 // ---------- Envio ----------
-// ============================================================================
-// Pré-visualização do Contrato de Locação de Imóvel (2026-08-20) — só pra este
-// tipo de contrato, pedido do usuário: antes de publicar de verdade, mostra um
-// rascunho fiel ao documento final (título, cláusulas condicionais, rodapé,
-// bloco de assinaturas) pra conferência, com "Voltar e editar" / "Confirmar e
-// publicar". As funções abaixo (g/flexGenero/titleCase/up/fmt/extensoReais/
-// numExtenso/dataBR/somarMesesBR/qualificarCV/clausulaCV/blocoContratoVale
-// Assinatura/blocoForoCV/dataExtensoLonga/blocoAssinaturasLocacaoPreview e o
-// corpo da cláusula em montarClausulasLocacao) são uma cópia deliberada da
-// mesma lógica de TIPOS.CONTRATO_LOCACAO_IMOVEL em index.html — o formulário
-// público não carrega o painel (nem tem a senha da equipe pra isso), então
-// pra pré-visualizar com fidelidade sem publicar precisa da própria lógica de
-// geração aqui. **Se a cláusula de Locação mudar em index.html, replicar a
-// mudança aqui também** (é o mesmo texto, coordenadamente duplicado).
-function g(genero, masc, fem) { return genero === 'Feminino' ? fem : masc; }
-const FLEX_EXCECOES_PREVIA = { 'União Estável': 'em união estável' };
-function flexGenero(valor, fem) {
-    if (!valor) return '';
-    if (FLEX_EXCECOES_PREVIA[valor]) return FLEX_EXCECOES_PREVIA[valor];
-    const m = valor.match(/^(.*)o\(a\)$/i);
-    if (!m) return valor.toLowerCase();
-    return fem ? `${m[1].toLowerCase()}a` : `${m[1].toLowerCase()}o`;
-}
-const TITLECASE_MINUSCULAS_PREVIA = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
-function titleCase(str) {
-    if (!str) return str;
-    return str.trim().toLowerCase().split(/\s+/).map((w, i) => {
-        if (i > 0 && TITLECASE_MINUSCULAS_PREVIA.has(w)) return w;
-        return w.charAt(0).toUpperCase() + w.slice(1);
-    }).join(' ');
-}
-const up = (v) => (v || '').toString().toUpperCase();
-const fmt = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-function extensoReais(valor) { return extenso(valor, { mode: 'currency', currency: { type: 'BRL' } }); }
-function numExtenso(n) { return extenso(n); }
-function dataBR(dataISO) {
-    if (!dataISO) return '';
-    return new Date(dataISO + 'T00:00:00').toLocaleDateString('pt-BR');
-}
-function somarMesesBR(dataISO, meses) {
-    if (!dataISO || !meses) return '';
-    const [ano, mes, dia] = dataISO.split('-').map(Number);
-    const d = new Date(ano, (mes - 1) + Number(meses), dia);
-    if (d.getDate() !== dia) d.setDate(0);
-    return d.toLocaleDateString('pt-BR');
-}
-function dataExtensoLonga() {
-    return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-}
-function clausulaCV(n, texto) { return `<p>Cláusula ${n}ª. ${texto}</p>`; }
-function qualificarCV(p, papel, semEndereco) {
-    let out = `${papel.toUpperCase()}: ${esc(titleCase(p.nome))}, ${esc(flexGenero(p.nacionalidade, p.genero === 'Feminino'))}, ${esc(flexGenero(p.estado_civil, p.genero === 'Feminino'))}, ${esc(p.profissao || '')}, `
-        + `portador${g(p.genero, '', 'a')} da Carteira de Identidade nº ${esc(p.rg || '')}, `
-        + `inscrit${g(p.genero, 'o', 'a')} no C.P.F. nº ${esc(p.cpf || '')}`;
-    out += semEndereco ? '.' : `, residente e domiciliad${g(p.genero, 'o', 'a')} na ${esc(titleCase(p.endereco))}, bairro ${esc(p.bairro || '')} da Cidade de ${esc(p.cidade || '')}/${esc(p.estado || '')}.`;
-    return out;
-}
-function blocoContratoValeAssinatura(n) {
-    return clausulaCV(n, 'O presente contrato passa a valer a partir da assinatura pelas partes, obrigando-se a ele os herdeiros ou sucessores das mesmas.');
-}
-function blocoForoCV(n, foro) {
-    return clausulaCV(n, `Para dirimir quaisquer controvérsias oriundas do CONTRATO, as partes elegem o foro da comarca de ${esc(foro.cidade)}/${esc(foro.estado)}.`);
-}
-// Igual ao blocoAssinaturasLocacao() de index.html, só que sem a classe
-// .locacao-assinaturas-print (que só ganha estilo dentro de @media print lá) —
-// aqui uso a classe .preview-assinaturas, com o mesmo efeito visual (centralizado,
-// espaço grande pra assinatura manual) já aplicado direto na tela, já que esta
-// é uma pré-visualização em tela, não uma impressão real.
-function blocoAssinaturasLocacaoPreview(cidade, partes, fiador, testemunhas) {
-    const linha = (texto) => `<div style="margin-top:48px;"><div style="border-top:1px solid #000; width:220px; margin:0 auto 6px;"></div><p>${texto}</p></div>`;
-    let out = `<div class="preview-assinaturas">`;
-    out += `<p>${esc(cidade)}, ${dataExtensoLonga()}.</p>`;
-    out += partes.map(p => linha(`${esc(p.label)}: ${esc(titleCase(p.nome))}`)).join('');
-    // Bloco de assinatura do FIADOR — mesma regra de index.html: só aparece
-    // quando a garantia é Fiador, entre o LOCATÁRIO e as testemunhas.
-    if (fiador && fiador.nome) {
-        out += linha(`FIADOR: ${esc(titleCase(fiador.nome))}${fiador.cpf ? ` - CPF: ${esc(fiador.cpf)}` : ''}`);
-    }
-    out += testemunhas.map((t, i) => {
-        const n = i + 1;
-        const texto = (t && t.nome) ? `Testemunha ${n}: ${esc(t.nome)} - CPF: ${esc(t.cpf || '')}` : `Testemunha ${n} - CPF:`;
-        return linha(texto);
-    }).join('');
-    out += `</div>`;
-    return out;
-}
-// Cópia fiel de TIPOS.CONTRATO_LOCACAO_IMOVEL.corpo() (index.html) — mesmas
-// cláusulas, mesma ordem, mesmas condicionais (residencial/comercial, caução,
-// multa por rescisão). Só o bloco final de assinaturas usa a variante
-// *Preview acima (visual em tela) em vez da versão de impressão.
-function montarClausulasLocacao(registro) {
-    const dados = registro.dados || {};
-    const locador = dados.pessoa_a || {};
-    const locatario = dados.pessoa_b || {};
-    const e = dados.especifico || {};
-    const ehResidencial = (e.finalidade || 'Residenciais') === 'Residenciais';
-    const foro = { cidade: e.foro_cidade || locador.cidade || '', estado: e.foro_estado || locador.estado || '' };
-    const pagAgua = e.pagamento_agua || 'LOCATÁRIA';
-    const pagEnergia = e.pagamento_energia || 'LOCATÁRIA';
-    const permiteAnimais = e.permite_animais || 'Não';
-    function flexArtigos(genero) {
-        const fem = genero === 'Feminino';
-        return { O: fem ? 'A' : 'O', o: fem ? 'a' : 'o', ao: fem ? 'à' : 'ao', pelo: fem ? 'pela' : 'pelo', do: fem ? 'da' : 'do' };
-    }
-    const termoLocador = g(locador.genero, 'LOCADOR', 'LOCADORA');
-    const termoLocatario = g(locatario.genero, 'LOCATÁRIO', 'LOCATÁRIA');
-    const fLocador = flexArtigos(locador.genero);
-    const fLocatario = flexArtigos(locatario.genero);
-    const textoResponsavelEncargo = (quem) => {
-        if (quem === 'Dividido entre as partes') return 'divididas igualmente entre as partes, cabendo 50% (cinquenta por cento) para cada uma';
-        const ehLocador = quem === 'LOCADOR';
-        return `por conta ${ehLocador ? fLocador.do : fLocatario.do} ${ehLocador ? termoLocador : termoLocatario}`;
-    };
-    let n = 1;
-    let out = '';
-    out += `<p>IDENTIFICAÇÃO DAS PARTES CONTRATANTES</p>`;
-    const semPrefixoPapel = (texto) => texto.replace(/^[^:]+:\s*/, '').replace(/\.$/, '');
-    out += `<p>De um lado, ${semPrefixoPapel(qualificarCV(locador, termoLocador))}, doravante denominad${g(locador.genero, 'o', 'a')} ${termoLocador}.</p>`;
-    out += `<p>E, do outro lado, ${semPrefixoPapel(qualificarCV(locatario, termoLocatario, ehResidencial))}, doravante denominad${g(locatario.genero, 'o', 'a')} ${termoLocatario}.</p>`;
-    out += `<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Imóvel, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente, e pela Lei nº 8.245/1991.</p>`;
-    out += `<h3>DO OBJETO E FINALIDADE</h3>`;
-    const limiteMoradores = ehResidencial && e.max_moradores ? Number(e.max_moradores) : null;
-    const segmentoAtividade = !ehResidencial && e.segmento_atividade ? e.segmento_atividade : null;
-    const destinacao = ehResidencial
-        ? `destinado exclusivamente a fins residenciais${limiteMoradores ? `, sendo autorizada a ocupação por, no máximo, ${limiteMoradores} ${limiteMoradores === 1 ? 'pessoa' : 'pessoas'}, conforme acordado entre as partes` : ''}`
-        : `destinado exclusivamente ${segmentoAtividade ? `ao segmento de ${esc(segmentoAtividade)}` : 'a fins comerciais'}`;
-    out += clausulaCV(n++, `${fLocador.O} ${termoLocador} dá em locação ${fLocatario.ao} ${termoLocatario} o imóvel do tipo ${up(e.tipo_imovel || 'Imóvel')}, situado na ${esc(titleCase(e.endereco_imovel))}, bairro ${esc(e.bairro_imovel || '')}, ${esc(e.cidade_imovel || '')}/${esc(e.estado_imovel || '')}, ${destinacao}.`);
-    if (limiteMoradores) {
-        out += `<p>Parágrafo Único. Caso haja permanência habitual de número de ocupantes superior ao limite estabelecido nesta cláusula, tal situação dependerá de autorização prévia e expressa ${fLocador.do} ${termoLocador}, podendo as partes, caso concordem, formalizar aditivo contratual para adequação, inclusive eventual revisão do valor do aluguel.</p>`;
-    } else if (segmentoAtividade) {
-        out += `<p>Parágrafo Único. Qualquer alteração do ramo de atividade ou da finalidade do imóvel dependerá de comunicação prévia ${fLocador.ao} ${termoLocador} com antecedência mínima de 30 (trinta) dias, além de autorização expressa e por escrito, sob pena de descumprimento contratual.</p>`;
-    }
-    out += `<h3>DO PRAZO</h3>`;
-    const dataFimResidencial = ehResidencial ? somarMesesBR(e.data_inicio, e.prazo_meses) : '';
-    out += clausulaCV(n++, dataFimResidencial
-        ? `O prazo de locação é de ${esc(String(e.prazo_meses || ''))} (${numExtenso(e.prazo_meses || 0)}) meses, com início em ${dataBR(e.data_inicio)} e término em ${dataFimResidencial}, data em que ${fLocatario.o} ${termoLocatario} obriga-se a restituir o imóvel completamente desocupado e em perfeitas condições, prazo este improrrogável, independentemente de aviso, notificação ou interpelação judicial ou extrajudicial.`
-        : `O prazo de locação é de ${esc(String(e.prazo_meses || ''))} (${numExtenso(e.prazo_meses || 0)}) meses, com início em ${dataBR(e.data_inicio)}, data em que ${fLocatario.o} ${termoLocatario} obriga-se a restituir o imóvel completamente desocupado e em perfeitas condições, prazo este improrrogável, independentemente de aviso, notificação ou interpelação judicial ou extrajudicial.`);
-    out += `<h3>DO ALUGUEL E REAJUSTE</h3>`;
-    out += clausulaCV(n++, `O aluguel mensal é de ${fmt(e.valor_aluguel)} (${extensoReais(e.valor_aluguel)}), a ser pago ${fLocatario.pelo} ${termoLocatario} até o dia ${esc(String(e.dia_vencimento || ''))} de cada mês, mediante recibo fornecido ${fLocador.pelo} ${termoLocador}.`);
-    out += clausulaCV(n++, 'Caso ocorra a renovação do contrato, o valor do aluguel será reajustado pelo Índice Geral de Preços do Mercado (IGP-M), ou por outro índice oficial que venha a substituí-lo por determinação legal, considerando o período de vigência do contrato.');
-    out += `<h3>DOS ENCARGOS</h3>`;
-    out += clausulaCV(n++, `As despesas relativas ao fornecimento de água ficam ${textoResponsavelEncargo(pagAgua)}, e as de energia elétrica ficam ${textoResponsavelEncargo(pagEnergia)}, ambas durante toda a vigência deste contrato.`);
-    if (pagEnergia === 'LOCATÁRIA') {
-        out += `<p>Parágrafo Único. Fica ${fLocatario.o} ${termoLocatario}, mediante autorização e consentimento ${fLocador.do} ${termoLocador}, autorizad${g(locatario.genero, 'o', 'a')} a promover a transferência da titularidade da unidade consumidora para o seu próprio nome, comprometendo-se a realizar esse procedimento junto à concessionária responsável no prazo máximo de 10 (dez) dias, contados da entrega das chaves ou do início da vigência do contrato. A partir da efetivação da transferência, ${fLocatario.o} ${termoLocatario} assume integralmente as responsabilidades de consumo, pagamento de faturas e demais obrigações relacionadas ao fornecimento de energia elétrica.</p>`;
-    }
-    out += `<h3>DA VISTORIA E DOS REPAROS</h3>`;
-    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} terá o prazo de 5 (cinco) dias, contados da entrega do imóvel, para reclamar por escrito eventuais reparos ou manutenções pendentes sobre a situação do imóvel e seus utensílios. Findo esse prazo sem reclamação, nada mais competirá ${fLocador.ao} ${termoLocador} a esse respeito, ficando ${g(locador.genero, 'este', 'esta')} ${g(locador.genero, 'isento', 'isenta')} de qualquer responsabilidade até o término do contrato.`);
-    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} faculta, desde já, ${fLocador.ao} ${termoLocador} examinar ou vistoriar o imóvel locado sempre que ${g(locador.genero, 'este', 'esta')} entender conveniente ou necessário, mediante prévio aviso.`);
-    out += `<h3>DA GARANTIA</h3>`;
-    if (e.garantia === 'Caução') {
-        out += clausulaCV(n++, `A título de garantia locatícia, ${fLocatario.o} ${termoLocatario} entrega ${fLocador.ao} ${termoLocador}, juntamente com o pagamento do primeiro aluguel, a importância de ${fmt(e.valor_caucao)} (${extensoReais(e.valor_caucao)}), a título de caução. O valor da caução não será devolvido automaticamente ao término do contrato, sendo utilizado para cobrir as despesas necessárias à recomposição do imóvel, incluindo pintura, reparos decorrentes do uso e manutenção, nos termos da Lei nº 8.245/1991.`);
-        out += `<p>Parágrafo Primeiro. Ao utilizar o valor da caução para as despesas de recomposição do imóvel de que trata esta cláusula, ${fLocador.o} ${termoLocador} notificará ${fLocatario.o} ${termoLocatario}, informando o valor utilizado e o motivo da utilização.</p>`;
-        out += `<p>Parágrafo Segundo. A caução não poderá ser utilizada ${fLocatario.pelo} ${termoLocatario} para quitar aluguéis ou qualquer outra dívida relacionada a este contrato, servindo exclusivamente para cobrir as despesas de recomposição do imóvel de que trata esta cláusula.</p>`;
-    } else if (e.garantia === 'Fiador') {
-        // Mesma cláusula ampliada de index.html (ver comentário lá).
-        out += clausulaCV(n++, `O presente contrato é garantido por fiador, ${esc(titleCase(e.fiador_nome || ''))}, portador do CPF nº ${esc(e.fiador_cpf || '')}, que assume, de forma solidária com ${fLocatario.o} ${termoLocatario}, todas as obrigações decorrentes deste contrato de locação. O fiador responsabiliza-se pelo pagamento dos aluguéis, encargos locatícios, multas contratuais, correção monetária, juros, despesas judiciais e extrajudiciais, bem como por quaisquer outros débitos oriundos deste contrato, caso ${fLocatario.o} ${termoLocatario} deixe de cumprir suas obrigações. A responsabilidade do fiador permanecerá vigente durante toda a locação, estendendo-se até a efetiva devolução do imóvel mediante entrega das chaves ${fLocador.ao} ${termoLocador}, bem como até a quitação integral de todas as obrigações contratuais, salvo disposição legal ou contratual em sentido diverso. O fiador declara que leu integralmente este contrato, compreendeu todas as suas cláusulas e concorda expressamente com as obrigações assumidas, comprometendo-se a cumpri-las em todos os seus termos.`);
-    } else if (e.garantia === 'Seguro-fiança') {
-        out += clausulaCV(n++, `A título de garantia locatícia, ${fLocatario.o} ${termoLocatario} contratará, às suas expensas, seguro de fiança locatícia, comprovando sua vigência ${fLocador.ao} ${termoLocador} durante todo o período de locação.`);
-    } else {
-        out += clausulaCV(n++, 'As partes dispensam, de comum acordo, a exigência de garantia locatícia para este contrato.');
-    }
-    out += `<h3>DO USO E DA CONSERVAÇÃO DO IMÓVEL</h3>`;
-    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} recebe o imóvel em bom estado de conservação e limpeza, obrigando-se a devolvê-lo nas mesmas condições ao final da locação, ressalvado o desgaste natural decorrente do uso regular.`);
-    out += clausulaCV(n++, `Benfeitorias necessárias realizadas ${fLocatario.pelo} ${termoLocatario}, ainda que não autorizadas, e as úteis, desde que autorizadas por escrito ${fLocador.pelo} ${termoLocador}, serão indenizáveis e permitem o direito de retenção. As benfeitorias voluptuárias não serão indenizadas, podendo ser levantadas ${fLocatario.pelo} ${termoLocatario}, desde que não afetem a estrutura do imóvel.`);
-    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} obriga-se a satisfazer todas as exigências dos Poderes Públicos a que der causa, sendo vedada qualquer modificação ou transformação no imóvel sem autorização prévia e por escrito ${fLocador.do} ${termoLocador}.`);
-    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} não poderá transferir este contrato, nem sublocar ou emprestar o imóvel, no todo ou em parte, sem o consentimento prévio e por escrito ${fLocador.do} ${termoLocador}.`);
-    // Cláusula de animais só existe em locação residencial (mesma condicional
-    // aplicada em index.html) — comercial não tem pergunta nem cláusula.
-    if (ehResidencial) {
-        if (permiteAnimais === 'Sim') {
-            out += clausulaCV(n++, `É permitida a permanência de animais de estimação no imóvel, desde que ${fLocatario.o} ${termoLocatario} mantenha sua devida guarda, cuidado e higiene, responsabilizando-se integralmente por eventuais danos causados ao imóvel ou por incômodos à vizinhança e aos demais moradores decorrentes dessa guarda.`);
-        } else {
-            out += clausulaCV(n++, `Fica vedada a permanência de animais de estimação no interior do imóvel, tais como cães, gatos, aves, roedores, répteis, peixes, entre outros. ${fLocatario.O} ${termoLocatario} compromete-se a não introduzir, hospedar ou permitir a permanência de quaisquer animais no imóvel, sob pena de infração contratual, além da obrigação de retirá-los imediatamente.`);
-        }
-    }
-    // Cláusula de sossego tem versão própria por tipo de locação (mesma
-    // condicional aplicada em index.html) — residencial mantém título e texto
-    // de sempre; comercial troca por versão sem silêncio/festas/visitantes,
-    // com título próprio.
-    if (ehResidencial) {
-        out += `<h3>DO SOSSEGO E DO HORÁRIO DE SILÊNCIO</h3>`;
-        out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} se compromete a utilizar o imóvel de forma a preservar o sossego, segurança e tranquilidade da vizinhança, evitando ruídos excessivos, som alto, festas ou atividades que possam causar incômodo, especialmente após as 22 horas. Responsabiliza-se também pelos atos de familiares, visitantes ou quaisquer pessoas que frequentem o imóvel. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
-    } else {
-        out += `<h3>DO SOSSEGO E DA BOA CONVIVÊNCIA</h3>`;
-        out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} deverá utilizar o imóvel exclusivamente para a atividade comercial informada neste contrato, observando a legislação vigente, as normas municipais aplicáveis, as regras do condomínio, quando houver, e o direito ao sossego da vizinhança, responsabilizando-se pelos atos de sócios, funcionários, clientes e demais pessoas vinculadas ao funcionamento do estabelecimento. O descumprimento poderá caracterizar infração contratual, sujeitando ${fLocatario.o} ${termoLocatario} às penalidades previstas neste contrato e na legislação aplicável.`);
-    }
-    out += `<h3>DA RESCISÃO E DE OUTRAS DISPOSIÇÕES</h3>`;
-    const temMulta = e.multa_rescisao === 'Sim';
-    let textoMulta = '';
-    if (temMulta && e.multa_rescisao_tipo === 'Alugueis' && e.multa_rescisao_qtd_alugueis) {
-        const qtd = Number(e.multa_rescisao_qtd_alugueis);
-        textoMulta = `${qtd} (${numExtenso(qtd)}) ${qtd === 1 ? 'aluguel' : 'aluguéis'} vigente(s) à época da rescisão`;
-    } else if (temMulta && e.multa_rescisao_tipo === 'Valor fixo' && e.multa_rescisao_valor) {
-        textoMulta = `${fmt(e.multa_rescisao_valor)} (${extensoReais(e.multa_rescisao_valor)})`;
-    }
-    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} poderá rescindir este contrato antes do término do prazo estabelecido, mediante comunicação por escrito ${fLocador.ao} ${termoLocador} com antecedência mínima de 30 (trinta) dias${textoMulta
-        ? `, ficando ${g(locatario.genero, 'obrigado', 'obrigada')} ao pagamento de multa por rescisão antecipada correspondente a ${textoMulta}`
-        : `, ficando ${g(locatario.genero, 'isento', 'isenta')} do pagamento de qualquer multa por rescisão antecipada`}.`);
-    out += clausulaCV(n++, `Em caso de desapropriação do imóvel locado, ${fLocador.o} ${termoLocador} ficará desobrigad${g(locador.genero, 'o', 'a')} de todas as cláusulas deste contrato, ressalvada ${fLocatario.ao} ${termoLocatario} tão somente a faculdade de haver, junto ao poder desapropriante, a indenização a que porventura tiver direito.`);
-    out += clausulaCV(n++, `Nenhuma intimação do Serviço Sanitário será motivo para ${fLocatario.o} ${termoLocatario} abandonar o imóvel ou pedir a rescisão deste contrato, salvo mediante vistoria judicial que apure estar a construção ameaçada de ruína.`);
-    out += clausulaCV(n++, 'Tudo quanto for devido em razão deste contrato e que não comporte cobrança executiva será exigido em ação própria, correndo por conta do devedor os honorários do advogado que a parte credora constituir para esse fim.');
-    out += clausulaCV(n++, `${fLocatario.O} ${termoLocatario} renuncia expressamente ao direito de preferência na aquisição do imóvel. Em caso de venda, ${fLocatario.o} ${termoLocatario} obriga-se a desocupá-lo no prazo de 30 (trinta) dias, contados da notificação prévia ${fLocador.do} ${termoLocador}.`);
-    out += blocoContratoValeAssinatura(n++);
-    out += `<h3>DO FORO</h3>`;
-    out += blocoForoCV(n++, foro);
-    out += `<p>Por estarem assim justos e contratados, firmam o presente instrumento, em duas vias de igual teor, juntamente com 2 (duas) testemunhas.</p>`;
-    out += blocoAssinaturasLocacaoPreview(
-        foro.cidade,
-        [{ nome: locador.nome, label: termoLocador }, { nome: locatario.nome, label: termoLocatario }],
-        e.garantia === 'Fiador' ? { nome: e.fiador_nome, cpf: e.fiador_cpf } : null,
-        [{ nome: e.testemunha_1_nome, cpf: e.testemunha_1_cpf }, { nome: e.testemunha_2_nome, cpf: e.testemunha_2_cpf }]
-    );
-    return out;
-}
-// Logo monocromática pequena + texto do rodapé — mesmo desenho e mesmo texto
-// do rodapé de impressão real em index.html (ver imprimirDeclFormatada()),
-// pra pré-visualização mostrar exatamente o que vai aparecer no PDF final.
-function montarRodapePreviaLocacao() {
-    const logo = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;">
-        <circle cx="50" cy="50" r="48" fill="#f2f2f2" stroke="#8c8c8c" stroke-width="3"/>
-        <path d="M50 18 A32 32 0 1 1 18 50" stroke="#8c8c8c" stroke-width="5" stroke-linecap="round" fill="none"/>
-        <polygon points="50,8 42,22 58,22" fill="#8c8c8c"/>
-        <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="#595959">B</text>
-    </svg>`;
-    return `<div class="preview-rodape">${logo}<span>Contrato elaborado pela Lan House Blackout, Impressões • Contratos • Documentos, WhatsApp 4799991-2755</span></div>`;
-}
-function montarPreviaContratoLocacao(registro) {
-    return `
-    <h2>Pré-visualização do contrato</h2>
-    <div class="preview-note">📄 Este é um rascunho pra você conferir o layout — título, cláusulas, assinaturas e rodapé — antes de publicar de verdade. Nada foi enviado ainda.</div>
-    <div class="preview-paper">
-        <div class="preview-margin-hint">margens ampliadas (~2cm topo/rodapé) na impressão real</div>
-        <h1>CONTRATO DE LOCAÇÃO DE IMÓVEL</h1>
-        ${montarClausulasLocacao(registro)}
-        ${montarRodapePreviaLocacao()}
-        <p style="text-align:center; font-size:9.5px; color:#999; margin-top:6px;">↳ este rodapé se repete em todas as páginas impressas</p>
-    </div>
-    <div id="errorMsg" class="error-msg"></div>
-    <div class="preview-actions">
-        <button class="btn btn-back" id="btnPreviaVoltar">Voltar e editar</button>
-        <button class="btn btn-next" id="btnSubmit">Confirmar e publicar</button>
-    </div>`;
-}
-function abrirPreviaLocacao() {
-    const registro = montarRegistro();
-    document.getElementById('cardArea').innerHTML = montarPreviaContratoLocacao(registro);
-    window.scrollTo(0, 0);
-}
-
 // Monta o registro final (tipo_contrato + dados.pessoa_a/pessoa_b/especifico)
-// a partir do state `s` — extraído de submitForm() pra dar pra reaproveitar
-// na pré-visualização do Contrato de Locação de Imóvel (ver abrirPreviaLocacao()
-// acima), sem duplicar a lógica de montagem nem gravar nada no banco.
+// a partir do state `s`.
 function montarRegistro() {
     // rua/numero/complemento salvos soltos (além do endereco já composto) só
     // pra dar pra recarregar certinho no modo de edição — ver carregarParaEdicao().
@@ -1552,8 +1264,8 @@ async function submitForm() {
     document.getElementById('cardArea').innerHTML = `
         <div class="success-box">
             <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
-            <h2>Contrato enviado!</h2>
-            <p>Recebemos as informações. A equipe da Blackout vai preparar o contrato pra assinatura.</p>
+            <h2>Dados recebidos!</h2>
+            <p>Seus dados foram recebidos com sucesso. Nossa equipe vai conferir as informações e entrar em contato assim que estiver tudo pronto.</p>
         </div>`;
     document.getElementById('progressFill').style.width = '100%';
     document.getElementById('stepLabel').textContent = 'Concluído';
