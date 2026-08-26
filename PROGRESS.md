@@ -945,11 +945,21 @@ Nova sessão. Pedido inicial: reproduzir em HTML, via um PDF de referência que 
 
 **Testado ao vivo**: a ferramenta de navegador desta sessão vinha recusando abrir `index.html`/`sw.js` localmente havia 2 sessões seguidas (só formulários públicos abriam) — contornado subindo um servidor estático próprio via PowerShell (`System.Net.HttpListener`, script em `.claude/scratch/static-server.ps1`, registrado em `.claude/launch.json` como config `blackout-static`; nenhum dos dois é rastreado no git, são só ferramental local desta máquina). Com o painel rodando de verdade (desbloqueado manualmente via DOM só pra navegar, nenhuma escrita usou a senha real): menu carregou normal com os badges certos (Contratos: 1 registro, sem duplicar com Declarações e Procurações — confirma de quebra a mudança da sessão anterior); tela Declarações e Procurações → Declarações → Declaração de Residência com os 2 botões de modelo lado a lado, iguais a antes; `assets/modelos-em-branco/declaracao-residencia-terceiros.pdf` acessado direto pela URL e reconhecido como PDF de verdade pelo navegador (prompt de abrir/baixar), confirmando caminho certo e arquivo íntegro. O clique no botão em si não abriu aba nova nesse navegador de automação (populares bloqueiam `window.open` disparado por clique sintético) — mesmo padrão `window.open(..., '_blank', 'noopener')` já usado em todo botão "Preencher pelo Sistema" da página, então não é um problema do código. **Não testado**: clique de verdade no botão por um humano (usuário vai validar manualmente em produção depois deste deploy).
 
-**Publicado**: a publicar junto com esta entrada do PROGRESS.md.
+**Publicado**: commit `99c6e7b` em `main`, deploy confirmado em produção (`lanblackout.com`) via `curl`, PDF servido com `Content-Type: application/pdf`.
+
+### PDF do "Para mim" chega, e o "Para terceiros" é substituído (2026-08-26, mesmo dia)
+
+Pedido de acompanhamento: o usuário mandou o PDF que faltava (Declaração de Residência — Para mim) e também um PDF novo pro "Para terceiros" (substituindo o arquivado antes). Mudança puramente mecânica, já que o mecanismo (`MODELOS_EM_BRANCO_PDF`/`abrirOuImprimirModeloEmBranco`) foi desenhado pra crescer assim sem tocar em mais nada:
+
+- `assets/modelos-em-branco/declaracao-residencia-proprio.pdf` (novo) e `declaracao-residencia-terceiros.pdf` (substituído pelo arquivo novo).
+- `MODELOS_EM_BRANCO_PDF` ganhou a entrada `DECLARACAO_RESIDENCIA_PROPRIO` — os 2 modelos em branco de Declaração de Residência agora abrem PDF arquivado; os outros 3 (Autônomo, Trabalho, União Estável) continuam no modal HTML de sempre.
+- Nenhuma outra linha de código tocada — só os 2 arquivos PDF e essa 1 linha no mapa.
+
+**Testado**: mesmo servidor estático local da rodada anterior — os 2 caminhos (`declaracao-residencia-proprio.pdf` e o `declaracao-residencia-terceiros.pdf` novo) acessados direto pela URL, reconhecidos como PDF de verdade pelo navegador (prompt de abrir/baixar) nos dois casos, confirmando que os arquivos estão íntegros e nos caminhos certos. **Não testado**: clique nos botões por um humano dentro do painel de verdade (mesma ressalva da rodada anterior).
 
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
 - Editar contrato/declaração/currículo: registros salvos *antes* dessa versão de cada formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
-- Os outros 4 modelos em branco (Declaração de Residência "Para mim", Autônomo, Trabalho, União Estável) ainda usam o modal HTML de sempre — se o usuário mandar o PDF de algum deles, é só acrescentar uma linha em `MODELOS_EM_BRANCO_PDF` (ver seção acima).
+- Os outros 3 modelos em branco (Autônomo, Trabalho, União Estável) ainda usam o modal HTML de sempre — se o usuário mandar o PDF de algum deles, é só acrescentar uma linha em `MODELOS_EM_BRANCO_PDF` (ver seção acima). Os 2 de Declaração de Residência (Para mim/Para terceiros) já usam PDF arquivado.
