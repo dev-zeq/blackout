@@ -1155,6 +1155,19 @@ Pedido: só o layout de geração do PDF (visual corporativo, limpo, profissiona
 
 **Não publicado** — segue como rascunho, aguardando revisão.
 
+## Migrations do módulo Prestação de Serviço aplicadas — módulo publicado e funcional (2026-08-26, mesmo dia)
+
+Depois de publicar o módulo (commit `cecd5a1`), o usuário pediu pra aplicar as duas pendências de banco documentadas acima, que bloqueavam qualquer envio real.
+
+1. **CHECK constraint** (`declaracoes_pendentes_tipo_contrato_check`) — `'PRESTACAO_SERVICO'` adicionado à lista de tipos aceitos (mesma migration já usada quando os 3 tipos de Contrato foram adicionados). Migration `add_prestacao_servico_to_declaracoes_pendentes_check`.
+2. **Edge Function `db-write`** — `declaracoes_pendentes` ganhou `'insert'` no mapa `ALLOWED` (antes só tinha `['update', 'delete']`), necessário pro botão Duplicar (que grava de dentro do painel autenticado, diferente do envio público que usa a policy `anon` direto). Deploy da função, v7 → v8, só essa uma linha alterada — resto do arquivo idêntico.
+
+**Testado ao vivo, ponta a ponta, em produção real** (`lanblackout.com`): preenchido e enviado um orçamento de teste completo pelo `prestador-form.html` publicado (nome "TESTE SESSAO - apagar", claramente marcado) — **envio funcionou** (tela "Dados recebidos!"), confirmando que a CHECK constraint não bloqueia mais. Registro conferido direto no banco via SQL. Aberto o painel (`index.html`) e clicado "Formatar" no registro real — o **documento formatado renderizou certinho com o layout corporativo novo**: cabeçalho com nome/CPF/endereço/telefone, título com número derivado do UUID real e data real, seção Cliente com a referência do local, Serviços com descrição+valor total (R$ 199,90) — confirmando que o pipeline completo (envio → gravação → "Formatar" → PDF) funciona de ponta a ponta. Registro de teste apagado do banco depois (`DELETE ... RETURNING id`, confirmado).
+
+**Não testado ainda**: o botão Duplicar em si (a permissão de `insert` na Edge Function foi adicionada e o mecanismo já existia, mas não cliquei o botão de verdade); impressão física em papel; um envio real com logo anexada.
+
+**Publicado e funcional** — diferente das seções acima (que ficaram só como rascunho até aqui), este módulo agora está ativo em produção e pronto pra uso real.
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
