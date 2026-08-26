@@ -3348,6 +3348,22 @@
         let declProcCategoriaAtiva = 'declaracoes';
         let declProcPendentesCache = [];
 
+        // Modelos em branco em PDF arquivado (2026-08-26, pedido do usuário) —
+        // troca o "renderizar uma imagem de declaração em branco" (modal HTML,
+        // ver MODELOS_EM_BRANCO/abrirModeloEmBranco logo abaixo) por abrir
+        // direto um PDF pronto que o próprio usuário diagramou e arquivou aqui
+        // (ver paineldecontrole/assets/modelos-em-branco/), pra imprimir ou
+        // enviar sem precisar bater o layout HTML com o PDF de referência dele.
+        // Cada tipo aqui tem prioridade sobre o modal HTML — ver
+        // abrirOuImprimirModeloEmBranco() abaixo, que decide qual dos dois usar.
+        // Só entra aqui o tipo que já tiver PDF de verdade arquivado; os que
+        // ainda não têm continuam abrindo o modal HTML normalmente, sem
+        // precisar mexer em nenhum outro lugar do código quando um PDF novo
+        // chegar — só acrescentar uma linha neste objeto.
+        const MODELOS_EM_BRANCO_PDF = {
+            DECLARACAO_RESIDENCIA_TERCEIROS: 'assets/modelos-em-branco/declaracao-residencia-terceiros.pdf',
+        };
+
         // Modelos em branco (2026-08-24) — conteúdo/layout extraído das abas
         // "Em Branco" da planilha "PAINEL DE CONTROLE" (Google Sheets, só como
         // referência de leitura, nada sincronizado nem alterado lá). Só os 4
@@ -3490,6 +3506,19 @@
         }
         window.abrirModeloEmBranco = abrirModeloEmBranco;
 
+        // Ponto único chamado pelos botões "Modelo em Branco" — abre o PDF
+        // arquivado (MODELOS_EM_BRANCO_PDF) quando existir pra esse tipo,
+        // numa aba nova (o navegador já abre com a barra de imprimir/baixar do
+        // próprio visualizador de PDF); sem PDF arquivado, cai no modal HTML
+        // de sempre (abrirModeloEmBranco), sem quebrar os tipos que ainda não
+        // tiverem um PDF pronto.
+        function abrirOuImprimirModeloEmBranco(tipo) {
+            const pdf = MODELOS_EM_BRANCO_PDF[tipo];
+            if (pdf) { window.open(pdf, '_blank', 'noopener'); return; }
+            abrirModeloEmBranco(tipo);
+        }
+        window.abrirOuImprimirModeloEmBranco = abrirOuImprimirModeloEmBranco;
+
         function selecionarCategoriaDeclProc(categoria) {
             declProcCategoriaAtiva = categoria;
             document.getElementById('declProcCatDeclaracoes').classList.toggle('selected', categoria === 'declaracoes');
@@ -3514,7 +3543,7 @@
                             <button class="btn-copy-link" onclick="copyLinkToClipboard('${item.url}', this)" title="Copiar link do sistema">📋</button>
                         </div>
                         <div style="display:flex; gap:8px;">
-                            ${item.modelosEmBranco.map(m => `<button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirModeloEmBranco('${m.tipo}')">${m.label}</button>`).join('')}
+                            ${item.modelosEmBranco.map(m => `<button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirOuImprimirModeloEmBranco('${m.tipo}')">${m.label}</button>`).join('')}
                         </div>
                     </div>`;
                 }
@@ -3524,7 +3553,7 @@
                         <span>${item.label}</span>
                         <div style="display:flex; gap:8px;">
                             <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="window.open('${item.url}', '_blank', 'noopener')">🖥️ Preencher pelo Sistema</button>
-                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirModeloEmBranco('${item.tipoModelo}')">📄 Modelo em Branco</button>
+                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirOuImprimirModeloEmBranco('${item.tipoModelo}')">📄 Modelo em Branco</button>
                             <button class="btn-copy-link" onclick="copyLinkToClipboard('${item.url}', this)" title="Copiar link do sistema">📋</button>
                         </div>
                     </div>`;
