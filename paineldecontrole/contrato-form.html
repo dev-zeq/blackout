@@ -272,6 +272,10 @@ const s = {
     im_tipo_imovel: '', im_tipo_imovel_outro: '', im_finalidade: 'Residenciais',
     im_rua: '', im_numero: '', im_complemento: '', im_cidade: '', im_cidade_outra: '', im_bairro: '', im_bairro_outro: '', im_estado: '',
     im_area: '', im_terreno_frente: '', im_terreno_fundo: '', im_matricula: '', im_cartorio: '',
+    // Unidade dentro da mesma propriedade do Locador (2026-08-26, pedido do
+    // usuário) — só entra em jogo em Locação de Imóvel, quando o endereço do
+    // imóvel bate com o do Locador (ver enderecoImovelIgualLocador()).
+    im_mesma_propriedade_locador: '', im_unidade_tipo: '', im_unidade_extra: '',
 
     forma_pagamento: '', valor_total: '', teve_dinheiro_entrada: '', valor_entrada: '', num_parcelas: '', data_primeira_parcela: '',
 
@@ -321,8 +325,27 @@ function nacionalidadeFinal(p) { return s[p + '_nacionalidade'] === 'Outra' ? s[
 // esquecendo o número) e são compostos num endereço só na hora de enviar/exibir.
 function enderecoFinal(p) {
     const rua = (s[p + '_rua'] || '').trim();
-    const numero = (s[p + '_numero'] || '').trim();
     const complemento = (s[p + '_complemento'] || '').trim();
+    // "Rua e número" campo único em Locação de Imóvel (2026-08-26, pedido do
+    // usuário) — tanto pro Locador ('a') quanto pro imóvel locado ('im'):
+    // rua já vem com o número incluso (ex: "Rua Monte Neblina, 563"), não
+    // concatena número separado. Locatário e Compra e Venda (Vendedor/
+    // Comprador/Imóvel do contrato) continuam com Rua/Número separados, sem
+    // nenhuma mudança.
+    if ((p === 'a' || p === 'im') && s.tipo === 'imovel_locacao') {
+        if (!rua) return '';
+        let out = complemento ? `${rua}, ${complemento}` : rua;
+        // Unidade dentro da mesma propriedade do Locador (2026-08-26, pedido
+        // do usuário) — só existe pro imóvel ('im'), quando a pessoa confirma
+        // que é a mesma propriedade do Locador e escolhe como a unidade é
+        // identificada (ver enderecoImovelIgualLocador()/stepImovelLocacao()).
+        if (p === 'im' && s.im_mesma_propriedade_locador === 'Sim') {
+            const unidade = unidadeImovelTexto();
+            if (unidade) out += (out ? ', ' : '') + unidade;
+        }
+        return out;
+    }
+    const numero = (s[p + '_numero'] || '').trim();
     if (!rua && !numero) return '';
     let out = rua;
     if (numero) out += (out ? ', nº ' : 'nº ') + numero;
@@ -475,15 +498,17 @@ async function processarImagemDocumento(file) {
 
 function mostrarDocConfirmacao(dados) {
     const nac = paraSelecaoOutro(dados.nacionalidade, ['Brasileiro(a)', 'Venezuelano(a)', 'Haitiano(a)']);
+    // Locação de Imóvel (2026-08-26): não pede mais confirmação de nascimento/
+    // órgão emissor/UF emissor pra nenhuma das duas pessoas — esses campos
+    // saíram completamente da etapa de dados pessoais (ver stepPessoa). O
+    // "Ler Documento" só existe em Locação de Imóvel (pilotoDocumento), então
+    // esse overlay nunca abre em Compra e Venda.
     const campos = [
         ['nome_completo', 'Nome completo', dados.nome_completo],
         ['cpf', 'CPF', dados.cpf],
         ['rg', 'RG', dados.rg],
-        ['data_nascimento', 'Data de nascimento', null], // preenchido via flatpickr logo abaixo
         ['nacionalidade', 'Nacionalidade', dados.nacionalidade],
         ['estado_civil', 'Estado civil', dados.estado_civil],
-        ['orgao_emissor', 'Órgão emissor', dados.orgao_emissor],
-        ['uf_emissor', 'UF emissor', dados.uf_emissor],
     ];
     renderDocOverlay(`
         <h3>Confira os dados lidos</h3>
@@ -564,11 +589,15 @@ function buildSteps() {
         // posição fixa 1/2, que só vale pros outros dois tipos de contrato).
         const passoLocador = () => stepPessoa('a', 'LOCADOR', 'Dados de quem está alugando o imóvel (proprietário).');
         passoLocador.__key = 'pessoaA';
+        // Endereço do Locador em etapa própria (2026-08-26, pedido do usuário) —
+        // separada da etapa de dados pessoais dele; ver stepEnderecoLocador().
+        const passoEnderecoLocador = () => stepEnderecoLocador();
+        passoEnderecoLocador.__key = 'enderecoLocador';
         const passoFinalidade = () => stepFinalidadeLocacao();
         passoFinalidade.__key = 'finalidadeLocacao';
         const passoLocatario = () => stepPessoa('b', 'LOCATÁRIO', 'Dados de quem vai morar/ocupar o imóvel.');
         passoLocatario.__key = 'pessoaB';
-        steps = [stepTipo, passoLocador, passoFinalidade, passoLocatario, stepImovelLocacao, stepCondicoesLocacao, stepGarantia, stepTestemunhas, stepRevisao];
+        steps = [stepTipo, passoLocador, passoEnderecoLocador, passoFinalidade, passoLocatario, stepImovelLocacao, stepCondicoesLocacao, stepGarantia, stepTestemunhas, stepRevisao];
     }
 }
 
@@ -583,10 +612,11 @@ function render() {
 
 function afterRenderStep() {
     const key = stepKey();
-    if (key === 'pessoaA') { renderCondCidade('a'); renderCondNacionalidade('a'); renderCondEstado('a'); inicializarCamposData(document.getElementById('cardArea')); }
+    if (key === 'pessoaA') { renderCondNacionalidade('a'); if (s.tipo !== 'imovel_locacao') { renderCondCidade('a'); renderCondEstado('a'); } inicializarCamposData(document.getElementById('cardArea')); }
+    if (key === 'enderecoLocador') { renderCondCidade('a'); renderCondEstado('a'); }
     if (key === 'pessoaB') { renderCondCidade('b'); renderCondNacionalidade('b'); renderCondEstado('b'); inicializarCamposData(document.getElementById('cardArea')); }
     if (key === 'veiculo') { ['v_tipo_veiculo', 'v_fabricante', 'v_cor'].forEach(renderCondSelecaoOutro); }
-    if (key === 'imovel') { renderCondCidade('im'); renderCondSelecaoOutro('im_tipo_imovel'); renderCondAreaImovel(); renderCondEstado('im'); }
+    if (key === 'imovel') { renderCondCidade('im'); renderCondSelecaoOutro('im_tipo_imovel'); renderCondAreaImovel(); renderCondEstado('im'); renderCondMesmaPropriedade(); }
     if (key === 'entrada') renderCondEntradaVeiculo(); // já chama inicializarCamposData internamente, escopado no #condEntrada
     if (key === 'locacao') { inicializarCamposData(document.getElementById('cardArea')); renderCondMultaRescisao(); }
     if (key === 'garantia') renderCondGarantia();
@@ -650,10 +680,18 @@ function locatarioSemEnderecoProprio() {
 }
 
 function stepPessoa(p, papel, subtitulo) {
-    // Piloto controlado: "Ler Documento" e os campos extras que ele preenche
-    // (nascimento/órgão emissor/UF emissor) só aparecem em Locação de Imóvel —
+    // Piloto controlado: "Ler Documento" só aparece em Locação de Imóvel —
     // Compra e Venda (veículo/imóvel) reaproveita esta mesma função sem mudança.
     const pilotoDocumento = s.tipo === 'imovel_locacao';
+    // Dados pessoais padronizados entre Locador e Locatário (2026-08-26,
+    // pedido do usuário) — nascimento/órgão emissor/UF emissor saem
+    // completamente da Locação de Imóvel pras duas pessoas (removidos do
+    // Locador numa mudança anterior; agora o Locatário segue a mesma regra).
+    // Compra e Venda (Vendedor/Comprador) nunca teve esses campos — não muda.
+    // O endereço do Locador vira uma etapa própria (ver stepEnderecoLocador
+    // logo abaixo) — só pra esta pessoa ('a') neste tipo de contrato;
+    // Locatário continua com endereço dentro da própria etapa, sem mudança.
+    const ehLocadorLocacao = p === 'a' && pilotoDocumento;
     return `
     <h2>${esc(papel)}</h2>
     <p class="step-sub">${esc(subtitulo)}</p>
@@ -661,10 +699,6 @@ function stepPessoa(p, papel, subtitulo) {
     <div class="field"><label>Nome completo *</label><input type="text" data-key="${p}_nome" value="${esc(s[p + '_nome'])}"></div>
     <div class="field"><label>CPF *</label><input type="text" data-key="${p}_cpf" value="${esc(s[p + '_cpf'])}"></div>
     <div class="field"><label>RG</label><input type="text" data-key="${p}_rg" value="${esc(s[p + '_rg'])}"></div>
-    ${pilotoDocumento ? `
-    ${campoDataBR(`${p}_nascimento`, 'Data de nascimento', false)}
-    <div class="field"><label>Órgão emissor (RG)</label><input type="text" data-key="${p}_orgao_emissor" value="${esc(s[p + '_orgao_emissor'])}"></div>
-    <div class="field"><label>UF emissor (RG)</label><select data-key="${p}_uf_emissor"><option value="">Selecione</option>${estadoOptions(s[p + '_uf_emissor'])}</select></div>` : ''}
     <div class="field"><label>Gênero *</label>
         <div class="radio-group">${pill(p + '_genero', 'Masculino', s[p + '_genero'] === 'Masculino')}${pill(p + '_genero', 'Feminino', s[p + '_genero'] === 'Feminino')}</div>
     </div>
@@ -673,13 +707,32 @@ function stepPessoa(p, papel, subtitulo) {
         <select data-key="${p}_estado_civil"><option value="">Selecione</option>${['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União Estável'].map(o => `<option value="${o}" ${s[p + '_estado_civil'] === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
     <div class="field"><label>Profissão</label><input type="text" data-key="${p}_profissao" value="${esc(s[p + '_profissao'])}"></div>
-    ${p === 'b' && locatarioSemEnderecoProprio() ? `
+    ${ehLocadorLocacao ? '' : p === 'b' && locatarioSemEnderecoProprio() ? `
     <p class="hint" style="margin:-4px 0 16px;">Como é uma locação residencial, o endereço do LOCATÁRIO será o próprio imóvel alugado — não precisa repetir aqui.</p>` : `
     <div class="field"><label>Rua *</label><input type="text" data-key="${p}_rua" value="${esc(s[p + '_rua'])}"></div>
     <div class="field"><label>Número *</label><input type="text" data-key="${p}_numero" value="${esc(s[p + '_numero'])}"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" data-key="${p}_complemento" value="${esc(s[p + '_complemento'])}"></div>
     ${cidadeCampoHtml(p)}
     <div id="cond_${p}_estado">${estadoCampoHtml(p)}</div>`}
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: endereço do Locador (só Locação de Imóvel) ----------
+// Separada da etapa de dados pessoais do Locador (2026-08-26, pedido do
+// usuário) — Locatário e Compra e Venda continuam com endereço dentro da
+// própria etapa de pessoa, sem mudança nenhuma (ver stepPessoa acima).
+// "Rua e número" é campo único aqui (mesmo padrão já usado nos formulários
+// públicos de Declaração/Procuração) — s.a_rua passa a guardar os dois
+// juntos; s.a_numero deixa de ser preenchido nesse fluxo.
+function stepEnderecoLocador() {
+    return `
+    <h2>Endereço do Locador</h2>
+    <p class="step-sub">Endereço de quem está alugando o imóvel (proprietário).</p>
+    <div class="field"><label>Rua e número *</label><input type="text" data-key="a_rua" value="${esc(s.a_rua)}" placeholder="Rua Monte Neblina, 563"></div>
+    <div class="field"><label>Complemento (não obrigatório)</label><input type="text" data-key="a_complemento" value="${esc(s.a_complemento)}"></div>
+    ${cidadeCampoHtml('a')}
+    <div id="cond_a_estado">${estadoCampoHtml('a')}</div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -745,13 +798,73 @@ function stepImovelLocacao() {
     <h2>Dados do Imóvel</h2>
     <p class="step-sub">Imóvel que será alugado (${s.im_finalidade === 'Comerciais' ? 'uso comercial' : 'uso residencial'}).</p>
     ${campoSelecaoComOutro('im_tipo_imovel', 'Tipo de imóvel', TIPOS_IMOVEL, true)}
-    <div class="field"><label>Rua *</label><input type="text" data-key="im_rua" value="${esc(s.im_rua)}"></div>
-    <div class="field"><label>Número *</label><input type="text" data-key="im_numero" value="${esc(s.im_numero)}"></div>
+    <div class="field"><label>Rua e número *</label><input type="text" data-key="im_rua" value="${esc(s.im_rua)}" placeholder="Rua Monte Neblina, 563"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" data-key="im_complemento" value="${esc(s.im_complemento)}"></div>
     ${cidadeCampoHtml('im')}
     <div id="cond_im_estado">${estadoCampoHtml('im')}</div>
+    <div id="condMesmaPropriedade"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Mesma propriedade do Locador (só Locação de Imóvel) ----------
+// Pedido do usuário (2026-08-26): evitar confusão quando o Locador mora no
+// mesmo endereço do imóvel alugado (ex: casa dos fundos, kitnet no mesmo
+// terreno) — sem complicar quem tem endereços diferentes, que nunca vê essa
+// pergunta. Detecta automaticamente comparando o endereço do imóvel com o do
+// Locador (etapa "Endereço do Locador", ver stepEnderecoLocador); se bater,
+// pergunta se é a mesma propriedade e, em caso de "Sim", como a unidade é
+// identificada — texto que entra no endereço final via enderecoFinal('im').
+function enderecoImovelIgualLocador() {
+    if (s.tipo !== 'imovel_locacao') return false;
+    // Rua e número já vêm juntos nos dois campos (ver enderecoFinal) — a
+    // comparação é uma igualdade direta, sem precisar recompor nada.
+    const norm = v => (v || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!norm(s.im_rua) || !norm(s.a_rua)) return false;
+    if (norm(s.im_rua) !== norm(s.a_rua)) return false;
+    if (!cidadeFinal('im') || cidadeFinal('im') !== cidadeFinal('a')) return false;
+    if (!bairroFinal('im') || bairroFinal('im') !== bairroFinal('a')) return false;
+    if (!estadoFinal('im') || estadoFinal('im') !== estadoFinal('a')) return false;
+    return true;
+}
+const UNIDADES_MESMA_PROPRIEDADE = ['Casa da Frente', 'Casa dos Fundos', 'Kitnet', 'Apartamento', 'Piso Superior', 'Piso Inferior', 'Sala Comercial', 'Bloco', 'Outro'];
+// "Outro" é o identificador completo (texto livre); os demais tipos aceitam
+// um número/letra opcional junto (ex: "Kitnet" + "02" = "Kitnet 02").
+function unidadeImovelTexto() {
+    const tipo = s.im_unidade_tipo;
+    if (!tipo) return '';
+    const extra = (s.im_unidade_extra || '').trim();
+    if (tipo === 'Outro') return extra;
+    return extra ? `${tipo} ${extra}` : tipo;
+}
+function renderCondMesmaPropriedade() {
+    const el = document.getElementById('condMesmaPropriedade');
+    if (!el) return;
+    if (!enderecoImovelIgualLocador()) {
+        // Endereço do imóvel diferente do Locador (ou ainda incompleto) — sem
+        // pergunta extra. Limpa qualquer resposta anterior, pra não deixar
+        // rastro se a pessoa corrigir o endereço depois de ter respondido.
+        if (s.im_mesma_propriedade_locador) { s.im_mesma_propriedade_locador = ''; s.im_unidade_tipo = ''; s.im_unidade_extra = ''; }
+        el.innerHTML = '';
+        return;
+    }
+    el.innerHTML = `
+    <div class="field"><label>Identificamos que o endereço é igual ao do Locador. O imóvel fica na mesma propriedade? *</label>
+        <div class="radio-group">${pill('im_mesma_propriedade_locador', 'Sim', s.im_mesma_propriedade_locador === 'Sim')}${pill('im_mesma_propriedade_locador', 'Não', s.im_mesma_propriedade_locador === 'Não')}</div>
+    </div>
+    <div id="condUnidadeImovel"></div>`;
+    renderCondUnidadeImovel();
+}
+function renderCondUnidadeImovel() {
+    const el = document.getElementById('condUnidadeImovel');
+    if (!el) return;
+    if (s.im_mesma_propriedade_locador !== 'Sim') { el.innerHTML = ''; return; }
+    const ehOutro = s.im_unidade_tipo === 'Outro';
+    el.innerHTML = `
+    <div class="field"><label>Como essa unidade é identificada? *</label>
+        <select data-key="im_unidade_tipo"><option value="">Selecione</option>${UNIDADES_MESMA_PROPRIEDADE.map(o => `<option value="${o}" ${s.im_unidade_tipo === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>${ehOutro ? 'Qual? *' : 'Número ou identificador (não obrigatório)'}</label><input type="text" data-key="im_unidade_extra" value="${esc(s.im_unidade_extra)}" placeholder="ex: 02, B"></div>`;
 }
 
 // ---------- Etapa: pagamento (compra e venda — veículo ou imóvel) ----------
@@ -999,6 +1112,9 @@ function validarPessoa(p) {
     if (!s[p + '_nome'] || !s[p + '_cpf'] || !s[p + '_genero'] || !nacionalidadeFinal(p)) {
         return 'Preencha todos os campos obrigatórios (*).';
     }
+    // Locador de Locação de Imóvel tem etapa própria de endereço (ver
+    // stepEnderecoLocador/validateCurrentStep abaixo) — não valida aqui.
+    if (p === 'a' && s.tipo === 'imovel_locacao') return null;
     // Locatário em locação residencial não tem campo de endereço próprio pra
     // validar — ver locatarioSemEnderecoProprio() e stepPessoa().
     if (p === 'b' && locatarioSemEnderecoProprio()) return null;
@@ -1012,15 +1128,28 @@ function validateCurrentStep() {
     switch (key) {
         case 'tipo': return s.tipo ? null : 'Escolha o tipo de contrato pra continuar.';
         case 'pessoaA': return validarPessoa('a');
+        case 'enderecoLocador':
+            if (!s.a_rua || !cidadeFinal('a') || !bairroFinal('a') || !estadoFinal('a')) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
         case 'finalidadeLocacao': return s.im_finalidade ? null : 'Selecione se a locação é residencial ou comercial.';
         case 'pessoaB': return validarPessoa('b');
         case 'veiculo':
             if (!valorSelecaoOutro('v_tipo_veiculo') || !valorSelecaoOutro('v_fabricante') || !s.v_modelo || !s.v_placa) return 'Preencha todos os campos obrigatórios (*).';
             return null;
-        case 'imovel':
-            if (!valorSelecaoOutro('im_tipo_imovel') || !s.im_rua || !s.im_numero || !cidadeFinal('im') || !bairroFinal('im') || !estadoFinal('im')) return 'Preencha todos os campos obrigatórios (*).';
+        case 'imovel': {
+            // Locação de Imóvel: "Rua e número" é campo único (ver
+            // stepImovelLocacao), não pede im_numero separado. Compra e Venda
+            // continua exatamente como sempre.
+            const numeroObrigatorio = s.tipo !== 'imovel_locacao';
+            if (!valorSelecaoOutro('im_tipo_imovel') || !s.im_rua || (numeroObrigatorio && !s.im_numero) || !cidadeFinal('im') || !bairroFinal('im') || !estadoFinal('im')) return 'Preencha todos os campos obrigatórios (*).';
             if (s.tipo === 'imovel_cv' && valorSelecaoOutro('im_tipo_imovel') === 'Terreno' && (!s.im_terreno_frente || !s.im_terreno_fundo)) return 'Informe os metros de frente e de fundo do terreno.';
+            if (enderecoImovelIgualLocador() && !s.im_mesma_propriedade_locador) return 'Responda se o imóvel fica na mesma propriedade do Locador.';
+            if (s.im_mesma_propriedade_locador === 'Sim') {
+                if (!s.im_unidade_tipo) return 'Selecione como essa unidade é identificada.';
+                if (s.im_unidade_tipo === 'Outro' && !(s.im_unidade_extra || '').trim()) return 'Informe como essa unidade é identificada.';
+            }
             return null;
+        }
         case 'pagamento':
             if (!s.forma_pagamento || !s.valor_total) return 'Preencha todos os campos obrigatórios (*).';
             return null;
@@ -1076,6 +1205,13 @@ cardEl.addEventListener('input', e => {
         const disp = document.getElementById('parcelaValorDisplay');
         if (disp) disp.value = valorParcelaTexto();
     }
+    // Recalcula "mesma propriedade do Locador" só quando o campo digitado
+    // pode mudar a comparação de endereço — nunca ao digitar em
+    // im_unidade_extra (que fica dentro do próprio bloco recalculado, senão
+    // o campo perderia o foco a cada letra digitada).
+    if (s.tipo === 'imovel_locacao' && (key === 'im_rua' || key === 'im_numero' || key === 'im_cidade_outra' || key === 'im_bairro_outro')) {
+        renderCondMesmaPropriedade();
+    }
 });
 cardEl.addEventListener('change', e => {
     const t = e.target;
@@ -1089,10 +1225,12 @@ cardEl.addEventListener('change', e => {
         s[p + '_estado'] = estadoForcadoSC(p) ? 'SC' : '';
         renderCondCidade(p);
         renderCondEstado(p);
+        if (p === 'im') renderCondMesmaPropriedade();
     }
     if (t.dataset.role === 'bairro') {
         const p = t.dataset.prefix;
         renderCondBairroOutro(p);
+        if (p === 'im') renderCondMesmaPropriedade();
     }
     if (t.dataset.role === 'select-outro') { renderCondSelecaoOutro(key); if (key === 'im_tipo_imovel') renderCondAreaImovel(); }
     if (t.type === 'radio' && (key === 'a_nacionalidade' || key === 'b_nacionalidade')) { renderCondNacionalidade(key.slice(0, 1)); }
@@ -1101,6 +1239,8 @@ cardEl.addEventListener('change', e => {
     if (key === 'teve_dinheiro_entrada') { renderCondValorEntradaDinheiro(); const disp = document.getElementById('parcelaValorDisplay'); if (disp) disp.value = valorParcelaTexto(); }
     if (key === 'tem_testemunhas') { renderCondTestemunhas(); }
     if (key === 'multa_rescisao' || key === 'multa_rescisao_tipo') { renderCondMultaRescisao(); }
+    if (key === 'im_estado') { renderCondMesmaPropriedade(); }
+    if (key === 'im_mesma_propriedade_locador' || key === 'im_unidade_tipo') { renderCondUnidadeImovel(); }
 });
 cardEl.addEventListener('click', e => {
     const lerDocBtn = e.target.closest('[data-action="ler-documento"]');
@@ -1228,6 +1368,13 @@ function montarRegistro() {
             multa_rescisao_valor: (s.multa_rescisao === 'Sim' && s.multa_rescisao_tipo === 'Valor fixo') ? (Number(s.multa_rescisao_valor) || null) : null,
             garantia: s.garantia, valor_caucao: s.valor_caucao ? Number(s.valor_caucao) : null,
             fiador_nome: s.fiador_nome || null, fiador_cpf: s.fiador_cpf || null,
+            // Unidade dentro da mesma propriedade do Locador (2026-08-26,
+            // pedido do usuário) — salvos à parte (além de já entrarem
+            // compostos em endereco_imovel, ver enderecoFinal('im')) só pra
+            // dar pra recarregar certinho no modo de edição.
+            mesma_propriedade_locador: s.im_mesma_propriedade_locador || null,
+            unidade_tipo: s.im_mesma_propriedade_locador === 'Sim' ? (s.im_unidade_tipo || null) : null,
+            unidade_extra: s.im_mesma_propriedade_locador === 'Sim' ? (s.im_unidade_extra || null) : null,
         };
     }
 
@@ -1329,6 +1476,22 @@ function carregarCidadeBairro(p, cidadeSalva, bairroSalvo) {
     }
 }
 function carregarEnderecoSolto(p, rua, numero, complemento, enderecoComposto) {
+    // "Rua e número" é campo único em Locação de Imóvel (2026-08-26) — tanto
+    // pro Locador ('a') quanto pro imóvel locado ('im'): registro salvo antes
+    // dessa mudança ainda tem rua/número separados; junta os dois de volta
+    // num "Rua e número" só ao reabrir pra edição (mesmo padrão já usado nos
+    // formulários públicos de Declaração/Procuração), sem perder o número.
+    // Locatário/Compra e Venda continuam com rua/número separados, sem
+    // nenhuma mudança.
+    if ((p === 'a' || p === 'im') && s.tipo === 'imovel_locacao') {
+        if (rua || numero) {
+            s[p + '_rua'] = numero ? `${rua || ''}${rua ? ', ' : ''}${numero}` : (rua || '');
+            s[p + '_complemento'] = complemento || '';
+        } else if (enderecoComposto) {
+            s[p + '_rua'] = enderecoComposto; s[p + '_complemento'] = '';
+        }
+        return;
+    }
     if (rua || numero || complemento) {
         s[p + '_rua'] = rua || ''; s[p + '_numero'] = numero || ''; s[p + '_complemento'] = complemento || '';
     } else if (enderecoComposto) {
@@ -1410,6 +1573,8 @@ function carregarParaEdicao(row) {
         s.multa_rescisao_valor = e.multa_rescisao_valor != null ? String(e.multa_rescisao_valor) : '';
         s.garantia = e.garantia || ''; s.valor_caucao = e.valor_caucao != null ? String(e.valor_caucao) : '';
         s.fiador_nome = e.fiador_nome || ''; s.fiador_cpf = e.fiador_cpf || '';
+        s.im_mesma_propriedade_locador = e.mesma_propriedade_locador || '';
+        s.im_unidade_tipo = e.unidade_tipo || ''; s.im_unidade_extra = e.unidade_extra || '';
     }
     s.tem_testemunhas = e.tem_testemunhas || ((e.testemunha_1_nome || e.testemunha_2_nome) ? 'Sim' : 'Não');
     s.test1_nome = e.testemunha_1_nome || ''; s.test1_cpf = e.testemunha_1_cpf || '';

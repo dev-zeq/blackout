@@ -957,9 +957,40 @@ Pedido de acompanhamento: o usuário mandou o PDF que faltava (Declaração de R
 
 **Testado**: mesmo servidor estático local da rodada anterior — os 2 caminhos (`declaracao-residencia-proprio.pdf` e o `declaracao-residencia-terceiros.pdf` novo) acessados direto pela URL, reconhecidos como PDF de verdade pelo navegador (prompt de abrir/baixar) nos dois casos, confirmando que os arquivos estão íntegros e nos caminhos certos. **Não testado**: clique nos botões por um humano dentro do painel de verdade (mesma ressalva da rodada anterior).
 
+## Contrato de Locação de Imóvel: Locador em etapa própria, "mesma propriedade" e padronização com Locatário (2026-08-26)
+
+Nova sessão, 3 pedidos de acompanhamento em sequência, todos só em `contrato-form.html` (Locação de Imóvel) — Compra e Venda (Veículo/Imóvel) e todo o resto do painel não foram tocados em nenhuma etapa.
+
+### 1) Etapa 2 do Locador enxuta + endereço em etapa própria
+
+Pedido: na etapa do Locador, manter só Nome/CPF/RG (opcional)/Gênero/Nacionalidade/Estado Civil/Profissão — remover Data de Nascimento/Órgão Emissor/UF Emissor por completo — e mover o endereço pra uma nova etapa "Endereço do Locador" logo em seguida, com Rua e número unificados (placeholder de exemplo) + Complemento + Bairro/Cidade/Estado.
+
+`stepPessoa(p, ...)` (função compartilhada por Locador/Locatário/Vendedor/Comprador) ganhou a flag `ehLocadorLocacao` (`p === 'a' && tipo === 'imovel_locacao'`): esconde nascimento/órgão/UF emissor e pula o bloco de endereço só pra esse caso. Nova etapa `stepEnderecoLocador()` (chave própria `enderecoLocador` em `buildSteps()`/`stepKey()`/`afterRenderStep()`/`validateCurrentStep()`) com `a_rua` como campo único ("Rua e número", placeholder de exemplo) + `a_complemento` + cidade/bairro/estado de sempre. `enderecoFinal('a')` ganhou um ramo específico pra Locação de Imóvel (não concatena mais `a_numero`, que fica sem uso nesse fluxo) e `carregarEnderecoSolto('a', ...)` ganhou o merge de volta (rua+número separados de um registro antigo viram "Rua e número" só ao reabrir pra editar). "Ler Documento" (leitura de RG/CNH por IA) continua existindo pro Locador — só a tela de confirmação (`mostrarDocConfirmacao`) parou de pedir os 3 campos removidos quando é ele.
+
+**Testado ao vivo** (servidor estático próprio via PowerShell, `.claude/scratch/static-server.ps1` — contornando a ferramenta de navegador que vinha recusando abrir arquivos locais fora de `paineldecontrole/*-form.html`): fluxo completo percorrido, Etapa 2 conferida sem os 3 campos, nova etapa "Endereço do Locador" com o campo único e o placeholder certos, Locatário reconferido intacto (com os 3 campos e endereço de sempre, sem nenhuma mudança).
+
+### 2) "Mesma propriedade do Locador" — evita endereço duplicado
+
+Pedido: quando o endereço do imóvel alugado bate com o do Locador, perguntar automaticamente se é a mesma propriedade e, se sim, como a unidade é identificada (Casa da Frente/Casa dos Fundos/Kitnet/Apartamento/Piso Superior/Piso Inferior/Sala Comercial/Bloco/Outro + identificador livre tipo "Kitnet 02"), incluindo isso no endereço final do contrato — sem complicar quem tem endereços diferentes.
+
+`enderecoImovelIgualLocador()` compara (normalizado, sem acento/caixa) rua+número, cidade, bairro e estado do imóvel contra os do Locador. `renderCondMesmaPropriedade()`/`renderCondUnidadeImovel()` (dois novos `<div id="cond...">` dentro de `stepImovelLocacao()`) mostram a pergunta Sim/Não e, se Sim, o seletor de unidade — recalculados a cada mudança relevante de endereço via os listeners `input`/`change` já existentes (`cardEl`), sem re-renderizar o campo de texto livre a cada tecla (evitaria perder o foco). `enderecoFinal('im')` acrescenta a identificação da unidade no fim do endereço só quando a resposta é "Sim". Validação nova (`validateCurrentStep`, caso `imovel`) exige a resposta e a identificação quando o endereço bate. Salvo/recarregado em `especifico.mesma_propriedade_locador`/`unidade_tipo`/`unidade_extra` (`montarRegistro()`/`carregarParaEdicao()`), sem tocar nos outros campos do imóvel.
+
+**Testado ao vivo**: caminho positivo (mesmo endereço) — mensagem apareceu sozinha, "Sim" abriu o seletor, "Kitnet" + "02" compôs certinho no "Objeto" da revisão final (`"Casa, Rua das Palmeiras, nº 789, Kitnet 02"`); caminho negativo (endereços diferentes) — nenhuma pergunta extra, fluxo seguiu normal sem nenhuma complicação.
+
+### 3) Locatário padronizado com o Locador + "Rua e número" também no Imóvel
+
+Pedido de acompanhamento: aplicar a mesma remoção (nascimento/órgão/UF emissor) ao Locatário também, e unificar Rua+Número tanto no Locador quanto no **imóvel locado** (não no Locatário, que fica de fora dessa parte — endereço dele continua Rua/Número separados, só entra quando é locação comercial).
+
+Bloco de nascimento/órgão/UF emissor removido de `stepPessoa()` incondicionalmente (antes só sumia pro Locador) — Locatário passa a ter exatamente os mesmos 7 campos pessoais do Locador. `mostrarDocConfirmacao()` simplificada: como "Ler Documento" só existe em Locação de Imóvel, não tem mais motivo pra distinguir Locador de Locatário — nunca mais pede os 3 campos, pra nenhum dos dois. `stepImovelLocacao()`: Rua/Número viram "Rua e número" único (mesmo placeholder de exemplo do Locador), `im_numero` sai do formulário. `enderecoFinal`/`carregarEnderecoSolto` generalizados de `p === 'a'` pra `(p === 'a' || p === 'im') && tipo === 'imovel_locacao'` — mesma lógica de campo único e merge de edição pros dois. `validateCurrentStep` (caso `imovel`, compartilhado com Compra e Venda) ganhou `numeroObrigatorio = tipo !== 'imovel_locacao'`, pra só a Locação dispensar o número separado — Compra e Venda de Imóvel continua exigindo Número como sempre. `enderecoImovelIgualLocador()` simplificado (compara `im_rua`/`a_rua` direto, já que os dois vêm com número incluso agora).
+
+**Testado ao vivo**: Locatário sem os 3 campos confirmado (locação comercial, pra também ver o endereço dele — que ficou com Rua/Número separados, como esperado, sem mudança); "Dados do Imóvel" com "Rua e número" único e o mesmo placeholder; detecção de mesma propriedade reconferida funcionando igual com os campos já unificados dos dois lados, endereço final da revisão saindo certo (`"Sala Comercial, Rua das Palmeiras, 789, Sala Comercial 3"`). **Regressão em Compra e Venda de Imóvel** (que compartilha `enderecoFinal`/`carregarEnderecoSolto`/o caso `imovel` de `validateCurrentStep`): Vendedor/Comprador continuam sem os 3 campos (nunca tiveram) e com Rua/Número separados; campo Número do imóvel comprovadamente continua obrigatório (tentativa de avançar sem preencher foi bloqueada com a mensagem de sempre).
+
+**Publicado**: commit a seguir, deploy confirmado em produção via `curl`.
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
 - Editar contrato/declaração/currículo: registros salvos *antes* dessa versão de cada formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
 - Os outros 3 modelos em branco (Autônomo, Trabalho, União Estável) ainda usam o modal HTML de sempre — se o usuário mandar o PDF de algum deles, é só acrescentar uma linha em `MODELOS_EM_BRANCO_PDF` (ver seção acima). Os 2 de Declaração de Residência (Para mim/Para terceiros) já usam PDF arquivado.
+- Endereço do Locatário (locação comercial) continua com Rua/Número separados — não fazia parte do pedido de unificação desta sessão; se um dia quiserem padronizar também, é a mesma receita já aplicada ao Locador/Imóvel.
