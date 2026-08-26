@@ -504,15 +504,17 @@
         }
 
         /* Orçamento de Prestação de Serviço — layout corporativo (2026-08-26,
-           pedido do usuário: "visual corporativo, limpo e profissional").
+           pedido do usuário: "visual corporativo, limpo e profissional",
+           ajustado no mesmo dia — logo maior, nome em destaque, sem número do
+           orçamento, data por extenso, CNPJ mascarado e assinatura no rodapé).
            Só usado por TIPOS.PRESTACAO_SERVICO.corpo() (ver montarContrato() /
            tituloProprio) — nenhum outro tipo de documento usa estas classes.
-           Paleta em variáveis CSS na raiz .presta-doc (--pd-*), de propósito,
-           pra uma personalização futura (ex: cores extraídas da logo do
-           prestador) só precisar sobrescrever essas variáveis por documento,
-           sem tocar em nenhuma regra abaixo — hoje usa uma paleta neutra fixa,
-           não há extração de cor da imagem implementada ainda. Sempre claro
-           (papel), igual ao .recibo-doc, mesmo com o painel/modal escuros. */
+           Paleta em variáveis CSS na raiz .presta-doc (--pd-*) — quando há
+           logo, `corpo()` tenta extrair uma cor de destaque da própria imagem
+           (ver extrairCorAccentLogo()) e sobrescreve `--pd-accent` inline só
+           naquele documento; sem logo, ou se a extração falhar, fica a
+           paleta neutra fixa abaixo. Sempre claro (papel), igual ao
+           .recibo-doc, mesmo com o painel/modal escuros. */
         .presta-doc {
             --pd-ink: #1e293b; --pd-text: #334155; --pd-dim: #64748b;
             --pd-accent: #2c4a6e; --pd-border: #e2e8f0; --pd-card-bg: #f8fafc;
@@ -520,22 +522,22 @@
             border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
         .presta-doc-content { padding: 34px 32px; }
-        .presta-doc-header { display: flex; align-items: flex-start; gap: 16px; padding-bottom: 20px; border-bottom: 2px solid var(--pd-border); flex-wrap: wrap; }
-        .presta-doc-logo { width: 64px; height: 64px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--pd-border); }
+        .presta-doc-header { display: flex; align-items: center; gap: 22px; padding-bottom: 22px; border-bottom: 2px solid var(--pd-border); flex-wrap: wrap; }
+        .presta-doc-logo { width: 150px; height: 110px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
         .presta-doc-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
         .presta-doc-brand-info { flex: 1; min-width: 180px; }
-        .presta-doc-empresa { font-size: 19px; font-weight: 800; color: var(--pd-ink); line-height: 1.25; }
-        .presta-doc-prestador-linha { font-size: 12.5px; color: var(--pd-dim); margin-top: 2px; line-height: 1.5; }
-        .presta-doc-titulo-area { text-align: center; margin: 26px 0 24px; }
+        .presta-doc-empresa { font-size: 27px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pd-ink); line-height: 1.2; }
+        .presta-doc-prestador-linha { font-size: 13px; color: var(--pd-dim); margin-top: 3px; line-height: 1.6; }
+        .presta-doc-titulo-area { text-align: center; margin: 28px 0 24px; }
         .presta-doc-titulo { font-size: 21px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--pd-ink); }
-        .presta-doc-titulo-meta { font-size: 12.5px; color: var(--pd-dim); margin-top: 6px; letter-spacing: 0.3px; }
-        .presta-doc-card { background: var(--pd-card-bg); border: 1px solid var(--pd-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+        .presta-doc-titulo-meta { font-size: 13px; color: var(--pd-dim); margin-top: 8px; letter-spacing: 0.3px; }
+        .presta-doc-card { background: var(--pd-card-bg); border: 1px solid var(--pd-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
         .presta-doc-card-titulo { font-size: 11.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-accent); margin-bottom: 12px; padding-left: 10px; border-left: 3px solid var(--pd-accent); }
         .presta-doc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 24px; }
         .presta-doc-campo-label { font-size: 10.5px; color: var(--pd-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
         .presta-doc-campo-valor { font-size: 14.5px; color: var(--pd-ink); font-weight: 600; }
         .presta-doc-descricao { font-size: 14px; line-height: 1.7; color: var(--pd-text); white-space: pre-line; }
-        .presta-doc-tabela { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        .presta-doc-tabela { width: 100%; border-collapse: collapse; font-size: 13.5px; break-inside: avoid; page-break-inside: avoid; }
         .presta-doc-tabela th { text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; background: var(--pd-accent); padding: 9px 12px; }
         .presta-doc-tabela th:last-child, .presta-doc-tabela td:last-child { text-align: right; }
         .presta-doc-tabela td { padding: 9px 12px; border-bottom: 1px solid var(--pd-border); color: var(--pd-text); }
@@ -543,9 +545,16 @@
         .presta-doc-total-linha { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 2px solid var(--pd-accent); }
         .presta-doc-total-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-accent); }
         .presta-doc-total-valor { font-size: 26px; font-weight: 900; color: var(--pd-ink); }
+        .presta-doc-assinatura { margin-top: 44px; display: flex; flex-direction: column; align-items: center; break-inside: avoid; page-break-inside: avoid; }
+        .presta-doc-assinatura-linha { width: 280px; border-top: 1px solid var(--pd-ink); margin-bottom: 8px; }
+        .presta-doc-assinatura-nome { font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pd-ink); text-align: center; }
+        .presta-doc-assinatura-tel { font-size: 12px; color: var(--pd-dim); margin-top: 2px; text-align: center; }
         .presta-doc-footer { text-align: center; font-size: 11px; color: var(--pd-dim); margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--pd-border); }
         @media (max-width: 480px) {
             .presta-doc-content { padding: 24px 18px; }
+            .presta-doc-header { gap: 14px; }
+            .presta-doc-logo { width: 96px; height: 76px; }
+            .presta-doc-empresa { font-size: 20px; }
             .presta-doc-grid { grid-template-columns: 1fr; }
             .presta-doc-total-valor { font-size: 21px; }
         }
@@ -4204,6 +4213,82 @@
             return `Esta procuração tem validade de ${escapeHtml((prazo || '').toLowerCase())}, contados a partir da data de assinatura deste instrumento.`;
         }
 
+        // ----- Helpers só do Orçamento de Prestação de Serviço (2026-08-26,
+        // ajuste de layout) — usados só dentro de TIPOS.PRESTACAO_SERVICO.corpo(),
+        // não tocam em nenhum outro tipo de documento. -----
+        const MESES_POR_EXTENSO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        // "26 de agosto de 2026" — pedido do usuário, sempre nesse formato em
+        // pt-BR, no lugar do "Nº XXXXXXXX · DD/MM/AAAA" que existia antes (o
+        // número do orçamento foi removido do PDF por completo).
+        function dataPorExtenso(dt) {
+            return `${dt.getDate()} de ${MESES_POR_EXTENSO[dt.getMonth()]} de ${dt.getFullYear()}`;
+        }
+        // Máscara de CNPJ (00.000.000/0000-00) — só aplica quando sobram
+        // exatamente 14 dígitos depois de tirar tudo que não é número; qualquer
+        // outra coisa (campo vazio, digitado errado, menos/mais dígitos) volta
+        // do jeito que veio, sem quebrar a exibição. Nunca usada em CPF.
+        function formatarCNPJDoc(v) {
+            const d = String(v || '').replace(/\D/g, '');
+            if (d.length !== 14) return v;
+            return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
+        }
+        // Extrai uma cor de destaque a partir da logo (pedido do usuário: "usar
+        // suas cores como referência visual") — média das cores da imagem,
+        // ignorando pixels quase-brancos/quase-transparentes (senão o fundo
+        // branco comum em logo dominaria a média) e depois escurecida até uma
+        // luminosidade máxima de 35% (garante contraste legível como cor de
+        // texto/borda em fundo branco, já que a cor "crua" da logo pode ser
+        // clara demais pra isso). Nunca lança erro — qualquer falha (imagem
+        // corrompida, CORS, etc.) devolve null e quem chama cai na paleta
+        // neutra padrão (--pd-accent já definida no CSS de .presta-doc).
+        function extrairCorAccentLogo(base64) {
+            return new Promise((resolve) => {
+                try {
+                    const img = new Image();
+                    img.onload = () => {
+                        try {
+                            const TAM = 32;
+                            const canvas = document.createElement('canvas');
+                            canvas.width = TAM; canvas.height = TAM;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, TAM, TAM);
+                            const { data } = ctx.getImageData(0, 0, TAM, TAM);
+                            let r = 0, g = 0, b = 0, n = 0;
+                            for (let i = 0; i < data.length; i += 4) {
+                                const [pr, pg, pb, pa] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+                                if (pa < 128) continue;
+                                if (pr > 235 && pg > 235 && pb > 235) continue;
+                                r += pr; g += pg; b += pb; n++;
+                            }
+                            if (!n) { resolve(null); return; }
+                            r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
+                            // RGB -> HSL, clampa luminosidade a 35% (escurece se precisar).
+                            let [rr, gg, bb] = [r / 255, g / 255, b / 255];
+                            const max = Math.max(rr, gg, bb), min = Math.min(rr, gg, bb);
+                            let h = 0, s = 0; const l = (max + min) / 2;
+                            const dlt = max - min;
+                            if (dlt !== 0) {
+                                s = dlt / (1 - Math.abs(2 * l - 1));
+                                if (max === rr) h = ((gg - bb) / dlt) % 6;
+                                else if (max === gg) h = (bb - rr) / dlt + 2;
+                                else h = (rr - gg) / dlt + 4;
+                                h *= 60; if (h < 0) h += 360;
+                            }
+                            const lFinal = Math.min(l, 0.35);
+                            const c = (1 - Math.abs(2 * lFinal - 1)) * s;
+                            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+                            const m = lFinal - c / 2;
+                            let [r2, g2, b2] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+                            const toHex = (v2) => Math.round((v2 + m) * 255).toString(16).padStart(2, '0');
+                            resolve(`#${toHex(r2)}${toHex(g2)}${toHex(b2)}`);
+                        } catch (e) { resolve(null); }
+                    };
+                    img.onerror = () => resolve(null);
+                    img.src = base64;
+                } catch (e) { resolve(null); }
+            });
+        }
+
         const TIPOS = {
             DECLARACAO_AUTONOMO: {
                 titulo: 'DECLARAÇÃO',
@@ -5114,14 +5199,16 @@
             // redesenhado no mesmo dia (pedido de acompanhamento), próprio deste
             // tipo (classes .presta-doc-*, CSS logo abaixo do bloco .recibo-doc-*)
             // e independente do <h1> genérico dos demais tipos (ver `tituloProprio`
-            // em montarContrato()). NÃO é um contrato com cláusulas jurídicas nem
-            // linha de assinatura — só organiza os dados do pedido de forma
-            // profissional pra imprimir/gerar PDF e entregar pro cliente conferir.
+            // em montarContrato()). NÃO é um contrato com cláusulas jurídicas —
+            // só organiza os dados do pedido de forma profissional pra imprimir/
+            // gerar PDF, com uma linha de assinatura simples no final (nome do
+            // responsável + telefone, ambos já coletados na Etapa 1 — nenhum
+            // campo novo no formulário).
             PRESTACAO_SERVICO: {
                 titulo: 'ORÇAMENTO DE PRESTAÇÃO DE SERVIÇO',
                 papeis: ['responsavel', 'cliente'],
                 tituloProprio: true,
-                corpo(d) {
+                async corpo(d) {
                     const dados = d.dados || {};
                     const a = dados.pessoa_a || {};
                     const b = dados.pessoa_b || {};
@@ -5130,10 +5217,13 @@
                     // Identidade de quem presta o serviço (cabeçalho): nome da
                     // empresa em negrito se Jurídica, senão o nome do próprio
                     // responsável (Autônomo) — mesma lógica de tituloEmpresa usada
-                    // na Revisão do formulário.
+                    // na Revisão do formulário. Maiúsculo é aplicado via CSS
+                    // (text-transform), não aqui, pra não perder acentuação.
                     const nomeCabecalho = e.tem_empresa === 'Sim' ? (e.empresa_nome || titleCase(a.nome)) : titleCase(a.nome);
                     const docPrestadorLabel = e.tem_empresa === 'Sim' ? 'CNPJ' : 'CPF';
-                    const docPrestador = e.tem_empresa === 'Sim' ? e.empresa_cnpj : e.prestador_cpf;
+                    // Máscara de CNPJ (2026-08-26, pedido do usuário) — só no CNPJ,
+                    // CPF nunca passa por formatarCNPJDoc().
+                    const docPrestador = e.tem_empresa === 'Sim' ? formatarCNPJDoc(e.empresa_cnpj) : e.prestador_cpf;
                     // titleCase só na parte de texto livre (rua/complemento/bairro/
                     // cidade) — a UF fica de fora e é concatenada depois, senão
                     // titleCase() (que só maiuscula a 1ª letra de cada "palavra"
@@ -5145,8 +5235,18 @@
                     };
                     const enderecoPrestador = enderecoDoc(e.empresa_endereco, e.empresa_complemento, e.empresa_bairro, e.empresa_cidade, e.empresa_estado);
 
-                    const numero = (d.id || '').replace(/-/g, '').slice(0, 8).toUpperCase();
-                    const dataDoc = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+                    // Número do orçamento removido do PDF (pedido do usuário) — só a
+                    // data, por extenso em pt-BR ("26 de agosto de 2026").
+                    const dataObj = d.data_pedido ? new Date(d.data_pedido) : new Date();
+                    const dataDoc = dataPorExtenso(dataObj);
+
+                    // Cor de destaque extraída da logo, quando houver (ver
+                    // extrairCorAccentLogo() acima) — sobrescreve só --pd-accent
+                    // deste documento; sem logo, ou se a extração falhar, fica a
+                    // paleta neutra fixa do CSS de .presta-doc.
+                    const temLogo = e.quer_logo === 'Sim' && !!e.logo_base64;
+                    const corAccent = temLogo ? await extrairCorAccentLogo(e.logo_base64) : null;
+                    const estiloAccent = corAccent ? ` style="--pd-accent:${corAccent};"` : '';
 
                     const campo = (label, valor) => valor ? `<div><div class="presta-doc-campo-label">${escapeHtml(label)}</div><div class="presta-doc-campo-valor">${escapeHtml(String(valor))}</div></div>` : '';
 
@@ -5154,7 +5254,7 @@
                     // da Etapa 3 (2026-08-26): tipo_pessoa/cpf/cnpj/tem_endereco/
                     // referencia, no lugar dos antigos tem_cnpj/endereco fixo.
                     const clienteDocLabel = b.tipo_pessoa === 'Jurídica' ? 'CNPJ' : 'CPF';
-                    const clienteDoc = b.tipo_pessoa === 'Jurídica' ? b.cnpj : b.cpf;
+                    const clienteDoc = b.tipo_pessoa === 'Jurídica' ? formatarCNPJDoc(b.cnpj) : b.cpf;
                     const clienteTelefone = (b.tem_telefone === 'Sim' && b.ddd && b.numero) ? `(${b.ddd}) ${b.numero}` : '';
                     const clienteEnderecoLabel = b.tem_endereco === 'Sim' ? 'Endereço' : 'Referência do local';
                     const clienteEndereco = b.tem_endereco === 'Sim'
@@ -5176,10 +5276,10 @@
                     const materialTexto = e.material_incluso === 'Sim' ? 'Incluso no orçamento' : (e.material_incluso === 'Não' ? 'Por conta do cliente' : '');
 
                     return `
-                    <div class="presta-doc">
+                    <div class="presta-doc"${estiloAccent}>
                         <div class="presta-doc-content">
                             <div class="presta-doc-header">
-                                ${e.quer_logo === 'Sim' && e.logo_base64 ? `<div class="presta-doc-logo"><img src="${e.logo_base64}" alt="Logo"></div>` : ''}
+                                ${temLogo ? `<div class="presta-doc-logo"><img src="${e.logo_base64}" alt="Logo"></div>` : ''}
                                 <div class="presta-doc-brand-info">
                                     <div class="presta-doc-empresa">${escapeHtml(nomeCabecalho || '')}</div>
                                     ${docPrestador ? `<div class="presta-doc-prestador-linha">${docPrestadorLabel}: ${escapeHtml(docPrestador)}</div>` : ''}
@@ -5190,7 +5290,7 @@
 
                             <div class="presta-doc-titulo-area">
                                 <div class="presta-doc-titulo">Orçamento de Prestação de Serviços</div>
-                                <div class="presta-doc-titulo-meta">Nº ${escapeHtml(numero)} &nbsp;·&nbsp; ${escapeHtml(dataDoc)}</div>
+                                <div class="presta-doc-titulo-meta">${escapeHtml(dataDoc)}</div>
                             </div>
 
                             <div class="presta-doc-card">
@@ -5228,6 +5328,12 @@
                                 <div class="presta-doc-card-titulo">Observações</div>
                                 <div class="presta-doc-descricao">${escapeHtml(e.observacao)}</div>
                             </div>` : ''}
+
+                            <div class="presta-doc-assinatura">
+                                <div class="presta-doc-assinatura-linha"></div>
+                                <div class="presta-doc-assinatura-nome">${escapeHtml(titleCase(a.nome) || '')}</div>
+                                ${a.ddd && a.numero ? `<div class="presta-doc-assinatura-tel">Telefone: (${escapeHtml(a.ddd)}) ${escapeHtml(a.numero)}</div>` : ''}
+                            </div>
 
                             <div class="presta-doc-footer">Orçamento gerado digitalmente pelo sistema Blackout</div>
                         </div>
@@ -5308,7 +5414,12 @@
             const cfg = TIPOS[d.tipo_contrato];
             const titulo = cfg ? cfg.titulo : 'DECLARAÇÃO';
             const dadosRevisados = await revisarTextoDocumento(d);
-            const corpo = cfg && cfg.corpo ? cfg.corpo({ ...d, dados: dadosRevisados }) : '<p>Tipo de declaração sem template de formatação ainda.</p>';
+            // await aqui (2026-08-26) só porque TIPOS.PRESTACAO_SERVICO.corpo()
+            // agora é async (extrai cor da logo antes de montar o HTML, ver
+            // extrairCorAccentLogo()) — `await` sobre um valor que já é uma
+            // string comum (todo o resto dos tipos) não muda nada, é sempre
+            // seguro (equivale a Promise.resolve(valor)).
+            const corpo = cfg && cfg.corpo ? await cfg.corpo({ ...d, dados: dadosRevisados }) : '<p>Tipo de declaração sem template de formatação ainda.</p>';
             // tituloFontSize é opcional por tipo (só a Locação de Imóvel define,
             // ver TIPOS.CONTRATO_LOCACAO_IMOVEL) — os demais continuam em 18px.
             const tituloFontSize = (cfg && cfg.tituloFontSize) || 18;
