@@ -1219,6 +1219,20 @@ Pedido: (1) todo campo de valor deve formatar automaticamente enquanto o usuári
 
 **Publicado** — usuário revisou por descrição e autorizou publicar.
 
+## Campo de valor: de máscara ao vivo pra legenda por extenso (2026-08-27, correção de acompanhamento)
+
+Pedido de correção: o mascaramento ao vivo do item anterior (o campo em si reescrevendo "R$ ...,00" a cada tecla) deu a impressão de ficar "acrescentando ,00 várias vezes" durante a digitação — pedido pra voltar o campo pra digitação simples e, em troca, mostrar o valor por extenso (em palavras) numa legenda logo abaixo, atualizando ao vivo. Só `prestador-form.html` mudou, mesmo escopo de sempre.
+
+**O que mudou**:
+- Os dois campos de valor (Etapa Serviços: "Valor total do orçamento" e "Valor do serviço" de cada item) voltaram a ser digitação simples — o campo só remove o que não é dígito (`aplicarLimpezaValorDigitado()`, substituiu `aplicarMascaraValorBRL()`), sem reescrever "R$"/pontuação dentro do próprio input.
+- Nova legenda `.extenso-valor` logo abaixo de cada um desses campos, atualizada a cada tecla (`atualizarExtensoValor()`), mostrando o valor formatado + por extenso — ex: digitando "2500" a legenda mostra "R$ 2.500,00 — dois mil e quinhentos reais".
+- **Valor por extenso via a mesma lib já usada e validada nos contratos de compra e venda** (`extenso` de `esm.sh/extenso@2`, `mode:'currency', currency:{type:'BRL'}` — mesmo uso de `extensoReais()` em `index.html`, replicado aqui só porque os formulários públicos não compartilham módulo entre si, padrão já estabelecido no projeto). Nova import + wrapper `extensoReais()` no topo do `<script type="module">`.
+- `s.valor_total_unico`/`s.itens[i].valor` continuam guardando só os dígitos (ex: `"2500"`) — nenhuma mudança em `valorTotalCalculado()`/`montarRegistro()`/`atualizarTotalItens()` (que já formatava o total certo desde antes).
+
+**Testado ao vivo** (harness local, digitação simulada tecla por tecla): valor único "2500" digitado progressivamente → campo mostrou só "2", "25", "250", "2500" (sem R$/pontuação atrapalhando), legenda atualizou em cada passo até "R$ 2.500,00 — dois mil e quinhentos reais"; item discriminado "1500" → mesmo comportamento, legenda "R$ 1.500,00 — mil e quinhentos reais", total ao vivo da lista acompanhando junto; percorrido até a Revisão, valor total "R$ 1.500,00" certo no resumo. Sem erro de console (import da lib `extenso` carregou sem problema).
+
+**Publicado** — usuário revisou por descrição e autorizou publicar.
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.

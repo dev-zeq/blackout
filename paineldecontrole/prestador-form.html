@@ -38,6 +38,7 @@
     .field { margin-bottom: 16px; }
     .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
     .field .hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+    .extenso-valor { font-size: 11.5px; color: var(--text-faint); margin-top: 5px; min-height: 14px; }
     input[type=text], input[type=tel], input[type=email], input[type=number], select, textarea {
         width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
         background: var(--surface-2); color: var(--text); font-size: 14.5px; font-family: inherit;
@@ -95,6 +96,13 @@
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import extenso from 'https://esm.sh/extenso@2';
+// Mesma lib/uso já validado em index.html (ver extensoReais lá, usada nas
+// cláusulas de pagamento dos contratos) — mode:'currency' já lida com
+// valores inteiros sem mencionar "centavos" quando não há.
+function extensoReais(valor) {
+    return extenso(valor, { mode: 'currency', currency: { type: 'BRL' } });
+}
 const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -287,10 +295,23 @@ function formatarValorBRLExibicao(v) {
     if (!digits) return '';
     return 'R$ ' + Number(digits).toLocaleString('pt-BR') + ',00';
 }
-function aplicarMascaraValorBRL(el) {
+// Reformulado (2026-08-27, pedido do usuário) — o campo em si volta a ser
+// digitação simples (só limpa o que não é dígito, sem sobrescrever com
+// "R$ ...,00" a cada tecla, que dava a impressão de ficar reaparecendo/
+// acrescentando ",00" várias vezes durante a digitação). Em troca, uma
+// legenda logo abaixo do campo mostra o valor formatado + por extenso ao
+// vivo (ver atualizarExtensoValor()) — mesma lib `extenso` já usada nos
+// contratos de compra e venda em index.html.
+function aplicarLimpezaValorDigitado(el) {
     const digits = el.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
-    el.value = digits ? formatarValorBRLExibicao(digits) : '';
+    if (el.value !== digits) el.value = digits;
     return digits;
+}
+function atualizarExtensoValor(elId, digits) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const n = Number(digits);
+    el.textContent = n > 0 ? `${formatarValorBRLExibicao(digits)} — ${extensoReais(n)}` : '';
 }
 
 function valorTotalCalculado() {
@@ -502,7 +523,8 @@ function renderCondPrecificacao() {
     if (s.tipo_precificacao === 'unico') {
         el.innerHTML = `
         <div class="field"><label>Descreva aqui todos os serviços, à vontade *</label><textarea data-key="desc_servicos" rows="8" style="min-height:160px;">${esc(s.desc_servicos)}</textarea></div>
-        <div class="field"><label>Valor total do orçamento *</label><input type="text" inputmode="numeric" data-role="valor-brl" data-key="valor_total_unico" value="${esc(formatarValorBRLExibicao(s.valor_total_unico))}" placeholder="R$ 0,00"></div>`;
+        <div class="field"><label>Valor total do orçamento (em reais, só o número inteiro) *</label><input type="text" inputmode="numeric" data-role="valor-extenso" data-key="valor_total_unico" value="${esc(s.valor_total_unico)}" placeholder="Ex: 2500">
+        <div class="extenso-valor" id="extensoValorUnico">${s.valor_total_unico ? `${formatarValorBRLExibicao(s.valor_total_unico)} — ${extensoReais(Number(s.valor_total_unico))}` : ''}</div></div>`;
     } else if (s.tipo_precificacao === 'itemizado') {
         el.innerHTML = `<div id="itensArea"></div>`;
         renderItensArea();
@@ -523,7 +545,8 @@ function renderItensArea() {
             ${s.itens.length > 1 ? `<button type="button" class="btn-remove" data-remove-item="${i}">remover</button>` : ''}
             <div class="repeat-title">Serviço ${i + 1}${i === 0 ? ' (obrigatório)' : ' (opcional)'}</div>
             <div class="field"><label>Descrição do serviço</label><input type="text" data-item="${i}" data-field="descricao" value="${esc(it.descricao)}"></div>
-            <div class="field"><label>Valor do serviço</label><input type="text" inputmode="numeric" data-role="valor-brl" data-item="${i}" data-field="valor" value="${esc(formatarValorBRLExibicao(it.valor))}" placeholder="R$ 0,00"></div>
+            <div class="field"><label>Valor do serviço (em reais, só o número inteiro)</label><input type="text" inputmode="numeric" data-role="valor-extenso" data-item="${i}" data-field="valor" value="${esc(it.valor)}" placeholder="Ex: 2500">
+            <div class="extenso-valor" id="extensoItem${i}">${it.valor ? `${formatarValorBRLExibicao(it.valor)} — ${extensoReais(Number(it.valor))}` : ''}</div></div>
         </div>`).join('')
         + `<button type="button" class="btn-add" id="btnAddItem">+ Adicionar serviço</button>`
         + `<div class="field" style="margin-top:14px; text-align:right;"><label>Valor total do orçamento</label><div id="totalItensValor" style="font-size:22px; font-weight:800; color:var(--accent-bright);">R$ ${valorTotalCalculado().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></div>`;
@@ -784,16 +807,22 @@ function validateCurrentStep() {
 const cardEl = document.getElementById('cardArea');
 cardEl.addEventListener('input', e => {
     const key = e.target.dataset.key;
-    // Campos de valor em reais (2026-08-26) — mascara e guarda só os
-    // dígitos em `s`/`s.itens[i].valor` (nunca o texto "R$ ..." formatado,
-    // que é só pra exibição); sai cedo, não passa pelos ramos genéricos
-    // abaixo (senão salvaria o texto formatado em vez do número).
-    if (e.target.dataset.role === 'valor-brl') {
-        const digits = aplicarMascaraValorBRL(e.target);
-        if (key) s[key] = digits;
+    // Campos de valor em reais (2026-08-27, reformulado) — o campo em si só
+    // limpa o que não é dígito, sem reescrever "R$ ...,00" a cada tecla (era
+    // isso que dava a sensação de ficar "acrescentando ,00" a cada
+    // digitação); a legenda logo abaixo (valor formatado + por extenso) é
+    // quem atualiza ao vivo, via atualizarExtensoValor(). Sai cedo, não
+    // passa pelos ramos genéricos abaixo.
+    if (e.target.dataset.role === 'valor-extenso') {
+        const digits = aplicarLimpezaValorDigitado(e.target);
+        if (key) {
+            s[key] = digits;
+            atualizarExtensoValor('extensoValorUnico', digits);
+        }
         if (e.target.dataset.item !== undefined) {
             const i = +e.target.dataset.item, f = e.target.dataset.field;
             if (s.itens[i]) s.itens[i][f] = digits;
+            atualizarExtensoValor(`extensoItem${i}`, digits);
             atualizarTotalItens();
         }
         return;
