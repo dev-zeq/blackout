@@ -503,6 +503,56 @@
             #printArea .recibo-doc-watermark svg { width: 340px; height: 340px; }
         }
 
+        /* Orçamento de Prestação de Serviço — layout corporativo (2026-08-26,
+           pedido do usuário: "visual corporativo, limpo e profissional").
+           Só usado por TIPOS.PRESTACAO_SERVICO.corpo() (ver montarContrato() /
+           tituloProprio) — nenhum outro tipo de documento usa estas classes.
+           Paleta em variáveis CSS na raiz .presta-doc (--pd-*), de propósito,
+           pra uma personalização futura (ex: cores extraídas da logo do
+           prestador) só precisar sobrescrever essas variáveis por documento,
+           sem tocar em nenhuma regra abaixo — hoje usa uma paleta neutra fixa,
+           não há extração de cor da imagem implementada ainda. Sempre claro
+           (papel), igual ao .recibo-doc, mesmo com o painel/modal escuros. */
+        .presta-doc {
+            --pd-ink: #1e293b; --pd-text: #334155; --pd-dim: #64748b;
+            --pd-accent: #2c4a6e; --pd-border: #e2e8f0; --pd-card-bg: #f8fafc;
+            background: #fff; color: var(--pd-text); font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+            border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .presta-doc-content { padding: 34px 32px; }
+        .presta-doc-header { display: flex; align-items: flex-start; gap: 16px; padding-bottom: 20px; border-bottom: 2px solid var(--pd-border); flex-wrap: wrap; }
+        .presta-doc-logo { width: 64px; height: 64px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--pd-border); }
+        .presta-doc-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .presta-doc-brand-info { flex: 1; min-width: 180px; }
+        .presta-doc-empresa { font-size: 19px; font-weight: 800; color: var(--pd-ink); line-height: 1.25; }
+        .presta-doc-prestador-linha { font-size: 12.5px; color: var(--pd-dim); margin-top: 2px; line-height: 1.5; }
+        .presta-doc-titulo-area { text-align: center; margin: 26px 0 24px; }
+        .presta-doc-titulo { font-size: 21px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--pd-ink); }
+        .presta-doc-titulo-meta { font-size: 12.5px; color: var(--pd-dim); margin-top: 6px; letter-spacing: 0.3px; }
+        .presta-doc-card { background: var(--pd-card-bg); border: 1px solid var(--pd-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+        .presta-doc-card-titulo { font-size: 11.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-accent); margin-bottom: 12px; padding-left: 10px; border-left: 3px solid var(--pd-accent); }
+        .presta-doc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 24px; }
+        .presta-doc-campo-label { font-size: 10.5px; color: var(--pd-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .presta-doc-campo-valor { font-size: 14.5px; color: var(--pd-ink); font-weight: 600; }
+        .presta-doc-descricao { font-size: 14px; line-height: 1.7; color: var(--pd-text); white-space: pre-line; }
+        .presta-doc-tabela { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        .presta-doc-tabela th { text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; background: var(--pd-accent); padding: 9px 12px; }
+        .presta-doc-tabela th:last-child, .presta-doc-tabela td:last-child { text-align: right; }
+        .presta-doc-tabela td { padding: 9px 12px; border-bottom: 1px solid var(--pd-border); color: var(--pd-text); }
+        .presta-doc-tabela tr:last-child td { border-bottom: none; }
+        .presta-doc-total-linha { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 2px solid var(--pd-accent); }
+        .presta-doc-total-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-accent); }
+        .presta-doc-total-valor { font-size: 26px; font-weight: 900; color: var(--pd-ink); }
+        .presta-doc-footer { text-align: center; font-size: 11px; color: var(--pd-dim); margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--pd-border); }
+        @media (max-width: 480px) {
+            .presta-doc-content { padding: 24px 18px; }
+            .presta-doc-grid { grid-template-columns: 1fr; }
+            .presta-doc-total-valor { font-size: 21px; }
+        }
+        @media print {
+            #printArea .presta-doc { border-radius: 0; box-shadow: none; }
+        }
+
         /* Orçamento de Impressões — seletor de tipo (tema escuro do painel) e
            card final (tema claro, igual ao recibo, pensado pra virar JPG). */
         .orc-tipo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -888,6 +938,40 @@
             </div>
         </div>
 
+        <!-- Prestação de Serviço (2026-08-26, pedido do usuário) — módulo nativo
+             novo que substitui o Google Forms "Orçamento" usado antes pela loja.
+             Mesmo padrão visual/funcional de viewDeclProc/viewTermos (link-row +
+             lista de pendentes com seleção múltipla); Compartilhar/Duplicar são
+             ações extras só deste módulo — ver compartilharPrestador()/
+             duplicarPrestador() no script. -->
+        <div class="view" id="viewPrestador">
+            <button class="back-btn" onclick="goHome()">← Menu</button>
+
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>🧾 Prestação de Serviço</h3>
+                    <span class="table-count" id="prestadorCount">0 registros</span>
+                </div>
+                <div class="link-row">
+                    <span style="cursor:pointer;" onclick="window.open('prestador-form.html', '_blank', 'noopener')">🧾 Link — Orçamento de Prestação de Serviço</span>
+                    <span class="link-row-actions">
+                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('prestador-form.html', this)" title="Copiar link">📋</button>
+                        <span class="arrow" style="cursor:pointer;" onclick="window.open('prestador-form.html', '_blank', 'noopener')">↗</span>
+                    </span>
+                </div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="selPrestadorSelAll" onchange="selPrestador.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="selPrestadorBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="selPrestadorBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="selPrestador.excluirSelecionados('declaracoes_pendentes', async () => { await loadPrestadorPendentes(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
+                    </div>
+                </div>
+                <div id="prestadorRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                </div>
+            </div>
+        </div>
+
         <div class="view" id="viewPlanejamento">
             <button class="back-btn" onclick="goHome()">← Menu</button>
 
@@ -984,17 +1068,10 @@
                     <span class="table-count" id="curriculoCount">0 registros</span>
                 </div>
                 <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">📝 Link — Formulário próprio (novo)</span>
+                    <span style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">📝 Link — Formulário do Cliente</span>
                     <span class="link-row-actions">
                         <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('curriculo-form.html', this)" title="Copiar link">📋</button>
                         <span class="arrow" style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">↗</span>
-                    </span>
-                </div>
-                <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('https://forms.gle/davEvSQfJrXt7jxL6', '_blank', 'noopener')">📝 Link do formulário pro cliente preencher (Google Forms)</span>
-                    <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('https://forms.gle/davEvSQfJrXt7jxL6', this)" title="Copiar link">📋</button>
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('https://forms.gle/davEvSQfJrXt7jxL6', '_blank', 'noopener')">↗</span>
                     </span>
                 </div>
                 <div class="curriculo-busca-wrap">
@@ -1885,6 +1962,10 @@
         window.selDeclProc = selDeclProc;
         const selRecibos = criarSelecaoMultipla({ nome: 'selRecibos' });
         window.selRecibos = selRecibos;
+        // Novo módulo "Prestação de Serviço" (2026-08-26) — mesma receita de 4
+        // passos documentada acima em criarSelecaoMultipla().
+        const selPrestador = criarSelecaoMultipla({ nome: 'selPrestador' });
+        window.selPrestador = selPrestador;
 
         // ===== Atualização em tempo real das listas (2026-08-24, pedido do
         // usuário) =====
@@ -2035,7 +2116,10 @@
             _atualizacaoAutomaticaIniciada = true;
             assinarRealtimeTabela('curriculos', () => { loadCurriculos(); loadPendingCounts(); },
                 (row) => notificarNovoRegistro(`Chegou um currículo novo${row?.nome ? ' — ' + row.nome : ''}`));
-            assinarRealtimeTabela('declaracoes_pendentes', () => { loadDeclaracoesPendentes(); loadPendingCounts(); },
+            // loadPrestadorPendentes() adicionado aqui (2026-08-26) em vez de uma
+            // assinatura de realtime nova — a tabela declaracoes_pendentes já está
+            // coberta por esta mesma assinatura, mesmo cuidado documentado acima.
+            assinarRealtimeTabela('declaracoes_pendentes', () => { loadDeclaracoesPendentes(); loadPendingCounts(); loadPrestadorPendentes(); },
                 (row) => notificarNovoRegistro(`Chegou uma nova solicitação — ${TIPO_CONTRATO_LABELS[row?.tipo_contrato] || 'documento'}`));
             assinarRealtimeTabela('contratos', () => { loadContratos(); });
             assinarRealtimeTabela('recibos', () => { loadRecibos(); });
@@ -2685,6 +2769,10 @@
             planejamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M4 21h16"/><path d="M5 21V10l7-5 7 5v11"/><circle cx="9.5" cy="14.5" r="1.6"/><circle cx="14.5" cy="14.5" r="1.6"/></svg>`,
             recibo: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 3h12v18l-2.5-1.6L13 21l-2.5-1.6L8 21l-2.5-1.6L6 21z"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="11.5" x2="15.5" y2="11.5"/><path d="M8.5 15h4"/></svg>`,
             orcamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><rect x="7" y="14" width="10" height="7"/><line x1="8" y1="17.5" x2="16" y2="17.5"/><line x1="8" y1="20" x2="13" y2="20"/></svg>`,
+            // Novo módulo "Prestação de Serviço" (2026-08-26) — ícone de caixa de
+            // ferramentas, pra diferenciar visualmente de "prestadora" (sub-painel
+            // de links já existente, ícone "prestadora" acima).
+            prestador: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="3" y="9" width="18" height="10" rx="1.5"/><path d="M8 9V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="10.5" y1="12.5" x2="13.5" y2="15.5"/></svg>`,
         };
 
         // Espelha o grid de atalhos da planilha "PAINEL DE CONTROLE" usada na loja.
@@ -2697,6 +2785,10 @@
             { icon: 'declaracao', label: 'Declarações e Procurações', action: { type: 'view', view: 'declProc' }, badgeKey: 'declProc' },
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
             { icon: 'contratos', label: 'Contratos', action: { type: 'view', view: 'termos' }, badgeKey: 'termos' },
+            // Novo módulo nativo (2026-08-26, pedido do usuário) — substitui o
+            // Google Forms "Orçamento" que a loja usava antes (ver
+            // prestador-form.html/viewPrestador/loadPrestadorPendentes).
+            { icon: 'prestador', label: 'Prestação de Serviço', action: { type: 'view', view: 'prestador' }, badgeKey: 'prestador', desc: 'Orçamentos de prestação de serviço enviados pelo cliente.' },
             { icon: 'exames', label: 'Exames', action: { type: 'sub', key: 'exames' } },
             { icon: 'boletos', label: 'Boletos', action: { type: 'sub', key: 'boletos' } },
             { icon: 'detran', label: 'Detran', action: { type: 'sub', key: 'detran' } },
@@ -2717,9 +2809,6 @@
         // uma lista de links diretos (portais de terceiros ou formulários de cliente),
         // exatamente como a loja usa hoje. Sem backend: só abre a URL em nova aba.
         const SUBPANELS = {
-            curriculo: { title: '📄 Currículo', items: [
-                { label: 'Formulário do Cliente', url: 'https://forms.gle/davEvSQfJrXt7jxL6' },
-            ]},
             exames: { title: '🩺 Exames', items: [
                 { label: 'Lab. Camboriú', url: 'https://www.laboratoriocamboriu.com.br/' },
                 { label: 'Central de Exames', url: 'https://centraldeexames.shiftcloud.com.br/shift/lis/cexames/elis/s01.iu.web.Login.cls' },
@@ -2807,12 +2896,12 @@
             ]},
         };
 
-        let viewsInitialized = { caixa: false, termos: false, recibo: false, declProc: false };
+        let viewsInitialized = { caixa: false, termos: false, recibo: false, declProc: false, prestador: false };
 
         // Contagem de itens pendentes pra mostrar como bolinha vermelha nos cards
-        // do menu (Currículo, Contratos, Declarações e Procurações) — atualizada
-        // em loadPendingCounts().
-        let pendingCounts = { curriculo: 0, termos: 0, declProc: 0 };
+        // do menu (Currículo, Contratos, Declarações e Procurações, Prestação de
+        // Serviço) — atualizada em loadPendingCounts().
+        let pendingCounts = { curriculo: 0, termos: 0, declProc: 0, prestador: 0 };
 
         function renderMenu() {
             const grid = document.getElementById('menuGrid');
@@ -2829,16 +2918,21 @@
 
         async function loadPendingCounts() {
             try {
-                const [curriculosRes, declRes, declProcRes] = await Promise.all([
+                const [curriculosRes, declRes, declProcRes, prestadorRes] = await Promise.all([
                     supabase.from('curriculos').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
-                    // Só conta pendentes que NÃO são Declaração/Procuração — esses já
-                    // têm o próprio badge (declProcRes abaixo); sem esse filtro os
-                    // mesmos registros pendentes eram contados duas vezes, uma no
-                    // menu Contratos e outra em Declarações e Procurações.
-                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').not('tipo_contrato', 'in', `(${DECL_PROC_TIPOS_TODOS.join(',')})`),
+                    // Só conta pendentes que NÃO são Declaração/Procuração nem
+                    // Prestação de Serviço — esses já têm o próprio badge (declProcRes/
+                    // prestadorRes abaixo); sem esse filtro os mesmos registros
+                    // pendentes eram contados duas vezes, uma no menu Contratos e
+                    // outra no menu de origem (Declarações e Procurações,
+                    // Prestação de Serviço).
+                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').not('tipo_contrato', 'in', `(${[...DECL_PROC_TIPOS_TODOS, ...PRESTADOR_TIPOS_TODOS].join(',')})`),
                     supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').in('tipo_contrato', DECL_PROC_TIPOS_TODOS),
+                    // Novo módulo "Prestação de Serviço" (2026-08-26) — badge próprio,
+                    // igual ao padrão de declProcRes acima. Ver PRESTADOR_TIPOS_TODOS.
+                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').in('tipo_contrato', PRESTADOR_TIPOS_TODOS),
                 ]);
-                pendingCounts = { curriculo: curriculosRes.count || 0, termos: declRes.count || 0, declProc: declProcRes.count || 0 };
+                pendingCounts = { curriculo: curriculosRes.count || 0, termos: declRes.count || 0, declProc: declProcRes.count || 0, prestador: prestadorRes.count || 0 };
                 renderMenu();
             } catch (error) {
                 console.error('❌ Erro ao carregar contagem de pendentes:', error);
@@ -2886,6 +2980,8 @@
             document.getElementById('viewPlanejamento').classList.toggle('active', view === 'planejamento');
             document.getElementById('viewRecibo').classList.toggle('active', view === 'recibo');
             document.getElementById('viewOrcamento').classList.toggle('active', view === 'orcamento');
+            // Novo módulo "Prestação de Serviço" (2026-08-26) — ver viewPrestador no HTML.
+            document.getElementById('viewPrestador').classList.toggle('active', view === 'prestador');
             if (!viewsInitialized[view]) {
                 viewsInitialized[view] = true;
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
@@ -2894,6 +2990,7 @@
                 else if (view === 'curriculo') loadCurriculos();
                 else if (view === 'planejamento') loadPlanejamento();
                 else if (view === 'recibo') loadRecibos();
+                else if (view === 'prestador') loadPrestadorPendentes();
             }
             scrollToSection(scrollTo);
         }
@@ -2926,6 +3023,7 @@
             document.getElementById('viewPlanejamento').classList.remove('active');
             document.getElementById('viewRecibo').classList.remove('active');
             document.getElementById('viewOrcamento').classList.remove('active');
+            document.getElementById('viewPrestador').classList.remove('active');
             document.getElementById('viewHome').classList.add('active');
             loadPendingCounts();
         }
@@ -3106,6 +3204,10 @@
             CONTRATO_CV_VEICULO: '🚗 Contrato — Compra e Venda de Veículo (formulário do cliente)',
             CONTRATO_CV_IMOVEL: '🏠 Contrato — Compra e Venda de Imóvel',
             CONTRATO_LOCACAO_IMOVEL: '🔑 Contrato — Locação de Imóvel',
+            // Novo módulo "Prestação de Serviço" (2026-08-26, pedido do usuário) —
+            // substitui o Google Forms "Orçamento" que a loja usava antes. Ver
+            // TIPOS.PRESTACAO_SERVICO/viewPrestador/loadPrestadorPendentes abaixo.
+            PRESTACAO_SERVICO: '🧾 Prestação de Serviço',
         };
         let contratosCache = [];
 
@@ -3125,6 +3227,7 @@
             PROCURACAO_SIMPLES: 'procuracao-simples-form.html',
             PROCURACAO_DETRAN: 'procuracao-detran-form.html',
             TERMO_RESPONSABILIDADE_VEICULO: 'termo-responsabilidade-veiculo-form.html',
+            PRESTACAO_SERVICO: 'prestador-form.html',
         };
         let declFormatadoAtual = null; // { id, tabela: 'declaracoes_pendentes', tipo } do contrato/declaração aberto no modal de formatação
 
@@ -3245,6 +3348,14 @@
                 await dbDelete('declaracoes_pendentes', { id });
                 await loadDeclaracoesPendentes();
                 loadPendingCounts();
+                // Botão "Excluir" da view Prestação de Serviço (viewPrestador)
+                // reaproveita esta mesma função genérica (2026-08-26) — sem esta
+                // chamada extra, o registro excluído continuaria aparecendo na
+                // lista de orçamentos pendentes até a próxima visita à view.
+                // loadPrestadorPendentes() já tem sua própria guarda (retorna sem
+                // fazer nada se a view nunca foi aberta na sessão), então é
+                // inofensivo chamar mesmo quando não é uma prestação de serviço.
+                loadPrestadorPendentes();
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
             }
@@ -3257,25 +3368,27 @@
                 // A view "Contratos" (menu Contratos) só mostra pedidos pendentes
                 // que são contrato de verdade (Compra e Venda, Locação — os únicos
                 // tipos que o contrato-form.html gera hoje); Declarações e
-                // Procurações (os 7 tipos de DECL_PROC_TIPOS_TODOS) têm sua própria
-                // view/lista dedicada (viewDeclProc) — por isso ficam de fora daqui,
-                // pra não duplicar o mesmo pedido pendente em dois lugares do menu.
+                // Procurações (os 7 tipos de DECL_PROC_TIPOS_TODOS) e Prestação de
+                // Serviço (PRESTADOR_TIPOS_TODOS) têm sua própria view/lista
+                // dedicada (viewDeclProc/viewPrestador) — por isso ficam de fora
+                // daqui, pra não duplicar o mesmo pedido pendente em dois lugares do menu.
                 const { data, error } = await supabase
                     .from('declaracoes_pendentes')
                     .select('id, tipo_contrato, dados, status, data_pedido')
                     .eq('status', 'PENDENTE')
-                    .not('tipo_contrato', 'in', `(${DECL_PROC_TIPOS_TODOS.join(',')})`)
+                    .not('tipo_contrato', 'in', `(${[...DECL_PROC_TIPOS_TODOS, ...PRESTADOR_TIPOS_TODOS].join(',')})`)
                     .order('data_pedido', { ascending: false });
 
                 if (error) throw new Error(error.message);
                 const contratosPendentes = data || [];
                 // declaracoesPendentesCache é compartilhado com a view Declarações e
-                // Procurações (openDeclaracaoFicha/abrirDeclFormatado leem dela) —
-                // preserva os itens de Declaração/Procuração que loadDeclProcPendentes()
-                // já tiver mesclado aqui antes, só substitui a fatia de contratos que
+                // Procurações e a view Prestação de Serviço
+                // (openDeclaracaoFicha/abrirDeclFormatado leem dela) — preserva os
+                // itens que loadDeclProcPendentes()/loadPrestadorPendentes() já
+                // tiverem mesclado aqui antes, só substitui a fatia de contratos que
                 // esta função é responsável por manter atualizada.
-                const declProcJaNoCache = declaracoesPendentesCache.filter(d => DECL_PROC_TIPOS_TODOS.includes(d.tipo_contrato));
-                declaracoesPendentesCache = [...contratosPendentes, ...declProcJaNoCache];
+                const outrosJaNoCache = declaracoesPendentesCache.filter(d => DECL_PROC_TIPOS_TODOS.includes(d.tipo_contrato) || PRESTADOR_TIPOS_TODOS.includes(d.tipo_contrato));
+                declaracoesPendentesCache = [...contratosPendentes, ...outrosJaNoCache];
 
                 document.getElementById('declPendCount').textContent = contratosPendentes.length + ' registro' + (contratosPendentes.length !== 1 ? 's' : '');
                 selDeclPend.definirListaAtual(contratosPendentes.map(d => d.id));
@@ -3347,6 +3460,13 @@
         const DECL_PROC_TIPOS_TODOS = [...DECL_PROC_CATEGORIAS.declaracoes.tipos, ...DECL_PROC_CATEGORIAS.procuracoes.tipos];
         let declProcCategoriaAtiva = 'declaracoes';
         let declProcPendentesCache = [];
+
+        // Novo módulo "Prestação de Serviço" (2026-08-26, pedido do usuário) —
+        // mesmo padrão de DECL_PROC_TIPOS_TODOS acima (array de tipos que a view
+        // Contratos e loadPendingCounts() precisam excluir pra não contar/mostrar
+        // o mesmo pedido pendente duas vezes). Só um tipo hoje; array por
+        // consistência com o padrão já usado, caso o módulo ganhe variações depois.
+        const PRESTADOR_TIPOS_TODOS = ['PRESTACAO_SERVICO'];
 
         // Modelos em branco em PDF arquivado (2026-08-26, pedido do usuário) —
         // troca o "renderizar uma imagem de declaração em branco" (modal HTML,
@@ -3654,6 +3774,137 @@
             }
         }
         window.declProcExcluir = declProcExcluir;
+
+        // ===== Módulo "Prestação de Serviço" (2026-08-26, pedido do usuário) =====
+        // Substitui o Google Forms "Orçamento" que a loja usava antes — módulo
+        // nativo novo, sem tocar em nenhum módulo existente. Mesmo padrão de
+        // view/cache independente já usado por loadDeclProcPendentes() acima:
+        // busca própria, cache próprio, só mescla os registros no cache global
+        // declaracoesPendentesCache pra abrirDeclFormatado()/openDeclaracaoFicha()/
+        // deleteDeclaracaoPendente() funcionarem de graça (são genéricas por
+        // tipo_contrato, já cobrem qualquer tipo novo que apareça nesse cache).
+        let prestadorPendentesCache = [];
+
+        function renderPrestadorRows() {
+            const container = document.getElementById('prestadorRows');
+            if (!container) return;
+            document.getElementById('prestadorCount').textContent = prestadorPendentesCache.length + ' registro' + (prestadorPendentesCache.length !== 1 ? 's' : '');
+            selPrestador.definirListaAtual(prestadorPendentesCache.map(d => d.id));
+            if (prestadorPendentesCache.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum orçamento pendente</div></div>';
+                return;
+            }
+            container.innerHTML = prestadorPendentesCache.map(d => {
+                const dataFmt = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : '-';
+                const nomeResp = d.dados?.pessoa_a?.nome || '-';
+                const nomeCliente = d.dados?.pessoa_b?.nome || '-';
+                return `<div class="contrato-card">
+                    ${selPrestador.checkboxHtml(d.id)}
+                    <div class="contrato-info" style="cursor:pointer;" onclick="openDeclaracaoFicha('${d.id}')">
+                        <b>🧾 ${escapeHtml(nomeResp)}</b>
+                        <span class="subtext">👤 Cliente: ${escapeHtml(nomeCliente)}</span>
+                        <span class="subtext">📅 ${dataFmt}</span>
+                    </div>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="abrirDeclFormatado('${d.id}')" title="Formatar">📄</button>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="compartilharPrestador('${d.id}')" title="Compartilhar">📤</button>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="duplicarPrestador('${d.id}')" title="Duplicar">📑</button>
+                    <button class="btn-delete" onclick="deleteDeclaracaoPendente('${d.id}')" title="Excluir">🗑️</button>
+                </div>`;
+            }).join('');
+        }
+
+        // Busca própria (não reaproveita declaracoesPendentesCache de viewTermos)
+        // — mesmo padrão independente de loadDeclProcPendentes().
+        async function loadPrestadorPendentes() {
+            const container = document.getElementById('prestadorRows');
+            if (!container) return;
+            try {
+                const { data, error } = await supabase
+                    .from('declaracoes_pendentes')
+                    .select('id, tipo_contrato, dados, status, data_pedido')
+                    .eq('status', 'PENDENTE')
+                    .in('tipo_contrato', PRESTADOR_TIPOS_TODOS)
+                    .order('data_pedido', { ascending: false });
+                if (error) throw new Error(error.message);
+                prestadorPendentesCache = data || [];
+                // abrirDeclFormatado()/openDeclaracaoFicha()/deleteDeclaracaoPendente()
+                // leem de declaracoesPendentesCache (cache global usado por
+                // viewTermos e pelo modal de formatação) — precisa ficar com os
+                // registros desse módulo também, senão "Formatar"/a ficha abrem
+                // vazios quando só essa view foi visitada na sessão. Mesmo
+                // cuidado de loadDeclProcPendentes() acima.
+                const idsJaNoCache = new Set(declaracoesPendentesCache.map(d => d.id));
+                prestadorPendentesCache.forEach(d => { if (!idsJaNoCache.has(d.id)) declaracoesPendentesCache.push(d); });
+                renderPrestadorRows();
+            } catch (error) {
+                console.error('❌ Erro ao carregar orçamentos de prestação de serviço:', error);
+                container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}</div>`;
+            }
+        }
+        window.loadPrestadorPendentes = loadPrestadorPendentes;
+
+        // Resumo em texto simples do orçamento — usado só por compartilharPrestador()
+        // (Web Share API/clipboard não aceitam HTML formatado).
+        function textoResumoPrestador(d) {
+            const dados = d.dados || {};
+            const a = dados.pessoa_a || {}, b = dados.pessoa_b || {}, e = dados.especifico || {};
+            const linhas = ['ORÇAMENTO DE PRESTAÇÃO DE SERVIÇO', ''];
+            linhas.push(`Responsável: ${a.nome || '-'}`);
+            if (e.tem_empresa === 'Sim' && e.empresa_nome) linhas.push(`Empresa: ${e.empresa_nome}${e.empresa_cnpj ? ' — CNPJ ' + e.empresa_cnpj : ''}`);
+            linhas.push(`Cliente: ${b.nome || '-'}`);
+            if (e.tipo_precificacao === 'itemizado' && Array.isArray(e.itens) && e.itens.length) {
+                linhas.push('', 'Serviços:');
+                e.itens.forEach(it => linhas.push(`- ${it.descricao || ''}: R$ ${Number(it.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`));
+            } else if (e.desc_servicos) {
+                linhas.push('', `Serviços: ${e.desc_servicos}`);
+            }
+            linhas.push('', `Valor total: R$ ${Number(e.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+            if (e.forma_pagamento) linhas.push(`Forma de pagamento: ${e.forma_pagamento}`);
+            if (e.dias_execucao) linhas.push(`Prazo de execução: ${e.dias_execucao} dias`);
+            if (e.validade_orcamento) linhas.push(`Validade do orçamento: ${e.validade_orcamento}`);
+            return linhas.join('\n');
+        }
+
+        // Ação nova "Compartilhar" (2026-08-26) — não existe em nenhum outro
+        // módulo hoje (confirmado por busca no código antes de implementar), só
+        // faz sentido aqui. Web Share API do navegador (celular) quando
+        // disponível; sem suporte (a maioria dos desktops), copia o texto pro
+        // clipboard — mesmo mecanismo de copyLinkToClipboard() acima.
+        async function compartilharPrestador(id) {
+            const d = declaracoesPendentesCache.find(x => x.id === id);
+            if (!d) return;
+            const texto = textoResumoPrestador(d);
+            if (navigator.share) {
+                try { await navigator.share({ title: 'Orçamento de Prestação de Serviço', text: texto }); return; }
+                catch (error) { if (error && error.name === 'AbortError') return; }
+            }
+            try {
+                await navigator.clipboard.writeText(texto);
+            } catch (error) {
+                const ta = document.createElement('textarea');
+                ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            }
+            alert('Compartilhamento do aparelho indisponível — o texto do orçamento foi copiado pro clipboard.');
+        }
+        window.compartilharPrestador = compartilharPrestador;
+
+        // Ação nova "Duplicar" (2026-08-26) — não existe em nenhum outro módulo
+        // hoje. Clona os mesmos `dados`/`tipo_contrato` num INSERT novo (novo id/
+        // data_pedido gerados pelo próprio banco), status sempre PENDENTE.
+        async function duplicarPrestador(id) {
+            const d = declaracoesPendentesCache.find(x => x.id === id);
+            if (!d) return;
+            if (!confirm('Duplicar este orçamento? Um novo registro pendente será criado com os mesmos dados.')) return;
+            try {
+                await dbInsert('declaracoes_pendentes', { tipo_contrato: d.tipo_contrato, dados: d.dados, status: 'PENDENTE' });
+                await loadPrestadorPendentes();
+                loadPendingCounts();
+            } catch (error) {
+                alert('Erro ao duplicar: ' + error.message);
+            }
+        }
+        window.duplicarPrestador = duplicarPrestador;
 
         // ===== Motor de contratos (blocos componíveis — ver CONTRATOS-SPEC.md) =====
         // g()/qualificar() são blocos puros reaproveitados por qualquer tipo de
@@ -4857,6 +5108,132 @@
                     return out;
                 }
             },
+
+            // Módulo "Prestação de Serviço" (criado 2026-08-26, substitui o Google
+            // Forms "Orçamento" que a loja usava antes) — layout corporativo
+            // redesenhado no mesmo dia (pedido de acompanhamento), próprio deste
+            // tipo (classes .presta-doc-*, CSS logo abaixo do bloco .recibo-doc-*)
+            // e independente do <h1> genérico dos demais tipos (ver `tituloProprio`
+            // em montarContrato()). NÃO é um contrato com cláusulas jurídicas nem
+            // linha de assinatura — só organiza os dados do pedido de forma
+            // profissional pra imprimir/gerar PDF e entregar pro cliente conferir.
+            PRESTACAO_SERVICO: {
+                titulo: 'ORÇAMENTO DE PRESTAÇÃO DE SERVIÇO',
+                papeis: ['responsavel', 'cliente'],
+                tituloProprio: true,
+                corpo(d) {
+                    const dados = d.dados || {};
+                    const a = dados.pessoa_a || {};
+                    const b = dados.pessoa_b || {};
+                    const e = dados.especifico || {};
+
+                    // Identidade de quem presta o serviço (cabeçalho): nome da
+                    // empresa em negrito se Jurídica, senão o nome do próprio
+                    // responsável (Autônomo) — mesma lógica de tituloEmpresa usada
+                    // na Revisão do formulário.
+                    const nomeCabecalho = e.tem_empresa === 'Sim' ? (e.empresa_nome || titleCase(a.nome)) : titleCase(a.nome);
+                    const docPrestadorLabel = e.tem_empresa === 'Sim' ? 'CNPJ' : 'CPF';
+                    const docPrestador = e.tem_empresa === 'Sim' ? e.empresa_cnpj : e.prestador_cpf;
+                    // titleCase só na parte de texto livre (rua/complemento/bairro/
+                    // cidade) — a UF fica de fora e é concatenada depois, senão
+                    // titleCase() (que só maiuscula a 1ª letra de cada "palavra"
+                    // separada por espaço) deixaria a sigla minúscula por estar
+                    // colada ao resto da string ("...camboriú/sc" em vez de "/SC").
+                    const enderecoDoc = (rua, complemento, bairro, cidade, estado) => {
+                        const base = titleCase([rua, complemento, bairro, cidade].filter(Boolean).join(', '));
+                        return [base, estado].filter(Boolean).join('/');
+                    };
+                    const enderecoPrestador = enderecoDoc(e.empresa_endereco, e.empresa_complemento, e.empresa_bairro, e.empresa_cidade, e.empresa_estado);
+
+                    const numero = (d.id || '').replace(/-/g, '').slice(0, 8).toUpperCase();
+                    const dataDoc = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+
+                    const campo = (label, valor) => valor ? `<div><div class="presta-doc-campo-label">${escapeHtml(label)}</div><div class="presta-doc-campo-valor">${escapeHtml(String(valor))}</div></div>` : '';
+
+                    // Cliente — nomes de campo atualizados junto com a reformulação
+                    // da Etapa 3 (2026-08-26): tipo_pessoa/cpf/cnpj/tem_endereco/
+                    // referencia, no lugar dos antigos tem_cnpj/endereco fixo.
+                    const clienteDocLabel = b.tipo_pessoa === 'Jurídica' ? 'CNPJ' : 'CPF';
+                    const clienteDoc = b.tipo_pessoa === 'Jurídica' ? b.cnpj : b.cpf;
+                    const clienteTelefone = (b.tem_telefone === 'Sim' && b.ddd && b.numero) ? `(${b.ddd}) ${b.numero}` : '';
+                    const clienteEnderecoLabel = b.tem_endereco === 'Sim' ? 'Endereço' : 'Referência do local';
+                    const clienteEndereco = b.tem_endereco === 'Sim'
+                        ? enderecoDoc(b.rua, b.complemento, b.bairro, b.cidade, b.estado)
+                        : titleCase(b.referencia || '');
+
+                    // Serviços — tabela com cada item se discriminado, ou só a
+                    // descrição livre se valor único; o total destacado é o mesmo
+                    // componente visual nos dois casos.
+                    let servicosHtml = '';
+                    if (e.tipo_precificacao === 'itemizado' && Array.isArray(e.itens) && e.itens.length) {
+                        servicosHtml = `<table class="presta-doc-tabela"><thead><tr><th>Descrição</th><th>Valor</th></tr></thead><tbody>
+                            ${e.itens.map(it => `<tr><td>${escapeHtml(it.descricao || '')}</td><td>${fmt(it.valor)}</td></tr>`).join('')}
+                        </tbody></table>`;
+                    } else if (e.desc_servicos) {
+                        servicosHtml = `<div class="presta-doc-descricao">${escapeHtml(e.desc_servicos)}</div>`;
+                    }
+
+                    const materialTexto = e.material_incluso === 'Sim' ? 'Incluso no orçamento' : (e.material_incluso === 'Não' ? 'Por conta do cliente' : '');
+
+                    return `
+                    <div class="presta-doc">
+                        <div class="presta-doc-content">
+                            <div class="presta-doc-header">
+                                ${e.quer_logo === 'Sim' && e.logo_base64 ? `<div class="presta-doc-logo"><img src="${e.logo_base64}" alt="Logo"></div>` : ''}
+                                <div class="presta-doc-brand-info">
+                                    <div class="presta-doc-empresa">${escapeHtml(nomeCabecalho || '')}</div>
+                                    ${docPrestador ? `<div class="presta-doc-prestador-linha">${docPrestadorLabel}: ${escapeHtml(docPrestador)}</div>` : ''}
+                                    ${enderecoPrestador ? `<div class="presta-doc-prestador-linha">${escapeHtml(enderecoPrestador)}</div>` : ''}
+                                    ${a.ddd && a.numero ? `<div class="presta-doc-prestador-linha">(${escapeHtml(a.ddd)}) ${escapeHtml(a.numero)}</div>` : ''}
+                                </div>
+                            </div>
+
+                            <div class="presta-doc-titulo-area">
+                                <div class="presta-doc-titulo">Orçamento de Prestação de Serviços</div>
+                                <div class="presta-doc-titulo-meta">Nº ${escapeHtml(numero)} &nbsp;·&nbsp; ${escapeHtml(dataDoc)}</div>
+                            </div>
+
+                            <div class="presta-doc-card">
+                                <div class="presta-doc-card-titulo">Dados do Cliente</div>
+                                <div class="presta-doc-grid">
+                                    ${campo('Nome', titleCase(b.nome))}
+                                    ${campo(clienteDocLabel, clienteDoc)}
+                                    ${campo('Telefone', clienteTelefone)}
+                                    ${campo(clienteEnderecoLabel, clienteEndereco)}
+                                </div>
+                            </div>
+
+                            <div class="presta-doc-card">
+                                <div class="presta-doc-card-titulo">Serviços</div>
+                                ${servicosHtml}
+                                <div class="presta-doc-total-linha">
+                                    <span class="presta-doc-total-label">Valor Total</span>
+                                    <span class="presta-doc-total-valor">${fmt(e.valor_total)}</span>
+                                </div>
+                            </div>
+
+                            <div class="presta-doc-card">
+                                <div class="presta-doc-card-titulo">Informações Complementares</div>
+                                <div class="presta-doc-grid">
+                                    ${campo('Material', materialTexto)}
+                                    ${campo('Forma de pagamento', e.forma_pagamento)}
+                                    ${campo('Prazo de execução', e.dias_execucao ? `${e.dias_execucao} dias` : '')}
+                                    ${campo('Validade do orçamento', e.validade_orcamento)}
+                                    ${campo('Nota fiscal', e.nota_fiscal)}
+                                </div>
+                                ${e.especificar_material === 'Sim' && e.lista_material ? `<div class="presta-doc-descricao" style="margin-top:12px;">${escapeHtml(e.lista_material)}</div>` : ''}
+                            </div>
+
+                            ${e.tem_observacao === 'Sim' && e.observacao ? `<div class="presta-doc-card">
+                                <div class="presta-doc-card-titulo">Observações</div>
+                                <div class="presta-doc-descricao">${escapeHtml(e.observacao)}</div>
+                            </div>` : ''}
+
+                            <div class="presta-doc-footer">Orçamento gerado digitalmente pelo sistema Blackout</div>
+                        </div>
+                    </div>`;
+                },
+            },
         };
 
         // ----- Revisão automática de texto (Declarações/Procurações/Contratos)
@@ -4935,6 +5312,13 @@
             // tituloFontSize é opcional por tipo (só a Locação de Imóvel define,
             // ver TIPOS.CONTRATO_LOCACAO_IMOVEL) — os demais continuam em 18px.
             const tituloFontSize = (cfg && cfg.tituloFontSize) || 18;
+            // tituloProprio (2026-08-26, só TIPOS.PRESTACAO_SERVICO define) — pro
+            // layout corporativo novo do Orçamento de Prestação de Serviço, que
+            // desenha seu próprio cabeçalho (logo/empresa/título/data/número)
+            // dentro do corpo(); sem essa flag o <h1> genérico apareceria
+            // duplicado por cima. Nenhum outro tipo foi afetado (default falso,
+            // comportamento de sempre).
+            if (cfg && cfg.tituloProprio) return corpo;
             return `<h1 style="text-align:center; font-size:${tituloFontSize}px; letter-spacing:1px; margin-bottom:22px;">${titulo}</h1>${corpo}`;
         }
         async function abrirDeclFormatado(id) {

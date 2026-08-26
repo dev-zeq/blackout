@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Orçamento de Prestação de Serviço — Blackout</title>
+<style>
+    :root {
+        --bg: #05170c;
+        --surface: #0c1f14;
+        --surface-2: #0f2818;
+        --border: rgba(255,255,255,0.08);
+        --text: #eafff1;
+        --text-dim: #8fa89a;
+        --text-faint: #5c7568;
+        --accent: #22c55e;
+        --accent-bright: #4ade80;
+        --accent-dim: rgba(34,197,94,0.12);
+        --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #0a2415 0%, var(--bg) 55%); color: var(--text);
+        padding: 24px 16px 60px;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 22px; }
+    .header .logo { width: 52px; height: 52px; margin: 0 auto 10px; }
+    .header h1 { font-size: 19px; margin: 0 0 4px; }
+    .header p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+    .progress-track { height: 5px; background: var(--surface); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); border-radius: 10px; transition: width .25s ease; }
+    .step-label { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-bright); margin-bottom: 18px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 22px 18px; }
+    .card h2 { font-size: 15px; margin: 0 0 6px; color: var(--text); }
+    .step-sub { font-size: 12.5px; color: var(--text-dim); margin: 0 0 16px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+    .field .hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+    input[type=text], input[type=tel], input[type=email], input[type=number], select, textarea {
+        width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); color: var(--text); font-size: 14.5px; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .radio-group, .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-pill { flex: 1 1 auto; min-width: 90px; }
+    .radio-pill input { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-pill .pill-label {
+        display: block; text-align: center; padding: 11px 10px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .12s;
+    }
+    .radio-pill input:checked + .pill-label { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+    .repeat-block { border: 1px dashed var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; position: relative; }
+    .repeat-block .repeat-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-bright); margin-bottom: 10px; }
+    .btn-remove { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--danger); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .btn-add { width: 100%; padding: 12px; border-radius: 12px; border: 1px dashed rgba(34,197,94,0.4); background: none; color: var(--accent-bright); font-size: 13px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+    .nav-row { display: flex; gap: 10px; margin-top: 22px; }
+    .btn { flex: 1; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn-next { background: linear-gradient(135deg, var(--accent-bright), var(--accent)); color: #05170c; box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
+    .btn-back { background: var(--surface-2); color: var(--text-dim); flex: 0 0 90px; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .error-msg { color: var(--danger); font-size: 12px; margin-top: 10px; display: none; }
+    .review-item { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+    .review-item .rk { color: var(--text-dim); }
+    .review-item .rv { color: var(--text); text-align: right; font-weight: 600; }
+    .success-box { text-align: center; padding: 40px 10px; }
+    .success-box .check { width: 64px; height: 64px; margin: 0 auto 18px; }
+    .success-box h2 { font-size: 18px; margin-bottom: 8px; }
+    .success-box p { color: var(--text-dim); font-size: 13.5px; }
+    @media (max-width: 380px) { .card { padding: 18px 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="46" fill="#05170c" stroke="#22C55E" stroke-width="4"/>
+            <g fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round">
+                <path d="M 50 10 A 40 40 0 1 1 12 60"/>
+            </g>
+            <polygon points="50,8 42,22 58,22" fill="#22C55E"/>
+            <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
+        </svg>
+        <h1>Orçamento de Prestação de Serviço</h1>
+        <p>Preencha os dados abaixo e a gente monta o orçamento pra você.</p>
+    </div>
+
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="step-label" id="stepLabel"></div>
+
+    <div class="card" id="cardArea"></div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pill(name, value, checked, label) {
+    const id = name + '_' + value.replace(/\W/g, '');
+    return `<label class="radio-pill"><input type="radio" name="${name}" data-key="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''}><span class="pill-label" for="${id}">${esc(label || value)}</span></label>`;
+}
+const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+function estadoOptions(selected) {
+    return ESTADOS_BR.map(u => `<option value="${u}" ${selected === u ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+// ---------- Telefone (DDD + número), copiado literalmente de curriculo-form.html
+// (sem import entre formulários públicos — é o padrão já usado no projeto:
+// cada formulário duplica esse bloco em vez de compartilhar módulo). ----------
+const DDDS_BR = [
+    ['11', 'SP'], ['12', 'SP'], ['13', 'SP'], ['14', 'SP'], ['15', 'SP'], ['16', 'SP'], ['17', 'SP'], ['18', 'SP'], ['19', 'SP'],
+    ['21', 'RJ'], ['22', 'RJ'], ['24', 'RJ'],
+    ['27', 'ES'], ['28', 'ES'],
+    ['31', 'MG'], ['32', 'MG'], ['33', 'MG'], ['34', 'MG'], ['35', 'MG'], ['37', 'MG'], ['38', 'MG'],
+    ['41', 'PR'], ['42', 'PR'], ['43', 'PR'], ['44', 'PR'], ['45', 'PR'], ['46', 'PR'],
+    ['47', 'SC'], ['48', 'SC'], ['49', 'SC'],
+    ['51', 'RS'], ['53', 'RS'], ['54', 'RS'], ['55', 'RS'],
+    ['61', 'DF'],
+    ['62', 'GO'], ['64', 'GO'],
+    ['63', 'TO'],
+    ['65', 'MT'], ['66', 'MT'],
+    ['67', 'MS'],
+    ['68', 'AC'],
+    ['69', 'RO'],
+    ['71', 'BA'], ['73', 'BA'], ['74', 'BA'], ['75', 'BA'], ['77', 'BA'],
+    ['79', 'SE'],
+    ['81', 'PE'], ['87', 'PE'],
+    ['82', 'AL'],
+    ['83', 'PB'],
+    ['84', 'RN'],
+    ['85', 'CE'], ['88', 'CE'],
+    ['86', 'PI'], ['89', 'PI'],
+    ['91', 'PA'], ['93', 'PA'], ['94', 'PA'],
+    ['92', 'AM'], ['97', 'AM'],
+    ['95', 'RR'],
+    ['96', 'AP'],
+    ['98', 'MA'], ['99', 'MA'],
+];
+function dddOptions(selecionado) {
+    return DDDS_BR.map(([ddd, uf]) => `<option value="${ddd}" ${selecionado === ddd ? 'selected' : ''}>${ddd} — ${uf}</option>`).join('');
+}
+function normalizarTelefoneBR(numero) {
+    const d = (numero || '').replace(/\D/g, '');
+    if (d.length === 8) return '9' + d;
+    if (d.length === 9) return d;
+    return null;
+}
+function campoTelefoneBR(labelDdd, labelNumero, attrsDdd, attrsNumero, valorDdd, valorNumero, obrigatorio) {
+    const marcador = obrigatorio ? ' *' : '';
+    return `
+        <div class="field"><label>${esc(labelDdd)}${marcador}</label><select ${attrsDdd}><option value="">Selecione</option>${dddOptions(valorDdd)}</select></div>
+        <div class="field"><label>${esc(labelNumero)}${marcador}</label><input type="tel" ${attrsNumero} value="${esc(valorNumero)}" placeholder="8 ou 9 dígitos"></div>`;
+}
+function validarTelefoneBR(ddd, numero, obrigatorio) {
+    if (!ddd && !numero) return obrigatorio ? 'Preencha o DDD e o número do telefone.' : null;
+    if (!ddd || !numero) return 'Preencha o DDD e o número do telefone.';
+    if (!normalizarTelefoneBR(numero)) return 'Telefone inválido — informe 8 ou 9 dígitos (sem o DDD).';
+    return null;
+}
+
+// ---------- Cidade/Estado (região onde a Blackout atua), copiado/adaptado de
+// contrato-form.html: CIDADES_SC/estadoForcadoSC()/estadoCampoHtml()/
+// renderCondEstado()/cidadeCampoHtml(). Aqui o Bairro NÃO fica amarrado à
+// cidade escolhida (o orçamento pede um seletor de bairro único — ver
+// BAIRROS_ORCAMENTO/campoSelecaoComOutro abaixo), por isso cidadeCampoHtml()
+// aqui só cuida de Cidade/Estado, sem embutir o <select> de bairro. ----------
+const CIDADES_OPTS = ['Camboriú', 'Balneário Camboriú', 'Itapema', 'Itajaí', 'Outra'];
+const CIDADES_SC = ['Camboriú', 'Balneário Camboriú', 'Itapema', 'Itajaí'];
+function cidadeOptions(selected) {
+    return '<option value="">Selecione</option>' + CIDADES_OPTS.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
+}
+function cidadeCampoHtml(p) {
+    return `<div class="field"><label>Cidade *</label><select data-key="${p}_cidade" data-role="cidade" data-prefix="${p}">${cidadeOptions(s[p + '_cidade'])}</select></div><div id="cond_${p}_cidade"></div>`;
+}
+function renderCondCidade(p) {
+    const el = document.getElementById(`cond_${p}_cidade`);
+    if (!el) return;
+    el.innerHTML = s[p + '_cidade'] === 'Outra' ? `<div class="field"><label>Qual cidade? *</label><input type="text" data-key="${p}_cidade_outra" value="${esc(s[p + '_cidade_outra'])}"></div>` : '';
+}
+function cidadeFinal(p) { return s[p + '_cidade'] === 'Outra' ? s[p + '_cidade_outra'] : s[p + '_cidade']; }
+function estadoForcadoSC(p) { return CIDADES_SC.includes(s[p + '_cidade']); }
+function estadoFinal(p) { return estadoForcadoSC(p) ? 'SC' : s[p + '_estado']; }
+function estadoCampoHtml(p) {
+    if (estadoForcadoSC(p)) { s[p + '_estado'] = 'SC'; return ''; }
+    return `<div class="field"><label>Estado *</label><select data-key="${p}_estado"><option value="">Selecione</option>${estadoOptions(s[p + '_estado'])}</select></div>`;
+}
+function renderCondEstado(p) {
+    const el = document.getElementById(`cond_${p}_estado`);
+    if (!el) return;
+    el.innerHTML = estadoCampoHtml(p);
+}
+
+// ---------- Campo <select> com opção "Outro" que libera texto livre, copiado
+// literalmente de contrato-form.html (campoSelecaoComOutro/
+// renderCondSelecaoOutro/valorSelecaoOutro) — mesmo padrão já usado pra
+// nacionalidade/tipo de veículo, reaproveitado aqui pro seletor de Bairro
+// (13 bairros fixos + Outro), que não existia ainda como componente pronto. ----------
+function campoSelecaoComOutro(key, label, opcoes, obrigatorio) {
+    const val = s[key];
+    return `<div class="field"><label>${esc(label)}${obrigatorio ? ' *' : ''}</label>
+        <select data-key="${key}" data-role="select-outro">
+            <option value="">Selecione</option>
+            ${opcoes.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
+            <option value="Outro" ${val === 'Outro' ? 'selected' : ''}>Outro</option>
+        </select>
+    </div><div id="cond_${key}"></div>`;
+}
+function renderCondSelecaoOutro(key) {
+    const el = document.getElementById(`cond_${key}`);
+    if (!el) return;
+    el.innerHTML = s[key] === 'Outro' ? `<div class="field"><label>Qual?</label><input type="text" data-key="${key}_outro" value="${esc(s[key + '_outro'])}"></div>` : '';
+}
+function valorSelecaoOutro(key) { return s[key] === 'Outro' ? s[key + '_outro'] : s[key]; }
+// Caminho inverso de valorSelecaoOutro() — usado só ao recarregar um registro
+// salvo pra edição (ver carregarParaEdicao).
+function paraSelecaoOutro(valor, opcoes) {
+    if (!valor) return { valor: '', outro: '' };
+    return opcoes.includes(valor) ? { valor, outro: '' } : { valor: 'Outro', outro: valor };
+}
+
+// 13 bairros informados pelo usuário (extraídos do Google Forms "Orçamento")
+// + "Outro" liberando texto livre — não amarrado a nenhuma cidade específica,
+// diferente do seletor de bairro usado em contrato-form.html/declaracao-*-form.html.
+const BAIRROS_ORCAMENTO = ['Monte Alegre', 'Tabuleiro', 'Municípios', 'Estados', 'Nova Esperança', 'Nações', 'Centro', 'Vila Real', 'Várzea do Ranchinho', 'Canhanduba', 'Rio Pequeno', 'Areias', 'Santa Regina'];
+
+// ---------- Estado ----------
+const s = {
+    resp_nome: '', resp_ddd: '', resp_numero: '',
+    tem_empresa: '', // 'Sim' | 'Não'
+
+    emp_nome: '', emp_cnpj: '', emp_cpf: '', emp_profissao: '',
+    emp_rua: '', emp_complemento: '',
+    emp_bairro: '', emp_bairro_outro: '', emp_cidade: '', emp_cidade_outra: '', emp_estado: '',
+
+    cli_nome: '', cli_funcao: '',
+    cli_tem_telefone: '', cli_ddd: '', cli_numero: '',
+    cli_tipo_pessoa: '', // 'Física' | 'Jurídica'
+    cli_cpf: '', cli_empresa_nome: '', cli_cnpj: '',
+    cli_tem_endereco: '', // 'Sim' | 'Não'
+    cli_rua: '', cli_complemento: '',
+    cli_bairro: '', cli_bairro_outro: '', cli_cidade: '', cli_cidade_outra: '', cli_estado: '',
+    cli_referencia: '',
+
+    tipo_precificacao: '', // 'unico' | 'itemizado'
+    itens: [], // [{descricao, valor}]
+    desc_servicos: '', valor_total_unico: '',
+
+    material_incluso: '', especificar_material: '', lista_material: '',
+
+    nota_fiscal: '', forma_pagamento: '', forma_pagamento_outro: '', dias_execucao: '', validade_orcamento: '',
+    tem_observacao: '', observacao: '',
+    quer_logo: '', // 'Sim' | 'Não' — imagem em si fica fora de `s` (ver logoFile/logoBase64)
+};
+
+function valorTotalCalculado() {
+    if (s.tipo_precificacao === 'itemizado') {
+        return s.itens.reduce((acc, it) => acc + (Number(it.valor) || 0), 0);
+    }
+    return Number(s.valor_total_unico) || 0;
+}
+
+let stepIndex = 0;
+let steps = [];
+
+// Etapa 2 (stepEmpresa) sempre aparece, pra qualquer resposta da Etapa 1 —
+// reformulada em 2026-08-26 (pedido do usuário) pra virar "Dados do
+// Prestador", com conteúdo condicional por dentro da própria função
+// (CPF+Profissão se Autônomo, Nome+CNPJ se Empresa, endereço comum aos
+// dois) em vez de a etapa inteira sumir no caminho Autônomo como antes.
+function buildSteps() {
+    steps = [stepResponsavel, stepEmpresa, stepCliente, stepServicos, stepDadosFinais, stepRevisao];
+    if (stepIndex >= steps.length) stepIndex = steps.length - 1;
+}
+
+function render() {
+    const total = steps.length;
+    document.getElementById('progressFill').style.width = (total > 1 ? Math.round((stepIndex / (total - 1)) * 100) : 0) + '%';
+    document.getElementById('stepLabel').textContent = total > 1 ? `Etapa ${stepIndex + 1} de ${total}` : 'Comece por aqui';
+    const card = document.getElementById('cardArea');
+    card.innerHTML = steps[stepIndex]();
+    afterRenderStep();
+}
+
+// Identifica a etapa atual pelo nome da função (funções nomeadas, não
+// arrow-wrapped) — independe do índice, que muda conforme tem_empresa.
+function stepKey() { return steps[stepIndex].name; }
+
+function afterRenderStep() {
+    const key = stepKey();
+    if (key === 'stepEmpresa') { renderCondSelecaoOutro('emp_bairro'); renderCondCidade('emp'); renderCondEstado('emp'); }
+    // stepCliente (2026-08-26): renderCondEnderecoCliente() já cuida de
+    // renderCondSelecaoOutro('cli_bairro')/renderCondCidade('cli')/
+    // renderCondEstado('cli') por dentro — esses 3 campos só existem no DOM
+    // quando o endereço completo está sendo mostrado (cli_tem_endereco==='Sim').
+    if (key === 'stepCliente') { renderCondTelefoneCliente(); renderCondTipoPessoaCliente(); renderCondEnderecoCliente(); }
+    if (key === 'stepServicos') { renderCondPrecificacao(); }
+    if (key === 'stepDadosFinais') { renderCondMaterialLista(); renderCondFormaPagamentoOutro(); renderCondObservacao(); }
+    if (key === 'stepRevisao') { renderCondLogo(); }
+}
+
+function goNext() {
+    const err = validateCurrentStep();
+    if (err) { showError(err); return; }
+    if (stepIndex < steps.length - 1) { stepIndex++; render(); window.scrollTo(0, 0); }
+}
+function goBack() { if (stepIndex > 0) { stepIndex--; render(); window.scrollTo(0, 0); } }
+function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+window.__goNext = goNext;
+window.__goBack = goBack;
+
+// ---------- Etapa: Responsável (dados da empresa que preenche o orçamento) ----------
+// Reformulada em 2026-08-26 (pedido do usuário): só 3 perguntas — nome
+// completo, telefone WhatsApp (mesmas regras de curriculo-form.html, já
+// reaproveitadas literalmente acima: DDDS_BR/campoTelefoneBR/
+// validarTelefoneBR/normalizarTelefoneBR) e, ao final, "Como você prestará
+// este serviço?" (Autônomo/Empresa) — essa resposta continua guardada em
+// `s.tem_empresa` ('Não'=Autônomo, 'Sim'=Empresa) só pra não precisar tocar
+// em mais nada do resto do fluxo (buildSteps()/stepEmpresa/
+// validateCurrentStep/montarRegistro/carregarParaEdicao já leem esse campo
+// e continuam funcionando sem nenhuma mudança) — só o texto da pergunta e a
+// ordem/rótulo das opções mudaram, o direcionamento pra Etapa 2 (Dados da
+// Empresa Contratada) continua automático via buildSteps().
+function stepResponsavel() {
+    return `
+    <h2>Dados do Responsável</h2>
+    <p class="step-sub">Quem está preenchendo esse orçamento.</p>
+    <div class="field"><label>Nome completo do responsável pelo orçamento *</label><input type="text" data-key="resp_nome" value="${esc(s.resp_nome)}"></div>
+    ${campoTelefoneBR('DDD do WhatsApp', 'Número do WhatsApp', 'data-key="resp_ddd"', 'data-key="resp_numero"', s.resp_ddd, s.resp_numero, true)}
+    <div class="field"><label>Como você prestará este serviço? *</label>
+        <div class="radio-group">${pill('tem_empresa', 'Não', s.tem_empresa === 'Não', 'Autônomo (CPF)')}${pill('tem_empresa', 'Sim', s.tem_empresa === 'Sim', 'Empresa (CNPJ)')}</div>
+    </div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa 2: Dados do Prestador (2026-08-26, reformulada) ----------
+// Aparece sempre, pras duas respostas da Etapa 1. Conteúdo condicional por
+// dentro da função: CPF (obrigatório) + Profissão se Autônomo; Nome da
+// empresa + CNPJ (ambos obrigatórios) se Empresa. Endereço completo é
+// comum aos dois caminhos (rua e número juntos, complemento opcional,
+// bairro/cidade/estado — sem CEP, sem inscrição estadual, sem telefone:
+// nenhum desses três foi pedido e o telefone já foi coletado na Etapa 1).
+function stepEmpresa() {
+    const autonomo = s.tem_empresa === 'Não';
+    return `
+    <h2>${autonomo ? 'Dados do Prestador (Autônomo)' : 'Dados da Empresa Contratada'}</h2>
+    <p class="step-sub">${autonomo ? 'Seus dados como profissional autônomo.' : 'Dados da empresa que vai fornecer o serviço.'}</p>
+    ${autonomo ? `
+    <div class="field"><label>CPF *</label><input type="text" data-key="emp_cpf" value="${esc(s.emp_cpf)}" placeholder="000.000.000-00"></div>
+    <div class="field"><label>Profissão</label><input type="text" data-key="emp_profissao" value="${esc(s.emp_profissao)}"></div>
+    ` : `
+    <div class="field"><label>Nome da empresa *</label><input type="text" data-key="emp_nome" value="${esc(s.emp_nome)}"></div>
+    <div class="field"><label>CNPJ da empresa *</label><input type="text" data-key="emp_cnpj" value="${esc(s.emp_cnpj)}" placeholder="00.000.000/0000-00"></div>
+    `}
+    <div class="field"><label>Endereço (rua e número) *</label><input type="text" data-key="emp_rua" value="${esc(s.emp_rua)}" placeholder="Rua Monte Neblina, 563"></div>
+    <div class="field"><label>Complemento</label><input type="text" data-key="emp_complemento" value="${esc(s.emp_complemento)}" placeholder="Apto, sala, bloco... (opcional)"></div>
+    ${campoSelecaoComOutro('emp_bairro', 'Bairro', BAIRROS_ORCAMENTO, true)}
+    ${cidadeCampoHtml('emp')}
+    <div id="cond_emp_estado">${estadoCampoHtml('emp')}</div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa 3: Dados sobre o Cliente (2026-08-26, reformulada) ----------
+// Ordem pedida pelo usuário: nome do responsável (obrigatório) + função
+// (opcional) -> telefone de contato (Sim/Não, mesma regra de DDD/telefone
+// do Currículo/Contrato) -> pessoa física (CPF opcional) ou jurídica (nome
+// da empresa + CNPJ, os dois opcionais) -> endereço completo do local do
+// serviço (Sim/Não); Sim pede rua e número, complemento opcional, bairro,
+// cidade, estado; Não pede só uma referência livre (obrigatória nesse
+// caso, senão não sobra nenhum jeito de identificar o local no PDF).
+function stepCliente() {
+    return `
+    <h2>Dados sobre o Cliente</h2>
+    <p class="step-sub">Quem vai receber os serviços.</p>
+    <div class="field"><label>Nome do responsável pelo cliente *</label><input type="text" data-key="cli_nome" value="${esc(s.cli_nome)}"></div>
+    <div class="field"><label>Função</label><input type="text" data-key="cli_funcao" value="${esc(s.cli_funcao)}" placeholder="Opcional"></div>
+    <div class="field"><label>Quer informar um telefone de contato do cliente?</label>
+        <div class="radio-group">${pill('cli_tem_telefone', 'Sim', s.cli_tem_telefone === 'Sim')}${pill('cli_tem_telefone', 'Não', s.cli_tem_telefone === 'Não', 'Não')}</div>
+    </div>
+    <div id="condTelefoneCliente"></div>
+    <div class="field"><label>O orçamento será para pessoa física ou jurídica? *</label>
+        <div class="radio-group">${pill('cli_tipo_pessoa', 'Física', s.cli_tipo_pessoa === 'Física', 'Física (CPF)')}${pill('cli_tipo_pessoa', 'Jurídica', s.cli_tipo_pessoa === 'Jurídica', 'Jurídica (CNPJ)')}</div>
+    </div>
+    <div id="condTipoPessoaCliente"></div>
+    <div class="field"><label>Quer informar o endereço completo do local do serviço?</label>
+        <div class="radio-group">${pill('cli_tem_endereco', 'Sim', s.cli_tem_endereco === 'Sim')}${pill('cli_tem_endereco', 'Não', s.cli_tem_endereco === 'Não', 'Não')}</div>
+    </div>
+    <div id="condEnderecoCliente"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondTelefoneCliente() {
+    const el = document.getElementById('condTelefoneCliente');
+    if (!el) return;
+    el.innerHTML = s.cli_tem_telefone === 'Sim' ? campoTelefoneBR('DDD do telefone do cliente', 'Número do telefone do cliente (sem DDD)', 'data-key="cli_ddd"', 'data-key="cli_numero"', s.cli_ddd, s.cli_numero, true) : '';
+}
+function renderCondTipoPessoaCliente() {
+    const el = document.getElementById('condTipoPessoaCliente');
+    if (!el) return;
+    if (s.cli_tipo_pessoa === 'Física') {
+        el.innerHTML = `<div class="field"><label>CPF</label><input type="text" data-key="cli_cpf" value="${esc(s.cli_cpf)}" placeholder="000.000.000-00 (opcional)"></div>`;
+    } else if (s.cli_tipo_pessoa === 'Jurídica') {
+        el.innerHTML = `<div class="field"><label>Nome da empresa</label><input type="text" data-key="cli_empresa_nome" value="${esc(s.cli_empresa_nome)}" placeholder="Opcional"></div>
+            <div class="field"><label>CNPJ</label><input type="text" data-key="cli_cnpj" value="${esc(s.cli_cnpj)}" placeholder="00.000.000/0000-00 (opcional)"></div>`;
+    } else {
+        el.innerHTML = '';
+    }
+}
+function renderCondEnderecoCliente() {
+    const el = document.getElementById('condEnderecoCliente');
+    if (!el) return;
+    if (s.cli_tem_endereco === 'Sim') {
+        el.innerHTML = `<div class="field"><label>Endereço do local do serviço (rua e número) *</label><input type="text" data-key="cli_rua" value="${esc(s.cli_rua)}" placeholder="Rua Monte Neblina, 563"></div>
+            <div class="field"><label>Complemento</label><input type="text" data-key="cli_complemento" value="${esc(s.cli_complemento)}" placeholder="Apto, sala, bloco... (opcional)"></div>
+            ${campoSelecaoComOutro('cli_bairro', 'Bairro', BAIRROS_ORCAMENTO, true)}
+            ${cidadeCampoHtml('cli')}
+            <div id="cond_cli_estado">${estadoCampoHtml('cli')}</div>`;
+        renderCondSelecaoOutro('cli_bairro');
+        renderCondCidade('cli');
+        renderCondEstado('cli');
+    } else if (s.cli_tem_endereco === 'Não') {
+        el.innerHTML = `<div class="field"><label>Referência do local *</label><input type="text" data-key="cli_referencia" value="${esc(s.cli_referencia)}" placeholder="Ex: perto de tal ponto conhecido..."></div>`;
+    } else {
+        el.innerHTML = '';
+    }
+}
+
+// ---------- Etapa: Serviços e Preços ----------
+// ---------- Etapa: Serviços Prestados (2026-08-26, reformulada) ----------
+// "Valor único" -> descrição livre em texto grande + um campo de total
+// digitado manualmente. "Discriminado" -> lista dinâmica sem limite de
+// itens (o usuário pode adicionar quantos serviços quiser), com soma
+// automática exibida ao vivo logo abaixo da lista (ver atualizarTotalItens,
+// chamada a cada tecla digitada num valor, sem re-renderizar a lista
+// inteira pra não perder o foco do campo). O PDF (TIPOS.PRESTACAO_SERVICO.
+// corpo() em index.html) já tratava os dois casos certinho desde a criação
+// do módulo — valor único mostra só a descrição + total, discriminado lista
+// cada serviço com seu valor + total no final — não precisou de nenhuma
+// mudança lá.
+function stepServicos() {
+    return `
+    <h2>Serviços Prestados</h2>
+    <p class="step-sub">Como você quer informar os valores desse orçamento.</p>
+    <div class="field"><label>Como deseja informar os valores deste orçamento? *</label>
+        <div class="radio-group">
+            ${pill('tipo_precificacao', 'unico', s.tipo_precificacao === 'unico', 'Valor único para todos os serviços')}
+            ${pill('tipo_precificacao', 'itemizado', s.tipo_precificacao === 'itemizado', 'Discriminar cada serviço individualmente')}
+        </div>
+    </div>
+    <div id="condPrecificacao"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondPrecificacao() {
+    const el = document.getElementById('condPrecificacao');
+    if (!el) return;
+    if (s.tipo_precificacao === 'unico') {
+        el.innerHTML = `
+        <div class="field"><label>Descreva aqui todos os serviços, à vontade *</label><textarea data-key="desc_servicos" rows="8" style="min-height:160px;">${esc(s.desc_servicos)}</textarea></div>
+        <div class="field"><label>Valor total do orçamento (R$) *</label><input type="number" step="0.01" data-key="valor_total_unico" value="${esc(s.valor_total_unico)}"></div>`;
+    } else if (s.tipo_precificacao === 'itemizado') {
+        el.innerHTML = `<div id="itensArea"></div>`;
+        renderItensArea();
+    } else {
+        el.innerHTML = '';
+    }
+}
+// Lista repetível de itens (descrição + valor) — mesmo padrão de Cursos/
+// Experiências/Referências de curriculo-form.html, mas sem limite de
+// quantidade (o botão "+ Adicionar serviço" nunca some) — pedido do
+// usuário: "quantas vezes quiser".
+function renderItensArea() {
+    const el = document.getElementById('itensArea');
+    if (!el) return;
+    if (s.itens.length === 0) s.itens.push({ descricao: '', valor: '' });
+    el.innerHTML = s.itens.map((it, i) => `
+        <div class="repeat-block">
+            ${s.itens.length > 1 ? `<button type="button" class="btn-remove" data-remove-item="${i}">remover</button>` : ''}
+            <div class="repeat-title">Serviço ${i + 1}${i === 0 ? ' (obrigatório)' : ' (opcional)'}</div>
+            <div class="field"><label>Descrição do serviço</label><input type="text" data-item="${i}" data-field="descricao" value="${esc(it.descricao)}"></div>
+            <div class="field"><label>Valor do serviço (R$)</label><input type="number" step="0.01" data-item="${i}" data-field="valor" value="${esc(it.valor)}"></div>
+        </div>`).join('')
+        + `<button type="button" class="btn-add" id="btnAddItem">+ Adicionar serviço</button>`
+        + `<div class="field" style="margin-top:14px; text-align:right;"><label>Valor total do orçamento</label><div id="totalItensValor" style="font-size:22px; font-weight:800; color:var(--accent-bright);">R$ ${valorTotalCalculado().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></div>`;
+    const btnAdd = document.getElementById('btnAddItem');
+    if (btnAdd) btnAdd.addEventListener('click', () => { s.itens.push({ descricao: '', valor: '' }); renderItensArea(); });
+    el.querySelectorAll('[data-remove-item]').forEach(b => b.addEventListener('click', () => { s.itens.splice(+b.dataset.removeItem, 1); renderItensArea(); }));
+}
+// Atualiza só o número do total (sem re-renderizar a lista, pra não tirar o
+// foco de quem está digitando) — chamada a cada input num valor de item.
+function atualizarTotalItens() {
+    const el = document.getElementById('totalItensValor');
+    if (el) el.textContent = 'R$ ' + valorTotalCalculado().toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+// ---------- Etapa: Dados Finais (2026-08-26) ----------
+// Fusão do que antes eram duas etapas separadas (Material / Forma de
+// Pagamento e Prazo) numa etapa só, na ordem pedida pelo usuário: material
+// incluso? -> discriminar materiais? (campo grande se Sim) -> forma de
+// pagamento (com "Outro tipo de pagamento" liberando campo aberto,
+// implementado à parte de campoSelecaoComOutro()/valorSelecaoOutro() pra
+// não usar o rótulo genérico "Outro" nem mexer no componente compartilhado
+// com o Bairro de outras etapas) -> nota fiscal? -> prazo de execução e
+// validade do orçamento (mantidos como já eram) -> observação? (campo
+// livre se Sim). Nenhuma outra etapa foi tocada.
+const FORMAS_PAGAMENTO = [
+    'A Combinar com cliente',
+    'À vista no termino (entrega) dos serviços',
+    '30% do valor no início dos serviços e o restante no término',
+    '25% do valor de entrada, 25% no andamento dos serviço e o restante no término',
+    '50% do valor no início dos serviços e o restante no término',
+    'Parcelado no cartão de crédito',
+];
+const VALIDADE_OPTS = ['7 dias', '15 dias', '30 dias', '60 dias', '90 dias', 'Por Prazo Indeterminado'];
+function formaPagamentoCampoHtml() {
+    return `<div class="field"><label>Forma de pagamento *</label>
+        <select data-key="forma_pagamento">
+            <option value="">Selecione</option>
+            ${FORMAS_PAGAMENTO.map(o => `<option value="${esc(o)}" ${s.forma_pagamento === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+            <option value="Outro" ${s.forma_pagamento === 'Outro' ? 'selected' : ''}>Outro tipo de pagamento</option>
+        </select>
+    </div><div id="condFormaPagamentoOutro"></div>`;
+}
+function renderCondFormaPagamentoOutro() {
+    const el = document.getElementById('condFormaPagamentoOutro');
+    if (!el) return;
+    el.innerHTML = s.forma_pagamento === 'Outro' ? `<div class="field"><label>Qual forma de pagamento? *</label><input type="text" data-key="forma_pagamento_outro" value="${esc(s.forma_pagamento_outro)}"></div>` : '';
+}
+function formaPagamentoFinal() { return s.forma_pagamento === 'Outro' ? s.forma_pagamento_outro : s.forma_pagamento; }
+function stepDadosFinais() {
+    return `
+    <h2>Dados Finais</h2>
+    <p class="step-sub">Material, pagamento, prazo e observações.</p>
+    <div class="field"><label>O material está incluso no orçamento?</label>
+        <div class="radio-group">${pill('material_incluso', 'Sim', s.material_incluso === 'Sim')}${pill('material_incluso', 'Não', s.material_incluso === 'Não', 'Não, por conta do cliente')}</div>
+    </div>
+    <div class="field"><label>Deseja discriminar os materiais?</label>
+        <div class="radio-group">${pill('especificar_material', 'Sim', s.especificar_material === 'Sim')}${pill('especificar_material', 'Não', s.especificar_material === 'Não', 'Não')}</div>
+    </div>
+    <div id="condMaterialLista"></div>
+    ${formaPagamentoCampoHtml()}
+    <div class="field"><label>Será emitida nota fiscal do serviço a ser realizado?</label>
+        <div class="radio-group">${pill('nota_fiscal', 'Sim', s.nota_fiscal === 'Sim')}${pill('nota_fiscal', 'Não', s.nota_fiscal === 'Não', 'Não')}</div>
+    </div>
+    <div class="field"><label>Quantos dias para execução desses serviços? *</label><input type="number" data-key="dias_execucao" value="${esc(s.dias_execucao)}"></div>
+    <div class="field"><label>Qual o prazo de validade desse orçamento? *</label>
+        <select data-key="validade_orcamento"><option value="">Selecione</option>${VALIDADE_OPTS.map(o => `<option value="${esc(o)}" ${s.validade_orcamento === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Gostaria de adicionar alguma observação nesse orçamento?</label>
+        <div class="radio-group">${pill('tem_observacao', 'Sim', s.tem_observacao === 'Sim')}${pill('tem_observacao', 'Não', s.tem_observacao === 'Não', 'Não')}</div>
+    </div>
+    <div id="condObservacao"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+function renderCondMaterialLista() {
+    const el = document.getElementById('condMaterialLista');
+    if (!el) return;
+    el.innerHTML = s.especificar_material === 'Sim' ? `<div class="field"><label>Descreva aqui livremente os materiais</label><textarea data-key="lista_material" rows="8" style="min-height:160px;">${esc(s.lista_material)}</textarea></div>` : '';
+}
+function renderCondObservacao() {
+    const el = document.getElementById('condObservacao');
+    if (!el) return;
+    el.innerHTML = s.tem_observacao === 'Sim' ? `<div class="field"><label>Observação *</label><textarea data-key="observacao">${esc(s.observacao)}</textarea></div>` : '';
+}
+
+// ---------- Etapa: Revisão ----------
+// Desde a padronização do fluxo público (2026-08-25, ver PROGRESS.md), nenhum
+// formulário mostra prévia do documento — o botão vai direto pra "Enviar
+// orçamento" e a tela final é a mesma dos outros formulários (ver submitForm).
+function stepRevisao() {
+    const rows = [
+        ['Responsável', s.resp_nome],
+        ['Empresa contratada', s.tem_empresa === 'Sim' ? s.emp_nome : 'Sem empresa (pessoa física)'],
+        ['Cliente', s.cli_nome],
+        ['Serviços', s.tipo_precificacao === 'itemizado' ? `${s.itens.filter(i => (i.descricao || '').trim()).length} item(ns)` : 'Valor único'],
+        ['Valor total', 'R$ ' + valorTotalCalculado().toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
+        ['Prazo de execução', s.dias_execucao ? `${s.dias_execucao} dias` : '—'],
+    ];
+    return `
+    <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
+    ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
+    <div class="field" style="margin-top:18px;"><label>Deseja inserir um logotipo no cabeçalho do orçamento?</label>
+        <div class="radio-group">${pill('quer_logo', 'Sim', s.quer_logo === 'Sim')}${pill('quer_logo', 'Não', s.quer_logo === 'Não', 'Não')}</div>
+    </div>
+    <div id="condLogo"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">${editMode ? 'Salvar alterações' : 'Enviar orçamento'}</button></div>
+    ${editMode ? `<p style="text-align:center; margin-top:14px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
+}
+// ---------- Logo do cabeçalho (2026-08-26, pedido do usuário) — pergunta
+// nova dentro da própria etapa de Revisão (última etapa do wizard), sem
+// criar etapa nova. Se Sim, mostra um seletor de imagem; a imagem é
+// redimensionada/comprimida no <canvas> (mesmo padrão já usado pra foto do
+// Currículo/leitura de documento) e guardada como base64 direto em
+// `especifico.logo_base64` — sem usar Supabase Storage (que exigiria criar
+// um bucket novo, fora do escopo deste pedido) nem qualquer outra mudança
+// no banco. Aplicada só no cabeçalho do PDF (ver TIPOS.PRESTACAO_SERVICO.
+// corpo() em index.html); se Não, o PDF sai exatamente como já saía.
+let logoFile = null;
+let logoBase64 = '';
+function renderCondLogo() {
+    const el = document.getElementById('condLogo');
+    if (!el) return;
+    if (s.quer_logo === 'Sim') {
+        el.innerHTML = `
+        <div class="field"><label>Imagem da logo</label>
+            <input type="file" id="f_logo" accept="image/png,image/jpeg,image/webp">
+        </div>
+        <div id="logoPreviewArea"></div>`;
+        const inp = document.getElementById('f_logo');
+        if (inp) inp.addEventListener('change', async (ev) => {
+            const file = ev.target.files && ev.target.files[0];
+            if (file) await receberLogoEscolhida(file);
+        });
+        renderLogoPreview();
+    } else {
+        el.innerHTML = '';
+    }
+}
+function renderLogoPreview() {
+    const el = document.getElementById('logoPreviewArea');
+    if (!el) return;
+    if (!logoBase64) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+        <div style="display:flex; align-items:center; gap:12px; margin-top:8px;">
+            <img src="${logoBase64}" alt="Prévia da logo" style="max-width:130px; max-height:80px; border-radius:8px; border:1px solid var(--border); background:#fff; padding:6px; object-fit:contain;">
+            <button type="button" class="btn-remove" id="btnRemoverLogo" style="position:static;">remover logo</button>
+        </div>`;
+    const btnRemover = document.getElementById('btnRemoverLogo');
+    if (btnRemover) btnRemover.addEventListener('click', () => {
+        logoFile = null; logoBase64 = '';
+        const inpFile = document.getElementById('f_logo'); if (inpFile) inpFile.value = '';
+        renderLogoPreview();
+    });
+}
+// Redimensiona pro maior lado caber em 480px e devolve como base64 — PNG se
+// a imagem de entrada já era PNG (preserva fundo transparente, comum em
+// logos), senão JPEG. Se der qualquer erro ao processar, devolve null sem
+// travar o preenchimento (a pessoa só não consegue anexar a logo).
+function comprimirLogo(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const urlOriginal = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(urlOriginal);
+            try {
+                const MAX = 480;
+                let w = img.width, h = img.height;
+                if (w > MAX || h > MAX) {
+                    if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+                    else { w = Math.round(w * MAX / h); h = MAX; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const tipoSaida = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                resolve(canvas.toDataURL(tipoSaida, 0.87));
+            } catch (e) {
+                resolve(null);
+            }
+        };
+        img.onerror = () => { URL.revokeObjectURL(urlOriginal); resolve(null); };
+        img.src = urlOriginal;
+    });
+}
+async function receberLogoEscolhida(file) {
+    const base64 = await comprimirLogo(file);
+    if (!base64) { showError('Não foi possível processar essa imagem. Tente outra.'); return; }
+    logoFile = file;
+    logoBase64 = base64;
+    renderLogoPreview();
+}
+
+// ---------- Validação ----------
+function validateCurrentStep() {
+    const key = stepKey();
+    switch (key) {
+        case 'stepResponsavel': {
+            if (!s.resp_nome) return 'Preencha todos os campos obrigatórios (*).';
+            const erroTel = validarTelefoneBR(s.resp_ddd, s.resp_numero, true);
+            if (erroTel) return erroTel;
+            if (!s.tem_empresa) return 'Responda como você vai prestar este serviço (Autônomo ou Empresa).';
+            return null;
+        }
+        case 'stepEmpresa': {
+            const autonomo = s.tem_empresa === 'Não';
+            if (autonomo) { if (!s.emp_cpf) return 'Preencha todos os campos obrigatórios (*).'; }
+            else { if (!s.emp_nome || !s.emp_cnpj) return 'Preencha todos os campos obrigatórios (*).'; }
+            if (!s.emp_rua || !valorSelecaoOutro('emp_bairro') || !cidadeFinal('emp') || !estadoFinal('emp')) return 'Preencha todos os campos obrigatórios (*).';
+            return null;
+        }
+        case 'stepCliente': {
+            if (!s.cli_nome) return 'Preencha todos os campos obrigatórios (*).';
+            if (!s.cli_tem_telefone) return 'Responda se quer informar um telefone de contato do cliente.';
+            if (s.cli_tem_telefone === 'Sim') {
+                const erro = validarTelefoneBR(s.cli_ddd, s.cli_numero, true);
+                if (erro) return erro;
+            }
+            if (!s.cli_tipo_pessoa) return 'Responda se o orçamento será para pessoa física ou jurídica.';
+            if (!s.cli_tem_endereco) return 'Responda se quer informar o endereço completo do local do serviço.';
+            if (s.cli_tem_endereco === 'Sim') {
+                if (!s.cli_rua || !valorSelecaoOutro('cli_bairro') || !cidadeFinal('cli') || !estadoFinal('cli')) return 'Preencha todos os campos obrigatórios (*).';
+            } else if (s.cli_tem_endereco === 'Não') {
+                if (!s.cli_referencia) return 'Informe uma referência do local.';
+            }
+            return null;
+        }
+        case 'stepServicos': {
+            if (!s.tipo_precificacao) return 'Selecione como gostaria de especificar os preços do seu serviço.';
+            if (s.tipo_precificacao === 'itemizado') {
+                if (!s.itens[0] || !s.itens[0].descricao || !s.itens[0].valor) return 'Preencha ao menos o primeiro item (descrição e valor).';
+            } else {
+                if (!s.desc_servicos || !s.valor_total_unico) return 'Preencha todos os campos obrigatórios (*).';
+            }
+            return null;
+        }
+        case 'stepDadosFinais': {
+            // Material incluso/discriminar materiais continuam sem obrigatoriedade
+            // (mesmo comportamento do Google Forms original, mantido desde a
+            // criação do módulo).
+            if (!s.forma_pagamento) return 'Selecione a forma de pagamento.';
+            if (s.forma_pagamento === 'Outro' && !s.forma_pagamento_outro) return 'Informe a forma de pagamento.';
+            if (!s.dias_execucao) return 'Informe quantos dias para execução desses serviços.';
+            if (!s.validade_orcamento) return 'Selecione o prazo de validade desse orçamento.';
+            if (!s.tem_observacao) return 'Responda se gostaria de adicionar alguma observação nesse orçamento.';
+            if (s.tem_observacao === 'Sim' && !s.observacao) return 'Preencha a observação.';
+            return null;
+        }
+        case 'stepRevisao':
+            if (s.quer_logo === 'Sim' && !logoBase64) return 'Selecione uma imagem para a logo, ou responda Não.';
+            return null;
+        default: return null;
+    }
+}
+
+// ---------- Delegação de eventos (form todo dirigido por data-key) ----------
+const cardEl = document.getElementById('cardArea');
+cardEl.addEventListener('input', e => {
+    const key = e.target.dataset.key;
+    if (key && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.type !== 'radio') {
+        s[key] = e.target.value;
+    }
+    if (e.target.dataset.item !== undefined) {
+        const i = +e.target.dataset.item, f = e.target.dataset.field;
+        if (s.itens[i]) s.itens[i][f] = e.target.value;
+        atualizarTotalItens();
+    }
+});
+cardEl.addEventListener('change', e => {
+    const t = e.target;
+    const key = t.dataset.key;
+    if (key) {
+        if (t.type === 'radio') s[key] = t.value;
+        else if (t.tagName === 'SELECT') s[key] = t.value;
+    }
+    if (key === 'tem_empresa') { buildSteps(); }
+    if (key === 'tipo_precificacao') renderCondPrecificacao();
+    if (key === 'cli_tem_telefone') renderCondTelefoneCliente();
+    if (key === 'cli_tipo_pessoa') renderCondTipoPessoaCliente();
+    if (key === 'cli_tem_endereco') renderCondEnderecoCliente();
+    if (key === 'especificar_material') renderCondMaterialLista();
+    if (key === 'forma_pagamento') renderCondFormaPagamentoOutro();
+    if (key === 'quer_logo') renderCondLogo();
+    if (key === 'tem_observacao') renderCondObservacao();
+    if (t.dataset.role === 'select-outro') renderCondSelecaoOutro(key);
+    if (t.dataset.role === 'cidade') {
+        const p = t.dataset.prefix;
+        s[p + '_estado'] = estadoForcadoSC(p) ? 'SC' : '';
+        renderCondCidade(p);
+        renderCondEstado(p);
+    }
+});
+cardEl.addEventListener('click', e => {
+    if (e.target.id === 'btnSubmit') {
+        // O botão de envio da Revisão nunca passou por validateCurrentStep()
+        // (é clicado direto, sem goNext()) — como a Revisão não tinha nenhum
+        // campo próprio até agora, não fazia falta. A pergunta da logo
+        // (2026-08-26) mudou isso: se "Sim" foi escolhido sem imagem, barra
+        // o envio aqui em vez de deixar submeter sem logo.
+        const erro = validateCurrentStep();
+        if (erro) { showError(erro); return; }
+        submitForm();
+    }
+});
+
+// ---------- Envio ----------
+function montarRegistro() {
+    const telResp = normalizarTelefoneBR(s.resp_numero);
+    const telCli = s.cli_tem_telefone === 'Sim' ? normalizarTelefoneBR(s.cli_numero) : null;
+    const itensFinal = s.tipo_precificacao === 'itemizado'
+        ? s.itens.filter(it => (it.descricao || '').trim() || String(it.valor || '').trim()).map(it => ({ descricao: it.descricao || '', valor: Number(it.valor) || 0 }))
+        : null;
+
+    return {
+        tipo_contrato: 'PRESTACAO_SERVICO',
+        dados: {
+            pessoa_a: {
+                nome: s.resp_nome,
+                ddd: s.resp_ddd || null, numero: s.resp_numero || null,
+                telefone: (s.resp_ddd && telResp) ? (s.resp_ddd + telResp) : null,
+            },
+            // Etapa 3 reformulada (2026-08-26): nome+função do responsável pelo
+            // cliente, telefone opcional (mesma regra de DDD/telefone dos outros
+            // módulos), pessoa física (CPF opcional) ou jurídica (nome da empresa
+            // + CNPJ, os dois opcionais), e endereço completo OU só uma
+            // referência livre quando o cliente não quer informar endereço —
+            // `endereco` guarda o que deve aparecer no PDF como local do serviço
+            // nos dois casos, pra `TIPOS.PRESTACAO_SERVICO.corpo()` (index.html)
+            // não precisar saber qual dos dois caminhos foi escolhido.
+            pessoa_b: {
+                nome: s.cli_nome,
+                funcao: s.cli_funcao || null,
+                tem_telefone: s.cli_tem_telefone || 'Não',
+                ddd: s.cli_tem_telefone === 'Sim' ? (s.cli_ddd || null) : null,
+                numero: s.cli_tem_telefone === 'Sim' ? (s.cli_numero || null) : null,
+                telefone: (s.cli_tem_telefone === 'Sim' && s.cli_ddd && telCli) ? (s.cli_ddd + telCli) : null,
+                tipo_pessoa: s.cli_tipo_pessoa || null,
+                cpf: s.cli_tipo_pessoa === 'Física' ? (s.cli_cpf || null) : null,
+                empresa_nome: s.cli_tipo_pessoa === 'Jurídica' ? (s.cli_empresa_nome || null) : null,
+                cnpj: s.cli_tipo_pessoa === 'Jurídica' ? (s.cli_cnpj || null) : null,
+                tem_endereco: s.cli_tem_endereco || 'Não',
+                rua: s.cli_tem_endereco === 'Sim' ? (s.cli_rua || null) : null,
+                complemento: s.cli_tem_endereco === 'Sim' ? (s.cli_complemento || null) : null,
+                bairro: s.cli_tem_endereco === 'Sim' ? valorSelecaoOutro('cli_bairro') : null,
+                cidade: s.cli_tem_endereco === 'Sim' ? cidadeFinal('cli') : null,
+                estado: s.cli_tem_endereco === 'Sim' ? estadoFinal('cli') : null,
+                referencia: s.cli_tem_endereco === 'Não' ? (s.cli_referencia || null) : null,
+                endereco: s.cli_tem_endereco === 'Sim' ? (s.cli_rua || null) : (s.cli_referencia || null),
+            },
+            especifico: {
+                tem_empresa: s.tem_empresa || 'Não',
+                empresa_nome: s.tem_empresa === 'Sim' ? s.emp_nome : null,
+                empresa_cnpj: s.tem_empresa === 'Sim' ? s.emp_cnpj : null,
+                // Etapa 2 reformulada (2026-08-26): CPF/Profissão só existem no
+                // caminho Autônomo; o endereço (rua/complemento/bairro/cidade/
+                // estado) agora é coletado nos dois caminhos, então deixou de
+                // ser condicionado a tem_empresa === 'Sim'.
+                prestador_cpf: s.tem_empresa === 'Não' ? (s.emp_cpf || null) : null,
+                prestador_profissao: s.tem_empresa === 'Não' ? (s.emp_profissao || null) : null,
+                empresa_endereco: s.emp_rua || null,
+                empresa_complemento: s.emp_complemento || null,
+                empresa_bairro: valorSelecaoOutro('emp_bairro'),
+                empresa_cidade: cidadeFinal('emp'),
+                empresa_estado: estadoFinal('emp'),
+
+                tipo_precificacao: s.tipo_precificacao,
+                itens: itensFinal,
+                desc_servicos: s.tipo_precificacao === 'unico' ? (s.desc_servicos || null) : null,
+                valor_total: valorTotalCalculado(),
+
+                material_incluso: s.material_incluso || null,
+                especificar_material: s.especificar_material || null,
+                lista_material: s.especificar_material === 'Sim' ? (s.lista_material || null) : null,
+
+                nota_fiscal: s.nota_fiscal || null,
+                forma_pagamento: formaPagamentoFinal(),
+                dias_execucao: Number(s.dias_execucao) || null,
+                validade_orcamento: s.validade_orcamento,
+                tem_observacao: s.tem_observacao || 'Não',
+                observacao: s.tem_observacao === 'Sim' ? (s.observacao || null) : null,
+
+                quer_logo: s.quer_logo || 'Não',
+                logo_base64: s.quer_logo === 'Sim' ? (logoBase64 || null) : null,
+            },
+        },
+    };
+}
+
+async function submitForm() {
+    if (editMode && !confirm('Deseja salvar as alterações feitas neste orçamento?')) return;
+    const btn = document.getElementById('btnSubmit');
+    const textoOriginal = btn.textContent;
+    btn.disabled = true; btn.textContent = editMode ? 'Salvando...' : 'Enviando...';
+
+    const registro = montarRegistro();
+
+    if (editMode) {
+        // O formulário público não tem (e não deve ter) a senha de escrita da
+        // equipe — só o painel tem, depois de desbloqueado. Por isso quem grava
+        // a edição é o painel: a gente só manda os dados prontos e espera a
+        // resposta (ver window.addEventListener('message') abaixo). Mesmo
+        // protocolo genérico 'form-salvar-pedido'/'form-salvar-resultado' usado
+        // por declaracao-autonomo-form.html e os demais formulários públicos.
+        avisarPai({ type: 'form-salvar-pedido', table: 'declaracoes_pendentes', id: editId, registro });
+        return;
+    }
+
+    const { error } = await supabase.from('declaracoes_pendentes').insert(registro);
+    if (error) {
+        showError('Não deu pra enviar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        btn.disabled = false; btn.textContent = textoOriginal;
+        return;
+    }
+    document.getElementById('cardArea').innerHTML = `
+        <div class="success-box">
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+            <h2>Dados recebidos!</h2>
+            <p>Seus dados foram recebidos com sucesso. Nossa equipe vai conferir as informações e entrar em contato assim que estiver tudo pronto.</p>
+        </div>`;
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('stepLabel').textContent = 'Concluído';
+}
+// Resposta do painel ao pedido de salvar (form-salvar-pedido) — só existe
+// quando o formulário está embutido no iframe de edição do painel.
+window.addEventListener('message', (ev) => {
+    if (ev.origin !== window.location.origin) return;
+    if (!ev.data || ev.data.type !== 'form-salvar-resultado') return;
+    const btn = document.getElementById('btnSubmit');
+    if (ev.data.ok) {
+        document.getElementById('cardArea').innerHTML = `
+            <div class="success-box">
+                <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+                <h2>Alterações salvas!</h2>
+                <p>O orçamento foi atualizado.</p>
+            </div>`;
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('stepLabel').textContent = 'Concluído';
+    } else {
+        showError(ev.data.error || 'Não deu pra salvar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
+    }
+});
+
+// ---------- Modo de edição (reabre o formulário já preenchido a partir de um
+// registro existente em declaracoes_pendentes, pra corrigir sem duplicar) ----------
+let editMode = false;
+let editId = null;
+
+function avisarPai(msg) {
+    if (window.parent && window.parent !== window) window.parent.postMessage(msg, window.location.origin);
+}
+function cancelarEdicao() {
+    avisarPai({ type: 'form-editar-cancelado' });
+    if (window.parent === window) history.back();
+}
+window.__cancelarEdicao = cancelarEdicao;
+
+function carregarCidade(p, cidadeSalva) {
+    if (cidadeSalva && CIDADES_OPTS.includes(cidadeSalva) && cidadeSalva !== 'Outra') {
+        s[p + '_cidade'] = cidadeSalva;
+    } else {
+        s[p + '_cidade'] = cidadeSalva ? 'Outra' : '';
+        s[p + '_cidade_outra'] = cidadeSalva || '';
+    }
+}
+function carregarParaEdicao(row) {
+    const dados = row.dados || {};
+    const a = dados.pessoa_a || {}, b = dados.pessoa_b || {}, e = dados.especifico || {};
+
+    s.resp_nome = a.nome || ''; s.resp_ddd = a.ddd || ''; s.resp_numero = a.numero || '';
+    s.tem_empresa = e.tem_empresa || 'Não';
+    if (s.tem_empresa === 'Sim') {
+        s.emp_nome = e.empresa_nome || ''; s.emp_cnpj = e.empresa_cnpj || '';
+    } else {
+        s.emp_cpf = e.prestador_cpf || ''; s.emp_profissao = e.prestador_profissao || '';
+    }
+    // Endereço da Etapa 2 é comum aos dois caminhos desde 2026-08-26.
+    s.emp_rua = e.empresa_endereco || ''; s.emp_complemento = e.empresa_complemento || '';
+    const bairroEmp = paraSelecaoOutro(e.empresa_bairro, BAIRROS_ORCAMENTO);
+    s.emp_bairro = bairroEmp.valor; s.emp_bairro_outro = bairroEmp.outro;
+    carregarCidade('emp', e.empresa_cidade);
+    s.emp_estado = e.empresa_estado || '';
+
+    s.cli_nome = b.nome || ''; s.cli_funcao = b.funcao || '';
+    s.cli_tem_telefone = b.tem_telefone || 'Não'; s.cli_ddd = b.ddd || ''; s.cli_numero = b.numero || '';
+    s.cli_tipo_pessoa = b.tipo_pessoa || '';
+    s.cli_cpf = b.cpf || ''; s.cli_empresa_nome = b.empresa_nome || ''; s.cli_cnpj = b.cnpj || '';
+    s.cli_tem_endereco = b.tem_endereco || 'Não';
+    s.cli_rua = b.rua || ''; s.cli_complemento = b.complemento || '';
+    const bairroCli = paraSelecaoOutro(b.bairro, BAIRROS_ORCAMENTO);
+    s.cli_bairro = bairroCli.valor; s.cli_bairro_outro = bairroCli.outro;
+    carregarCidade('cli', b.cidade);
+    s.cli_estado = b.estado || '';
+    s.cli_referencia = b.referencia || '';
+
+    s.tipo_precificacao = e.tipo_precificacao || '';
+    s.itens = Array.isArray(e.itens) ? e.itens.map(it => ({ descricao: it.descricao || '', valor: it.valor != null ? String(it.valor) : '' })) : [];
+    s.desc_servicos = e.desc_servicos || '';
+    s.valor_total_unico = (e.tipo_precificacao === 'unico' && e.valor_total != null) ? String(e.valor_total) : '';
+
+    s.material_incluso = e.material_incluso || '';
+    s.especificar_material = e.especificar_material || '';
+    s.lista_material = e.lista_material || '';
+
+    s.nota_fiscal = e.nota_fiscal || '';
+    // formaPagamentoFinal() já grava o texto literal escolhido (seja uma das
+    // opções fixas ou o texto digitado em "Outro tipo de pagamento") — na
+    // volta, paraSelecaoOutro() (função genérica já usada pro Bairro)
+    // reconhece se bate com uma das opções fixas ou se era um "Outro".
+    const fp = paraSelecaoOutro(e.forma_pagamento, FORMAS_PAGAMENTO);
+    s.forma_pagamento = fp.valor; s.forma_pagamento_outro = fp.outro;
+    s.dias_execucao = e.dias_execucao != null ? String(e.dias_execucao) : '';
+    s.validade_orcamento = e.validade_orcamento || '';
+    s.tem_observacao = e.tem_observacao || 'Não';
+    s.observacao = e.observacao || '';
+
+    s.quer_logo = e.quer_logo || 'Não';
+    logoBase64 = e.quer_logo === 'Sim' ? (e.logo_base64 || '') : '';
+
+    buildSteps();
+}
+
+async function iniciar() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('editId');
+    if (!id) { buildSteps(); render(); return; }
+    editMode = true; editId = id;
+    document.getElementById('cardArea').innerHTML = '<p class="step-sub">Carregando orçamento…</p>';
+    const { data, error } = await supabase.from('declaracoes_pendentes').select('*').eq('id', id).single();
+    if (error || !data || data.tipo_contrato !== 'PRESTACAO_SERVICO') {
+        document.getElementById('cardArea').innerHTML = `
+            <h2>Não foi possível abrir este orçamento</h2>
+            <p class="step-sub">O registro não foi encontrado ou não é desse tipo.</p>`;
+        return;
+    }
+    carregarParaEdicao(data);
+    const headerP = document.querySelector('.header p');
+    if (headerP) headerP.textContent = 'Corrija os dados abaixo e salve as alterações.';
+    render();
+}
+
+iniciar();
+</script>
+</body>
+</html>
