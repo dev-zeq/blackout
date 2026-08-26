@@ -1200,6 +1200,25 @@ Pedido: reduzir margens/espaçamentos verticais (entre seções, entre linhas) p
 
 **Publicado** — usuário revisou por descrição (não pela ferramenta) e autorizou publicar, com ajustes ficando pra próxima sessão se necessário.
 
+## Máscara de valor em reais e telefone com hífen (2026-08-26, mesmo dia — rascunho pra revisão)
+
+Pedido: (1) todo campo de valor deve formatar automaticamente enquanto o usuário digita — só o número inteiro é digitado (ex: "2500"), o campo já mostra "R$ 2.500,00" (separador de milhar, ",00" fixo); (2) todo campo de telefone deve seguir a regra de DDD/8-9-dígitos já usada no Currículo (que já era o caso desde a criação do módulo) **e também** ganhar máscara visual com hífen enquanto digita. **Sem tocar em mais nada** — só `prestador-form.html` mudou, `index.html` sem nenhuma diferença (`git diff --stat` confirma).
+
+**Valores em reais** — dois campos afetados: "Valor total do orçamento" (Etapa Serviços, caminho valor único) e "Valor do serviço" (cada item da lista discriminada). Os dois trocaram de `<input type="number" step="0.01">` pra `<input type="text" inputmode="numeric">`, com uma máscara nova:
+- `formatarValorBRLExibicao(v)` — formata dígitos crus como "R$ X.XXX,00" (novo helper).
+- `aplicarMascaraValorBRL(el)` — roda a cada tecla digitada (`input`), reformata o campo em tempo real e devolve só os dígitos.
+- **Importante**: `s.valor_total_unico`/`s.itens[i].valor` continuam guardando só os dígitos (ex: `"2500"`), nunca o texto "R$ 2.500,00" — é assim que `valorTotalCalculado()`/`montarRegistro()` já esperavam (`Number("2500") = 2500`), então essas duas funções não precisaram de nenhuma mudança. O total ao vivo da lista discriminada (`atualizarTotalItens()`, já existia) continua funcionando sem alteração, pelo mesmo motivo.
+
+**Telefone com máscara visual** — nova função `formatarNumeroTelExibicao()`/`aplicarMascaraTelefone()`, aplicada só no campo de **número** (não no DDD, que continua um `<select>` — não tem o que mascarar num valor escolhido de uma lista já validada, diferente de texto livre digitado). Hífen aparece no ponto certo conforme a quantidade de dígitos: `9999-8888` pra 8 dígitos, `99999-8888` pra 9. A regra de validação em si (DDD + 8 ou 9 dígitos, completar com "9" na frente se vier só com 8, mensagem de erro se for diferente disso) **já existia desde a criação do módulo**, copiada literalmente de `curriculo-form.html` (`validarTelefoneBR`/`normalizarTelefoneBR`) — não precisou de nenhuma mudança, porque essas duas funções já limpam qualquer caractere não-numérico (`replace(/\D/g,'')`) antes de validar, então a máscara nova (hífen) não interfere em nada.
+- **Nota sobre "regra dos currículos"**: o `curriculo-form.html` de hoje **não tem** essa máscara visual com hífen (só o `<select>` de DDD + input simples de número, sem formatação) — então essa parte do pedido é uma funcionalidade nova, implementada só aqui (não copiada de lugar nenhum, já que não existe ainda no Currículo). A parte que **já era** "igual ao Currículo" (validação de 8/9 dígitos) continua exatamente igual, sem mudança.
+- `montarRegistro()` foi ajustado pra sempre limpar o hífen antes de salvar no banco (`.replace(/\D/g,'')`) — o campo `numero` salvo continua só dígitos, igual sempre foi; o hífen é só cosmético durante a digitação, nunca vai pro banco.
+
+**Testado ao vivo** (harness local, digitação simulada tecla por tecla via evento `input`, pra exercitar a máscara progressiva de verdade, não só o resultado final): telefone digitado "999998888" (9 dígitos) → "99999-8888"; "99998888" (8 dígitos) → "9999-8888"; avançado com esse número de 8 dígitos sem erro de validação (confirma que `normalizarTelefoneBR` continua completando com o "9" por trás dos panos); valor único digitado "2500" tecla por tecla → "R$ 2.500,00" ao vivo; dois itens discriminados (1.500 e 750) → cada um formatado certo e o total ao vivo somando "R$ 2.250,00"; percorrido até a Revisão, valor total "R$ 2.250,00" aparecendo certo no resumo. Sem erro de console em nenhum teste.
+
+**Não testado**: reabertura via Editar de um registro salvo com telefone/valor antigos (a formatação de exibição usa as mesmas funções tanto pro campo em digitação quanto pro valor inicial ao carregar — revisão de código confirma que `carregarParaEdicao()` não precisou de nenhuma mudança, já que ela só popula `s` com os dígitos crus do banco e quem formata é o template de render — mas não foi exercitado ao vivo com um registro de edição real); envio real (bloqueado pela CHECK constraint de antes, não é novidade desta rodada).
+
+**Publicado** — usuário revisou por descrição e autorizou publicar.
+
 ## Possíveis próximos passos (não pedidos ainda, só ideias)
 
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.

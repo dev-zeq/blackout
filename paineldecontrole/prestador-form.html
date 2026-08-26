@@ -150,11 +150,29 @@ function normalizarTelefoneBR(numero) {
     if (d.length === 9) return d;
     return null;
 }
+// Máscara visual do número (2026-08-26, pedido do usuário) — hífen no ponto
+// certo conforme a quantidade de dígitos já digitados (8 = XXXX-XXXX, 9 =
+// XXXXX-XXXX), sem mexer na regra de validação em si (validarTelefoneBR/
+// normalizarTelefoneBR continuam idênticas — já stripam hífen/traço sozinhas
+// via replace(/\D/g,''), então a máscara é só cosmética, não muda o que é
+// salvo). O DDD continua um <select> (não é campo digitado, não tem o que
+// mascarar) — por isso o "(DDD)" não aparece aqui: quem escolhe o DDD já
+// escolhe de uma lista validada, o parêntese faria sentido num campo de
+// texto livre, que não é o caso.
+function formatarNumeroTelExibicao(v) {
+    const digits = String(v || '').replace(/\D/g, '').slice(0, 9);
+    if (digits.length <= 4) return digits;
+    const corte = digits.length >= 9 ? 5 : digits.length - 4;
+    return digits.slice(0, corte) + '-' + digits.slice(corte);
+}
+function aplicarMascaraTelefone(el) {
+    el.value = formatarNumeroTelExibicao(el.value);
+}
 function campoTelefoneBR(labelDdd, labelNumero, attrsDdd, attrsNumero, valorDdd, valorNumero, obrigatorio) {
     const marcador = obrigatorio ? ' *' : '';
     return `
         <div class="field"><label>${esc(labelDdd)}${marcador}</label><select ${attrsDdd}><option value="">Selecione</option>${dddOptions(valorDdd)}</select></div>
-        <div class="field"><label>${esc(labelNumero)}${marcador}</label><input type="tel" ${attrsNumero} value="${esc(valorNumero)}" placeholder="8 ou 9 dígitos"></div>`;
+        <div class="field"><label>${esc(labelNumero)}${marcador}</label><input type="tel" ${attrsNumero} data-role="tel-numero" value="${esc(formatarNumeroTelExibicao(valorNumero))}" placeholder="8 ou 9 dígitos" maxlength="10"></div>`;
 }
 function validarTelefoneBR(ddd, numero, obrigatorio) {
     if (!ddd && !numero) return obrigatorio ? 'Preencha o DDD e o número do telefone.' : null;
@@ -256,6 +274,24 @@ const s = {
     tem_observacao: '', observacao: '',
     quer_logo: '', // 'Sim' | 'Não' — imagem em si fica fora de `s` (ver logoFile/logoBase64)
 };
+
+// ---------- Máscara de valor em reais (2026-08-26, pedido do usuário) ----------
+// O usuário digita só o valor inteiro (sem centavos) e o campo já mostra
+// formatado com separador de milhar e ",00" fixo — ex: digitar "2500" vira
+// "R$ 2.500,00" na hora. `s.valor_total_unico`/`s.itens[i].valor` guardam só
+// os dígitos (ex: "2500"), nunca o texto formatado — é isso que
+// valorTotalCalculado()/montarRegistro() já esperam (Number("2500") = 2500),
+// então nenhum dos dois precisou mudar.
+function formatarValorBRLExibicao(v) {
+    const digits = String(v || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    if (!digits) return '';
+    return 'R$ ' + Number(digits).toLocaleString('pt-BR') + ',00';
+}
+function aplicarMascaraValorBRL(el) {
+    const digits = el.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    el.value = digits ? formatarValorBRLExibicao(digits) : '';
+    return digits;
+}
 
 function valorTotalCalculado() {
     if (s.tipo_precificacao === 'itemizado') {
@@ -466,7 +502,7 @@ function renderCondPrecificacao() {
     if (s.tipo_precificacao === 'unico') {
         el.innerHTML = `
         <div class="field"><label>Descreva aqui todos os serviços, à vontade *</label><textarea data-key="desc_servicos" rows="8" style="min-height:160px;">${esc(s.desc_servicos)}</textarea></div>
-        <div class="field"><label>Valor total do orçamento (R$) *</label><input type="number" step="0.01" data-key="valor_total_unico" value="${esc(s.valor_total_unico)}"></div>`;
+        <div class="field"><label>Valor total do orçamento *</label><input type="text" inputmode="numeric" data-role="valor-brl" data-key="valor_total_unico" value="${esc(formatarValorBRLExibicao(s.valor_total_unico))}" placeholder="R$ 0,00"></div>`;
     } else if (s.tipo_precificacao === 'itemizado') {
         el.innerHTML = `<div id="itensArea"></div>`;
         renderItensArea();
@@ -487,7 +523,7 @@ function renderItensArea() {
             ${s.itens.length > 1 ? `<button type="button" class="btn-remove" data-remove-item="${i}">remover</button>` : ''}
             <div class="repeat-title">Serviço ${i + 1}${i === 0 ? ' (obrigatório)' : ' (opcional)'}</div>
             <div class="field"><label>Descrição do serviço</label><input type="text" data-item="${i}" data-field="descricao" value="${esc(it.descricao)}"></div>
-            <div class="field"><label>Valor do serviço (R$)</label><input type="number" step="0.01" data-item="${i}" data-field="valor" value="${esc(it.valor)}"></div>
+            <div class="field"><label>Valor do serviço</label><input type="text" inputmode="numeric" data-role="valor-brl" data-item="${i}" data-field="valor" value="${esc(formatarValorBRLExibicao(it.valor))}" placeholder="R$ 0,00"></div>
         </div>`).join('')
         + `<button type="button" class="btn-add" id="btnAddItem">+ Adicionar serviço</button>`
         + `<div class="field" style="margin-top:14px; text-align:right;"><label>Valor total do orçamento</label><div id="totalItensValor" style="font-size:22px; font-weight:800; color:var(--accent-bright);">R$ ${valorTotalCalculado().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></div>`;
@@ -748,6 +784,27 @@ function validateCurrentStep() {
 const cardEl = document.getElementById('cardArea');
 cardEl.addEventListener('input', e => {
     const key = e.target.dataset.key;
+    // Campos de valor em reais (2026-08-26) — mascara e guarda só os
+    // dígitos em `s`/`s.itens[i].valor` (nunca o texto "R$ ..." formatado,
+    // que é só pra exibição); sai cedo, não passa pelos ramos genéricos
+    // abaixo (senão salvaria o texto formatado em vez do número).
+    if (e.target.dataset.role === 'valor-brl') {
+        const digits = aplicarMascaraValorBRL(e.target);
+        if (key) s[key] = digits;
+        if (e.target.dataset.item !== undefined) {
+            const i = +e.target.dataset.item, f = e.target.dataset.field;
+            if (s.itens[i]) s.itens[i][f] = digits;
+            atualizarTotalItens();
+        }
+        return;
+    }
+    // Telefone (2026-08-26) — só a máscara visual (hífen); a validação/
+    // limpeza continua em normalizarTelefoneBR(), que já ignora qualquer
+    // caractere não-numérico sozinha, então guardar o valor mascarado em
+    // `s` (ramo genérico logo abaixo) não muda nada no que é validado/salvo.
+    if (e.target.dataset.role === 'tel-numero') {
+        aplicarMascaraTelefone(e.target);
+    }
     if (key && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.type !== 'radio') {
         s[key] = e.target.value;
     }
@@ -807,7 +864,9 @@ function montarRegistro() {
         dados: {
             pessoa_a: {
                 nome: s.resp_nome,
-                ddd: s.resp_ddd || null, numero: s.resp_numero || null,
+                // .replace(/\D/g,'') (2026-08-26) — a máscara visual (hífen) fica
+                // só na tela; o que é salvo continua dígitos puros, como sempre foi.
+                ddd: s.resp_ddd || null, numero: s.resp_numero ? s.resp_numero.replace(/\D/g, '') : null,
                 telefone: (s.resp_ddd && telResp) ? (s.resp_ddd + telResp) : null,
             },
             // Etapa 3 reformulada (2026-08-26): nome+função do responsável pelo
@@ -823,7 +882,7 @@ function montarRegistro() {
                 funcao: s.cli_funcao || null,
                 tem_telefone: s.cli_tem_telefone || 'Não',
                 ddd: s.cli_tem_telefone === 'Sim' ? (s.cli_ddd || null) : null,
-                numero: s.cli_tem_telefone === 'Sim' ? (s.cli_numero || null) : null,
+                numero: s.cli_tem_telefone === 'Sim' && s.cli_numero ? s.cli_numero.replace(/\D/g, '') : null,
                 telefone: (s.cli_tem_telefone === 'Sim' && s.cli_ddd && telCli) ? (s.cli_ddd + telCli) : null,
                 tipo_pessoa: s.cli_tipo_pessoa || null,
                 cpf: s.cli_tipo_pessoa === 'Física' ? (s.cli_cpf || null) : null,
