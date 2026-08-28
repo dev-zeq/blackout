@@ -37,6 +37,7 @@
     .field { margin-bottom: 16px; }
     .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
     .field .hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+    .extenso-valor { font-size: 11.5px; color: var(--text-faint); margin-top: 5px; min-height: 14px; }
     input[type=text], input[type=tel], input[type=email], input[type=date], input[type=time], input[type=number], select, textarea {
         width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
         background: var(--surface-2); color: var(--text); font-size: 14.5px; font-family: inherit;
@@ -90,6 +91,7 @@
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import extenso from 'https://esm.sh/extenso@2';
 const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -105,6 +107,26 @@ const s = {
 const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
 function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Campo de valor padrão do sistema (mesmo da Prestação de Serviço): digita
+// só dígitos = reais inteiros; legenda .extenso-valor logo abaixo mostra
+// "R$ 2.500,00 — dois mil e quinhentos reais" ao vivo. s.renda_mensal guarda
+// só os dígitos, como o resto do fluxo já espera.
+function extensoReais(valor) { return extenso(valor, { mode: 'currency', currency: { type: 'BRL' } }); }
+function legendaExtensoTexto(v) {
+    const d = String(v || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    const n = Number(d);
+    return n > 0 ? `R$ ${Number(d).toLocaleString('pt-BR')},00 — ${extensoReais(n)}` : '';
+}
+function ligarCampoValorExtenso(inp, legenda, onDigits) {
+    if (!inp) return;
+    inp.addEventListener('input', () => {
+        const d = inp.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+        if (inp.value !== d) inp.value = d;
+        if (onDigits) onDigits(d);
+        if (legenda) legenda.textContent = legendaExtensoTexto(d);
+    });
+}
 function pill(name, value, checked, label) {
     const id = name + '_' + value.replace(/\W/g, '');
     return `<label class="radio-pill"><input type="radio" name="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''}><span class="pill-label" for="${id}">${esc(label || value)}</span></label>`;
@@ -277,7 +299,15 @@ function stepEmpresa() {
 function renderCondRenda() {
     const el = document.getElementById('condRenda');
     if (!el) return;
-    el.innerHTML = s.informar_renda === 'SIM' ? `<div class="field"><label>Renda mensal (R$)</label><input type="number" step="0.01" id="f_renda_mensal" value="${esc(s.renda_mensal)}"></div>` : '';
+    if (s.informar_renda !== 'SIM') { el.innerHTML = ''; return; }
+    el.innerHTML = `<div class="field"><label>Renda mensal (R$)</label>`
+        + `<input type="text" inputmode="numeric" id="f_renda_mensal" value="${esc(s.renda_mensal)}" placeholder="Ex: 2500">`
+        + `<div class="extenso-valor" id="f_renda_mensal_ext">${legendaExtensoTexto(s.renda_mensal)}</div></div>`;
+    ligarCampoValorExtenso(
+        document.getElementById('f_renda_mensal'),
+        document.getElementById('f_renda_mensal_ext'),
+        (d) => { s.renda_mensal = d; }
+    );
 }
 
 // ---------- Etapa 4: Revisão ----------

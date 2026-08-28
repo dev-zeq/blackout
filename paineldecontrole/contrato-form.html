@@ -39,6 +39,9 @@
     .field { margin-bottom: 16px; }
     .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
     .field .hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+    /* Legenda "R$ ... — por extenso" abaixo de campos de valor — mesmo
+       componente da Prestação de Serviço (ver aplicarLimpezaValorDigitado). */
+    .extenso-valor { font-size: 11.5px; color: var(--text-faint); margin-top: 5px; min-height: 14px; }
     input[type=text], input[type=tel], input[type=email], input[type=date], input[type=number], select, textarea {
         width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
         background: var(--surface-2); color: var(--text); font-size: 14.5px; font-family: inherit;
@@ -151,11 +154,34 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import flatpickr from 'https://esm.sh/flatpickr@4.6.13';
 import { Portuguese } from 'https://esm.sh/flatpickr@4.6.13/dist/l10n/pt.js';
+import extenso from 'https://esm.sh/extenso@2';
 const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Campo de valor padrão do sistema — idêntico ao da Prestação de Serviço:
+// digita só dígitos (reais inteiros), legenda .extenso-valor logo abaixo
+// mostra "R$ 2.500,00 — dois mil e quinhentos reais" ao vivo. s[key] guarda
+// só os dígitos (ex: "2500"), que Number()/montarRegistro já esperam.
+function extensoReais(valor) { return extenso(valor, { mode: 'currency', currency: { type: 'BRL' } }); }
+function formatarValorBRLExibicao(v) {
+    const digits = String(v || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    if (!digits) return '';
+    return 'R$ ' + Number(digits).toLocaleString('pt-BR') + ',00';
+}
+function legendaExtensoTexto(v) {
+    const digits = String(v || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    const n = Number(digits);
+    return n > 0 ? `${formatarValorBRLExibicao(digits)} — ${extensoReais(n)}` : '';
+}
+// Monta um <div class="field"> com input de valor + legenda por extenso já semeada.
+function campoValor(label, key) {
+    return `<div class="field"><label>${label}</label>`
+        + `<input type="text" inputmode="numeric" data-role="valor-extenso" data-key="${key}" value="${esc(s[key])}" placeholder="Ex: 2500">`
+        + `<div class="extenso-valor" data-for="${key}">${legendaExtensoTexto(s[key])}</div></div>`;
+}
 function pill(name, value, checked, label) {
     const id = name + '_' + value.replace(/\W/g, '');
     return `<label class="radio-pill"><input type="radio" name="${name}" data-key="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''}><span class="pill-label" for="${id}">${esc(label || value)}</span></label>`;
@@ -874,7 +900,7 @@ function stepPagamento() {
     <div class="field"><label>Pagamento *</label>
         <div class="radio-group">${pill('forma_pagamento', 'Vista', s.forma_pagamento === 'Vista', 'À Vista')}${pill('forma_pagamento', 'Prazo', s.forma_pagamento === 'Prazo', 'A Prazo')}</div>
     </div>
-    <div class="field"><label>Valor total do negócio *</label><input type="number" step="0.01" data-key="valor_total" value="${esc(s.valor_total)}"></div>
+    ${campoValor('Valor total do negócio *', 'valor_total')}
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -915,7 +941,7 @@ function renderCondEntradaVeiculo() {
         <div class="field"><label>Placa *</label><input type="text" data-key="ev_placa" value="${esc(s.ev_placa)}"></div>
         <div class="field"><label>Chassi</label><input type="text" data-key="ev_chassi" value="${esc(s.ev_chassi)}"></div>
         <div class="field"><label>Renavam</label><input type="text" data-key="ev_renavam" value="${esc(s.ev_renavam)}"></div>
-        <div class="field"><label>Valor desse veículo na negociação *</label><input type="number" step="0.01" data-key="ev_valor" value="${esc(s.ev_valor)}"></div>`;
+        ${campoValor('Valor desse veículo na negociação *', 'ev_valor')}`;
     ['ev_tipo_veiculo', 'ev_fabricante', 'ev_cor'].forEach(renderCondSelecaoOutro);
     renderCondEntradaDinheiroParcelas();
 }
@@ -962,14 +988,14 @@ function renderCondValorEntradaDinheiro() {
     const el = document.getElementById('condValorEntradaDinheiro');
     if (!el) return;
     if (s.teve_dinheiro_entrada !== 'Sim') { s.valor_entrada = ''; el.innerHTML = ''; return; }
-    el.innerHTML = `<div class="field"><label>Qual o valor em dinheiro da entrada?</label><input type="number" step="0.01" data-key="valor_entrada" value="${esc(s.valor_entrada)}"></div>`;
+    el.innerHTML = campoValor('Qual o valor em dinheiro da entrada?', 'valor_entrada');
 }
 
 // ---------- Etapa: condições da locação ----------
 function stepCondicoesLocacao() {
     return `
     <h2>Condições da Locação</h2>
-    <div class="field"><label>Valor do aluguel mensal *</label><input type="number" step="0.01" data-key="valor_aluguel" value="${esc(s.valor_aluguel)}"></div>
+    ${campoValor('Valor do aluguel mensal *', 'valor_aluguel')}
     <div class="field"><label>Dia do vencimento (todo mês) *</label><select data-key="dia_vencimento">${diaOptions(s.dia_vencimento)}</select></div>
     <div class="field"><label>Prazo do contrato (em meses) *</label><input type="number" min="1" data-key="prazo_meses" value="${esc(s.prazo_meses)}"></div>
     ${campoDataBR('data_inicio', 'Data de início', true)}
@@ -1015,7 +1041,7 @@ function renderCondMultaRescisao() {
     if (s.multa_rescisao_tipo === 'Alugueis') {
         html += `<div class="field"><label>Quantidade de aluguéis *</label><input type="number" min="1" step="1" data-key="multa_rescisao_qtd_alugueis" value="${esc(s.multa_rescisao_qtd_alugueis)}"></div>`;
     } else if (s.multa_rescisao_tipo === 'Valor fixo') {
-        html += `<div class="field"><label>Valor fixo da multa (R$) *</label><input type="number" step="0.01" data-key="multa_rescisao_valor" value="${esc(s.multa_rescisao_valor)}"></div>`;
+        html += campoValor('Valor fixo da multa (R$) *', 'multa_rescisao_valor');
     }
     el.innerHTML = html;
 }
@@ -1046,7 +1072,7 @@ function renderCondGarantia() {
     const el = document.getElementById('condGarantia');
     if (!el) return;
     if (s.garantia === 'Caução') {
-        el.innerHTML = `<div class="field"><label>Valor da caução *</label><input type="number" step="0.01" data-key="valor_caucao" value="${esc(s.valor_caucao)}"></div>`;
+        el.innerHTML = campoValor('Valor da caução *', 'valor_caucao');
     } else if (s.garantia === 'Fiador') {
         el.innerHTML = `
             <div class="field"><label>Nome completo do fiador *</label><input type="text" data-key="fiador_nome" value="${esc(s.fiador_nome)}"></div>
@@ -1194,6 +1220,21 @@ cardEl.addEventListener('input', e => {
     // Campos de data (flatpickr) são só-leitura e cuidam de `s[key]` sozinhos
     // via onChange (ver inicializarCamposData) — nada a fazer aqui.
     if (e.target.dataset.role === 'fp-data') return;
+    // Campo de valor padrão: guarda só os dígitos em s[key] e atualiza a
+    // legenda "R$ ... — por extenso" logo abaixo, ao vivo.
+    if (e.target.dataset.role === 'valor-extenso') {
+        const digits = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+        if (e.target.value !== digits) e.target.value = digits;
+        if (key) s[key] = digits;
+        let leg = e.target.nextElementSibling;
+        while (leg && !leg.classList.contains('extenso-valor')) leg = leg.nextElementSibling;
+        if (leg) leg.textContent = legendaExtensoTexto(digits);
+        if (key === 'valor_entrada') {
+            const disp = document.getElementById('parcelaValorDisplay');
+            if (disp) disp.value = valorParcelaTexto();
+        }
+        return;
+    }
     if (key && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.type !== 'radio') {
         s[key] = e.target.value;
     }

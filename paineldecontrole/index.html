@@ -124,6 +124,13 @@
         .form-group input, .form-group select { width: 100%; padding: 12px 16px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 16px; font-family: inherit; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
         .form-group select { appearance: none; }
+        /* Legenda "R$ ... — por extenso" abaixo de qualquer campo de valor
+           (componente reaproveitado da Prestação de Serviço — ver
+           aplicarLimpezaValorDigitado/atualizarExtensoValor no script e o
+           mesmo .extenso-valor em prestador-form.html). Padroniza todos os
+           campos monetários do sistema: digita só dígitos (reais inteiros),
+           a legenda mostra o valor formatado + por extenso ao vivo. */
+        .extenso-valor { font-size: 11.5px; color: var(--text-faint); margin-top: 5px; min-height: 14px; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 24px; }
         .btn-cancel { flex: 1; padding: 14px; border: 1px solid var(--border-strong); background: transparent; color: var(--text); border-radius: 12px; font-size: 15px; cursor: pointer; }
         .btn-save { flex: 2; padding: 14px; background: linear-gradient(135deg, var(--accent-bright), var(--accent)); border: none; color: #05170c; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
@@ -665,6 +672,95 @@
         .pwa-aviso-botoes button { flex: 1; padding: 8px 10px; border-radius: 10px; border: none; font-size: 12.5px; font-weight: 700; cursor: pointer; }
         .pwa-aviso-instalar { background: var(--accent); color: #05170c; }
         .pwa-aviso-fechar { background: transparent; color: var(--text-faint); border: none; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 2px; }
+
+        /* ============================================================
+           Módulo Financeiro (2026-08-27) — SÓ layout e navegação.
+           Nenhuma regra de cálculo nesta etapa: valores são estáticos
+           ("R$ 0,00" / "—") e nada consulta o Supabase. As telas
+           internas são alternadas por financeiroTela() no script.
+           ============================================================ */
+        .fin-screen { display: none; }
+        .fin-screen.active { display: block; animation: finFade .2s ease-out; }
+        @keyframes finFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fin-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-faint); margin: 26px 2px 12px; }
+        .fin-screen > .fin-section-title:first-child { margin-top: 4px; }
+
+        .fin-accounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .fin-account { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; position: relative; overflow: hidden; }
+        .fin-account::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 4px; background: var(--fin-c, var(--accent)); }
+        .fin-account-top { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .fin-account-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--fin-bg, var(--accent-dim)); color: var(--fin-c, var(--accent-bright)); flex-shrink: 0; }
+        .fin-account-icon svg { width: 17px; height: 17px; }
+        .fin-account-name { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-faint); }
+        .fin-account-value { font-size: 20px; font-weight: 800; color: var(--text); letter-spacing: -.3px; }
+        .fin-account-value.neg { color: #fca5a5; }
+
+        .fin-nav-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+        .fin-nav-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px; cursor: pointer; text-align: left; color: var(--text); font-family: inherit; transition: border-color .15s, transform .1s, background .15s; }
+        .fin-nav-btn:hover { border-color: var(--border-strong); background: var(--bg-elev); }
+        .fin-nav-btn:active { transform: scale(.98); }
+        .fin-nav-btn-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-dim); color: var(--accent-bright); }
+        .fin-nav-btn-icon svg { width: 21px; height: 21px; }
+        .fin-nav-btn-label { font-size: 14px; font-weight: 700; }
+        .fin-nav-btn-sub { font-size: 11px; color: var(--text-faint); font-weight: 500; }
+
+        .fin-subhead { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+        .fin-subhead h2 { font-size: 18px; font-weight: 800; letter-spacing: -.2px; }
+        .fin-subhead-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-dim); color: var(--accent-bright); flex-shrink: 0; }
+        .fin-subhead-ico svg { width: 19px; height: 19px; }
+        .fin-back { background: none; border: none; color: var(--text-faint); font-size: 14px; font-weight: 700; cursor: pointer; padding: 8px 0; margin-bottom: 4px; display: inline-flex; align-items: center; gap: 4px; }
+        .fin-back:hover { color: var(--text); }
+
+        .fin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+        .fin-card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-dim); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .fin-card-title svg { width: 15px; height: 15px; }
+
+        .fin-kv { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13.5px; }
+        .fin-kv:last-child { border-bottom: none; }
+        .fin-kv-label { color: var(--text-dim); }
+        .fin-kv-value { font-weight: 700; color: var(--text); }
+        .fin-status-chip { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.06); color: var(--text-dim); border: 1px solid var(--border-strong); }
+        .fin-aviso { margin-top: 12px; font-size: 12px; line-height: 1.5; color: #fbbf24; background: rgba(251,191,36,0.10); border: 1px solid rgba(251,191,36,0.28); border-radius: 12px; padding: 10px 12px; }
+
+        .fin-field { margin-bottom: 14px; }
+        .fin-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-faint); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .6px; }
+        .fin-field input, .fin-field select, .fin-field textarea { width: 100%; padding: 12px 14px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 15px; font-family: inherit; }
+        .fin-field input:focus, .fin-field select:focus, .fin-field textarea:focus { outline: none; border-color: var(--accent); }
+        .fin-field textarea { resize: vertical; min-height: 76px; }
+        .fin-radio-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .fin-radio { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 130px; padding: 11px 14px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; color: var(--text); cursor: pointer; user-select: none; }
+        .fin-radio input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+        .fin-radio:has(input:checked) { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+        .fin-field input:disabled { opacity: .5; cursor: not-allowed; }
+        .fin-field input[readonly] { background: rgba(255,255,255,0.04); color: var(--text-dim); cursor: default; }
+        .fin-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-dim); cursor: pointer; user-select: none; margin-top: 2px; }
+        .fin-check input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+        .fin-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 480px) { .fin-field-row { grid-template-columns: 1fr; } }
+        .fin-submit { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--accent-bright), var(--accent)); border: none; color: #05170c; border-radius: 14px; font-size: 15px; font-weight: 800; cursor: pointer; margin-top: 4px; }
+        .fin-submit:disabled { opacity: .45; cursor: not-allowed; }
+        .fin-actions-row { display: flex; gap: 10px; margin-top: 4px; }
+        .fin-actions-row .fin-submit { width: auto; margin-top: 0; }
+        .fin-btn-ghost { padding: 15px; background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .fin-btn-ghost:hover { color: var(--text); border-color: var(--text-faint); }
+
+        .fin-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+        .fin-table-scroll { overflow-x: auto; }
+        .fin-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+        .fin-table th { text-align: left; padding: 13px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); border-bottom: 1px solid var(--border); background: var(--bg-elev); }
+        .fin-table td { padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13.5px; color: var(--text-dim); }
+        .fin-table tbody tr:last-child td { border-bottom: none; }
+        .fin-table tfoot td { padding: 13px 16px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 800; color: var(--text); background: var(--bg-elev); text-transform: uppercase; letter-spacing: .5px; }
+        .fin-table-amount { font-weight: 700; color: var(--text); }
+        .fin-table-amount.neg { color: #fca5a5; }
+        .fin-table-amount.pos { color: var(--accent-bright); }
+        .fin-tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: rgba(255,255,255,0.06); color: var(--text-dim); border: 1px solid var(--border-strong); white-space: nowrap; }
+
+        .fin-note { font-size: 11.5px; color: var(--text-faint); margin-top: 14px; text-align: center; font-style: italic; }
+
+        .rf-config-btn { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); font-size: 18px; line-height: 1; cursor: pointer; }
+        .rf-config-btn:hover { color: var(--text); border-color: var(--text-faint); }
     </style>
 </head>
 <body>
@@ -871,6 +967,649 @@
             </details>
         </div>
 
+        <!-- ============================================================
+             Módulo Financeiro (2026-08-27, pedido do usuário).
+             BASE (2026-08-28): "Saldos por conta" agora lê da tabela `contas`
+             (Supabase) — ver loadFinanceiroSaldos() e o motor de saldos
+             (trigger em cima de `lancamentos`). O restante das telas internas
+             (Abertura, Fechamento) ainda é só layout; as regras de cada módulo
+             (Pix, reembolso, transferência, retirada, fechamento) entram nas
+             próximas etapas, sempre gerando lançamentos nessa mesma base.
+             Telas internas = .fin-screen alternadas por financeiroTela().
+             ============================================================ -->
+        <div class="view" id="viewFinanceiro">
+            <button class="back-btn" onclick="goHome()">← Menu</button>
+
+            <!-- TELA: Início ------------------------------------------------ -->
+            <div class="fin-screen active" id="finScreen-inicio">
+                <div class="fin-section-title">Saldos por conta</div>
+                <!-- Cartões preenchidos por loadFinanceiroSaldos() a partir da
+                     tabela `contas` (Supabase). Sem valores fixos aqui — o saldo
+                     de cada conta é mantido pelo trigger em cima de `lancamentos`.
+                     Saldos negativos (conta devedora) são exibidos normalmente. -->
+                <div class="fin-accounts" id="finContasCards">
+                    <div class="fin-note" id="finContasCarregando">Carregando saldos…</div>
+                </div>
+
+                <div class="fin-section-title">Cofre</div>
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3"/></svg> Saldos atuais do cofre</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo do Cofre Notas</span><span class="fin-kv-value">R$ 236,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo do Cofre Moedas</span><span class="fin-kv-value">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Fundo de Caixa (incluído no total)</span><span class="fin-kv-value">R$ 160,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo Total do Cofre</span><span class="fin-kv-value" style="color:var(--accent-bright); font-size:16px;">R$ 396,00</span></div>
+                </div>
+
+                <div class="fin-section-title">Abertura de Caixa</div>
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg> Fundo de caixa</div>
+                    <div class="fin-field-row">
+                        <div class="fin-field">
+                            <label>Fundo Caixa 1</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                            <div class="extenso-valor"></div>
+                        </div>
+                        <div class="fin-field">
+                            <label>Fundo Caixa 2</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                            <div class="extenso-valor"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Conferência</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Valor esperado</span><span class="fin-kv-value">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Valor informado</span><span class="fin-kv-value">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Diferença</span><span class="fin-kv-value">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Status</span><span class="fin-status-chip">Aguardando</span></div>
+                    <div class="fin-aviso">Diferença não impede a abertura — o sistema só registra um aviso.</div>
+                </div>
+                <button type="button" class="fin-submit">Abrir Caixa</button>
+
+                <div class="fin-section-title">Fechamento</div>
+                <div class="fin-nav-grid">
+                    <button type="button" class="fin-nav-btn" onclick="financeiroTela('fechamento')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg></span>
+                        <span class="fin-nav-btn-label">Fechamento de Caixa</span>
+                        <span class="fin-nav-btn-sub">Encerrar o dia</span>
+                    </button>
+                </div>
+                <div class="fin-note">Etapa 1 — apenas layout e navegação. Registro de Pix, retiradas, sangria, transferências etc. ficam no módulo "Movimentação Financeira".</div>
+            </div>
+
+            <!-- TELA: Fechamento de Caixa ------------------------------- -->
+            <div class="fin-screen" id="finScreen-fechamento">
+                <button type="button" class="fin-back" onclick="financeiroTela('inicio')">← Financeiro</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+                    <h2>Fechamento de Caixa</h2>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Saldos encontrados</div>
+                    <div class="fin-field-row">
+                        <div class="fin-field">
+                            <label>Saldo Atual Sicredi</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                            <div class="extenso-valor"></div>
+                        </div>
+                        <div class="fin-field">
+                            <label>Saldo Atual PagSeguro</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                            <div class="extenso-valor"></div>
+                        </div>
+                    </div>
+                    <div class="fin-field-row">
+                        <div class="fin-field">
+                            <label>Caixa Notas</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfFechNotas" oninput="mfFechamentoConferir()" placeholder="Ex: 2500">
+                            <div class="extenso-valor"></div>
+                        </div>
+                        <div class="fin-field">
+                            <label>Caixa Moedas</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfFechMoedas" oninput="mfFechamentoConferir()" placeholder="Ex: 2500">
+                            <div class="extenso-valor"></div>
+                        </div>
+                    </div>
+                    <div class="fin-field-row">
+                        <div class="fin-field">
+                            <label>Fundo de Caixa 1</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                            <div class="extenso-valor"></div>
+                        </div>
+                        <div class="fin-field">
+                            <label>Fundo de Caixa 2</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                            <div class="extenso-valor"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/></svg> Conferência do movimento (sangrias)</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Dinheiro físico contado <span style="color:var(--text-faint);">(Notas + Moedas)</span></span><span class="fin-kv-value" id="mfFechFisico">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Sangrias do dia <span style="color:var(--text-faint);">(saíram do Caixa da Loja)</span></span><span class="fin-kv-value" id="mfFechSangrias" style="color:var(--text-dim);">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Movimento conferido <span style="color:var(--text-faint);">(físico + sangrias)</span></span><span class="fin-kv-value" id="mfFechMovimento" style="color:var(--accent-bright); font-size:16px;">R$ 0,00</span></div>
+                    <div class="fin-aviso">As sangrias do dia entram aqui <b>só pra conferência do movimento</b> — mostram quanto dinheiro passou pelo caixa. Não alteram os saldos finais das contas nem duplicam valores (a sangria já creditou a conta de destino no momento do registro).</div>
+                </div>
+                <button type="button" class="fin-submit">Fechar Caixa</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             Módulo "Movimentação Financeira" (2026-08-27) — separado do
+             Financeiro de propósito: aqui ficam só os REGISTROS de dinheiro
+             entrando/saindo (Pix, retirada, sangria, envio de Pix, reembolso,
+             capitalização, transferências) + um histórico simples. NÃO mostra
+             saldo consolidado — isso é responsabilidade do módulo Financeiro.
+             Telas internas alternadas por movFinTela(); nada consulta o banco.
+             ETAPA 1: só estrutura e navegação, sem regra de negócio.
+             ============================================================ -->
+        <div class="view" id="viewMovFin">
+            <button class="back-btn" onclick="goHome()">← Menu</button>
+
+            <!-- TELA: Início ------------------------------------------------ -->
+            <div class="fin-screen active" id="mfScreen-inicio">
+                <div class="fin-section-title">Registrar movimentação</div>
+                <div class="fin-nav-grid">
+                    <button type="button" class="fin-nav-btn" onclick="movFinTela('retirada')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 13l6 6 6-6"/></svg></span>
+                        <span class="fin-nav-btn-label">Retirada</span>
+                    </button>
+                    <button type="button" class="fin-nav-btn" onclick="movFinTela('troca-pix')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg></span>
+                        <span class="fin-nav-btn-label">Troca por Pix</span>
+                    </button>
+                    <button type="button" class="fin-nav-btn" onclick="movFinTela('reembolso')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3H8l3 3M8 8L5 5"/></svg></span>
+                        <span class="fin-nav-btn-label">Reembolso</span>
+                    </button>
+                    <button type="button" class="fin-nav-btn" onclick="movFinTela('transferencia')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10M14 4l3 3-3 3"/><path d="M17 17H7M10 20l-3-3 3-3"/></svg></span>
+                        <span class="fin-nav-btn-label">Transferência</span>
+                        <span class="fin-nav-btn-sub">Entre contas</span>
+                    </button>
+                </div>
+                <div class="fin-note">Etapa 1 — apenas layout e navegação. Sem saldo consolidado aqui.</div>
+            </div>
+
+            <!-- TELA: Retirada ----------------------------------------- -->
+            <div class="fin-screen" id="mfScreen-retirada">
+                <button type="button" class="fin-back" onclick="movFinTela('inicio')">← Movimentação</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 13l6 6 6-6"/></svg></span>
+                    <h2>Retirada</h2>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-field">
+                        <label>Data da retirada</label>
+                        <div class="fin-radio-row">
+                            <label class="fin-radio"><input type="radio" name="mfRetData" value="hoje" checked onchange="mfRetiradaData()"> Hoje</label>
+                            <label class="fin-radio"><input type="radio" name="mfRetData" value="especificar" onchange="mfRetiradaData()"> Especificar data</label>
+                        </div>
+                        <input type="date" id="mfRetDataInput" style="margin-top:10px; display:none;">
+                    </div>
+                    <div class="fin-field">
+                        <label>Valor</label>
+                        <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                        <div class="extenso-valor"></div>
+                    </div>
+                    <div class="fin-field">
+                        <label>Origem do valor *</label>
+                        <select>
+                            <option value="">Selecione</option>
+                            <option>Sicredi</option>
+                            <option>PagSeguro</option>
+                            <option>Caixa (dinheiro da loja)</option>
+                            <option>Cofre Notas</option>
+                            <option>Cofre Moedas</option>
+                        </select>
+                    </div>
+                    <div class="fin-field">
+                        <label>Finalidade da retirada</label>
+                        <div class="fin-radio-row">
+                            <label class="fin-radio"><input type="radio" name="mfRetFim" value="empresa" onchange="mfRetiradaFinalidade()"> Empresa</label>
+                            <label class="fin-radio"><input type="radio" name="mfRetFim" value="pessoal" onchange="mfRetiradaFinalidade()"> Pessoal</label>
+                        </div>
+                    </div>
+                    <div class="fin-field" id="mfRetCatEmpresa" style="display:none;">
+                        <label>Categoria (Empresa)</label>
+                        <select>
+                            <option value="">Selecione</option>
+                            <option>Despesas fixas</option>
+                            <option>Manutenção</option>
+                            <option>Consumíveis</option>
+                            <option>Reembolso</option>
+                            <option>Pró-labore</option>
+                            <option>Juros de cartão</option>
+                            <option>Juros diversos</option>
+                        </select>
+                    </div>
+                    <div class="fin-field" id="mfRetCatPessoal" style="display:none;">
+                        <label>Categoria (Pessoal)</label>
+                        <select>
+                            <option value="">Selecione</option>
+                            <option>Retirada Márcio</option>
+                            <option>Retirada Renata</option>
+                            <option>Mercado</option>
+                            <option>Gasolina</option>
+                            <option>Almoço</option>
+                        </select>
+                    </div>
+                    <button type="button" class="fin-submit">Registrar</button>
+                </div>
+                <div class="fin-note">Etapa 1 — só a estrutura da interface, sem validação nem gravação.</div>
+
+                <div class="fin-section-title">Histórico de retiradas</div>
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12M6 4l2 16h8l2-16M9 9h6M10 13h4"/></svg> Filtros</div>
+                    <div class="fin-field">
+                        <label>Período</label>
+                        <div class="fin-radio-row">
+                            <label class="fin-radio"><input type="radio" name="mfRetFiltroPeriodo" value="hoje" checked onchange="mfRetiradaFiltroPeriodo()"> Hoje</label>
+                            <label class="fin-radio"><input type="radio" name="mfRetFiltroPeriodo" value="periodo" onchange="mfRetiradaFiltroPeriodo()"> Especificar período</label>
+                        </div>
+                        <div class="fin-field-row" id="mfRetFiltroPeriodoCampos" style="display:none; margin-top:10px;">
+                            <div class="fin-field"><label>Data inicial</label><input type="date"></div>
+                            <div class="fin-field"><label>Data final</label><input type="date"></div>
+                        </div>
+                    </div>
+                    <div class="fin-field">
+                        <label>Origem do recurso</label>
+                        <select>
+                            <option value="">Todas</option>
+                            <option>Sicredi</option>
+                            <option>PagSeguro</option>
+                            <option>Caixa Notas</option>
+                            <option>Caixa Moedas</option>
+                            <option>Fundo de Caixa 1</option>
+                            <option>Fundo de Caixa 2</option>
+                        </select>
+                    </div>
+                    <div class="fin-field">
+                        <label>Tipo de retirada</label>
+                        <select id="mfRetFiltroTipo" onchange="mfRetiradaFiltroTipo()">
+                            <option value="">Todos</option>
+                            <option value="empresa">Empresa</option>
+                            <option value="pessoal">Pessoal</option>
+                        </select>
+                    </div>
+                    <div class="fin-field">
+                        <label>Categoria</label>
+                        <select id="mfRetFiltroCategoria" disabled>
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="fin-actions-row">
+                        <button type="button" class="fin-submit" style="flex:2;">Filtrar</button>
+                        <button type="button" class="fin-btn-ghost" style="flex:1;">Limpar</button>
+                    </div>
+                </div>
+                <div class="fin-table-wrap">
+                    <div class="fin-table-scroll">
+                        <table class="fin-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Valor</th>
+                                    <th>Origem</th>
+                                    <th>Tipo</th>
+                                    <th>Categoria</th>
+                                    <th>Observação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>27/08/2026</td>
+                                    <td class="fin-table-amount">R$ 180,00</td>
+                                    <td>Caixa Notas</td>
+                                    <td>Empresa</td>
+                                    <td>Consumíveis</td>
+                                    <td>Papel A4 e toner</td>
+                                </tr>
+                                <tr>
+                                    <td>26/08/2026</td>
+                                    <td class="fin-table-amount">R$ 120,00</td>
+                                    <td>Sicredi</td>
+                                    <td>Pessoal</td>
+                                    <td>Gasolina</td>
+                                    <td>—</td>
+                                </tr>
+                                <tr>
+                                    <td>24/08/2026</td>
+                                    <td class="fin-table-amount">R$ 90,00</td>
+                                    <td>Caixa Moedas</td>
+                                    <td>Pessoal</td>
+                                    <td>Almoço</td>
+                                    <td>Equipe</td>
+                                </tr>
+                                <tr>
+                                    <td>22/08/2026</td>
+                                    <td class="fin-table-amount">R$ 1.500,00</td>
+                                    <td>PagSeguro</td>
+                                    <td>Empresa</td>
+                                    <td>Pró-labore</td>
+                                    <td>—</td>
+                                </tr>
+                                <tr>
+                                    <td>20/08/2026</td>
+                                    <td class="fin-table-amount">R$ 260,00</td>
+                                    <td>Sicredi</td>
+                                    <td>Pessoal</td>
+                                    <td>Gasolina</td>
+                                    <td>Viagem fornecedor</td>
+                                </tr>
+                                <tr>
+                                    <td>18/08/2026</td>
+                                    <td class="fin-table-amount">R$ 340,00</td>
+                                    <td>Fundo de Caixa 1</td>
+                                    <td>Empresa</td>
+                                    <td>Manutenção</td>
+                                    <td>Conserto impressora</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>Total</td>
+                                    <td class="fin-table-amount">R$ 0,00</td>
+                                    <td colspan="4"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="fin-note">Etapa 1 — filtros combináveis e total ainda sem cálculo. Dados fictícios.</div>
+            </div>
+
+            <!-- TELA: Troca por Pix -------------------------------- -->
+            <div class="fin-screen" id="mfScreen-troca-pix">
+                <button type="button" class="fin-back" onclick="movFinTela('inicio')">← Movimentação</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg></span>
+                    <h2>Troca por Pix</h2>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-field">
+                        <label>Data</label>
+                        <input type="text" id="mfTpData" readonly>
+                    </div>
+                    <div class="fin-field">
+                        <label>Valor desejado</label>
+                        <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfTpValor" oninput="mfTrocaPixCalcular()" placeholder="Ex: 500">
+                        <div class="extenso-valor"></div>
+                    </div>
+                    <div class="fin-field">
+                        <label>Valor da taxa</label>
+                        <input type="text" id="mfTpTaxa" readonly value="R$ 0,00">
+                    </div>
+                    <div class="fin-field">
+                        <label>Valor total a cobrar</label>
+                        <input type="text" id="mfTpTotal" readonly value="R$ 0,00">
+                    </div>
+                    <label class="fin-check"><input type="checkbox" id="mfTpDescontoOn" onchange="mfTrocaPixCalcular()"> Aplicar desconto</label>
+                    <div class="fin-field" id="mfTpDescontoCampo" style="display:none; margin-top:12px;">
+                        <label>Valor do desconto</label>
+                        <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfTpDesconto" oninput="mfTrocaPixCalcular()" placeholder="Ex: 20">
+                        <div class="extenso-valor"></div>
+                    </div>
+                    <div class="fin-field" id="mfTpFinalCampo" style="display:none;">
+                        <label>Valor final a cobrar</label>
+                        <input type="text" id="mfTpFinal" readonly value="R$ 0,00">
+                    </div>
+                    <button type="button" class="fin-submit">Registrar</button>
+                </div>
+
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Classificação no fluxo de caixa</div>
+                    <div class="fin-kv">
+                        <span class="fin-kv-label">Transferência interna <span style="color:var(--text-faint);">(Sicredi → Caixa da Loja)</span></span>
+                        <span class="fin-kv-value" id="mfTpTransfInterna" style="color:var(--text-dim);">R$ 0,00</span>
+                    </div>
+                    <div class="fin-kv">
+                        <span class="fin-kv-label">Receita da operação <span style="color:var(--text-faint);">(taxa − desconto)</span></span>
+                        <span class="fin-kv-value" id="mfTpReceita" style="color:var(--accent-bright); font-size:16px;">R$ 0,00</span>
+                    </div>
+                    <div class="fin-aviso">O <b>Valor desejado</b> é só movimentação de dinheiro (transferência interna) — não entra como receita nem lucro. Só a <b>taxa</b> (já com desconto, se houver) conta como receita no caixa do dia.</div>
+                </div>
+                <div class="fin-note">Conta fixa: <b>Sicredi</b> — toda Troca por Pix sai do Sicredi. Taxa por faixa e arredondamento comercial iguais aos da planilha (T1034 / W1036 / W1037). Etapa 1 — sem gravação.</div>
+
+                <div class="fin-section-title">Histórico de Troca por Pix</div>
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12M6 4l2 16h8l2-16M9 9h6M10 13h4"/></svg> Filtro</div>
+                    <div class="fin-field">
+                        <label>Data</label>
+                        <div class="fin-radio-row">
+                            <label class="fin-radio"><input type="radio" name="mfTpHistData" value="hoje" checked onchange="mfTrocaPixHistData()"> Hoje</label>
+                            <label class="fin-radio"><input type="radio" name="mfTpHistData" value="especificar" onchange="mfTrocaPixHistData()"> Especificar data</label>
+                        </div>
+                        <input type="date" id="mfTpHistDataInput" style="margin-top:10px; display:none;">
+                    </div>
+                    <div class="fin-actions-row">
+                        <button type="button" class="fin-submit" style="flex:2;">Filtrar</button>
+                        <button type="button" class="fin-btn-ghost" style="flex:1;">Limpar</button>
+                    </div>
+                </div>
+                <div class="fin-table-wrap">
+                    <div class="fin-table-scroll">
+                        <table class="fin-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Valor desejado</th>
+                                    <th>Taxa</th>
+                                    <th>Total cobrado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>27/08/2026</td>
+                                    <td class="fin-table-amount">R$ 500,00</td>
+                                    <td class="fin-table-amount">R$ 27,50</td>
+                                    <td class="fin-table-amount">R$ 527,50</td>
+                                </tr>
+                                <tr>
+                                    <td>27/08/2026</td>
+                                    <td class="fin-table-amount">R$ 200,00</td>
+                                    <td class="fin-table-amount">R$ 11,00</td>
+                                    <td class="fin-table-amount">R$ 211,00</td>
+                                </tr>
+                                <tr>
+                                    <td>27/08/2026</td>
+                                    <td class="fin-table-amount">R$ 950,00</td>
+                                    <td class="fin-table-amount">R$ 47,50</td>
+                                    <td class="fin-table-amount">R$ 997,50</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td style="color:var(--text-dim);">Transferência interna <span style="color:var(--text-faint); text-transform:none; letter-spacing:0;">(não entra no caixa)</span></td>
+                                    <td class="fin-table-amount" id="mfTpHistTransf" style="color:var(--text-dim);">R$ 0,00</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                                <tr>
+                                    <td>Receita do dia <span style="color:var(--text-faint); text-transform:none; letter-spacing:0;">(taxas)</span></td>
+                                    <td colspan="1"></td>
+                                    <td class="fin-table-amount" id="mfTpHistReceita" style="color:var(--accent-bright);">R$ 0,00</td>
+                                    <td colspan="1"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="fin-note">A apuração do dia soma <b>só as taxas</b> (receita real). O Valor desejado é transferência interna e fica de fora. Etapa 1 — filtro só por data, dados fictícios.</div>
+            </div>
+
+            <!-- TELA: Reembolso ----------------------------------- -->
+            <div class="fin-screen" id="mfScreen-reembolso">
+                <button type="button" class="fin-back" onclick="movFinTela('inicio')">← Movimentação</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3H8l3 3M8 8L5 5"/></svg></span>
+                    <h2>Reembolso</h2>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-field">
+                        <label>Valor</label>
+                        <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRbValor" oninput="mfReembolsoValidar()" placeholder="Ex: 2500">
+                        <div class="extenso-valor"></div>
+                    </div>
+                    <div class="fin-field">
+                        <label>Origem do Reembolso *</label>
+                        <select id="mfRbOrigem" onchange="mfReembolsoValidar()">
+                            <option value="">Selecione</option>
+                            <option>Sicredi</option>
+                            <option>PagSeguro</option>
+                            <option>Caixa da Loja</option>
+                            <option>Cofre Notas</option>
+                            <option>Cofre Moedas</option>
+                        </select>
+                    </div>
+                    <div class="fin-field"><label>Observação</label><textarea placeholder="Opcional"></textarea></div>
+                    <button type="button" class="fin-submit" id="mfRbSubmit" disabled>Registrar Reembolso</button>
+                </div>
+
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Efeito no fluxo de caixa</div>
+                    <div class="fin-kv">
+                        <span class="fin-kv-label">Efeito no saldo</span>
+                        <span class="fin-kv-value" id="mfRbClassifValor" style="color:var(--text-dim);">Selecione a origem</span>
+                    </div>
+                    <div class="fin-aviso">O reembolso <b>sempre</b> vai pro relatório. Se a origem for <b>Caixa da Loja</b>, o saldo não muda (só registro). Nas outras contas, o valor é abatido do saldo daquela conta.</div>
+                </div>
+                <div class="fin-note">Origem do Reembolso é obrigatória. Etapa 1 — classificação na interface; a gravação e o abatimento real entram com as integrações.</div>
+
+                <div class="fin-section-title">Histórico de reembolsos</div>
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12M6 4l2 16h8l2-16M9 9h6M10 13h4"/></svg> Filtros</div>
+                    <div class="fin-field">
+                        <label>Período</label>
+                        <div class="fin-radio-row">
+                            <label class="fin-radio"><input type="radio" name="mfRbFiltroPeriodo" value="hoje" checked onchange="mfReembolsoFiltroPeriodo()"> Hoje</label>
+                            <label class="fin-radio"><input type="radio" name="mfRbFiltroPeriodo" value="periodo" onchange="mfReembolsoFiltroPeriodo()"> Especificar período</label>
+                        </div>
+                        <div class="fin-field-row" id="mfRbFiltroPeriodoCampos" style="display:none; margin-top:10px;">
+                            <div class="fin-field"><label>Data inicial</label><input type="date"></div>
+                            <div class="fin-field"><label>Data final</label><input type="date"></div>
+                        </div>
+                    </div>
+                    <div class="fin-field">
+                        <label>Origem do valor</label>
+                        <select>
+                            <option value="">Todas</option>
+                            <option>Sicredi</option>
+                            <option>PagSeguro</option>
+                            <option>Caixa da Loja</option>
+                            <option>Cofre Notas</option>
+                            <option>Cofre Moedas</option>
+                        </select>
+                    </div>
+                    <div class="fin-actions-row">
+                        <button type="button" class="fin-submit" style="flex:2;">Filtrar</button>
+                        <button type="button" class="fin-btn-ghost" style="flex:1;">Limpar</button>
+                    </div>
+                </div>
+                <div class="fin-table-wrap">
+                    <div class="fin-table-scroll">
+                        <table class="fin-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Valor</th>
+                                    <th>Origem</th>
+                                    <th>Observação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>27/08/2026</td>
+                                    <td class="fin-table-amount">R$ 45,90</td>
+                                    <td>Caixa da Loja</td>
+                                    <td>Devolução ao cliente</td>
+                                </tr>
+                                <tr>
+                                    <td>25/08/2026</td>
+                                    <td class="fin-table-amount">R$ 120,00</td>
+                                    <td>Sicredi</td>
+                                    <td>Estorno de cobrança dupla</td>
+                                </tr>
+                                <tr>
+                                    <td>23/08/2026</td>
+                                    <td class="fin-table-amount">R$ 80,00</td>
+                                    <td>PagSeguro</td>
+                                    <td>—</td>
+                                </tr>
+                                <tr>
+                                    <td>21/08/2026</td>
+                                    <td class="fin-table-amount">R$ 30,00</td>
+                                    <td>Cofre Moedas</td>
+                                    <td>Troco a mais devolvido</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td style="color:var(--text-dim);">Só relatório <span style="color:var(--text-faint); text-transform:none; letter-spacing:0;">(Caixa da Loja)</span></td>
+                                    <td class="fin-table-amount" id="mfRbHistSoRelatorio" style="color:var(--text-dim);">R$ 0,00</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                                <tr>
+                                    <td>Abatido de conta</td>
+                                    <td class="fin-table-amount" id="mfRbHistAbatido" style="color:#fca5a5;">R$ 0,00</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="fin-note">Reembolso com origem <b>Caixa da Loja</b> só entra no relatório; nas outras contas abate do saldo. Etapa 1 — filtros e dados fictícios.</div>
+            </div>
+
+            <!-- TELA: Transferência ---------------------------- -->
+            <div class="fin-screen" id="mfScreen-transferencia">
+                <button type="button" class="fin-back" onclick="movFinTela('inicio')">← Movimentação</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10M14 4l3 3-3 3"/><path d="M17 17H7M10 20l-3-3 3-3"/></svg></span>
+                    <h2>Transferência</h2>
+                </div>
+                <div class="fin-card">
+                    <div class="fin-field-row">
+                        <div class="fin-field">
+                            <label>Origem</label>
+                            <select id="mfTrOrigem" onchange="mfTransferenciaClassificar()">
+                                <option value="">Selecione</option>
+                                <option>Caixa da Loja</option>
+                                <option>Sicredi</option>
+                                <option>PagSeguro</option>
+                                <option>Cofre de Notas</option>
+                                <option>Cofre de Moedas</option>
+                                <option>Fundo de Caixa</option>
+                            </select>
+                        </div>
+                        <div class="fin-field">
+                            <label>Destino</label>
+                            <select id="mfTrDestino" onchange="mfTransferenciaClassificar()">
+                                <option value="">Selecione</option>
+                                <option>Caixa da Loja</option>
+                                <option>Sicredi</option>
+                                <option>PagSeguro</option>
+                                <option>Cofre de Notas</option>
+                                <option>Cofre de Moedas</option>
+                                <option>Fundo de Caixa</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="fin-field"><label>Valor</label><input type="text" inputmode="numeric" data-role="valor-extenso" id="mfTrValor" oninput="mfTransferenciaClassificar()" placeholder="Ex: 2500"><div class="extenso-valor"></div></div>
+                    <div class="fin-field"><label>Observação</label><textarea placeholder="Opcional"></textarea></div>
+                    <button type="button" class="fin-submit">Transferir</button>
+                </div>
+
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10M14 4l3 3-3 3"/><path d="M17 17H7M10 20l-3-3 3-3"/></svg> <span id="mfTrClassifTitulo">Classificação: transferência interna</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Débito</span><span class="fin-kv-value" id="mfTrDebito" style="color:#fca5a5;">—</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Crédito</span><span class="fin-kv-value" id="mfTrCredito" style="color:var(--accent-bright);">—</span></div>
+                    <div class="fin-aviso" id="mfTrAviso">Transferência interna: só move dinheiro entre contas — nunca é receita nem lucro, e não muda o saldo total do sistema.</div>
+                </div>
+                <div class="fin-note">Origem <b>Caixa da Loja</b> = sangria (débito Caixa da Loja / crédito destino), que entra na conferência do movimento no fechamento. Etapa 1 — classificação na interface; a gravação real entra com as integrações.</div>
+            </div>
+        </div>
+
         <div class="view" id="viewTermos">
             <button class="back-btn" onclick="goHome()">← Menu</button>
 
@@ -991,82 +1730,99 @@
             </div>
         </div>
 
+        <!-- ============================================================
+             Resumo Financeiro (2026-08-27; rateio de excedente + config oculta):
+             PESSOAL — orçamento por categoria (limite manual). Despesas
+             compartilhadas (Mercado, Gasolina, Almoço, Despesas da Casa, Outras
+             Despesas Domésticas) que passam do limite: só o excedente é rateado
+             50/50 no "Usado" de Retirada Márcio / Retirada Renata.
+             EMPRESA — Pró-labore em cartão próprio com limite manual (pode ficar
+             negativo); demais categorias só somam, sem limite.
+             A área de "Configurar limites" fica escondida — só abre pela
+             engrenagem ⚙ (modal #rfConfigModal), sem senha.
+             Consolidação real fica pra quando as retiradas passarem a gravar.
+             O id da view segue "viewPlanejamento" só pra não quebrar
+             openView/goHome/realtime; o rótulo já é "Resumo Financeiro".
+             ============================================================ -->
         <div class="view" id="viewPlanejamento">
             <button class="back-btn" onclick="goHome()">← Menu</button>
 
-            <div class="cards">
-                <div class="card">
-                    <div class="card-label">🧔 Márcio</div>
-                    <div class="card-value" id="plMarcio">R$ 0,00</div>
+            <div class="rf-topbar" style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+                <div class="tabs" style="flex:1; margin-bottom:0;">
+                    <button type="button" class="tab-btn active" id="rfTabPessoal" onclick="rfTab('pessoal')">Pessoal</button>
+                    <button type="button" class="tab-btn" id="rfTabEmpresa" onclick="rfTab('empresa')">Empresa</button>
                 </div>
-                <div class="card">
-                    <div class="card-label">👩 Renata</div>
-                    <div class="card-value" id="plRenata">R$ 0,00</div>
-                </div>
-            </div>
-            <div style="padding: 0 20px 16px;">
-                <span class="subtext">Teto mensal de <b id="plSalarioBase">R$ 0,00</b> por pessoa, menos as retiradas de cada um, menos metade do estouro dos budgets (mercado/almoço/gasolina) e metade da Despesa Casa.</span>
+                <button type="button" class="rf-config-btn" id="rfConfigBtn" onclick="rfConfigAbrir()" title="Configurar limites" aria-label="Configurar limites">⚙</button>
             </div>
 
-            <details class="acc">
-                <summary class="acc-summary">
-                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>🛒 Budgets compartilhados</h3></div>
-                </summary>
-                <div class="acc-body">
-                    <div class="cards" style="padding: 16px 20px 0;">
-                        <div class="card">
-                            <div class="card-label">🛒 Mercado</div>
-                            <div class="card-value" id="plMercado">R$ 0,00</div>
-                        </div>
-                        <div class="card">
-                            <div class="card-label">🍽️ Almoço</div>
-                            <div class="card-value" id="plAlmoco">R$ 0,00</div>
-                        </div>
-                        <div class="card">
-                            <div class="card-label">⛽ Gasolina</div>
-                            <div class="card-value" id="plGasolina">R$ 0,00</div>
-                        </div>
+            <div class="fin-card">
+                <div class="fin-field">
+                    <label>Período</label>
+                    <div class="fin-radio-row">
+                        <label class="fin-radio"><input type="radio" name="rfPeriodo" value="mes" checked onchange="rfPeriodoChange()"> Mês atual</label>
+                        <label class="fin-radio"><input type="radio" name="rfPeriodo" value="especificar" onchange="rfPeriodoChange()"> Especificar período</label>
                     </div>
-                    <div style="padding: 4px 20px 16px;">
-                        <span class="subtext">Restante do budget do mês. Quando fica negativo, o estouro (somado dos 3) é dividido 50/50 e descontado de cada um.</span><br>
-                        <span class="subtext">📛 V. Excedente atual: <b id="plExcedente">R$ 0,00</b> (R$ <span id="plExcedenteMetade">0,00</span> pra cada um) · 🏠 Despesa Casa: <b id="plDespesaCasa">R$ 0,00</b> (R$ <span id="plDespesaCasaMetade">0,00</span> pra cada um)</span>
+                    <div class="fin-field-row" id="rfPeriodoCampos" style="display:none; margin-top:10px;">
+                        <div class="fin-field"><label>Data inicial</label><input type="date" id="rfDataIni" onchange="loadPlanejamento()"></div>
+                        <div class="fin-field"><label>Data final</label><input type="date" id="rfDataFim" onchange="loadPlanejamento()"></div>
                     </div>
                 </div>
-            </details>
+            </div>
 
-            <details class="acc">
-                <summary class="acc-summary">
-                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>💰 Saldo da Família</h3></div>
-                </summary>
-                <div class="acc-body">
-                    <div style="padding: 16px 20px;">
-                        <div class="card-label">Pool de <span id="plPoolBase">R$ 0,00</span>, menos despesas fixas ativas (Aluguel/Água/Luz/Internet) e menos Casa+Mercado+Gasolina+Almoço</div>
-                        <div class="card-value" id="plSaldoPool" style="margin-top:8px;">R$ 0,00</div>
+            <!-- ===== PESSOAL ===== -->
+            <div id="rfSecPessoal">
+                <div class="fin-section-title">Orçamento por categoria — Pessoal</div>
+                <div class="fin-table-wrap">
+                    <div class="fin-table-scroll">
+                        <table class="fin-table" style="min-width:480px;">
+                            <thead><tr><th>Categoria</th><th>Limite</th><th>Usado</th><th>Saldo restante</th></tr></thead>
+                            <tbody id="rfPessoalRows"></tbody>
+                            <tfoot><tr><td>Total</td><td class="fin-table-amount" id="rfPessoalLimite">R$ 0,00</td><td class="fin-table-amount" id="rfPessoalUsado">R$ 0,00</td><td class="fin-table-amount" id="rfPessoalSaldo">R$ 0,00</td></tr></tfoot>
+                        </table>
                     </div>
                 </div>
-            </details>
 
-            <details class="acc">
-                <summary class="acc-summary">
-                    <div class="acc-summary-left"><span class="acc-chevron">▸</span><h3>⚙️ Configuração</h3></div>
-                </summary>
-                <div class="acc-body" style="padding: 16px 20px;">
-                    <div class="form-row">
-                        <div class="form-group"><label>Salário base (cada)</label><input type="number" id="pl_salario_base" step="0.01" min="0" inputmode="decimal"></div>
-                        <div class="form-group"><label>Pool da família</label><input type="number" id="pl_saldo_pool_base" step="0.01" min="0" inputmode="decimal"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Budget Mercado</label><input type="number" id="pl_budget_mercado" step="0.01" min="0" inputmode="decimal"></div>
-                        <div class="form-group"><label>Budget Almoço</label><input type="number" id="pl_budget_almoco" step="0.01" min="0" inputmode="decimal"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Budget Gasolina</label><input type="number" id="pl_budget_gasolina" step="0.01" min="0" inputmode="decimal"></div>
-                        <div class="form-group"><label>Somar retiradas a partir de</label><input type="date" id="pl_periodo_inicio"></div>
-                    </div>
-                    <span class="subtext">"Somar a partir de" é opcional — deixe em branco pra somar tudo desde sempre (igual a planilha). Preencher equivale a "limpar a aba" sem apagar o histórico de verdade.</span>
-                    <button class="btn-save" style="width:100%; margin-top:12px;" onclick="salvarPlanejamentoConfig()">💾 Salvar Configuração</button>
+                <div class="fin-note">Despesas compartilhadas (Mercado, Gasolina, Almoço, Despesas da Casa, Outras Despesas Domésticas) que passarem do limite têm <b>só o excedente</b> rateado 50% / 50% e somado ao "Usado" de Retirada Márcio e Retirada Renata — que podem ficar com saldo negativo. Valor de retirada negativo funciona como estorno, abatendo o "Usado" da categoria. Ajuste os limites pela engrenagem ⚙ acima. "Usado" fica R$ 0,00 até as retiradas gravarem de verdade.</div>
+            </div>
+
+            <!-- ===== EMPRESA ===== -->
+            <div id="rfSecEmpresa" style="display:none;">
+                <div class="fin-section-title">Pró-labore</div>
+                <div class="fin-card">
+                    <div class="fin-kv"><span class="fin-kv-label">Limite configurado</span><span class="fin-kv-value" id="rfProLaboreLimite">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Já retirado</span><span class="fin-kv-value" id="rfProLaboreUsado">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo restante</span><span class="fin-kv-value" id="rfProLaboreSaldo">R$ 0,00</span></div>
                 </div>
-            </details>
+                <div class="fin-section-title">Custos por categoria — Empresa</div>
+                <div class="fin-table-wrap">
+                    <div class="fin-table-scroll">
+                        <table class="fin-table">
+                            <thead><tr><th>Categoria</th><th>Total</th></tr></thead>
+                            <tbody id="rfEmpresaRows"></tbody>
+                            <tfoot><tr><td>Total geral</td><td class="fin-table-amount" id="rfEmpresaTotal">R$ 0,00</td></tr></tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="fin-note">Pró-labore tem limite manual (engrenagem ⚙) e pode ficar negativo. As demais categorias não têm limite — só somam as retiradas <b>Empresa</b> do período. Zerado até as retiradas gravarem de verdade.</div>
+            </div>
+        </div>
+
+        <!-- Configuração de limites do Resumo Financeiro — oculta por padrão,
+             aberta só pela engrenagem. Sem senha. Pessoal = 7 categorias;
+             Empresa = só Pró-labore. Persiste em localStorage rf_limites_pessoal
+             (mesma chave/objeto de antes, agora incluindo 'Pró-labore'). -->
+        <div class="modal" id="rfConfigModal">
+            <div class="modal-content wide">
+                <h2>⚙ Configurar limites</h2>
+                <div class="fin-section-title" style="margin-top:4px;">Pessoal</div>
+                <div id="rfLimitesInputs"></div>
+                <div class="fin-section-title">Empresa</div>
+                <div id="rfLimitesEmpresaInputs"></div>
+                <div class="fin-actions-row" style="display:flex; gap:10px; margin-top:8px;">
+                    <button type="button" class="fin-submit" onclick="rfSalvarLimites()">Salvar</button>
+                    <button type="button" class="fin-btn-ghost" onclick="rfConfigFechar()">Cancelar</button>
+                </div>
+            </div>
         </div>
 
         <div class="view" id="viewSub">
@@ -1613,13 +2369,13 @@
                 <div class="fieldset-title">💰 Pagamento</div>
 
                 <div id="cv_pag_vista">
-                    <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="cv_valor_total_vista"></div>
+                    <div class="form-group"><label>Valor total</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_vista"><div class="extenso-valor"></div></div>
                 </div>
 
                 <div id="cv_pag_prazo_entrada" style="display:none;">
                     <div class="form-row">
-                        <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="cv_valor_total_pe"></div>
-                        <div class="form-group"><label>Valor da entrada (dinheiro)</label><input type="number" step="0.01" id="cv_valor_entrada_pe"></div>
+                        <div class="form-group"><label>Valor total</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_pe"><div class="extenso-valor"></div></div>
+                        <div class="form-group"><label>Valor da entrada (dinheiro)</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_entrada_pe"><div class="extenso-valor"></div></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_pe"></div>
@@ -1630,7 +2386,7 @@
 
                 <div id="cv_pag_prazo_sem_entrada" style="display:none;">
                     <div class="form-row">
-                        <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="cv_valor_total_se"></div>
+                        <div class="form-group"><label>Valor total</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_se"><div class="extenso-valor"></div></div>
                         <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_se"></div>
                     </div>
                     <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_se"></div>
@@ -1638,13 +2394,13 @@
                 </div>
 
                 <div id="cv_pag_vista_carro" style="display:none;">
-                    <div class="form-group"><label>Valor total do negócio</label><input type="number" step="0.01" id="cv_valor_total_vc"></div>
+                    <div class="form-group"><label>Valor total do negócio</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_vc"><div class="extenso-valor"></div></div>
                     <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">A quantia em dinheiro (item b) é calculada sozinha: valor total menos o valor do veículo dado na entrada, preenchido abaixo.</p>
                 </div>
 
                 <div id="cv_pag_prazo_carro_parcelas" style="display:none;">
                     <div class="form-row">
-                        <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="cv_valor_total_pc"></div>
+                        <div class="form-group"><label>Valor total</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_pc"><div class="extenso-valor"></div></div>
                         <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_pc"></div>
                     </div>
                     <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_pc"></div>
@@ -1669,7 +2425,7 @@
                         <div class="form-group"><label>Renavam</label><input type="text" id="cv2_renavam" inputmode="numeric"></div>
                         <div class="form-group"><label>Chassi</label><input type="text" id="cv2_chassi"></div>
                     </div>
-                    <div class="form-group"><label>Valor atribuído a este veículo na negociação</label><input type="number" step="0.01" id="cv2_valor"></div>
+                    <div class="form-group"><label>Valor atribuído a este veículo na negociação</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv2_valor"><div class="extenso-valor"></div></div>
                 </div>
 
                 <div class="fieldset-title">⚖️ Foro</div>
@@ -1851,6 +2607,43 @@
         function numExtenso(n) {
             return extenso(n);
         }
+
+        // ---------- Campo de valor padrão do sistema (2026-08-27) ----------
+        // Componente idêntico ao da Prestação de Serviço (prestador-form.html):
+        // o usuário digita só dígitos = reais inteiros ("2500"); o campo só
+        // limpa o que não é dígito (não sobrescreve com "R$..." a cada tecla);
+        // uma legenda .extenso-valor logo abaixo mostra "R$ 2.500,00 — dois mil
+        // e quinhentos reais" ao vivo. Qualquer <input data-role="valor-extenso">
+        // seguido de um <div class="extenso-valor"> já ganha esse comportamento
+        // via o listener global abaixo — nenhuma fiação por campo.
+        function formatarValorBRLExibicao(v) {
+            const digits = String(v || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+            if (!digits) return '';
+            return 'R$ ' + Number(digits).toLocaleString('pt-BR') + ',00';
+        }
+        function aplicarLimpezaValorDigitado(el) {
+            const digits = el.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+            if (el.value !== digits) el.value = digits;
+            return digits;
+        }
+        function atualizarExtensoValor(legendaEl, digits) {
+            if (!legendaEl) return;
+            const n = Number(digits);
+            legendaEl.textContent = n > 0 ? `${formatarValorBRLExibicao(digits)} — ${extensoReais(n)}` : '';
+        }
+        // Zera as legendas de valor dentro de um container (chamado ao abrir
+        // modais, já que form.reset() limpa o input mas não o <div> irmão).
+        function limparExtensosValor(root) {
+            (root || document).querySelectorAll('.extenso-valor').forEach(el => { el.textContent = ''; });
+        }
+        document.addEventListener('input', (e) => {
+            const el = e.target;
+            if (!el || el.dataset.role !== 'valor-extenso') return;
+            const digits = aplicarLimpezaValorDigitado(el);
+            let leg = el.nextElementSibling;
+            while (leg && !leg.classList.contains('extenso-valor')) leg = leg.nextElementSibling;
+            atualizarExtensoValor(leg, digits);
+        });
 
         const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
@@ -2142,6 +2935,15 @@
                 (row) => notificarNovoRegistro(`Chegou uma nova solicitação — ${TIPO_CONTRATO_LABELS[row?.tipo_contrato] || 'documento'}`));
             assinarRealtimeTabela('contratos', () => { loadContratos(); });
             assinarRealtimeTabela('recibos', () => { loadRecibos(); });
+            // Motor de saldos: quando um lançamento move o saldo de uma conta,
+            // os cartões "Saldos por conta" se atualizam sozinhos (só recarrega
+            // se o módulo Financeiro estiver aberto na tela inicial).
+            assinarRealtimeTabela('contas', () => {
+                const fin = document.getElementById('viewFinanceiro');
+                if (fin && fin.classList.contains('active') && document.getElementById('finScreen-inicio').classList.contains('active')) {
+                    loadFinanceiroSaldos();
+                }
+            });
         }
 
         // ===== Bloqueio de acesso (senha única da equipe + Face ID / Digital) =====
@@ -2613,6 +3415,7 @@
         function closeCVModal() {
             document.getElementById('cvModal').classList.remove('active');
             document.querySelectorAll('#cvModal form')[0].reset();
+            limparExtensosValor(document.getElementById('cvModal'));
             onCVCidadeChange('vend');
             onCVCidadeChange('comp');
             onCVForoCidadeChange();
@@ -2784,6 +3587,9 @@
             email: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 6.5l9 6.5 9-6.5"/></svg>`,
             whatsapp: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.7-1.2A9 9 0 1 0 12 3z"/><circle cx="9" cy="12" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg>`,
             financeiro: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M3 7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="17" cy="13" r="1.3" fill="currentColor" stroke="none"/></svg>`,
+            // Módulo "Movimentação Financeira" (2026-08-27) — setas de troca,
+            // pra diferenciar do cofre/carteira do "financeiro" acima.
+            movfin: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M4 9h13l-3-3M20 15H7l3 3"/><circle cx="12" cy="12" r="9"/></svg>`,
             fechamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
             planejamento: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M4 21h16"/><path d="M5 21V10l7-5 7 5v11"/><circle cx="9.5" cy="14.5" r="1.6"/><circle cx="14.5" cy="14.5" r="1.6"/></svg>`,
             recibo: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 3h12v18l-2.5-1.6L13 21l-2.5-1.6L8 21l-2.5-1.6L6 21z"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="11.5" x2="15.5" y2="11.5"/><path d="M8.5 15h4"/></svg>`,
@@ -2819,9 +3625,17 @@
             { icon: 'prestadora', label: 'Prestadora', action: { type: 'sub', key: 'prestadora' } },
             { icon: 'email', label: 'Email', action: { type: 'link', url: 'https://outlook.live.com/mail/0/' } },
             { icon: 'whatsapp', label: 'WhatsApp', action: { type: 'link', url: 'https://web.whatsapp.com/' } },
-            { icon: 'financeiro', label: 'Financeiro', action: { type: 'view', view: 'caixa' } },
-            { icon: 'fechamento', label: 'Fechamento', action: { type: 'view', view: 'caixa', scrollTo: 'fechamentoSection' } },
-            { icon: 'planejamento', label: 'Planejamento Familiar', action: { type: 'view', view: 'planejamento' } },
+            // Módulo Financeiro nativo (2026-08-27) — ver viewFinanceiro/financeiroTela().
+            // Abertura, Fechamento, Movimentações, Transferências e Histórico agora
+            // vivem todos dentro dele. O card "Fechamento" separado foi removido
+            // (2026-08-27, refatoração); o fluxo antigo #viewCaixa segue no HTML
+            // mas sem entrada no menu.
+            { icon: 'financeiro', label: 'Financeiro', action: { type: 'view', view: 'financeiro' } },
+            // Módulo separado do Financeiro (2026-08-27) — só registros de
+            // movimentação (Pix, retirada, sangria, envio de Pix, reembolso,
+            // capitalização, transferências) + histórico. Sem saldo consolidado.
+            { icon: 'movfin', label: 'Movimentação Financeira', action: { type: 'view', view: 'movfin' } },
+            { icon: 'planejamento', label: 'Resumo Financeiro', action: { type: 'view', view: 'planejamento' } },
         ];
 
         // Sub-painéis extraídos das abas "PAINEL X" da planilha original — cada um é
@@ -2915,7 +3729,7 @@
             ]},
         };
 
-        let viewsInitialized = { caixa: false, termos: false, recibo: false, declProc: false, prestador: false };
+        let viewsInitialized = { caixa: false, termos: false, recibo: false, declProc: false, prestador: false, financeiro: false, movfin: false };
 
         // Contagem de itens pendentes pra mostrar como bolinha vermelha nos cards
         // do menu (Currículo, Contratos, Declarações e Procurações, Prestação de
@@ -2993,6 +3807,7 @@
             document.getElementById('viewHome').classList.remove('active');
             document.getElementById('viewSub').classList.remove('active');
             document.getElementById('viewCaixa').classList.toggle('active', view === 'caixa');
+            document.getElementById('viewFinanceiro').classList.toggle('active', view === 'financeiro');
             document.getElementById('viewTermos').classList.toggle('active', view === 'termos');
             document.getElementById('viewDeclProc').classList.toggle('active', view === 'declProc');
             document.getElementById('viewCurriculo').classList.toggle('active', view === 'curriculo');
@@ -3001,16 +3816,23 @@
             document.getElementById('viewOrcamento').classList.toggle('active', view === 'orcamento');
             // Novo módulo "Prestação de Serviço" (2026-08-26) — ver viewPrestador no HTML.
             document.getElementById('viewPrestador').classList.toggle('active', view === 'prestador');
+            // Módulo "Movimentação Financeira" (2026-08-27) — ver viewMovFin no HTML.
+            document.getElementById('viewMovFin').classList.toggle('active', view === 'movfin');
             if (!viewsInitialized[view]) {
                 viewsInitialized[view] = true;
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
                 else if (view === 'termos') { loadContratos(); loadDeclaracoesPendentes(); }
                 else if (view === 'declProc') { selecionarCategoriaDeclProc('declaracoes'); }
                 else if (view === 'curriculo') loadCurriculos();
-                else if (view === 'planejamento') loadPlanejamento();
                 else if (view === 'recibo') loadRecibos();
                 else if (view === 'prestador') loadPrestadorPendentes();
             }
+            // Financeiro / Movimentação Financeira (etapa 1) não carregam dados —
+            // só voltam pra tela inicial do módulo toda vez que abrem pelo menu.
+            if (view === 'financeiro') financeiroTela('inicio');
+            if (view === 'movfin') movFinTela('inicio');
+            // Resumo Financeiro — re-renderiza a cada abertura (limites/período podem mudar).
+            if (view === 'planejamento') loadPlanejamento();
             scrollToSection(scrollTo);
         }
 
@@ -3035,6 +3857,7 @@
 
         function goHome() {
             document.getElementById('viewCaixa').classList.remove('active');
+            document.getElementById('viewFinanceiro').classList.remove('active');
             document.getElementById('viewTermos').classList.remove('active');
             document.getElementById('viewDeclProc').classList.remove('active');
             document.getElementById('viewSub').classList.remove('active');
@@ -3043,10 +3866,330 @@
             document.getElementById('viewRecibo').classList.remove('active');
             document.getElementById('viewOrcamento').classList.remove('active');
             document.getElementById('viewPrestador').classList.remove('active');
+            document.getElementById('viewMovFin').classList.remove('active');
             document.getElementById('viewHome').classList.add('active');
             loadPendingCounts();
         }
         window.goHome = goHome;
+
+        // ===== Motor de saldos centralizado — base do módulo Financeiro
+        // (2026-08-28) =====
+        // Fonte única de verdade: tabela `contas` no Supabase. O saldo de cada
+        // conta é mantido por um trigger (`trg_lancamentos_saldo`) em cima da
+        // tabela `lancamentos` — toda movimentação de dinheiro do sistema vira
+        // um lançamento com sinal (>0 entra, <0 sai) e o saldo da conta se
+        // ajusta sozinho no banco. Saldos negativos (conta devedora) são
+        // válidos e exibidos normalmente; não há trava de sinal em lugar nenhum.
+        // Escrita só via Edge Function db-write (tabelas `contas`/`lancamentos`
+        // já liberadas lá). Aqui, nesta etapa, só a LEITURA dos cartões
+        // "Saldos por conta" — as regras de cada módulo (Pix, reembolso,
+        // transferência, retirada, fechamento) plugam lançamentos aqui depois.
+        //
+        // Apresentação (ícone + cor) fica no cliente, indexada pela `chave`
+        // estável da conta; o banco guarda só dado (nome, tipo, saldo, ordem).
+        const FIN_CONTA_UI = {
+            sicredi:      { cor: '#38bdf8', bg: 'rgba(56,189,248,.14)',  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M19 10v9M9 10v9M15 10v9"/><path d="M3 20h18"/></svg>' },
+            pagseguro:    { cor: '#fbbf24', bg: 'rgba(251,191,36,.14)',  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 9h16"/><path d="M8 14h4"/></svg>' },
+            cofre_notas:  { cor: '#a78bfa', bg: 'rgba(167,139,250,.14)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3"/></svg>' },
+            cofre_moedas: { cor: '#f472b6', bg: 'rgba(244,114,182,.14)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M9.5 9.5h3a2 2 0 0 1 0 4h-3zM9.5 9.5v7"/></svg>' },
+            fundo_caixa:  { cor: '#4ade80', bg: 'rgba(74,222,128,.14)',  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.3"/></svg>' },
+            caixa_loja:   { cor: '#f59e0b', bg: 'rgba(245,158,11,.14)',  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>' },
+        };
+        const FIN_CONTA_UI_DEFAULT = { cor: '#94a3b8', bg: 'rgba(148,163,184,.14)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>' };
+
+        // R$ com sinal na frente pra saldo devedor: "− R$ 908,81".
+        function finFmtSaldo(n) {
+            const v = Number(n) || 0;
+            const abs = Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return (v < 0 ? '− R$ ' : 'R$ ') + abs;
+        }
+
+        async function loadFinanceiroSaldos() {
+            const wrap = document.getElementById('finContasCards');
+            if (!wrap) return;
+            const { data, error } = await supabase.from('contas').select('*').eq('ativa', true).order('ordem');
+            if (error) {
+                wrap.innerHTML = `<div class="fin-note" style="color:var(--danger);">Erro ao carregar saldos: ${escapeHtml(error.message)}</div>`;
+                return;
+            }
+            if (!data || !data.length) {
+                wrap.innerHTML = `<div class="fin-note">Nenhuma conta cadastrada.</div>`;
+                return;
+            }
+            wrap.innerHTML = data.map(c => {
+                const ui = FIN_CONTA_UI[c.chave] || FIN_CONTA_UI_DEFAULT;
+                const neg = Number(c.saldo) < 0;
+                return `<div class="fin-account" style="--fin-c:${ui.cor};--fin-bg:${ui.bg};">`
+                    + `<div class="fin-account-top">`
+                    + `<span class="fin-account-icon">${ui.icon}</span>`
+                    + `<span class="fin-account-name">${escapeHtml(c.nome)}</span>`
+                    + `</div>`
+                    + `<div class="fin-account-value${neg ? ' neg' : ''}">${finFmtSaldo(c.saldo)}</div>`
+                    + `</div>`;
+            }).join('');
+        }
+        window.loadFinanceiroSaldos = loadFinanceiroSaldos;
+
+        // Módulo Financeiro — navegação entre as telas internas (.fin-screen
+        // dentro de #viewFinanceiro). A tela "inicio" lê os saldos do banco
+        // (loadFinanceiroSaldos); as demais ainda são só layout, sem regra de
+        // negócio própria (isso vem nas próximas etapas por módulo).
+        function financeiroTela(nome) {
+            document.querySelectorAll('#viewFinanceiro .fin-screen').forEach(el => {
+                el.classList.toggle('active', el.id === 'finScreen-' + nome);
+            });
+            if (nome === 'inicio') loadFinanceiroSaldos();
+            if (nome === 'fechamento') mfFechamentoConferir();
+            const cont = document.querySelector('.container');
+            if (cont) cont.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
+        window.financeiroTela = financeiroTela;
+
+        // Módulo "Movimentação Financeira" (2026-08-27) — ETAPA 1: só navegação
+        // entre as telas internas (.fin-screen dentro de #viewMovFin, ids
+        // mfScreen-*). Sem regra de negócio; a etapa 2 pluga os registros aqui.
+        function movFinTela(nome) {
+            document.querySelectorAll('#viewMovFin .fin-screen').forEach(el => {
+                el.classList.toggle('active', el.id === 'mfScreen-' + nome);
+            });
+            if (nome === 'troca-pix') {
+                const d = document.getElementById('mfTpData');
+                if (d) d.value = new Date().toLocaleDateString('pt-BR');
+                mfTrocaPixCalcular();
+                mfTrocaPixHistApurar();
+            }
+            if (nome === 'reembolso') { mfReembolsoValidar(); mfReembolsoHistApurar(); }
+            if (nome === 'transferencia') mfTransferenciaClassificar();
+            const cont = document.querySelector('.container');
+            if (cont) cont.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
+        window.movFinTela = movFinTela;
+
+        // Tela Retirada (etapa 1) — só o comportamento de interface: revelar o
+        // seletor de data quando "Especificar data" (escondido em "Hoje") e
+        // trocar o bloco de categoria conforme Empresa/Pessoal. Sem regra de negócio.
+        function mfRetiradaData() {
+            const esp = document.querySelector('input[name="mfRetData"][value="especificar"]').checked;
+            const inp = document.getElementById('mfRetDataInput');
+            inp.style.display = esp ? '' : 'none';
+            if (!esp) inp.value = '';
+        }
+        function mfRetiradaFinalidade() {
+            const sel = document.querySelector('input[name="mfRetFim"]:checked');
+            const v = sel ? sel.value : '';
+            document.getElementById('mfRetCatEmpresa').style.display = v === 'empresa' ? '' : 'none';
+            document.getElementById('mfRetCatPessoal').style.display = v === 'pessoal' ? '' : 'none';
+        }
+        // Categorias por tipo de retirada — reusadas no filtro do "Histórico de
+        // retiradas". Só alimentam o <select>; nenhuma regra/consulta real ainda.
+        const MF_RET_CATEGORIAS = {
+            empresa: ['Despesas fixas', 'Manutenção', 'Consumíveis', 'Reembolso', 'Pró-labore', 'Juros de cartão', 'Juros diversos'],
+            pessoal: ['Retirada Márcio', 'Retirada Renata', 'Mercado', 'Gasolina', 'Almoço', 'Despesas da Casa', 'Outras Despesas Domésticas'],
+        };
+        function mfRetiradaFiltroTipo() {
+            const tipo = document.getElementById('mfRetFiltroTipo').value;
+            const cat = document.getElementById('mfRetFiltroCategoria');
+            const lista = MF_RET_CATEGORIAS[tipo] || [];
+            cat.innerHTML = '<option value="">Todas</option>' + lista.map(c => `<option>${c}</option>`).join('');
+            cat.disabled = !tipo;
+        }
+        // Período do filtro do histórico — mesmo padrão do "Data da retirada":
+        // "Hoje" por padrão; "Especificar período" revela os campos de data.
+        // A filtragem em si (Hoje = data atual) fica pra etapa de regras.
+        function mfRetiradaFiltroPeriodo() {
+            const esp = document.querySelector('input[name="mfRetFiltroPeriodo"][value="periodo"]').checked;
+            const campos = document.getElementById('mfRetFiltroPeriodoCampos');
+            campos.style.display = esp ? '' : 'none';
+            if (!esp) campos.querySelectorAll('input[type="date"]').forEach(i => { i.value = ''; });
+        }
+        window.mfRetiradaData = mfRetiradaData;
+        window.mfRetiradaFinalidade = mfRetiradaFinalidade;
+        window.mfRetiradaFiltroTipo = mfRetiradaFiltroTipo;
+        window.mfRetiradaFiltroPeriodo = mfRetiradaFiltroPeriodo;
+
+        // ---------- Troca por Pix — cálculo idêntico à planilha PAINEL DE CONTROLE ----------
+        // Fórmulas lidas da aba "PAINEL DE CONTROLE":
+        //   T1034 = valor desejado (entrada do usuário)
+        //   W1036 = taxa por faixa:
+        //     <1 -> 0 ; <182 -> 10 (fixo) ; <800 -> 5,5% ; <1500 -> 5% ; >=1500 -> 4,5%
+        //   W1037 = "R$ " & arredondamento comercial de (T1034 + W1036):
+        //     parte fracionária  [0 ; 0,125) -> ,00 | [0,125 ; 0,375) -> ,25
+        //                        [0,375 ; 0,625) -> ,50 | [0,625 ; 1) -> sobe pro inteiro seguinte
+        // O desconto (extra desta tela) é abatido do total já arredondado, sem tocar na taxa.
+        function mfTrocaPixTaxa(v) {
+            if (!(v >= 1)) return 0;
+            if (v < 182) return 10;
+            if (v < 800) return v * 0.055;
+            if (v < 1500) return v * 0.05;
+            return v * 0.045;
+        }
+        function mfTrocaPixArredComercial(x) {
+            if (!(x > 0)) return 0;
+            const base = Math.floor(x);
+            const frac = x - base;
+            if (frac < 0.125) return base;
+            if (frac < 0.375) return base + 0.25;
+            if (frac < 0.625) return base + 0.5;
+            return base + 1;
+        }
+        function mfBRL(n) {
+            return 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        function mfTrocaPixCalcular() {
+            const dig = id => Number(String((document.getElementById(id) || {}).value || '').replace(/\D/g, ''));
+            const valor = dig('mfTpValor');
+            const taxa = mfTrocaPixTaxa(valor);
+            const total = mfTrocaPixArredComercial(valor + taxa);
+            const setV = (id, s) => { const el = document.getElementById(id); if (el) el.value = s; };
+            const setT = (id, s) => { const el = document.getElementById(id); if (el) el.textContent = s; };
+            setV('mfTpTaxa', mfBRL(taxa));
+            setV('mfTpTotal', mfBRL(total));
+            const on = !!(document.getElementById('mfTpDescontoOn') || {}).checked;
+            const campo = document.getElementById('mfTpDescontoCampo');
+            const finCampo = document.getElementById('mfTpFinalCampo');
+            if (campo) campo.style.display = on ? '' : 'none';
+            if (finCampo) finCampo.style.display = on ? '' : 'none';
+            const desconto = on ? dig('mfTpDesconto') : 0;
+            if (on) {
+                setV('mfTpFinal', mfBRL(total - desconto));
+            } else {
+                setV('mfTpFinal', 'R$ 0,00');
+                const d = document.getElementById('mfTpDesconto');
+                if (d) {
+                    d.value = '';
+                    const leg = d.parentElement && d.parentElement.querySelector('.extenso-valor');
+                    if (leg) leg.textContent = '';
+                }
+            }
+            // Classificação no fluxo de caixa:
+            //  - Valor desejado  = transferência interna (Sicredi → Caixa da Loja), NÃO é receita.
+            //  - Receita = taxa − desconto (só isso entra como ganho no caixa do dia).
+            setT('mfTpTransfInterna', mfBRL(valor));
+            setT('mfTpReceita', mfBRL(Math.max(0, taxa - desconto)));
+        }
+        window.mfTrocaPixCalcular = mfTrocaPixCalcular;
+
+        // Apuração do histórico de Troca por Pix: separa transferência interna
+        // (Σ Valor desejado — não entra no caixa) da receita do dia (Σ Taxa).
+        function mfTrocaPixHistApurar() {
+            const tbody = document.querySelector('#mfScreen-troca-pix .fin-table tbody');
+            if (!tbody) return;
+            const num = s => Number(String(s || '').replace(/[^\d,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+            let transf = 0, receita = 0;
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const c = tr.querySelectorAll('td');
+                if (c.length < 3) return;
+                transf += num(c[1].textContent);   // Valor desejado
+                receita += num(c[2].textContent);  // Taxa (receita)
+            });
+            const t = document.getElementById('mfTpHistTransf');
+            const r = document.getElementById('mfTpHistReceita');
+            if (t) t.textContent = mfBRL(transf);
+            if (r) r.textContent = mfBRL(receita);
+        }
+        window.mfTrocaPixHistApurar = mfTrocaPixHistApurar;
+        // Filtro do histórico de Troca por Pix — só data (Hoje / Especificar data),
+        // mesmo padrão do "Data da retirada". Sem período, origem, valor ou taxa.
+        function mfTrocaPixHistData() {
+            const esp = document.querySelector('input[name="mfTpHistData"][value="especificar"]').checked;
+            const inp = document.getElementById('mfTpHistDataInput');
+            inp.style.display = esp ? '' : 'none';
+            if (!esp) inp.value = '';
+        }
+        window.mfTrocaPixHistData = mfTrocaPixHistData;
+
+        // ---------- Reembolso ----------
+        // "Origem do Reembolso" é obrigatória; o botão "Registrar Reembolso" só
+        // habilita com valor > 0 E origem escolhida. A origem entra no registro e
+        // na movimentação (débito exatamente da conta escolhida) — plumbing de
+        // gravação fica pra etapa de regras. O filtro de período do histórico
+        // espelha o de retiradas.
+        function mfReembolsoValidar() {
+            const valorNum = Number(String((document.getElementById('mfRbValor') || {}).value || '').replace(/\D/g, '')) || 0;
+            const origem = (document.getElementById('mfRbOrigem') || {}).value || '';
+            const btn = document.getElementById('mfRbSubmit');
+            if (btn) btn.disabled = !(valorNum > 0 && origem);
+            // Efeito no fluxo de caixa: Caixa da Loja = só relatório (saldo não muda);
+            // qualquer outra conta = abate do saldo dela + relatório.
+            const el = document.getElementById('mfRbClassifValor');
+            if (el) {
+                if (!origem) {
+                    el.textContent = 'Selecione a origem';
+                    el.style.color = 'var(--text-dim)';
+                } else if (origem === 'Caixa da Loja') {
+                    el.textContent = 'Só registro no relatório — saldo do Caixa da Loja não muda';
+                    el.style.color = 'var(--text-dim)';
+                } else {
+                    el.textContent = `Abate ${mfBRL(valorNum)} do saldo de ${origem} + registra no relatório`;
+                    el.style.color = '#fca5a5';
+                }
+            }
+        }
+        // Apuração do histórico de reembolsos: separa o que só foi pro relatório
+        // (origem Caixa da Loja) do que foi abatido de uma conta.
+        function mfReembolsoHistApurar() {
+            const tbody = document.querySelector('#mfScreen-reembolso .fin-table tbody');
+            if (!tbody) return;
+            const num = s => Number(String(s || '').replace(/[^\d,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+            let soRel = 0, abatido = 0;
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const c = tr.querySelectorAll('td');
+                if (c.length < 3) return;
+                const v = num(c[1].textContent);
+                if ((c[2].textContent || '').trim() === 'Caixa da Loja') soRel += v; else abatido += v;
+            });
+            const a = document.getElementById('mfRbHistSoRelatorio');
+            const b = document.getElementById('mfRbHistAbatido');
+            if (a) a.textContent = mfBRL(soRel);
+            if (b) b.textContent = mfBRL(abatido);
+        }
+        function mfReembolsoFiltroPeriodo() {
+            const esp = document.querySelector('input[name="mfRbFiltroPeriodo"][value="periodo"]').checked;
+            const campos = document.getElementById('mfRbFiltroPeriodoCampos');
+            campos.style.display = esp ? '' : 'none';
+            if (!esp) campos.querySelectorAll('input[type="date"]').forEach(i => { i.value = ''; });
+        }
+        window.mfReembolsoValidar = mfReembolsoValidar;
+        window.mfReembolsoHistApurar = mfReembolsoHistApurar;
+        window.mfReembolsoFiltroPeriodo = mfReembolsoFiltroPeriodo;
+
+        // ---------- Transferência / Sangria ----------
+        // Sangria = transferência com origem "Caixa da Loja": debita o Caixa da
+        // Loja e credita a conta de destino (Sicredi / PagSeguro / Cofre de Notas
+        // / Cofre de Moedas / Fundo de Caixa). É sempre transferência interna —
+        // nunca receita nem lucro. No fechamento, o total das sangrias do dia é
+        // somado ao dinheiro físico só PRA CONFERÊNCIA do movimento (ver
+        // mfFechamentoConferir) — não altera os saldos finais nem duplica valor.
+        function mfTransferenciaClassificar() {
+            const g = id => document.getElementById(id);
+            const origem = (g('mfTrOrigem') || {}).value || '';
+            const destino = (g('mfTrDestino') || {}).value || '';
+            const valor = Number(String((g('mfTrValor') || {}).value || '').replace(/\D/g, '')) || 0;
+            const sangria = origem === 'Caixa da Loja';
+            const tit = g('mfTrClassifTitulo');
+            if (tit) tit.textContent = sangria ? 'Classificação: sangria (transferência interna)' : 'Classificação: transferência interna';
+            const deb = g('mfTrDebito'), cred = g('mfTrCredito');
+            if (deb) deb.textContent = origem ? `${origem} − ${mfBRL(valor)}` : '—';
+            if (cred) cred.textContent = destino ? `${destino} + ${mfBRL(valor)}` : '—';
+            const av = g('mfTrAviso');
+            if (av) av.innerHTML = sangria
+                ? 'Sangria: <b>debita</b> o Caixa da Loja e <b>credita</b> a conta de destino. Só move dinheiro — não é receita nem lucro. O valor entra na <b>conferência do movimento</b> no fechamento do dia, sem mexer nos saldos finais.'
+                : 'Transferência interna: só move dinheiro entre contas — nunca é receita nem lucro, e não muda o saldo total do sistema.';
+        }
+        window.mfTransferenciaClassificar = mfTransferenciaClassificar;
+
+        // Fechamento de Caixa — conferência do movimento: dinheiro físico
+        // (Notas + Moedas) + total das sangrias do dia. Só conferência.
+        function mfFechamentoConferir() {
+            const dig = id => Number(String((document.getElementById(id) || {}).value || '').replace(/\D/g, '')) || 0;
+            const fisico = dig('mfFechNotas') + dig('mfFechMoedas');
+            const sangrias = 0; // virá das sangrias registradas no dia; por ora 0.
+            const setT = (id, s) => { const el = document.getElementById(id); if (el) el.textContent = s; };
+            setT('mfFechFisico', mfBRL(fisico));
+            setT('mfFechSangrias', mfBRL(sangrias));
+            setT('mfFechMovimento', mfBRL(fisico + sangrias));
+        }
+        window.mfFechamentoConferir = mfFechamentoConferir;
 
         async function upsertPessoa(pessoaData) {
             if (!pessoaData.nome) return null;
@@ -5922,110 +7065,151 @@
         }
         window.saveFechamento = saveFechamento;
 
-        // ===== Planejamento Familiar =====
-        // Replica a lógica real da aba "PLANEJAMENTO FAMILIAR" da planilha
-        // (fórmulas extraídas do .xlsx — o texto renderizado não mostra fórmula).
-        // Cada pessoa tem um teto mensal (salario_base) do qual se descontam:
-        // as retiradas próprias dela, metade do estouro combinado dos budgets
-        // de mercado/almoço/gasolina (v. excedente) e metade da Despesa Casa.
-        let planejamentoConfigCache = null;
+        // ===== Resumo Financeiro (2026-08-27; rateio de excedente + config oculta) =====
+        // Substituiu o antigo "Planejamento Familiar" (teto/penalidade/pool da
+        // planilha). Duas seções:
+        //   PESSOAL  — orçamento por categoria (limite manual). As 5 categorias
+        //              compartilhadas (RF_COMPART) que passam do limite têm SÓ o
+        //              excedente rateado 50/50 e somado ao "Usado" de Retirada
+        //              Márcio / Retirada Renata (essas duas não geram rateio
+        //              próprio). Retirada de valor negativo = estorno: abate o
+        //              "Usado" da categoria, podendo deixá-lo negativo.
+        //   EMPRESA  — Pró-labore tem limite manual (cartão próprio, pode ficar
+        //              negativo); demais categorias só somam, sem limite.
+        // Limites em localStorage `rf_limites_pessoal` — objeto {categoria: valor},
+        // agora incluindo 'Pró-labore'. A área de config fica escondida: só abre
+        // pelo ⚙ (rfConfigAbrir/rfConfigFechar), sem senha. Fonte de retiradas
+        // (rfRetiradas) é vazia até o Registrar do módulo Retirada gravar de
+        // verdade — aí basta retornar {tipo:'pessoal'|'empresa', categoria,
+        // valor, data} já filtrado pelo período; os totais se consolidam sozinhos.
+        const RF_LIMITES_KEY = 'rf_limites_pessoal';
+        const RF_COMPART = ['Mercado', 'Gasolina', 'Almoço', 'Despesas da Casa', 'Outras Despesas Domésticas'];
+        function rfLimites() {
+            try { return JSON.parse(localStorage.getItem(RF_LIMITES_KEY) || '{}') || {}; } catch (e) { return {}; }
+        }
+        function rfFmt(n) {
+            return 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        // Retiradas consolidáveis, já filtradas pelo período selecionado.
+        // Vazio até as retiradas gravarem de verdade (ver módulo Retirada).
+        function rfRetiradas() {
+            return [];
+        }
+        function rfTab(qual) {
+            document.getElementById('rfTabPessoal').classList.toggle('active', qual === 'pessoal');
+            document.getElementById('rfTabEmpresa').classList.toggle('active', qual === 'empresa');
+            document.getElementById('rfSecPessoal').style.display = qual === 'pessoal' ? '' : 'none';
+            document.getElementById('rfSecEmpresa').style.display = qual === 'empresa' ? '' : 'none';
+        }
+        function rfPeriodoChange() {
+            const esp = document.querySelector('input[name="rfPeriodo"][value="especificar"]').checked;
+            const c = document.getElementById('rfPeriodoCampos');
+            c.style.display = esp ? '' : 'none';
+            if (!esp) c.querySelectorAll('input[type="date"]').forEach(i => { i.value = ''; });
+            loadPlanejamento();
+        }
+        function rfConfigAbrir() {
+            const limites = rfLimites();
+            const campo = cat =>
+                `<div class="fin-field"><label>${escapeHtml(cat)}</label>`
+                + `<input type="text" inputmode="numeric" data-rf-cat="${escapeHtml(cat)}" value="${limites[cat] ? String(limites[cat]) : ''}" placeholder="Ex: 1500"></div>`;
+            document.getElementById('rfLimitesInputs').innerHTML = MF_RET_CATEGORIAS.pessoal.map(campo).join('');
+            document.getElementById('rfLimitesEmpresaInputs').innerHTML = campo('Pró-labore');
+            document.getElementById('rfConfigModal').classList.add('active');
+        }
+        function rfConfigFechar() {
+            document.getElementById('rfConfigModal').classList.remove('active');
+        }
+        function loadPlanejamento() {
+            const sec = document.getElementById('rfSecPessoal');
+            if (!sec) return; // view ainda não montada
+            const limites = rfLimites();
+            const movs = rfRetiradas();
+            const somaCat = (tipo, cat) => movs.filter(m => m.tipo === tipo && m.categoria === cat).reduce((s, m) => s + (Number(m.valor) || 0), 0);
 
-        async function loadPlanejamento() {
-            try {
-                const [{ data: config, error: cfgErr }, { data: retiradas, error: retErr }, { data: fixas, error: fixasErr }] = await Promise.all([
-                    supabase.from('planejamento_config').select('*').limit(1).single(),
-                    supabase.from('retiradas').select('valor, destino, data'),
-                    supabase.from('despesas_fixas').select('valor').eq('categoria', 'FAMILIA').eq('ativa', true),
-                ]);
-                if (cfgErr) throw new Error(cfgErr.message);
-                if (retErr) throw new Error(retErr.message);
-                if (fixasErr) throw new Error(fixasErr.message);
+            // ----- Pessoal -----
+            const pcats = MF_RET_CATEGORIAS.pessoal;
+            const usoDireto = {};
+            pcats.forEach(cat => { usoDireto[cat] = somaCat('pessoal', cat); });
 
-                planejamentoConfigCache = config;
+            // Excedente das compartilhadas (só quando há limite > 0) → rateio 50/50
+            // para Retirada Márcio / Retirada Renata. A categoria compartilhada
+            // fica exibida no teto (o que passou virou retirada pessoal).
+            let rateioTotal = 0;
+            const usoExibido = Object.assign({}, usoDireto);
+            RF_COMPART.forEach(cat => {
+                const lim = Number(limites[cat]) || 0;
+                if (lim > 0) {
+                    const exc = Math.max(0, usoDireto[cat] - lim);
+                    if (exc > 0) { rateioTotal += exc; usoExibido[cat] = usoDireto[cat] - exc; }
+                }
+            });
+            const rateioCada = rateioTotal / 2;
+            usoExibido['Retirada Márcio'] += rateioCada;
+            usoExibido['Retirada Renata'] += rateioCada;
 
-                const rows = (retiradas || []).filter(r => !config.periodo_inicio || r.data >= config.periodo_inicio);
-                const somaPor = (destino) => rows.filter(r => r.destino === destino).reduce((s, r) => s + Number(r.valor), 0);
+            let tLim = 0, tUso = 0;
+            document.getElementById('rfPessoalRows').innerHTML = pcats.map(cat => {
+                const lim = Number(limites[cat]) || 0;
+                const uso = usoExibido[cat];
+                const saldo = lim - uso;
+                tLim += lim; tUso += uso;
+                const tag = (cat === 'Retirada Márcio' || cat === 'Retirada Renata') && rateioCada > 0
+                    ? ` <span class="fin-tag">inclui rateio ${rfFmt(rateioCada)}</span>` : '';
+                return `<tr><td>${escapeHtml(cat)}${tag}</td>`
+                    + `<td class="fin-table-amount">${rfFmt(lim)}</td>`
+                    + `<td class="fin-table-amount${uso < 0 ? ' neg' : ''}">${rfFmt(uso)}</td>`
+                    + `<td class="fin-table-amount${saldo < 0 ? ' neg' : ''}">${rfFmt(saldo)}</td></tr>`;
+            }).join('');
+            document.getElementById('rfPessoalLimite').textContent = rfFmt(tLim);
+            const pUsoEl = document.getElementById('rfPessoalUsado');
+            pUsoEl.textContent = rfFmt(tUso);
+            pUsoEl.classList.toggle('neg', tUso < 0);
+            const pSaldoEl = document.getElementById('rfPessoalSaldo');
+            pSaldoEl.textContent = rfFmt(tLim - tUso);
+            pSaldoEl.classList.toggle('neg', (tLim - tUso) < 0);
 
-                const mercadoGasto = somaPor('MERCADO');
-                const almocoGasto = somaPor('ALMOÇO');
-                const gasolinaGasto = somaPor('GASOLINA');
-                const despesaCasaGasto = somaPor('DESPESA CASA');
-                const marcioRetirada = somaPor('RETIRADA MÁRCIO');
-                const renataRetirada = somaPor('RETIRADA RENATA');
+            // ----- Empresa -----
+            // Pró-labore: cartão próprio, limite manual (pode ficar negativo).
+            const plLim = Number(limites['Pró-labore']) || 0;
+            const plUso = somaCat('empresa', 'Pró-labore');
+            const plSaldo = plLim - plUso;
+            document.getElementById('rfProLaboreLimite').textContent = rfFmt(plLim);
+            const plUsoEl = document.getElementById('rfProLaboreUsado');
+            plUsoEl.textContent = rfFmt(plUso);
+            plUsoEl.classList.toggle('neg', plUso < 0);
+            const plSaldoEl = document.getElementById('rfProLaboreSaldo');
+            plSaldoEl.textContent = rfFmt(plSaldo);
+            plSaldoEl.classList.toggle('neg', plSaldo < 0);
 
-                const mercadoRestante = config.budget_mercado - mercadoGasto;
-                const almocoRestante = config.budget_almoco - almocoGasto;
-                const gasolinaRestante = config.budget_gasolina - gasolinaGasto;
-
-                const excedente = -(Math.min(mercadoRestante, 0) + Math.min(almocoRestante, 0) + Math.min(gasolinaRestante, 0));
-                const penalidade = (excedente / 2) + (despesaCasaGasto * 0.5);
-
-                const marcioSaldo = config.salario_base - marcioRetirada - penalidade;
-                const renataSaldo = config.salario_base - renataRetirada - penalidade;
-
-                const setValor = (id, valor) => {
-                    const el = document.getElementById(id);
-                    el.textContent = fmt(valor);
-                    el.style.color = valor < 0 ? 'var(--danger)' : '';
-                };
-
-                setValor('plMarcio', marcioSaldo);
-                setValor('plRenata', renataSaldo);
-                document.getElementById('plSalarioBase').textContent = fmt(config.salario_base);
-
-                setValor('plMercado', mercadoRestante);
-                setValor('plAlmoco', almocoRestante);
-                setValor('plGasolina', gasolinaRestante);
-
-                document.getElementById('plExcedente').textContent = fmt(excedente);
-                document.getElementById('plExcedenteMetade').textContent = fmt(excedente / 2).replace('R$', '').trim();
-                document.getElementById('plDespesaCasa').textContent = fmt(despesaCasaGasto);
-                document.getElementById('plDespesaCasaMetade').textContent = fmt(despesaCasaGasto * 0.5).replace('R$', '').trim();
-
-                const fixasTotal = (fixas || []).reduce((s, f) => s + Number(f.valor), 0);
-                const saldoPool = config.saldo_pool_base - fixasTotal - (despesaCasaGasto + mercadoGasto + gasolinaGasto + almocoGasto);
-                document.getElementById('plPoolBase').textContent = fmt(config.saldo_pool_base);
-                setValor('plSaldoPool', saldoPool);
-
-                document.getElementById('pl_salario_base').value = config.salario_base;
-                document.getElementById('pl_saldo_pool_base').value = config.saldo_pool_base;
-                document.getElementById('pl_budget_mercado').value = config.budget_mercado;
-                document.getElementById('pl_budget_almoco').value = config.budget_almoco;
-                document.getElementById('pl_budget_gasolina').value = config.budget_gasolina;
-                document.getElementById('pl_periodo_inicio').value = config.periodo_inicio || '';
-            } catch (error) {
-                console.error('❌ Erro no Planejamento Familiar:', error);
-                alert('Erro ao carregar Planejamento Familiar: ' + error.message);
-            }
+            // Tabela: demais categorias Empresa (sem Pró-labore, sem limite).
+            const ecats = MF_RET_CATEGORIAS.empresa.filter(c => c !== 'Pró-labore');
+            let tEmp = 0;
+            document.getElementById('rfEmpresaRows').innerHTML = ecats.map(cat => {
+                const tot = somaCat('empresa', cat);
+                tEmp += tot;
+                return `<tr><td>${escapeHtml(cat)}</td><td class="fin-table-amount">${rfFmt(tot)}</td></tr>`;
+            }).join('');
+            document.getElementById('rfEmpresaTotal').textContent = rfFmt(tEmp);
         }
         window.loadPlanejamento = loadPlanejamento;
+        window.rfTab = rfTab;
+        window.rfPeriodoChange = rfPeriodoChange;
+        window.rfConfigAbrir = rfConfigAbrir;
+        window.rfConfigFechar = rfConfigFechar;
 
-        async function salvarPlanejamentoConfig() {
-            if (!planejamentoConfigCache) return;
-            const btn = document.querySelector('#viewPlanejamento button[onclick="salvarPlanejamentoConfig()"]');
-            const original = btn.textContent;
-            btn.textContent = '⏳ Salvando...';
-            btn.disabled = true;
-            try {
-                await dbUpdate('planejamento_config', {
-                    salario_base: parseFloat(document.getElementById('pl_salario_base').value) || 0,
-                    saldo_pool_base: parseFloat(document.getElementById('pl_saldo_pool_base').value) || 0,
-                    budget_mercado: parseFloat(document.getElementById('pl_budget_mercado').value) || 0,
-                    budget_almoco: parseFloat(document.getElementById('pl_budget_almoco').value) || 0,
-                    budget_gasolina: parseFloat(document.getElementById('pl_budget_gasolina').value) || 0,
-                    periodo_inicio: document.getElementById('pl_periodo_inicio').value || null,
-                    updated_at: new Date().toISOString(),
-                }, { id: planejamentoConfigCache.id });
-                await loadPlanejamento();
-                alert('✅ Configuração salva!');
-            } catch (error) {
-                alert('Erro: ' + error.message);
-            } finally {
-                btn.textContent = original;
-                btn.disabled = false;
-            }
+        function rfSalvarLimites() {
+            const out = {};
+            document.querySelectorAll('#rfConfigModal input[data-rf-cat]').forEach(inp => {
+                const cat = inp.dataset.rfCat;
+                const v = Number(String(inp.value || '').replace(/\D/g, '')) || 0;
+                if (v > 0) out[cat] = v;
+            });
+            try { localStorage.setItem(RF_LIMITES_KEY, JSON.stringify(out)); } catch (e) {}
+            rfConfigFechar();
+            loadPlanejamento();
         }
-        window.salvarPlanejamentoConfig = salvarPlanejamentoConfig;
+        window.rfSalvarLimites = rfSalvarLimites;
 
         // ===== Currículo (pedidos de cliente) =====
         let curriculosCache = [];
@@ -7735,7 +8919,8 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Valor do serviço (R$) *</label>
-                        <input type="number" id="rc_valor" step="0.01" min="0" inputmode="decimal" value="${escapeHtml(reciboForm.valor)}">
+                        <input type="text" id="rc_valor" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" value="${escapeHtml(reciboForm.valor)}">
+                        <div class="extenso-valor">${reciboForm.valor ? `${formatarValorBRLExibicao(reciboForm.valor)} — ${extensoReais(Number(reciboForm.valor))}` : ''}</div>
                     </div>
                     <div class="form-group">
                         <label>Forma de pagamento *</label>

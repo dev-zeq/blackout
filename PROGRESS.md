@@ -1233,7 +1233,412 @@ Pedido de correção: o mascaramento ao vivo do item anterior (o campo em si ree
 
 **Publicado** — usuário revisou por descrição e autorizou publicar.
 
-## Possíveis próximos passos (não pedidos ainda, só ideias)
+## Módulo "Financeiro" — ETAPA 1: só layout e navegação (2026-08-27)
+
+Pedido: criar um módulo nativo chamado **Financeiro** no painel, **sem nenhuma regra de negócio nesta etapa** — só estrutura visual e navegação. Cálculo/persistência ficam pra etapa 2.
+
+**Só `paineldecontrole/index.html` foi tocado.** Nada de Supabase, nenhuma migration, nenhum arquivo novo. Nenhuma função consulta o banco.
+
+**O que foi adicionado**:
+- **CSS** (`.fin-*`, bloco novo antes do `</style>`): telas internas `.fin-screen` (alternadas via classe `.active`), cartões de conta com faixa/ícone colorido por conta (`--fin-c`/`--fin-bg` inline), card de resumo com grid de métricas, botões grandes de navegação (`.fin-nav-btn`), cards genéricos, linhas rótulo/valor (`.fin-kv`), form próprio (`.fin-field`), tabela de histórico (`.fin-table`). Paleta suave reaproveitando os tokens do painel (`--surface`/`--accent`/`--border` etc.) — cada conta com um tom próprio (verde/azul/âmbar/violeta/rosa).
+- **View `#viewFinanceiro`** (logo depois de `#viewCaixa` no HTML) com 6 telas internas `.fin-screen`:
+  1. `inicio` — 5 cartões de saldo (Caixa, Sicredi, PagSeguro, Cofre Notas, Cofre Moedas, todos "R$ 0,00"); card "Resumo financeiro / Hoje" com Faturamento Hoje, Dinheiro, Pix, Cartão, Lucro do Dia, Total (zerados); seção "Movimentações" com 5 botões grandes → Abertura de Caixa, Fechamento de Caixa, Movimentações, Transferências, Histórico.
+  2. `movimentacoes` — 6 botões grandes sem ação: Retirada, Gráfica, Envio de Pix, Sangria, Capitalização Cartão, Reembolso.
+  3. `transferencias` — form: Origem (select), Destino (select), Valor, Observação (textarea), botão "Transferir". Origem/Destino têm as opções Caixa, Sicredi, PagSeguro, Cofre-Notas, Cofre-Moedas. Sem validação/submit.
+  4. `abertura` — campos Caixa 1 / Caixa 2 + card "Conferência" com linhas Valor esperado / Valor informado / Diferença / Status (chip "Aguardando"). Tudo estático.
+  5. `fechamento` — campos Total de notas / Total de moeda / Saldo Sicredi / Saldo PagSeguro + card "Resumo do fechamento" (Total em espécie / Total em contas / Faturamento do dia / Diferença / Status). Estático.
+  6. `historico` — tabela `.fin-table` com 7 linhas fictícias (colunas Data / Tipo / Conta / Descrição / Valor, com tags e valores +/− coloridos), scroll horizontal em tela estreita.
+- **JS** (mínimo): `financeiroTela(nome)` alterna a `.fin-screen` ativa e rola pro topo; exportada em `window`. `openView` e `goHome` ganharam o toggle de `#viewFinanceiro`; `viewsInitialized` ganhou `financeiro: false`; ao abrir a view pelo menu, sempre volta pra tela `inicio`. Botões internos "voltar" chamam `financeiroTela('inicio')`.
+- **Menu**: o card "Financeiro" (`MENU_ITEMS`) foi **repontado** de `view: 'caixa'` pra `view: 'financeiro'`. O fluxo antigo de caixa/entradas/pix/saídas/fechamento (`#viewCaixa`) **continua intacto e acessível pelo card "Fechamento"** (que aponta pra `caixa` + `scrollTo: 'fechamentoSection'`).
+
+**Testado ao vivo** (harness local `blackout-static` na porta 8790, lock destravado só via DOM pra inspeção): as 6 telas alternam certo por `financeiroTela()`, todos os rótulos batem com o pedido (5 contas, 6 métricas, 5 botões de navegação, 6 botões de Movimentações, campos de Transferências/Abertura/Fechamento, 7 linhas no Histórico), selects de Origem/Destino com as 5 contas, CSS custom props resolvendo (tinte por conta funcionando). Sem erro novo no console (só o 404 de favicon que já existe em todo o projeto). **Screenshot não disponível nesta sessão** (Browser pane não compõe frames) — verificação foi por leitura de DOM/computed style.
+
+**Não implementado de propósito** (etapa 2): qualquer cálculo (conferência, diferença, totais, lucro), validação de formulário, gravação no banco, ação dos botões de Movimentações, carregamento de histórico real.
+
+**Não publicado** — aguardando revisão do usuário.
+
+### Refatoração da estrutura (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: unificar tudo num único módulo Financeiro e simplificar o fluxo de fechamento. Só `paineldecontrole/index.html`.
+
+- **Card "Fechamento" separado removido do menu** — a entrada `{ icon: 'fechamento', label: 'Fechamento', view: 'caixa', scrollTo: 'fechamentoSection' }` saiu de `MENU_ITEMS`. Abertura, Fechamento, Movimentações, Transferências e Histórico agora vivem só dentro do módulo Financeiro (os 5 botões da tela inicial, inalterados). O `#viewCaixa` legado continua no HTML/JS mas **sem nenhuma entrada no menu** — órfão, não removido nesta rodada pra não mexer nos loaders/modais antigos (`loadData`/`loadPix`/`loadSaidas`/`loadResumo`/`loadFechamento`). `openView`/`goHome` ainda alternam `#viewCaixa`, inofensivo.
+- **Tela de Fechamento reescrita pro novo fluxo** — não pede mais faturamento do dia nem "contagem de notas/moedas". Agora só 4 campos de **saldo final encontrado em cada local**: Sicredi, PagSeguro, Dinheiro em Caixa, Cofre. Card "Contagem do dia" → "Saldo final em cada local", com uma linha de ajuda (`.fin-card-hint`, classe CSS nova) explicando que o sistema parte do fechamento anterior pra deduzir as movimentações — o usuário não lança quanto entrou. Card de conferência: "Total em espécie / Total em contas / Faturamento do dia / Diferença / Status" → **"Fechamento anterior (base) / Saldo final informado / Movimentação no período / Status"**. Continua tudo estático (R$ 0,00 / "Aguardando"), sem cálculo — a dedução automática entra na etapa 2.
+
+**Testado ao vivo** (harness local, unlock real + cliques reais): menu com 20 tiles, "Fechamento" ausente, "Financeiro" presente e abrindo `viewFinanceiro` na tela inicial; botão "Fechamento de Caixa" abre a tela com exatamente os 4 campos novos e o card de conferência novo, sem nenhuma menção a "faturamento"; "← Financeiro" volta pra tela inicial. Sem erro novo no console.
+
+**Não publicado** — aguardando revisão.
+
+### Card "Resumo financeiro" da tela inicial reescrito (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: tirar Faturamento Hoje e Total; deixar só os saldos que vêm da conferência + Lucro do Dia como resultado. Sem lógica. Só `paineldecontrole/index.html`.
+
+- **Removidos**: Faturamento Hoje, Dinheiro, Pix, Cartão, Total.
+- **Mantidos/novos** (6 saldos): Saldo Atual Sicredi, Saldo Atual PagSeguro, Caixa Notas, Caixa Moedas, Fundo de Caixa 1, Fundo de Caixa 2 — cada um num `.fin-metric` do grid.
+- **Lucro do Dia** virou linha de resultado destacada — classe nova `.fin-metric.is-result` (ocupa a linha inteira, `grid-column: 1/-1`, rótulo à esquerda / valor à direita), somada ao `.is-total` que já dava o fundo/verde. Continua "R$ 0,00", sem cálculo.
+- Cabeçalho do card: "Hoje" → "Saldos da conferência". Comparação com o fechamento anterior pra achar diferenças fica pra etapa 2.
+
+**Testado ao vivo** (harness local, unlock + clique real no tile Financeiro): o grid mostra exatamente os 6 saldos na ordem pedida + Lucro do Dia como faixa full-width no fim; nenhum resquício de Faturamento/Dinheiro/Pix/Cartão/Total. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Card "Resumo financeiro" movido pra dentro do Fechamento (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: tirar o card "Resumo financeiro" da tela inicial de vez; a tela de Fechamento passa a ter só os 6 campos de saldo + um botão "Fechar Caixa". Sem conferência, sem cálculo. Só `paineldecontrole/index.html`.
+
+- **Tela inicial**: seção "Resumo financeiro" (título + `.fin-summary`) removida inteira. Sobrou: cartões de saldo por conta + seção "Movimentações" (os 5 botões) + a nota de rodapé.
+- **Tela de Fechamento de Caixa**: reduzida a **um card** com 6 `.fin-field` (Saldo Atual Sicredi, Saldo Atual PagSeguro, Caixa Notas, Caixa Moedas, Fundo de Caixa 1, Fundo de Caixa 2, em 3 linhas de 2) seguido do botão `.fin-submit` "Fechar Caixa". O card de "Conferência" (Fechamento anterior/Saldo informado/Movimentação/Status), a linha de ajuda e a nota foram removidos — comparação com o fechamento anterior e cálculos ficam pra etapa 2.
+- **CSS**: `.fin-summary*`, `.fin-metric*` (incl. `.is-total`/`.is-profit`/`.is-result`) e `.fin-card-hint` removidos — ficaram sem uso depois dessas duas mudanças.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): tela inicial sem o card de resumo (só accounts + nav + nota); Fechamento de Caixa com exatamente 1 card / 6 campos (Saldo Atual Sicredi, Saldo Atual PagSeguro, Caixa Notas, Caixa Moedas, Fundo de Caixa 1, Fundo de Caixa 2) / botão "Fechar Caixa", zero `.fin-kv`, zero nota. Navegação e volta OK. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Cartão "Caixa" fora dos saldos da tela inicial (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: tirar qualquer referência ao "Banco Caixa" da tela principal do Financeiro; na seção de saldos deixar só Sicredi, PagSeguro, Cofre de Notas e Cofre de Moedas; manter os 5 botões (Abertura/Fechamento de Caixa, Movimentações, Transferências, Histórico). Só layout. Só `paineldecontrole/index.html`.
+
+- Cartão `.fin-account` "Caixa" (o verde, primeiro da grade) **removido**. Sobraram 4: Sicredi, PagSeguro, Cofre de Notas, Cofre de Moedas.
+- Rótulos "Cofre Notas"/"Cofre Moedas" → **"Cofre de Notas"/"Cofre de Moedas"** (texto exato do pedido).
+- Botões da seção Movimentações inalterados — "Abertura de Caixa"/"Fechamento de Caixa" continuam (referem-se ao caixa/gaveta, não ao banco; o pedido mandou manter).
+- Tela de Transferências não foi tocada (é sub-tela, não "tela principal"; ali "Caixa" nos selects Origem/Destino segue como a gaveta).
+
+**Testado ao vivo** (harness local, unlock + clique real no tile Financeiro): saldos = Sicredi, PagSeguro, Cofre de Notas, Cofre de Moedas; 5 botões intactos; as únicas ocorrências de "Caixa" que sobraram na tela inicial são os rótulos "Abertura de Caixa"/"Fechamento de Caixa". Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Abertura de Caixa embutida na tela inicial (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: tirar "Abertura de Caixa" como tela separada e trazer a estrutura inteira pra tela inicial, logo abaixo dos cartões de saldo. Diferença não bloqueia, só mostra aviso. Manter o botão "Abrir Caixa". Só layout. Só `paineldecontrole/index.html`.
+
+- **Botão "Abertura de Caixa"** removido do `.fin-nav-grid` da tela inicial. Restaram 4 botões: Fechamento de Caixa, Movimentações, Transferências, Histórico.
+- **Tela `#finScreen-abertura` removida por completo** (não há mais `financeiroTela('abertura')` em lugar nenhum).
+- **Tela inicial** agora tem, em ordem: seção "Saldos por conta" (4 cartões) → seção **"Abertura de Caixa"** → seção "Movimentações". A parte de Abertura tem: card "Fundo de caixa" com **Fundo Caixa 1 / Fundo Caixa 2**; card "Conferência" com Valor esperado / Valor informado / Diferença / Status + uma faixa de aviso âmbar (`.fin-aviso`, classe CSS nova) "Diferença não impede a abertura — o sistema só registra um aviso."; e o botão `.fin-submit` **"Abrir Caixa"**. Tudo estático (R$ 0,00 / "Aguardando"), sem cálculo nem trava.
+- **CSS**: só a classe nova `.fin-aviso` (fundo/borda âmbar suave).
+
+**Testado ao vivo** (harness local, unlock + clique real no tile Financeiro): ordem das seções na inicial = Saldos por conta / Abertura de Caixa / Movimentações; campos Fundo Caixa 1 e 2; conferência com os 4 kv + aviso; 1 botão "Abrir Caixa"; nav grid só com os 4 botões restantes; `#finScreen-abertura` inexistente; as outras 4 telas internas (fechamento/movimentações/transferências/histórico) continuam alternando certo. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### "Movimentação Financeira" virou módulo separado do Financeiro (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: tirar toda a parte de movimentações de dentro do Financeiro e criar um módulo independente ao lado. O Financeiro fica só com saldos, abertura, fechamento e conferência. O novo módulo não mostra saldo consolidado. Só estrutura/navegação. Só `paineldecontrole/index.html`.
+
+**Financeiro (`#viewFinanceiro`) — enxugado**:
+- Removidas as telas internas `#finScreen-movimentacoes`, `#finScreen-transferencias`, `#finScreen-historico`. Sobraram só `finScreen-inicio` e `finScreen-fechamento`.
+- Na tela inicial, a seção "Movimentações" (4 botões) virou seção **"Fechamento"** com 1 botão só ("Fechamento de Caixa"). Ordem final: Saldos por conta → Abertura de Caixa (com Conferência + aviso + "Abrir Caixa") → Fechamento.
+
+**Novo módulo "Movimentação Financeira" (`#viewMovFin`)**:
+- Novo tile no menu (`MENU_ITEMS`, ícone `movfin` — setas de troca num círculo) logo depois de "Financeiro". Novo `viewsInitialized.movfin`, toggle em `openView`/`goHome`, reset pra tela inicial ao abrir.
+- Função `movFinTela(nome)` (espelho de `financeiroTela`, alterna `.fin-screen` com id `mfScreen-*` dentro de `#viewMovFin`). Exportada em `window`.
+- **Não exibe saldo consolidado** — nenhum `.fin-account` no módulo.
+- 9 telas internas: `inicio` (grade de 8 botões: Pix, Retirada, Sangria, Envio de Pix, Reembolso, Capitalização, Transferências, Histórico) + uma tela por registro. Pix/Retirada/Sangria/Reembolso/Capitalização = card com Valor + Observação + "Registrar". Envio de Pix = + campo "Destinatário / chave". Transferências = Origem/Destino (selects: Caixa, Sicredi, PagSeguro, Cofre-Notas, Cofre-Moedas) + Valor + Observação + "Transferir". Histórico = tabela `.fin-table` (reaproveitada) com 7 linhas fictícias (Data/Tipo/Descrição/Valor).
+- CSS: nenhuma classe nova — reaproveita todo o conjunto `.fin-*` (as telas do módulo novo usam a mesma classe `.fin-screen`, escopada por `#viewMovFin` na função `movFinTela`).
+
+**Testado ao vivo** (harness local, unlock + cliques reais): menu com "Financeiro" e "Movimentação Financeira" lado a lado; Financeiro com só 2 telas (inicio + fechamento), inicio com seções Saldos/Abertura/Fechamento e nav só com "Fechamento de Caixa", fechamento ainda navegável; Movimentação Financeira abre em `viewMovFin`, 9 telas, 8 botões na inicial, sem nenhum `.fin-account`, todas as 9 telas alternando certo por `movFinTela`, transferências com os 5 selects e histórico com 7 linhas. Sem `financeiroTela('movimentacoes'|'transferencias'|'historico')` remanescente. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Movimentação Financeira reduzida pra 6 segmentos (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: o módulo passa a ter **só 6 segmentos**: Retirada, Sangria, **Troca por Pix** (renomeando toda menção a "Envio de Pix"), Reembolso, **Transferência** (singular) e Histórico. Remover qualquer outra opção. Cada segmento com sua própria tela. Só layout. Só `paineldecontrole/index.html`.
+
+- **Removidos**: o segmento "Pix" (registrar Pix recebido, tela `#mfScreen-pix`) e "Capitalização" (`#mfScreen-capitalizacao`) — telas e botões apagados.
+- **Renomeados**: `#mfScreen-envio-pix` → `#mfScreen-troca-pix`, rótulo/título "Envio de Pix" → **"Troca por Pix"**, ícone trocado pro de setas de troca, campo "Destinatário / chave" removido (fica só Valor + Observação + Registrar, igual aos outros). `#mfScreen-transferencias` → `#mfScreen-transferencia`, título "Transferências" → **"Transferência"** (form idêntico: Origem/Destino/Valor/Observação/Transferir). `movFinTela('...')` dos botões e back atualizado nos dois casos.
+- **Grade da tela inicial**: de 8 botões pra **6** (Retirada, Sangria, Troca por Pix, Reembolso, Transferência, Histórico).
+- **Histórico** (dados fictícios): removidas as linhas "Pix" e "Capitalização"; a linha "Envio de Pix" virou "Troca por Pix" (5 linhas no total).
+- Nenhuma regra de negócio; cada segmento tem sua tela isolada pra receber regras próprias na etapa 2.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): 6 botões na ordem pedida; 7 telas internas (`mfScreen-inicio` + os 6 segmentos); as 6 alternam certo por `movFinTela`; títulos "Troca por Pix" e "Transferência" conferidos; nenhum resquício de "Pix"/"Envio de Pix"/"Capitalização" no `#viewMovFin`; tags do histórico = Sangria, Transferência, Reembolso, Retirada, Troca por Pix. Sem `mfScreen-pix`/`mfScreen-envio-pix`/`mfScreen-capitalizacao`/`mfScreen-transferencias` remanescente. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Tela Retirada detalhada (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: montar a estrutura de interface da tela Retirada (só layout + comportamento de UI, sem regra de negócio). Só `paineldecontrole/index.html`.
+
+Campos, em ordem, no card de `#mfScreen-retirada`:
+1. **Data da retirada** — dois rádios (`.fin-radio` dentro de `.fin-radio-row`, classes CSS novas): "Hoje" (`checked` por padrão) e "Especificar data". Abaixo, `<input type="date" id="mfRetDataInput" disabled>` que só habilita quando "Especificar data" está marcado (função `mfRetiradaData()`); volta a `disabled` + limpa o valor ao voltar pra "Hoje".
+2. **Valor** — campo monetário (`<input type="text" inputmode="decimal" placeholder="R$ 0,00">`). Sem máscara nesta etapa.
+3. **Origem do valor \*** — `<select>` com Sicredi, PagSeguro, "Caixa (dinheiro da loja)", Cofre Notas, Cofre Moedas. (Rótulo já sinaliza obrigatório com "\*"; sem validação ainda.)
+4. **Finalidade da retirada** — dois rádios: "Empresa" e "Pessoal" (nenhum marcado por padrão).
+5. **Categoria** — dois blocos `.fin-field` (`#mfRetCatEmpresa` / `#mfRetCatPessoal`), ambos `display:none` no início; `mfRetiradaFinalidade()` mostra o de Empresa (Despesas fixas, Manutenção, Consumíveis, Reembolso, Pró-labore, Juros de cartão, Juros diversos) ou o de Pessoal (Retirada Márcio, Retirada Renata, Mercado, Gasolina, Almoço) conforme o rádio.
+6. Botão **"Registrar"**.
+
+Duas funções novas no script (`mfRetiradaData`/`mfRetiradaFinalidade`, exportadas em `window`), chamadas por `onchange` inline nos rádios — só toggles de `disabled`/`display`, nenhuma regra de negócio. CSS novo: `.fin-radio-row`, `.fin-radio` (com destaque via `:has(input:checked)`), `.fin-field input:disabled`.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): ordem dos rótulos conferida; select de origem com as 5 opções certas; data começa `disabled`, habilita em "Especificar data", volta a `disabled` em "Hoje"; categorias começam escondidas, "Empresa" mostra só o bloco Empresa (7 opções) e esconde Pessoal, "Pessoal" mostra só o de Pessoal (5 opções) e esconde Empresa. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Tela Retirada — seção "Histórico de retiradas" com filtros (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: abaixo do formulário de cadastro, uma seção de consulta com filtros combináveis + tabela de resultado com total. Só estrutura da interface e da consulta, sem cálculo. Só `paineldecontrole/index.html` (tudo dentro de `#mfScreen-retirada`).
+
+- **Card "Filtros"**: Data inicial / Data final (`<input type="date">` lado a lado); **Origem do recurso** (`<select>`: Todas, Sicredi, PagSeguro, Caixa Notas, Caixa Moedas, Fundo de Caixa 1, Fundo de Caixa 2 — obs.: lista diferente da "Origem do valor" do cadastro, que segue com "Caixa (dinheiro da loja)"); **Tipo de retirada** (`#mfRetFiltroTipo`: Todos / Empresa / Pessoal); **Categoria** (`#mfRetFiltroCategoria`, começa `disabled` só com "Todas"). Função nova `mfRetiradaFiltroTipo()` repovoa o select de categoria conforme o tipo, usando a constante nova `MF_RET_CATEGORIAS` (Empresa: Despesas fixas/Manutenção/Consumíveis/Reembolso/Pró-labore/Juros de cartão/Juros diversos; Pessoal: Retirada Márcio/Retirada Renata/Mercado/Gasolina/Almoço) — "Todos" volta a desabilitar. Botões **Filtrar** (`.fin-submit`) + **Limpar** (`.fin-btn-ghost`, classe CSS nova) numa `.fin-actions-row` (classe CSS nova).
+- **Tabela de resultado** (`.fin-table` com `<tfoot>`): colunas Data / Valor / Origem / Tipo / Categoria / Observação; 6 linhas fictícias (algumas com Observação, outras com "—"); linha de **Total** no `tfoot` (R$ 0,00, sob a coluna Valor). CSS novo: `.fin-table tfoot td` (+ `tr:last-child` trocado pra `tbody tr:last-child` pra não tirar a borda do tfoot).
+- Nenhum filtro/soma funciona ainda — Filtrar/Limpar sem ação, Total estático. Só a estrutura.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): seção "Histórico de retiradas" presente abaixo do form; rótulos dos filtros e as 7 opções de Origem do recurso conferidos; categoria começa disabled/"Todas", vira 7 opções em Empresa, 5 em Pessoal, volta a disabled em "Todos"; tabela com 6 colunas certas, 6 linhas, `tfoot` "Total / R$ 0,00"; botões "Filtrar" e "Limpar". Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Tela Sangria removida — sangria passa a sair de Transferência (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: remover a tela Sangria do módulo. Toda sangria passa a ser registrada pela tela Transferência; quando a **origem for Caixa da Loja**, o sistema identifica automaticamente como sangria (pros relatórios e o fechamento) — sem o usuário marcar nada. Regras de saldo/validação ficam pra próxima etapa. Só `paineldecontrole/index.html`.
+
+- **Botão "Sangria"** removido do `.fin-nav-grid` de `#mfScreen-inicio`; **tela `#mfScreen-sangria` apagada**. Módulo Movimentação Financeira agora com **5 segmentos**: Retirada, Troca por Pix, Reembolso, Transferência, Histórico. Não sobrou `movFinTela('sangria')` em lugar nenhum.
+- **Tela Transferência**: opção "Caixa" dos selects Origem/Destino renomeada pra **"Caixa da Loja"** (deixa explícito qual conta dispara a sangria automática). Faixa `.fin-aviso` nova dentro do card explicando que transferência com origem em Caixa da Loja é registrada automaticamente como sangria — texto informativo, **nenhuma lógica** (não há detecção nem gravação ainda).
+- A opção "Caixa (dinheiro da loja)" do cadastro de Retirada (campo "Origem do valor") não foi tocada — pedido é só sobre a tela Sangria/Transferência.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): 5 botões na inicial (sem Sangria); 6 telas internas (`mfScreen-inicio` + os 5 segmentos), sem `mfScreen-sangria`; Transferência com Origem = Selecione/Caixa da Loja/Sicredi/PagSeguro/Cofre-Notas/Cofre-Moedas + faixa de aviso. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Padronização de todos os campos de valor com o componente da Prestação de Serviço (2026-08-27)
+
+Pedido: todo campo monetário do sistema deve usar **exatamente** o componente já existente na Prestação de Serviço — digita só dígitos (reais inteiros, ex. "2500"), o campo só limpa não-dígitos (não reescreve "R$..." a cada tecla), e uma legenda `.extenso-valor` logo abaixo mostra "R$ 2.500,00 — dois mil e quinhentos reais" ao vivo. **Sem regra nova**, só reuso. O usuário confirmou por pergunta que é esse comportamento (reais inteiros, não máscara de centavos) e o alcance "todos os módulos do sistema".
+
+**Consequência assumida (avisada e aceita pelo usuário):** os campos que antes eram `type="number" step="0.01"` (aceitavam centavos) passam a aceitar **só reais inteiros** — vale pra contratos, recibo, compra e venda etc. Valor salvo no banco continua sendo o número (`Number("2500") = 2500`), agora sempre inteiro.
+
+**`index.html`** — helpers `formatarValorBRLExibicao`/`aplicarLimpezaValorDigitado`/`atualizarExtensoValor`/`limparExtensosValor` + um **listener global** `document.addEventListener('input')` que pega qualquer `<input data-role="valor-extenso">` seguido de um `<div class="extenso-valor">` e atualiza a legenda — nenhuma fiação por campo. CSS `.extenso-valor` adicionado. Campos convertidos: **Financeiro** (Abertura: Fundo Caixa 1/2; Fechamento: os 6 saldos), **Movimentação Financeira** (Retirada/Troca por Pix/Reembolso/Transferência — campo Valor), **Recibo** (`rc_valor`, com legenda semeada no template), **Compra e Venda** (`cvModal`: os 7 campos `cv_valor_*`/`cv2_valor`; `closeCVModal` limpa as legendas). Reaproveita o `extenso` já importado e o `extensoReais()` que já existia.
+**Não convertidos de propósito**: os modais do `#viewCaixa` legado (`#amount`/`pix_valor`/`pix_taxa`/`saida_valor`/`df_valor`) — view órfã, fora do menu desde a refatoração do Financeiro; e os steppers de orçamento (contagem de páginas, não valor) e os budgets do Planejamento Familiar (campos de configuração, não transação). Se o usuário quiser incluir, é só sinalizar.
+
+**`contrato-form.html`** — `import extenso` + helpers `extensoReais`/`formatarValorBRLExibicao`/`legendaExtensoTexto` + `campoValor(label, key)` (monta o `.field` com input `data-role="valor-extenso"` + legenda semeada). Os 6 campos (`valor_total`, `ev_valor`, `valor_entrada`, `valor_aluguel`, `multa_rescisao_valor`, `valor_caucao`) passaram a usar `campoValor()`. O handler delegado `cardEl` ganhou um ramo pra `data-role="valor-extenso"`: guarda só os dígitos em `s[key]`, atualiza a legenda e (pra `valor_entrada`) o display de parcela; sai antes do `s[key] = e.target.value` genérico.
+
+**`declaracao-autonomo-form.html`** e **`declaracao-trabalho-form.html`** — `import extenso` + `extensoReais`/`legendaExtensoTexto`/`ligarCampoValorExtenso(inp, legenda, onDigits)`. `renderCondRenda()` reescrito: campo "Renda mensal" virou `type="text" inputmode="numeric"` com legenda semeada, e liga o listener que grava `s.renda_mensal` só com dígitos.
+
+**Currículo** não tem campo de valor (nada a fazer).
+
+**Testado ao vivo** (harness local): `index.html` — digitar "25a00x" num campo do Financeiro/MovFin limpa pra "2500" e a legenda mostra "R$ 2.500,00 — dois mil e quinhentos reais"; limpar o campo zera a legenda; Fechamento tem os 6 inputs + 6 legendas; Recibo (`rc_valor`) e os 7 campos do `cvModal` convertidos e formatando certo ("R$ 45.000,00 — quarenta e cinco mil reais"); legenda do cvModal zera no `closeCVModal`. `contrato-form.html` — o handler delegado limpa "45a000"→"45000" e a legenda sai certa; módulo carrega sem erro (extenso importado). `declaracao-autonomo`/`trabalho` — carregam sem erro de parse, helpers definidos. Sem erro novo no console em nenhum (só o 404 de favicon de sempre). **Não exercitado ao vivo**: preencher um contrato/declaração ponta a ponta até o campo de valor (validação dos wizards trava o avanço sem dados válidos) — verificação foi do componente isolado + carga dos módulos.
+
+**Não publicado** — aguardando revisão.
+
+### Filtro "Período" do Histórico de retiradas — padrão "Data da retirada" (2026-08-27, mesmo dia)
+
+Pedido: no card de filtros do "Histórico de retiradas", trocar o par fixo "Data inicial / Data final" pelo mesmo padrão do campo "Data da retirada": rádios **"Hoje"** (marcado por padrão) e **"Especificar período"**; ao marcar "Especificar período", aparecem os campos Data inicial / Data final. Só interface. Só `paineldecontrole/index.html`.
+
+- Par fixo de datas → bloco com `.fin-radio-row` (mesma classe/visual do "Data da retirada"): `input[name="mfRetFiltroPeriodo"]` valores `hoje`/`periodo`. Os dois `<input type="date">` foram pra dentro de `#mfRetFiltroPeriodoCampos` (`display:none` por padrão).
+- Função nova `mfRetiradaFiltroPeriodo()` (exportada em `window`, `onchange` nos rádios): mostra/esconde `#mfRetFiltroPeriodoCampos` e, ao voltar pra "Hoje", limpa os dois campos de data — espelha o `mfRetiradaData()` do formulário.
+- A filtragem em si ("Hoje" = registros da data atual) **não** foi implementada — fica pra etapa de regras, como pedido.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): "Hoje" marcado por padrão, campos de data escondidos; "Especificar período" revela Data inicial/Data final; voltar pra "Hoje" esconde e zera os dois; nenhum campo de data solto fora do bloco condicional. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Campo "Data da retirada" do formulário — esconder o seletor em "Hoje" (2026-08-27, mesmo dia)
+
+Pedido: o seletor de data do campo "Data da retirada" (formulário de cadastro) deve **sumir** quando "Hoje" está marcado e só **aparecer** ao escolher "Especificar data" — antes ficava sempre visível, só desabilitado. Só `paineldecontrole/index.html`.
+
+- `#mfRetDataInput`: `disabled` → `style="display:none"` por padrão.
+- `mfRetiradaData()`: `inp.disabled = !esp` → `inp.style.display = esp ? '' : 'none'` (continua limpando o valor ao voltar pra "Hoje"). Agora bate exatamente com o filtro de período do histórico.
+
+**Testado ao vivo** (harness local): "Hoje" por padrão com o seletor escondido (`display:none`); "Especificar data" mostra o seletor; voltar pra "Hoje" esconde e zera. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Troca por Pix — cálculo real baseado na planilha PAINEL DE CONTROLE (2026-08-27)
+
+Pedido: reimplementar a tela "Troca por Pix" reproduzindo **exatamente** as fórmulas da aba "PAINEL DE CONTROLE" da planilha Google Sheets (`16aoOGD9mqHdchgje02F1g1wuIAFLsT8XvQtt9nDAdeA`): T1034 (valor desejado), W1036 (taxa) e W1037 (soma T1034+W1036 com arredondamento comercial). Tela: data, valor desejado, valor da taxa, valor total a cobrar, botão Registrar. Campos de valor calculados = **somente leitura**, atualizados em tempo real. Extra novo: opção "Aplicar desconto" (começa desmarcada) → campo "Valor do desconto" → abate do **total** sem tocar na taxa; "Valor final a cobrar" atualiza ao vivo.
+
+**Fórmulas lidas da planilha** (baixada via MCP do Drive como xlsx, desempacotada, XML lido direto):
+- **W1036 (taxa)** — `IFS` por faixa (ramo positivo, que é o caso da tela): `valor < 1` → 0; `< 182` → **R$ 10 fixo**; `< 800` → **5,5%**; `< 1500` → **5%**; `>= 1500` → **4,5%**. (A planilha tem um ramo espelhado pra valores negativos; a tela só recebe positivo, então só o ramo positivo foi portado.)
+- **W1037 (total)** — `"R$ " &` arredondamento comercial de `x = T1034 + W1036`: parte fracionária `[0; 0,125)` → `,00` (piso) · `[0,125; 0,375)` → `,25` · `[0,375; 0,625)` → `,50` · `[0,625; 1)` → sobe pro inteiro seguinte. (Curiosidade da fórmula: **não há faixa `,75`** — qualquer coisa a partir de `,625` já pula pro real inteiro seguinte.)
+
+**Implementação** (`paineldecontrole/index.html`, dentro de `#mfScreen-troca-pix` + script): funções `mfTrocaPixTaxa()`, `mfTrocaPixArredComercial()`, `mfBRL()`, `mfTrocaPixCalcular()`. A tela tem: **Data** (readonly, `new Date().toLocaleDateString('pt-BR')`, setada ao abrir a tela via `movFinTela`), **Valor desejado** (o único editável — usa o componente padrão dígitos+extenso), **Valor da taxa** e **Valor total a cobrar** (readonly, recalculados a cada tecla), checkbox **"Aplicar desconto"** → **Valor do desconto** (componente padrão) + **Valor final a cobrar** (readonly = total − desconto), ambos escondidos até marcar. CSS novo: `.fin-check`, `.fin-field input[readonly]`. Botão Registrar segue sem gravação (não foi pedido salvar).
+**Diferença mínima de exibição vs. planilha**: a planilha mostra "R$ 527,5" (concat de número, sem zero final); a tela mostra "R$ 527,50" (2 casas). O **valor** é idêntico; a taxa é exibida arredondada a 2 casas mas o total usa a taxa exata internamente (ex: valor 313 → taxa exibida R$ 17,22, taxa real 17,215, total R$ 330,25).
+
+**Testado ao vivo** (harness local, conferido contra a planilha): valor 500 → taxa R$ 27,50 → total R$ 527,50 (planilha: "R$ 527,5"); 950 → 47,50 → 997,50; 2000 → 90,00 (4,5%) → 2.090,00; 100/181 → taxa fixa R$ 10,00; 182 → R$ 10,01 (5,5% na virada) → total R$ 192,00; 313 → total R$ 330,25; 356 → R$ 375,50; 358 → R$ 378,00 (pulou o inteiro); desconto R$ 20 sobre valor 500 → total R$ 527,50, **final R$ 507,50**, taxa intacta; Data = hoje; taxa/total/data readonly, valor editável. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Reembolso — origem obrigatória + histórico com filtro de origem (2026-08-27)
+
+Pedido: adicionar à tela Reembolso um campo obrigatório **"Origem do Reembolso"** (Sicredi, PagSeguro, Caixa da Loja, Cofre Notas, Cofre Moedas), mantendo Valor e Observação. O botão "Registrar Reembolso" só habilita com todos os obrigatórios preenchidos. A origem entra no registro e na movimentação (débito exatamente da conta escolhida). No histórico/filtros, poder filtrar por origem também. Só `paineldecontrole/index.html`.
+
+**Formulário** (`#mfScreen-reembolso`):
+- `<select id="mfRbOrigem">` "Origem do Reembolso *" com as 5 contas + "Selecione".
+- Botão renomeado pra **"Registrar Reembolso"**, com atributo `disabled` inicial. `mfReembolsoValidar()` (chamada por `oninput` no valor, `onchange` na origem, e ao abrir a tela via `movFinTela`) habilita só quando `valor > 0 && origem !== ''`. CSS novo `.fin-submit:disabled`.
+- A gravação em si (registrar + debitar da conta escolhida) fica pra etapa de regras — o campo já está pronto pra alimentar isso.
+
+**Seção "Histórico de reembolsos"** (nova, abaixo do form, mesmo padrão do "Histórico de retiradas"):
+- Filtros: **Período** (Hoje / Especificar período — rádios, `mfReembolsoFiltroPeriodo()`, espelha o de retiradas) + **Origem do valor** (`<select>` Todas + as 5 contas). Botões Filtrar / Limpar.
+- Tabela: colunas **Data / Valor / Origem / Observação**, 4 linhas fictícias, linha de Total no `tfoot`. Filtro/soma ainda sem cálculo.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): select de origem com as 5 opções; botão "Registrar Reembolso" disabled no início, continua disabled só com valor, habilita com valor + origem, volta a disabled ao limpar a origem; seção "Histórico de reembolsos" presente com colunas Data/Valor/Origem/Observação; filtro "Origem do valor" com Todas + 5 contas; toggle de período Hoje/Especificar período funcionando. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Troca por Pix — histórico com filtro só por data + conta Sicredi fixa (2026-08-27)
+
+Pedido: adicionar histórico à tela Troca por Pix com filtro **só por data** (Hoje pré-selecionado / Especificar data). Nada de período, origem, valor, taxa ou outro filtro. Como toda Troca por Pix usa exclusivamente **Sicredi**, isso é fixo no sistema, sem seleção. Só `paineldecontrole/index.html`.
+
+- **Nota do formulário** ganhou "Conta fixa: **Sicredi** — toda Troca por Pix sai do Sicredi." (informativo; não há nem havia seletor de origem nessa tela).
+- **Seção "Histórico de Troca por Pix"** (nova, abaixo do form): card "Filtro" com **só** o campo Data — rádios "Hoje" (pré-selecionado) / "Especificar data", com `<input type="date" id="mfTpHistDataInput">` escondido (`display:none`) e revelado só em "Especificar data" (função `mfTrocaPixHistData()`, mesmo padrão do "Data da retirada"). Botões Filtrar / Limpar. **Zero** `<select>` e zero outros inputs no card de filtro (conferido no teste).
+- Tabela: colunas **Data / Valor desejado / Taxa / Total cobrado**, 3 linhas fictícias, linha de Total no `tfoot` (sob "Total cobrado"). Filtro/soma sem cálculo ainda.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): seção presente; rádios Hoje (default) / Especificar data; seletor de data escondido por padrão, aparece em "Especificar data", volta a esconder e zera em "Hoje"; tabela com as 4 colunas certas; o card de filtro tem 0 selects e 0 inputs de texto/número (só os rádios + o date picker). Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Movimentação Financeira — segmento "Histórico" removido (2026-08-27)
+
+Pedido: remover o **campo/segmento "Histórico"** do módulo Movimentação Financeira, sem colocar nada no lugar (a parte de relatórios vem depois, com as integrações prontas). Manter o resto exatamente como está, sem mexer no fluxo de registro. Só `paineldecontrole/index.html`.
+
+- Botão "Histórico" removido do `.fin-nav-grid` de `#mfScreen-inicio`. Módulo agora com **4 segmentos**: Retirada, Troca por Pix, Reembolso, Transferência.
+- Tela `#mfScreen-historico` (tabela genérica Data/Tipo/Descrição/Valor com dados fictícios) apagada por completo. Não sobrou `movFinTela('historico')`.
+- **Mantidas** (não são "o segmento Histórico"): as seções de histórico próprias dentro das telas de cadastro — "Histórico de retiradas", "Histórico de reembolsos", "Histórico de Troca por Pix" — pedidas em rodadas anteriores. Se a intenção for tirar essas também, é só avisar.
+
+**Testado ao vivo** (harness local, unlock + cliques reais): grade inicial com 4 botões (sem Histórico); telas internas = `mfScreen-inicio` + os 4 segmentos, sem `mfScreen-historico`; os 4 alternam certo por `movFinTela`; as seções de histórico por tela seguem presentes. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Financeiro — saldos iniciais preenchidos + seção "Cofre" (2026-08-27)
+
+Pedido: implementação inicial de saldos do cofre — só **exibir** os valores atuais (Saldo do Cofre Notas, Saldo do Cofre Moedas, Saldo Total do Cofre), sem cálculo automático nem movimentação. Valores informados: PagSeguro 107,53; Sicredi −908,81 (negativo); Cofre Moedas 0,00; Cofre Notas 236,00; Fundo de Caixa 160,00 (incluído no total do cofre). Só `paineldecontrole/index.html`, na tela inicial do Financeiro.
+
+- **Cartões "Saldos por conta"** atualizados com valores fixos: Sicredi **− R$ 908,81** (classe nova `.fin-account-value.neg`, vermelho suave), PagSeguro **R$ 107,53**, Cofre de Notas **R$ 236,00**, Cofre de Moedas **R$ 0,00**.
+- **Seção "Cofre"** nova (card `.fin-kv` logo abaixo de "Saldos por conta"): Saldo do Cofre Notas R$ 236,00 · Saldo do Cofre Moedas R$ 0,00 · Fundo de Caixa (incluído no total) R$ 160,00 · **Saldo Total do Cofre R$ 396,00** (destaque verde). O total é valor **estático** (236 + 0 + 160), não calculado ao vivo — a lógica de entradas/saídas conecta na próxima etapa.
+
+**Testado ao vivo** (harness local, unlock + clique no tile Financeiro): 4 cartões com os valores certos, Sicredi em vermelho com "− R$ 908,81"; seção "Cofre" entre "Saldos por conta" e "Abertura de Caixa" com as 4 linhas (236,00 / 0,00 / 160,00 / total 396,00). Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+### Conta "Fundo de Caixa" adicionada aos Saldos por conta (2026-08-27, mesmo dia)
+
+Pedido: adicionar um 5º cartão **"Fundo de Caixa"** ao "Saldos por conta" do Financeiro, no mesmo padrão dos outros, mantendo Sicredi/PagSeguro/Cofre de Notas/Cofre de Moedas. Só existe pra receber um saldo inicial — sem movimentação/cálculo. Prepara a base pro futuro módulo Fundo de Caixa. Só `paineldecontrole/index.html`.
+
+- Novo `.fin-account` "Fundo de Caixa" (cor verde `--fin-c:#4ade80`, ícone de gaveta de caixa) com valor fixo **R$ 160,00** (o mesmo já mostrado na seção "Cofre"). Grade `repeat(auto-fit, minmax(150px,1fr))` acomoda os 5 cartões sem mudança de CSS.
+
+**Testado ao vivo** (harness local): 5 cartões — Sicredi −908,81 / PagSeguro 107,53 / Cofre de Notas 236,00 / Cofre de Moedas 0,00 / **Fundo de Caixa 160,00**. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Troca por Pix — integração com o Fluxo de Caixa (classificação transferência interna × receita) (2026-08-27)
+
+Pedido: separar corretamente, na Troca por Pix, o que é **transferência interna** (só move dinheiro) do que é **receita** (lucro real). Regras: (1) Valor Desejado = saída do Sicredi + entrada no Caixa da Loja, classificado como **transferência interna**, nunca receita/lucro; (2) não entra no cálculo de lucro; (3) só a **taxa** é receita; (4) com desconto, a receita é a **taxa já com desconto**; (5) a apuração do dia soma **só as taxas**, ignorando o Valor Desejado. Só `paineldecontrole/index.html` (tela `#mfScreen-troca-pix`).
+
+**Card novo "Classificação no fluxo de caixa"** (abaixo do form de cálculo):
+- **Transferência interna (Sicredi → Caixa da Loja)** = `mfTpTransfInterna` = Valor desejado. Cinza/neutro + aviso de que não é receita nem lucro.
+- **Receita da operação (taxa − desconto)** = `mfTpReceita` = `max(0, taxa − desconto)`. Verde/destaque. Calculado no mesmo `mfTrocaPixCalcular()` (que agora também guarda `desconto` e reseta `mfTpFinal` pra "R$ 0,00" quando o desconto é desmarcado).
+
+**Histórico de Troca por Pix — `<tfoot>` com duas linhas** (função nova `mfTrocaPixHistApurar()`, chamada ao abrir a tela):
+- **Transferência interna (não entra no caixa)** = Σ da coluna "Valor desejado" (cinza).
+- **Receita do dia (taxas)** = Σ da coluna "Taxa" (verde) — **esta é a apuração** (regra 5). Somas lidas das linhas visíveis do `tbody` (parse dos "R$ …" pt-BR).
+
+Textos/notas atualizados pra deixar as regras explícitas. A gravação real (lançar a transferência interna numa conta e a receita noutra) continua fora do escopo — aqui é só a **classificação/apuração** correta na interface.
+
+**Testado ao vivo** (harness local): valor 500 → taxa R$ 27,50, transferência interna R$ 500,00, **receita R$ 27,50**; valor 500 + desconto R$ 10 → taxa bruta R$ 27,50, **receita R$ 17,50** (27,50 − 10), valor final a cobrar R$ 517,50; valor 100 → receita R$ 10,00. Histórico (3 linhas fictícias): **Transferência interna R$ 1.650,00** (500+200+950) / **Receita do dia R$ 86,00** (27,50+11+47,50). Cores certas (transferência cinza, receita verde). Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Reembolso — efeito no saldo conforme a origem (2026-08-27)
+
+Pedido: ao registrar reembolso, a origem (Sicredi/PagSeguro/Caixa da Loja/Cofre Notas/Cofre Moedas — o `<select>` já existia) define o efeito: **Caixa da Loja** → só registra no relatório, **sem** mexer no saldo; **demais contas** → abate o valor do saldo daquela conta + registra no relatório. Os registros ficam disponíveis pros relatórios, sem impactar o caixa errado. Só `paineldecontrole/index.html` (`#mfScreen-reembolso`).
+
+**Card novo "Efeito no fluxo de caixa"** (abaixo do form): linha `mfRbClassifValor` que muda com a origem (dentro de `mfReembolsoValidar()`, que já roda no `oninput` do valor e no `onchange` da origem):
+- sem origem → "Selecione a origem" (cinza)
+- **Caixa da Loja** → "Só registro no relatório — saldo do Caixa da Loja não muda" (cinza)
+- outra conta → "Abate R$ X do saldo de [conta] + registra no relatório" (vermelho)
++ faixa `.fin-aviso` explicando a regra.
+
+**Histórico de reembolsos — `<tfoot>` com duas linhas** (função nova `mfReembolsoHistApurar()`, chamada ao abrir a tela): **"Só relatório (Caixa da Loja)"** = Σ valor das linhas com origem "Caixa da Loja" (cinza) · **"Abatido de conta"** = Σ valor das demais (vermelho). Somas lidas do `tbody`.
+
+A gravação real e o abatimento no saldo continuam fora do escopo (não há tabela/engine ainda) — aqui é só a **classificação/apuração** correta na interface, deixando claro o que vai pro relatório e o que mexe (ou não) no saldo.
+
+**Testado ao vivo** (harness local): origem vazia → "Selecione a origem"; Caixa da Loja → "só registro, saldo não muda" (cinza); Sicredi R$ 250 → "Abate R$ 250,00 do saldo de Sicredi + registra no relatório" (vermelho); Cofre Moedas R$ 30 idem; limpar origem volta ao placeholder. Histórico: **Só relatório R$ 45,90** (a linha Caixa da Loja) / **Abatido de conta R$ 230,00** (120+80+30). Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Sangria no fluxo de caixa — regra na Transferência + conferência no Fechamento (2026-08-27)
+
+Pedido: implementar a regra de sangria. Sangria = retirada de dinheiro do **Caixa da Loja** pra outra conta (Sicredi / PagSeguro / Cofre de Notas / Cofre de Moedas / Fundo de Caixa). Ao registrar: **debita o Caixa da Loja e credita o destino** (transferência interna). No **fechamento**, somar as sangrias do dia ao dinheiro físico restante **só pra conferência do movimento** — sem duplicar valores nem alterar os saldos finais. Só `paineldecontrole/index.html`.
+
+**Tela Transferência (`#mfScreen-transferencia`)**:
+- Selects Origem/Destino: opções renomeadas pra bater com o resto (`Cofre de Notas`/`Cofre de Moedas`) e **acrescentado "Fundo de Caixa"**. Ids `mfTrOrigem`/`mfTrDestino`/`mfTrValor` + `onchange`/`oninput="mfTransferenciaClassificar()"`.
+- O `.fin-aviso` estático virou um **card "Classificação"** dinâmico: título "sangria (transferência interna)" quando origem = Caixa da Loja, senão "transferência interna"; linhas **Débito** (origem − R$ X, vermelho) e **Crédito** (destino + R$ X, verde); aviso que muda conforme sangria/comum. Sempre transferência interna — nunca receita/lucro.
+
+**Tela Fechamento de Caixa (`#finScreen-fechamento`)**:
+- Card novo **"Conferência do movimento (sangrias)"**: **Dinheiro físico contado (Notas + Moedas)** = soma ao vivo dos campos Caixa Notas + Caixa Moedas (ids `mfFechNotas`/`mfFechMoedas`, `oninput="mfFechamentoConferir()"`); **Sangrias do dia** = readonly R$ 0,00 (virá das sangrias registradas); **Movimento conferido** = físico + sangrias (destaque). Aviso: é só conferência — não altera saldos finais nem duplica (a sangria já creditou o destino no registro).
+- `financeiroTela('fechamento')` chama `mfFechamentoConferir()`.
+
+**Testado ao vivo** (harness local): Origem inclui "Fundo de Caixa"; sangria Caixa da Loja → Sicredi R$ 300 → título "sangria (transferência interna)", débito "Caixa da Loja − R$ 300,00", crédito "Sicredi + R$ 300,00"; sangria pro Fundo de Caixa idem; Sicredi → PagSeguro R$ 500 → título "transferência interna" (não sangria). Fechamento: Notas 800 + Moedas 45 → físico R$ 845,00, sangrias R$ 0,00, movimento R$ 845,00. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## "Planejamento Familiar" → "Resumo Financeiro" + limpeza dos dados de exemplo (2026-08-27)
+
+Pedido: renomear a aba "Planejamento Familiar" pra **"Resumo Financeiro"**, remover todos os dados importados/de exemplo da planilha antiga e zerar os campos de valores, preservando só a estrutura da tela e a config básica. A partir de agora só as movimentações reais do sistema alimentam o módulo.
+
+**Código (`paineldecontrole/index.html`) — feito**:
+- `MENU_ITEMS`: label "Planejamento Familiar" → **"Resumo Financeiro"** (view/ids internos `planejamento`/`viewPlanejamento`/`loadPlanejamento`/`planejamento_config` mantidos — renomear quebraria sem ganho).
+- Mensagens de erro (`console.error`/`alert`) → "Resumo Financeiro". Estrutura da tela (cards Márcio/Renata, accordions Budgets/Saldo da Família/Configuração, textos que explicam a lógica) preservada como pedido.
+
+**Dados (Supabase `planejamento_config`) — PENDENTE**: o módulo lê os valores de `planejamento_config` (linha única: salario_base 1500, budget_mercado 1300, budget_almoco 884, budget_gasolina 200, saldo_pool_base 5000, periodo_inicio null) + 41 linhas antigas de `retiradas` (01–11/08, MERCADO/ALMOÇO/GASOLINA/RETIRADA MÁRCIO/etc.). Tentei zerar via SQL (`update planejamento_config set ... = 0, periodo_inicio = CURRENT_DATE`) mas o **write foi bloqueado pelo classificador de auto-aprovação**. Duas formas de finalizar:
+  1. **Pelo painel** (mecanismo embutido "limpar a aba sem apagar histórico): Resumo Financeiro → Configuração → zerar Salário base / Pool / Budget Mercado / Almoço / Gasolina, "Somar retiradas a partir de" = 27/08/2026, "Salvar Configuração". Zera tudo e tira as 41 retiradas antigas da soma (nenhuma é ≥ 27/08). Sem deletar nada.
+  2. Autorizar o SQL pra eu rodar o `update planejamento_config`.
+
+**Testado ao vivo** (harness local contra prod): menu agora mostra "Resumo Financeiro"; a view abre e ainda exibe os valores antigos (Márcio R$ 247,30, salário base R$ 1.500,00, budget mercado 1300…) — some quando a config for zerada por um dos caminhos acima. Sem erro de console novo.
+
+**Não publicado** — código aguardando revisão; passo de dados aguardando o usuário.
+
+### Resumo Financeiro reestruturado em Pessoal / Empresa (2026-08-27, mesmo dia — pedido de acompanhamento)
+
+Pedido: reestruturar o Resumo Financeiro em duas seções independentes. **Pessoal** = controle de orçamento: tela de config onde o usuário define manualmente o limite de cada categoria; cada retirada abate → mostra **valor inicial (limite) / total usado / saldo restante** (pode ficar negativo). **Empresa** = controle de custos: **sem limite**, só soma automática por categoria. Remover todos os valores de exemplo, manter só a estrutura. Toda nova retirada atualiza a seção certa pela classificação do módulo Retirada. Persistência = **esperar o banco** (só o layout ativo agora). Só `paineldecontrole/index.html`.
+
+**HTML `#viewPlanejamento` reescrito** (id mantido pra não quebrar `openView`/`goHome`/realtime; rótulo já é "Resumo Financeiro"): removidos os cards Márcio/Renata, os 3 accordions (Budgets/Saldo da Família/Configuração) e toda a lógica de teto/penalidade/pool da planilha. Agora:
+- Seletor de abas **Pessoal / Empresa** (`.tabs`/`.tab-btn`).
+- Card de **Período**: rádios "Mês atual" / "Especificar período" (revela Data inicial/final) — `rfPeriodoChange()`.
+- **Pessoal**: tabela Categoria | Limite | Usado | Saldo restante (`neg` em vermelho quando < 0) + rodapé com os 3 totais; abaixo, card "Configurar limites" com um input por categoria + "Salvar limites".
+- **Empresa**: tabela Categoria | Total + rodapé "Total geral". Sem limite.
+- Categorias = **`MF_RET_CATEGORIAS`** (as mesmas do módulo Retirada): pessoal = Retirada Márcio / Retirada Renata / Mercado / Gasolina / Almoço; empresa = Despesas fixas / Manutenção / Consumíveis / Reembolso / Pró-labore / Juros de cartão / Juros diversos.
+
+**JS**: `loadPlanejamento()` reescrito (sync, sem Supabase) — lê `rfLimites()` (localStorage `rf_limites_pessoal`) e `rfRetiradas()` (**retorna `[]` até as retiradas gravarem de verdade**; quando existir, é só devolver `{tipo, categoria, valor, data}` já filtrado pelo período → os totais consolidam sozinhos). `rfTab()`, `rfPeriodoChange()`, `rfSalvarLimites()` (grava limites no localStorage — config local até a tabela existir). `openView` agora chama `loadPlanejamento()` sempre que abre a aba. Removidos `planejamentoConfigCache` e `salvarPlanejamentoConfig` (e a dependência de `planejamento_config`/`retiradas`/`despesas_fixas`).
+**Nada do `planejamento_config` no Supabase foi tocado** — a tabela continua lá com os valores antigos, agora só ignorada pelo código.
+
+**Testado ao vivo** (harness local): aba Pessoal com as 5 categorias (Limite/Usado/Saldo todos R$ 0,00) + inputs de limite; salvar Mercado 1300 / Gasolina 200 → persiste no localStorage, linhas e rodapé atualizam (total limite R$ 1.500,00, usado R$ 0,00, saldo R$ 1.500,00); aba Empresa com as 7 categorias (todas R$ 0,00, total R$ 0,00, sem coluna de limite); período "Especificar" revela as datas, "Mês atual" esconde. Sem erro no console.
+
+**Não publicado** — aguardando revisão. Consolidação real (retirada → seção) liga sozinha quando o módulo Retirada passar a gravar.
+
+### Resumo Financeiro — config oculta + rateio de excedente das despesas compartilhadas (2026-08-27)
+
+Pedido: (1) esconder a área de configuração de limites — só abre por um botão discreto (engrenagem), sem senha; os valores não ficam expostos na tela principal. (2) Reestruturar as despesas compartilhadas da aba Pessoal: categorias compartilhadas passam a ser **Mercado, Gasolina, Almoço, Despesas da Casa** (só contas fixas: aluguel, água, luz, internet) e **Outras Despesas Domésticas** (qualquer outra conta da casa) — todas com limite configurável. Se o usado passar do limite, **só o excedente** é dividido 50% Márcio / 50% Renata, caindo no "Usado" de Retirada Márcio / Retirada Renata (que continuam individuais e **não** geram rateio próprio). Valor de retirada negativo = estorno (abate o "Usado", pode ficar negativo). (3) **Pró-labore**: continua na aba Empresa, ganha limite manual próprio (cartão acima da tabela, Limite / Já retirado / Saldo restante, pode ficar negativo), sem fórmula/rateio; as demais categorias Empresa seguem só somando. Só `paineldecontrole/index.html`.
+
+**`MF_RET_CATEGORIAS.pessoal`** ganhou `'Despesas da Casa'` e `'Outras Despesas Domésticas'` (agora 7). Essa lista também alimenta o `<select>` de categoria do módulo **Retirada** e o filtro do Histórico — as duas novas aparecem lá também (necessário: é a Retirada que alimenta o Resumo).
+
+**HTML `#viewPlanejamento`**: o card "Configurar limites (Pessoal)" saiu da tela. A linha de abas virou `.rf-topbar` (flex) com as abas + um botão `#rfConfigBtn` (`.rf-config-btn`, engrenagem ⚙) à direita. Novo modal `#rfConfigModal` (reusa `.modal`/`.modal-content wide`): subtítulo "Pessoal" + `#rfLimitesInputs` (7 campos), subtítulo "Empresa" + `#rfLimitesEmpresaInputs` (só Pró-labore), botões Salvar / Cancelar. Aba Empresa ganhou o cartão `#rfProLaboreCard` (ids `rfProLaboreLimite`/`rfProLaboreUsado`/`rfProLaboreSaldo`) acima da tabela; a tabela agora lista `MF_RET_CATEGORIAS.empresa.filter(c => c !== 'Pró-labore')` (6 linhas).
+
+**JS**: `RF_COMPART = ['Mercado','Gasolina','Almoço','Despesas da Casa','Outras Despesas Domésticas']`. `rfConfigAbrir()` monta os inputs (a partir de `rfLimites()`) e abre o modal; `rfConfigFechar()` fecha. `rfSalvarLimites()` agora lê `#rfConfigModal input[data-rf-cat]` (inclui Pró-labore), grava no mesmo `localStorage` `rf_limites_pessoal` (objeto `{categoria: valor}`, agora com a chave `'Pró-labore'`), fecha o modal e re-renderiza (sem `alert`). `loadPlanejamento()` reescrito: 1º passo calcula `usoDireto` por categoria; para cada `RF_COMPART` com `limite > 0`, `exc = max(0, usoDireto - limite)` → soma em `rateioTotal` e a categoria fica exibida **no teto** (`usoExibido = usoDireto - exc`); `rateioCada = rateioTotal / 2` entra no `usoExibido` de Retirada Márcio e Retirada Renata (com um `.fin-tag` "inclui rateio R$ …" na célula da categoria). Assim o "Total Usado" do rodapé não duplica (Σ usoExibido = Σ usoDireto). Rodapé "Usado" e "Saldo" ganham classe `neg` quando < 0. Empresa: Pró-labore lê limite de `limites['Pró-labore']`, `usado = somaCat('empresa','Pró-labore')`, saldo pode ficar `neg`.
+
+**Testado ao vivo** (harness local, com mock temporário de `rfRetiradas` via `window.__rfRetiradasMock` — hook removido depois): aba Pessoal com 7 linhas, Empresa com 6 + cartão Pró-labore; engrenagem abre o modal com 7 campos Pessoal + Pró-labore; salvar persiste as 8 chaves no `localStorage` e fecha o modal. Cenário de rateio (limites M/R 800, Mercado 1000, Gasolina 300, Almoço 500, Casa 2000, Outras 400, Pró-labore 3000; retiradas Mercado 1300 / Gasolina 250 / Almoço 700 / Casa 2000 / Outras 500 / Ret. Márcio 200 / Pró-labore 3500 / Manutenção 120): excedentes 300+200+100 = 600 → rateioCada 300; Ret. Márcio usado R$ 500,00 (200+300) saldo R$ 300,00, Ret. Renata usado R$ 300,00 saldo R$ 500,00, tags "inclui rateio R$ 300,00"; Mercado/Almoço/Outras exibidas no teto (saldo R$ 0,00); Gasolina saldo R$ 50,00; rodapé usado R$ 4.950,00 = Σ direto (sem duplicar); Empresa sem Pró-labore na tabela (total R$ 120,00); cartão Pró-labore saldo **R$ -500,00** em vermelho. Estorno: Mercado 1300 + (−1500) → usado R$ -200,00 (vermelho), saldo R$ 1.200,00. Sem erro no console (só o 404 de favicon de sempre).
+
+**Não publicado** — aguardando revisão. Consolidação real só quando o módulo Retirada gravar (`rfRetiradas()` ainda retorna `[]`).
+
+## Motor de saldos centralizado — BASE do módulo Financeiro (2026-08-28)
+
+Pedido: iniciar a arquitetura definitiva do financeiro — **sem** solução temporária, **sem** dado simulado. Base única pra todos os módulos: toda movimentação vira um **lançamento** e ajusta o **saldo da conta** correspondente. Criar `contas` e `lancamentos`, integrar com a Edge Function `db-write`, atualizar saldos automaticamente e fazer os cartões "Saldos por conta" lerem do banco (nada fixo no HTML). Só a base agora — regras de Pix / reembolso / transferência / retirada / fechamento ficam pra próxima etapa. Avisar ao terminar pra revisão/aprovação antes de seguir.
+
+**Banco (migration `create_financeiro_contas_lancamentos`, projeto `kihnavaovspdjnegcraj`)**:
+- **`contas`**: `id`, `chave` (slug único estável — `sicredi`/`pagseguro`/`cofre_notas`/`cofre_moedas`/`fundo_caixa`/`caixa_loja`), `nome`, `tipo` (`BANCO`/`CAIXA`/`COFRE`/`FUNDO`), `saldo_inicial numeric(14,2)`, `saldo numeric(14,2)` (mantido por trigger), `ordem`, `ativa`, timestamps. **Sem CHECK de sinal** — saldo devedor é válido.
+- **`lancamentos`**: `id`, `conta_id` (FK → `contas`, `on delete restrict`), `data` (default hoje), `valor numeric(14,2)` **com sinal** (>0 entra, <0 sai; **sem CHECK de sinal**), `tipo` (default `AJUSTE` — genérico por ora), `descricao`, `origem` (módulo que gerou), `ref_tabela`/`ref_id` (ligação opcional a outra linha), `meta jsonb`, `created_at`. Índices em `conta_id`, `data`, `(ref_tabela, ref_id)`.
+- **Motor** = trigger `trg_lancamentos_saldo` (`after insert/update/delete`) → função `fn_lancamento_ajusta_saldo()`: INSERT soma `new.valor` ao saldo; UPDATE aplica o delta (`new.valor - old.valor`, e se trocou `conta_id`, tira do antigo e põe no novo); DELETE subtrai `old.valor`. Assim o saldo fica sempre certo independentemente de quem escreve, desde que passe pela tabela.
+- **`fn_recalcular_saldo_conta(uuid)`** — helper de auditoria/reparo: `saldo = saldo_inicial + Σ lancamentos`. Uso manual (service_role), não é API.
+- **RLS**: `anon` só `SELECT` nas duas (mesmo padrão das outras tabelas). Escrita só via `db-write`.
+- **Realtime**: `contas` e `lancamentos` adicionadas à publication `supabase_realtime`.
+- **Hardening** (migration `harden_financeiro_saldo_functions`, após o advisor apontar): `revoke execute` das 2 funções `SECURITY DEFINER` de `public/anon/authenticated` (o trigger roda independentemente de GRANT; o helper roda como service_role). Advisor de segurança **limpo** depois.
+- **Seed**: as 6 contas com `saldo_inicial = saldo` = valor atual conhecido — Sicredi **−908,81**, PagSeguro 107,53, Cofre de Notas 236,00, Cofre de Moedas 0,00, Fundo de Caixa 160,00, **Caixa da Loja 0,00** (nova — não estava nos cartões antigos, mas os módulos movimentam ela; incluída na base).
+
+**Edge Function `db-write` (v9 deployada)**: `ALLOWED` ganhou `contas: ['insert','update']` e `lancamentos: ['insert','update','delete']`. Nenhuma outra mudança — insert/update/delete usam o mesmo código genérico das outras 16 tabelas. O cliente nunca escreve `saldo` direto; só mexe em `lancamentos`.
+
+**`paineldecontrole/index.html`**:
+- Os 6 `.fin-account` fixos do `#finScreen-inicio` viraram `<div class="fin-accounts" id="finContasCards">` (com "Carregando saldos…"). `loadFinanceiroSaldos()` novo: `supabase.from('contas').select('*').eq('ativa',true).order('ordem')` → monta os cartões. Apresentação (ícone SVG + cor + bg) fica num mapa cliente `FIN_CONTA_UI` indexado pela `chave` (+ `FIN_CONTA_UI_DEFAULT`); o banco só guarda dado. `finFmtSaldo()` põe o sinal na frente pro devedor (`− R$ 908,81`) e a classe `.neg` (vermelho) já existente.
+- `financeiroTela('inicio')` agora chama `loadFinanceiroSaldos()`. Em `iniciarAtualizacaoAutomaticaListas()`, `assinarRealtimeTabela('contas', …)` recarrega os cartões sozinho quando um lançamento move um saldo (só se o Financeiro estiver aberto na tela inicial).
+- Comentários "ETAPA 1 / sem persistência" do módulo Financeiro atualizados. A seção **"Cofre"** (logo abaixo dos cartões) **continua com valores fixos** de propósito — faz parte da próxima etapa, não foi mexida.
+
+**Testado ao vivo** (harness local contra prod):
+- Motor (via SQL, com asserts + rollback): INSERT credita, INSERT de valor negativo em conta já negativa fica mais negativa (`-908,81 → -2108,81`), UPDATE de valor aplica delta, UPDATE trocando `conta_id` tira de uma e põe na outra, DELETE reverte. `fn_recalcular_saldo_conta` bate. Após o `revoke execute`, novo teste INSERT/DELETE confirma que o **trigger continua funcionando**.
+- Cliente: cartões renderizam as 6 contas do banco, Sicredi **− R$ 908,81** em vermelho. E2E com lançamento real **commitado** (`+250` no Caixa da Loja via SQL) → cartão vai a **R$ 250,00**; `DELETE` do lançamento → cartão **volta sozinho a R$ 0,00 via realtime** (~3s, sem reload). Banco conferido limpo depois (0 lançamentos, saldos = seed). Console sem erro novo (404 de favicon de sempre; um 401 veio de um teste manual meu ao `db-write` com senha de escrita ausente no browser do harness — não é do app).
+
+**Não publicado** — base pronta, **aguardando sua revisão/aprovação** antes da próxima etapa (plugar Pix/reembolso/transferência/retirada/fechamento como lançamentos + migrar a seção "Cofre" pra ler do banco).
 
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
