@@ -722,6 +722,7 @@
         .fin-kv-value { font-weight: 700; color: var(--text); }
         .fin-status-chip { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.06); color: var(--text-dim); border: 1px solid var(--border-strong); }
         .fin-aviso { margin-top: 12px; font-size: 12px; line-height: 1.5; color: #fbbf24; background: rgba(251,191,36,0.10); border: 1px solid rgba(251,191,36,0.28); border-radius: 12px; padding: 10px 12px; }
+        .fin-ok { margin-top: 12px; font-size: 12px; line-height: 1.5; color: #4ade80; background: rgba(74,222,128,0.10); border: 1px solid rgba(74,222,128,0.28); border-radius: 12px; padding: 10px 12px; }
 
         .fin-field { margin-bottom: 14px; }
         .fin-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-faint); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .6px; }
@@ -1006,23 +1007,28 @@
                     <div class="fin-field-row">
                         <div class="fin-field">
                             <label>Fundo Caixa 1</label>
-                            <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" id="finAbFC1" oninput="aberturaCaixaConferir()" placeholder="Ex: 2500">
                             <div class="extenso-valor"></div>
                         </div>
                         <div class="fin-field">
                             <label>Fundo Caixa 2</label>
-                            <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" id="finAbFC2" oninput="aberturaCaixaConferir()" placeholder="Ex: 2500">
                             <div class="extenso-valor"></div>
                         </div>
                     </div>
                 </div>
-                <div class="fin-card">
-                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Conferência</div>
-                    <div class="fin-kv"><span class="fin-kv-label">Valor esperado</span><span class="fin-kv-value">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Valor informado</span><span class="fin-kv-value">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Diferença</span><span class="fin-kv-value">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Status</span><span class="fin-status-chip">Aguardando</span></div>
-                    <div class="fin-aviso">Diferença não impede a abertura — o sistema só registra um aviso.</div>
+                <!-- Conferência da abertura x fechamento anterior. Só aparece
+                     quando HÁ um valor de referência do fechamento anterior E um
+                     valor informado na abertura. Sem diferença => confirmação
+                     verde; com diferença => aviso amarelo detalhado. Nunca
+                     bloqueia a abertura. Ver aberturaCaixaConferir(). -->
+                <div class="fin-card" id="finAbConferenciaCard" style="display:none;">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Conferência com o fechamento anterior</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Valor esperado <span style="color:var(--text-faint);">(fechamento anterior)</span></span><span class="fin-kv-value" id="finAbEsperado">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Valor informado <span style="color:var(--text-faint);">(abertura de hoje)</span></span><span class="fin-kv-value" id="finAbInformado">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Diferença encontrada</span><span class="fin-kv-value" id="finAbDiferenca">R$ 0,00</span></div>
+                    <div class="fin-ok" id="finAbOk" style="display:none;">Sem diferença — a abertura de hoje confere com o fechamento anterior.</div>
+                    <div class="fin-aviso" id="finAbAviso" style="display:none;"></div>
                 </div>
                 <button type="button" class="fin-submit">Abrir Caixa</button>
 
@@ -1148,7 +1154,7 @@
                         </div>
                         <input type="date" id="mfRetDataInput" style="margin-top:10px; display:none;">
                     </div>
-                    <div class="fin-field">
+                    <div class="fin-field" id="mfRetValorField">
                         <label>Valor</label>
                         <input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500">
                         <div class="extenso-valor"></div>
@@ -1173,27 +1179,87 @@
                     </div>
                     <div class="fin-field" id="mfRetCatEmpresa" style="display:none;">
                         <label>Categoria (Empresa)</label>
-                        <select>
+                        <select id="mfRetCatEmpresaSel" onchange="mfRetiradaCategoria()">
                             <option value="">Selecione</option>
-                            <option>Despesas fixas</option>
+                            <option>Despesa Fixa</option>
                             <option>Manutenção</option>
                             <option>Consumíveis</option>
                             <option>Reembolso</option>
-                            <option>Pró-labore</option>
                             <option>Juros de cartão</option>
                             <option>Juros diversos</option>
                         </select>
                     </div>
+                    <!-- Despesa Fixa (Empresa): 3 campos fixos (sem Água). A soma
+                         é o valor total da retirada nesta categoria. -->
+                    <div class="fin-field" id="mfRetDespesaFixaEmpresa" style="display:none;">
+                        <label>Despesa Fixa (Empresa) — contas do mês (campos fixos)</label>
+                        <div class="fin-field-row">
+                            <div class="fin-field">
+                                <label>Aluguel</label>
+                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfeAluguel" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 1000">
+                                <div class="extenso-valor"></div>
+                            </div>
+                            <div class="fin-field">
+                                <label>Energia Elétrica</label>
+                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfeEnergia" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 200">
+                                <div class="extenso-valor"></div>
+                            </div>
+                        </div>
+                        <div class="fin-field">
+                            <label>Internet</label>
+                            <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfeInternet" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 150">
+                            <div class="extenso-valor"></div>
+                        </div>
+                        <div class="fin-kv"><span class="fin-kv-label">Despesa Fixa Empresa <span style="color:var(--text-faint);">(Aluguel + Energia + Internet)</span></span><span class="fin-kv-value" id="mfRetDfeTotal" style="color:var(--accent-bright); font-size:16px;">R$ 0,00</span></div>
+                        <div class="fin-note" style="text-align:left; margin-top:8px;">Os três campos são fixos (sem Água) — a soma é o valor total da retirada nesta categoria. Não é possível adicionar outros itens aqui.</div>
+                    </div>
                     <div class="fin-field" id="mfRetCatPessoal" style="display:none;">
                         <label>Categoria (Pessoal)</label>
-                        <select>
+                        <select id="mfRetCatPessoalSel" onchange="mfRetiradaCategoria()">
                             <option value="">Selecione</option>
                             <option>Retirada Márcio</option>
                             <option>Retirada Renata</option>
                             <option>Mercado</option>
                             <option>Gasolina</option>
                             <option>Almoço</option>
+                            <option>Despesa Fixa</option>
+                            <option>Outras Despesas Domésticas</option>
                         </select>
+                    </div>
+                    <!-- Despesa Fixa: 4 campos fixos. A soma é o valor total da
+                         retirada nesta categoria (substitui o campo "Valor"). -->
+                    <div class="fin-field" id="mfRetDespesaFixa" style="display:none;">
+                        <label>Despesa Fixa — contas do mês (campos fixos)</label>
+                        <div class="fin-field-row">
+                            <div class="fin-field">
+                                <label>Aluguel</label>
+                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfAluguel" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 1000">
+                                <div class="extenso-valor"></div>
+                            </div>
+                            <div class="fin-field">
+                                <label>Energia Elétrica</label>
+                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfEnergia" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 150">
+                                <div class="extenso-valor"></div>
+                            </div>
+                        </div>
+                        <div class="fin-field-row">
+                            <div class="fin-field">
+                                <label>Água</label>
+                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfAgua" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 80">
+                                <div class="extenso-valor"></div>
+                            </div>
+                            <div class="fin-field">
+                                <label>Internet</label>
+                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfInternet" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 100">
+                                <div class="extenso-valor"></div>
+                            </div>
+                        </div>
+                        <div class="fin-kv"><span class="fin-kv-label">Despesa Fixa total <span style="color:var(--text-faint);">(Aluguel + Energia + Água + Internet)</span></span><span class="fin-kv-value" id="mfRetDfTotal" style="color:var(--accent-bright); font-size:16px;">R$ 0,00</span></div>
+                        <div class="fin-note" style="text-align:left; margin-top:8px;">Os quatro campos são fixos — a soma é o valor total da retirada nesta categoria. Não é possível adicionar outras despesas aqui.</div>
+                    </div>
+                    <div class="fin-field" id="mfRetDescricaoField">
+                        <label>Descrição / Observação<span id="mfRetDescricaoReq" style="display:none;"> *</span></label>
+                        <textarea id="mfRetDescricao" rows="2" placeholder="Opcional — ex: Pagamento fornecedor de papel, Compra de tinta para impressora, Retirada pessoal"></textarea>
                     </div>
                     <button type="button" class="fin-submit">Registrar</button>
                 </div>
@@ -1287,7 +1353,7 @@
                                     <td class="fin-table-amount">R$ 1.500,00</td>
                                     <td>PagSeguro</td>
                                     <td>Empresa</td>
-                                    <td>Pró-labore</td>
+                                    <td>Despesa Fixa</td>
                                     <td>—</td>
                                 </tr>
                                 <tr>
@@ -1731,13 +1797,31 @@
         </div>
 
         <!-- ============================================================
-             Resumo Financeiro (2026-08-27; rateio de excedente + config oculta):
-             PESSOAL — orçamento por categoria (limite manual). Despesas
-             compartilhadas (Mercado, Gasolina, Almoço, Despesas da Casa, Outras
-             Despesas Domésticas) que passam do limite: só o excedente é rateado
-             50/50 no "Usado" de Retirada Márcio / Retirada Renata.
-             EMPRESA — Pró-labore em cartão próprio com limite manual (pode ficar
-             negativo); demais categorias só somam, sem limite.
+             Resumo Financeiro (2026-08-28; Teto Mensal + rateio + config oculta):
+             PESSOAL — dois níveis de controle:
+               (1) TETO MENSAL DE DESPESAS (#rfTetoCard) — valor máximo mensal
+                   manual (chave 'Teto Mensal' no ⚙). Consomem o teto TODAS as 7
+                   categorias pessoais (usoDireto). Mostra Teto configurado /
+                   Total utilizado / Saldo disponível / Valor excedente. Passar
+                   do teto é permitido; o excedente (total − teto) é rateado
+                   50/50 e exibido como "Excedente → Retirada Márcio/Renata".
+               (2) LIMITES INDIVIDUAIS por categoria compartilhada (RF_COMPART:
+                   Mercado, Gasolina, Almoço) — o que passa do limite da
+                   categoria é rateado 50/50 no "Usado" de Retirada Márcio /
+                   Retirada Renata (categoria exibida no teto). Independente do
+                   nível (1).
+             Config (⚙) — distribuição progressiva DENTRO do Teto Mensal: campos
+             'Teto Mensal' + RF_CONFIG_CATS (Pró-labore Márcio/Renata, Mercado,
+             Gasolina, Almoço) + 'Demais Despesas' (auto = saldo restante).
+             rfConfigRecalcular() trava Salvar até a soma == teto (Diferença 0).
+             EMPRESA — demonstrativo único "Pró-labore Total" (#rfProLaboreTotalCard):
+             4 indicadores (Teto configurado / Total utilizado / Saldo restante /
+             Valor excedente) = MESMOS números do Teto Mensal da aba Pessoal,
+             visto pelo lado da empresa (quanto saiu no mês pras despesas
+             pessoais). Saldo restante limitado a 0; o que passa vai pro
+             excedente (50/50). Sem os dois cartões separados Márcio/Renata — o
+             detalhe por retirada fica na aba Pessoal. Demais categorias Empresa
+             só somam, sem limite.
              A área de "Configurar limites" fica escondida — só abre pela
              engrenagem ⚙ (modal #rfConfigModal), sem senha.
              Consolidação real fica pra quando as retiradas passarem a gravar.
@@ -1771,6 +1855,17 @@
 
             <!-- ===== PESSOAL ===== -->
             <div id="rfSecPessoal">
+                <div class="fin-section-title">Teto Mensal de Despesas</div>
+                <div class="fin-card" id="rfTetoCard">
+                    <div class="fin-kv"><span class="fin-kv-label">Teto Mensal configurado</span><span class="fin-kv-value" id="rfTetoConfig">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Total utilizado <span style="color:var(--text-faint);">(todas as despesas pessoais/familiares)</span></span><span class="fin-kv-value" id="rfTetoUsado">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo disponível</span><span class="fin-kv-value" id="rfTetoSaldo" style="font-size:16px;">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Valor excedente <span style="color:var(--text-faint);">(acima do teto)</span></span><span class="fin-kv-value" id="rfTetoExcedente">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Excedente → Retirada Márcio (50%)</span><span class="fin-kv-value" id="rfTetoExcMarcio">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Excedente → Retirada Renata (50%)</span><span class="fin-kv-value" id="rfTetoExcRenata">R$ 0,00</span></div>
+                    <div class="fin-note" style="text-align:left; margin-top:10px;">Consomem o teto: <b>Retirada Márcio, Retirada Renata, Mercado, Gasolina, Almoço, Despesa Fixa da Casa, Outras Despesas Domésticas</b>. Passar do teto é permitido — a diferença aparece em "Valor excedente" e é rateada 50% / 50% entre Márcio e Renata. Os limites individuais de cada categoria (⚙) continuam valendo pra sinalizar quando uma categoria passou do planejado. Configure o teto na engrenagem ⚙.</div>
+                </div>
+
                 <div class="fin-section-title">Orçamento por categoria — Pessoal</div>
                 <div class="fin-table-wrap">
                     <div class="fin-table-scroll">
@@ -1782,16 +1877,19 @@
                     </div>
                 </div>
 
-                <div class="fin-note">Despesas compartilhadas (Mercado, Gasolina, Almoço, Despesas da Casa, Outras Despesas Domésticas) que passarem do limite têm <b>só o excedente</b> rateado 50% / 50% e somado ao "Usado" de Retirada Márcio e Retirada Renata — que podem ficar com saldo negativo. Valor de retirada negativo funciona como estorno, abatendo o "Usado" da categoria. Ajuste os limites pela engrenagem ⚙ acima. "Usado" fica R$ 0,00 até as retiradas gravarem de verdade.</div>
+                <div class="fin-note">Além do <b>Teto Mensal</b> (acima), Mercado, Gasolina e Almoço têm limite individual: o que passar do limite é rateado 50% / 50% e somado ao "Usado" de Retirada Márcio e Retirada Renata — que podem ficar com saldo negativo. Valor de retirada negativo funciona como estorno, abatendo o "Usado" da categoria. Distribua o teto entre os limites pela engrenagem ⚙ acima (a configuração só salva quando fecha exatamente com o teto). "Usado" fica R$ 0,00 até as retiradas gravarem de verdade.</div>
             </div>
 
             <!-- ===== EMPRESA ===== -->
             <div id="rfSecEmpresa" style="display:none;">
-                <div class="fin-section-title">Pró-labore</div>
-                <div class="fin-card">
-                    <div class="fin-kv"><span class="fin-kv-label">Limite configurado</span><span class="fin-kv-value" id="rfProLaboreLimite">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Já retirado</span><span class="fin-kv-value" id="rfProLaboreUsado">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Saldo restante</span><span class="fin-kv-value" id="rfProLaboreSaldo">R$ 0,00</span></div>
+                <div class="fin-section-title">Pró-labore Total</div>
+                <div class="fin-card" id="rfProLaboreTotalCard">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> Pró-labore Total <span style="color:var(--text-faint); text-transform:none; font-weight:400;">— custo real das despesas/retiradas pessoais para a empresa</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Teto configurado</span><span class="fin-kv-value" id="rfProLaboreTetoConfig">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Total utilizado <span style="color:var(--text-faint);">(saiu da empresa no mês)</span></span><span class="fin-kv-value" id="rfProLaboreTotalUsado" style="font-size:16px;">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo restante</span><span class="fin-kv-value" id="rfProLaboreSaldoRestante">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Valor excedente <span style="color:var(--text-faint);">(acima do teto)</span></span><span class="fin-kv-value" id="rfProLaboreExcedente">R$ 0,00</span></div>
+                    <div class="fin-note" style="text-align:left; margin-top:10px;">Consolidado das categorias pessoais/familiares que saem da empresa no mês selecionado: <b>Retirada Márcio, Retirada Renata, Mercado, Gasolina, Almoço, Despesa Fixa da Casa, Outras Despesas Domésticas</b>. É o mesmo teto da aba Pessoal, visto pelo lado da empresa. Passar do teto é permitido — o excedente segue a divisão 50% / 50% entre Márcio e Renata já definida. O detalhe por retirada fica na aba <b>Pessoal</b>.</div>
                 </div>
                 <div class="fin-section-title">Custos por categoria — Empresa</div>
                 <div class="fin-table-wrap">
@@ -1803,23 +1901,32 @@
                         </table>
                     </div>
                 </div>
-                <div class="fin-note">Pró-labore tem limite manual (engrenagem ⚙) e pode ficar negativo. As demais categorias não têm limite — só somam as retiradas <b>Empresa</b> do período. Zerado até as retiradas gravarem de verdade.</div>
+                <div class="fin-note">As categorias acima <b>só somam</b> as retiradas <b>Empresa</b> do período (sem limite). O <b>Pró-labore Total</b> no topo é um demonstrativo à parte — usa o Teto Mensal e as despesas pessoais/familiares. Zerado até as retiradas gravarem de verdade.</div>
             </div>
         </div>
 
         <!-- Configuração de limites do Resumo Financeiro — oculta por padrão,
-             aberta só pela engrenagem. Sem senha. Pessoal = 7 categorias;
-             Empresa = só Pró-labore. Persiste em localStorage rf_limites_pessoal
-             (mesma chave/objeto de antes, agora incluindo 'Pró-labore'). -->
+             aberta só pela engrenagem. Sem senha. Distribuição progressiva
+             dentro do Teto Mensal: campos = 'Teto Mensal' + RF_CONFIG_CATS
+             (Pró-labore Márcio/Renata, Mercado, Gasolina, Almoço) + 'Demais
+             Despesas' (readonly, saldo restante). rfConfigRecalcular() atualiza
+             o resumo e trava o botão Salvar enquanto a soma não fecha com o
+             teto. Persiste em localStorage rf_limites_pessoal. -->
         <div class="modal" id="rfConfigModal">
             <div class="modal-content wide">
                 <h2>⚙ Configurar limites</h2>
-                <div class="fin-section-title" style="margin-top:4px;">Pessoal</div>
-                <div id="rfLimitesInputs"></div>
-                <div class="fin-section-title">Empresa</div>
-                <div id="rfLimitesEmpresaInputs"></div>
+                <div id="rfLimitesInputs" style="margin-top:4px;"></div>
+                <div class="fin-card" style="margin-top:12px;">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Distribuição do teto</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Teto Mensal</span><span class="fin-kv-value" id="rfCfgTeto">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Total já distribuído</span><span class="fin-kv-value" id="rfCfgDistribuido">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo disponível para configuração</span><span class="fin-kv-value" id="rfCfgSaldo">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Demais Despesas <span style="color:var(--text-faint);">(automático)</span></span><span class="fin-kv-value" id="rfCfgDemais">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Diferença</span><span class="fin-kv-value" id="rfCfgDiferenca">R$ 0,00</span></div>
+                    <div id="rfCfgStatus" class="fin-aviso">Informe o Teto Mensal de Despesas para começar a distribuir.</div>
+                </div>
                 <div class="fin-actions-row" style="display:flex; gap:10px; margin-top:8px;">
-                    <button type="button" class="fin-submit" onclick="rfSalvarLimites()">Salvar</button>
+                    <button type="button" class="fin-submit" id="rfConfigSalvarBtn" onclick="rfSalvarLimites()" disabled>Salvar Configuração</button>
                     <button type="button" class="fin-btn-ghost" onclick="rfConfigFechar()">Cancelar</button>
                 </div>
             </div>
@@ -3938,7 +4045,7 @@
             document.querySelectorAll('#viewFinanceiro .fin-screen').forEach(el => {
                 el.classList.toggle('active', el.id === 'finScreen-' + nome);
             });
-            if (nome === 'inicio') loadFinanceiroSaldos();
+            if (nome === 'inicio') { loadFinanceiroSaldos(); aberturaCaixaConferir(); }
             if (nome === 'fechamento') mfFechamentoConferir();
             const cont = document.querySelector('.container');
             if (cont) cont.scrollIntoView({ behavior: 'auto', block: 'start' });
@@ -3968,6 +4075,17 @@
         // Tela Retirada (etapa 1) — só o comportamento de interface: revelar o
         // seletor de data quando "Especificar data" (escondido em "Hoje") e
         // trocar o bloco de categoria conforme Empresa/Pessoal. Sem regra de negócio.
+        // Campo "Descrição / Observação" (#mfRetDescricao): opcional por padrão;
+        // quando a Retirada passar a emitir um lançamento, esse texto vai direto
+        // pra coluna `lancamentos.descricao` e aparece na coluna "Observação" do
+        // Histórico. Regras por categoria (mfRetiradaCategoria):
+        //   • Pessoal "Despesa Fixa" → abre 4 campos fixos (Aluguel/Energia/Água/
+        //     Internet); a soma é o valor total (o campo "Valor" some); a
+        //     Descrição fica oculta (os 4 campos já identificam a finalidade).
+        //   • Empresa "Despesa Fixa" → mesmo padrão, mas SÓ 3 campos (Aluguel/
+        //     Energia/Internet, sem Água); Valor e Descrição somem.
+        //   • Pessoal "Outras Despesas Domésticas" → Descrição visível e OBRIGATÓRIA.
+        //   • demais categorias → Descrição visível e opcional; sem campos extra.
         function mfRetiradaData() {
             const esp = document.querySelector('input[name="mfRetData"][value="especificar"]').checked;
             const inp = document.getElementById('mfRetDataInput');
@@ -3979,12 +4097,67 @@
             const v = sel ? sel.value : '';
             document.getElementById('mfRetCatEmpresa').style.display = v === 'empresa' ? '' : 'none';
             document.getElementById('mfRetCatPessoal').style.display = v === 'pessoal' ? '' : 'none';
+            mfRetiradaCategoria();
+        }
+        // Reage à categoria escolhida (Empresa OU Pessoal, conforme a finalidade
+        // marcada). Centraliza a exibição dos campos que dependem da categoria:
+        // blocos de Despesa Fixa (Pessoal 4 campos / Empresa 3 campos), campo
+        // "Valor" (some nas duas Despesa Fixa) e Descrição/Observação (some nas
+        // Despesa Fixa; obrigatória em "Outras Despesas Domésticas").
+        function mfRetiradaCategoria() {
+            const fim = document.querySelector('input[name="mfRetFim"]:checked');
+            const v = fim ? fim.value : '';
+            const eSel = document.getElementById('mfRetCatEmpresaSel');
+            const pSel = document.getElementById('mfRetCatPessoalSel');
+            const ecat = (v === 'empresa' && eSel) ? (eSel.value || '') : '';
+            const pcat = (v === 'pessoal' && pSel) ? (pSel.value || '') : '';
+
+            const dfEmpresa = ecat === 'Despesa Fixa';
+            const dfPessoal = pcat === 'Despesa Fixa';
+            const df = dfEmpresa || dfPessoal;
+            const outras = pcat === 'Outras Despesas Domésticas';
+
+            const setDisp = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+            setDisp('mfRetDespesaFixa', dfPessoal);
+            setDisp('mfRetDespesaFixaEmpresa', dfEmpresa);
+            setDisp('mfRetValorField', !df);
+            setDisp('mfRetDescricaoField', !df);
+
+            const desc = document.getElementById('mfRetDescricao');
+            const req = document.getElementById('mfRetDescricaoReq');
+            if (req) req.style.display = outras ? '' : 'none';
+            if (desc) {
+                desc.required = outras;
+                desc.placeholder = outras
+                    ? 'Obrigatório — ex: produtos de limpeza, material doméstico, farmácia, outra despesa da residência'
+                    : 'Opcional — ex: Pagamento fornecedor de papel, Compra de tinta para impressora, Retirada pessoal';
+            }
+            if (dfPessoal) mfRetiradaDespesaFixaTotal();
+            if (dfEmpresa) mfRetiradaDespesaFixaEmpresaTotal();
+        }
+        // Soma dos 4 campos fixos da Despesa Fixa Pessoal (Aluguel + Energia +
+        // Água + Internet) = valor total da retirada nessa categoria.
+        function mfRetiradaDespesaFixaTotal() {
+            const dig = id => { const el = document.getElementById(id); return el ? (Number(String(el.value).replace(/\D/g, '')) || 0) : 0; };
+            const total = dig('mfRetDfAluguel') + dig('mfRetDfEnergia') + dig('mfRetDfAgua') + dig('mfRetDfInternet');
+            const el = document.getElementById('mfRetDfTotal');
+            if (el) el.textContent = mfBRL(total);
+            return total;
+        }
+        // Soma dos 3 campos fixos da Despesa Fixa Empresa (Aluguel + Energia +
+        // Internet, SEM Água) = valor total da retirada nessa categoria.
+        function mfRetiradaDespesaFixaEmpresaTotal() {
+            const dig = id => { const el = document.getElementById(id); return el ? (Number(String(el.value).replace(/\D/g, '')) || 0) : 0; };
+            const total = dig('mfRetDfeAluguel') + dig('mfRetDfeEnergia') + dig('mfRetDfeInternet');
+            const el = document.getElementById('mfRetDfeTotal');
+            if (el) el.textContent = mfBRL(total);
+            return total;
         }
         // Categorias por tipo de retirada — reusadas no filtro do "Histórico de
         // retiradas". Só alimentam o <select>; nenhuma regra/consulta real ainda.
         const MF_RET_CATEGORIAS = {
-            empresa: ['Despesas fixas', 'Manutenção', 'Consumíveis', 'Reembolso', 'Pró-labore', 'Juros de cartão', 'Juros diversos'],
-            pessoal: ['Retirada Márcio', 'Retirada Renata', 'Mercado', 'Gasolina', 'Almoço', 'Despesas da Casa', 'Outras Despesas Domésticas'],
+            empresa: ['Despesa Fixa', 'Manutenção', 'Consumíveis', 'Reembolso', 'Juros de cartão', 'Juros diversos'],
+            pessoal: ['Retirada Márcio', 'Retirada Renata', 'Mercado', 'Gasolina', 'Almoço', 'Despesa Fixa', 'Outras Despesas Domésticas'],
         };
         function mfRetiradaFiltroTipo() {
             const tipo = document.getElementById('mfRetFiltroTipo').value;
@@ -4004,6 +4177,9 @@
         }
         window.mfRetiradaData = mfRetiradaData;
         window.mfRetiradaFinalidade = mfRetiradaFinalidade;
+        window.mfRetiradaCategoria = mfRetiradaCategoria;
+        window.mfRetiradaDespesaFixaTotal = mfRetiradaDespesaFixaTotal;
+        window.mfRetiradaDespesaFixaEmpresaTotal = mfRetiradaDespesaFixaEmpresaTotal;
         window.mfRetiradaFiltroTipo = mfRetiradaFiltroTipo;
         window.mfRetiradaFiltroPeriodo = mfRetiradaFiltroPeriodo;
 
@@ -4190,6 +4366,81 @@
             setT('mfFechMovimento', mfBRL(fisico + sangrias));
         }
         window.mfFechamentoConferir = mfFechamentoConferir;
+
+        // ---------- Abertura de Caixa — conferência com o fechamento anterior ----------
+        // Objetivo exclusivo: identificar diferença de contagem entre o
+        // fechamento de ontem e a abertura de hoje (indício de que alguém mexeu
+        // no fundo de caixa no período). É só informativo — NUNCA bloqueia a
+        // abertura.
+        //
+        // O valor de referência ("fechamento anterior") vem de
+        // aberturaCaixaRefFechamentoAnterior(). Enquanto o fechamento do módulo
+        // Financeiro não persistir, ela retorna null e nenhum aviso aparece
+        // (regra: sem valor anterior => sem mensagem de diferença). Quando a
+        // etapa de persistência do fechamento entrar, é só essa função passar a
+        // devolver { fc1, fc2 } do último fechamento salvo.
+        function aberturaCaixaRefFechamentoAnterior() {
+            try {
+                const raw = localStorage.getItem('fin_abertura_ref_fechamento');
+                if (!raw) return null;
+                const o = JSON.parse(raw) || {};
+                const fc1 = Number(o.fc1) || 0;
+                const fc2 = Number(o.fc2) || 0;
+                const total = fc1 + fc2;
+                return total > 0 ? { fc1, fc2, total } : null;
+            } catch (_) { return null; }
+        }
+        function aberturaCaixaConferir() {
+            const card = document.getElementById('finAbConferenciaCard');
+            if (!card) return;
+            const aviso = document.getElementById('finAbAviso');
+            const ok = document.getElementById('finAbOk');
+            const fc1El = document.getElementById('finAbFC1');
+            const fc2El = document.getElementById('finAbFC2');
+            const dig = el => (el ? (Number(String(el.value).replace(/\D/g, '')) || 0) : 0);
+
+            const algumPreenchido = !!((fc1El && fc1El.value.trim()) || (fc2El && fc2El.value.trim()));
+            const informado = dig(fc1El) + dig(fc2El);
+            const ref = aberturaCaixaRefFechamentoAnterior();
+
+            // Campo de abertura vazio, ou sem valor de referência do fechamento
+            // anterior => não mostra nada (nem erro, nem diferença).
+            if (!algumPreenchido || informado <= 0 || !ref) {
+                card.style.display = 'none';
+                if (aviso) { aviso.style.display = 'none'; aviso.innerHTML = ''; }
+                if (ok) ok.style.display = 'none';
+                return;
+            }
+
+            const esperado = ref.total;
+            const diff = informado - esperado;
+            const sinal = diff > 0 ? '+ ' : (diff < 0 ? '− ' : '');
+            const setT = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            setT('finAbEsperado', mfBRL(esperado));
+            setT('finAbInformado', mfBRL(informado));
+            setT('finAbDiferenca', sinal + mfBRL(Math.abs(diff)));
+            const diffEl = document.getElementById('finAbDiferenca');
+            if (diffEl) diffEl.style.color = diff === 0 ? 'var(--text)' : '#fbbf24';
+
+            card.style.display = '';
+            if (diff === 0) {
+                // Igual ao fechamento anterior => nenhum aviso de diferença.
+                if (aviso) { aviso.style.display = 'none'; aviso.innerHTML = ''; }
+                if (ok) ok.style.display = '';
+            } else {
+                if (ok) ok.style.display = 'none';
+                if (aviso) {
+                    aviso.style.display = '';
+                    aviso.innerHTML =
+                        'Diferença entre o fechamento anterior e a abertura de hoje — pode indicar que mexeram no fundo de caixa no período.<br>'
+                        + '<b>Valor esperado</b> (fechamento anterior): ' + mfBRL(esperado) + '<br>'
+                        + '<b>Valor informado</b> (abertura de hoje): ' + mfBRL(informado) + '<br>'
+                        + '<b>Diferença encontrada</b>: ' + sinal + mfBRL(Math.abs(diff)) + '<br>'
+                        + 'A diferença é <b>só um aviso</b> — não impede a abertura do caixa.';
+                }
+            }
+        }
+        window.aberturaCaixaConferir = aberturaCaixaConferir;
 
         async function upsertPessoa(pessoaData) {
             if (!pessoaData.nome) return null;
@@ -7065,25 +7316,61 @@
         }
         window.saveFechamento = saveFechamento;
 
-        // ===== Resumo Financeiro (2026-08-27; rateio de excedente + config oculta) =====
+        // ===== Resumo Financeiro (2026-08-28; Teto Mensal + rateio + config oculta) =====
         // Substituiu o antigo "Planejamento Familiar" (teto/penalidade/pool da
         // planilha). Duas seções:
-        //   PESSOAL  — orçamento por categoria (limite manual). As 5 categorias
-        //              compartilhadas (RF_COMPART) que passam do limite têm SÓ o
-        //              excedente rateado 50/50 e somado ao "Usado" de Retirada
-        //              Márcio / Retirada Renata (essas duas não geram rateio
-        //              próprio). Retirada de valor negativo = estorno: abate o
-        //              "Usado" da categoria, podendo deixá-lo negativo.
-        //   EMPRESA  — Pró-labore tem limite manual (cartão próprio, pode ficar
-        //              negativo); demais categorias só somam, sem limite.
-        // Limites em localStorage `rf_limites_pessoal` — objeto {categoria: valor},
-        // agora incluindo 'Pró-labore'. A área de config fica escondida: só abre
+        //   PESSOAL  — dois níveis independentes:
+        //     (1) TETO MENSAL DE DESPESAS — limite manual (chave 'Teto Mensal'
+        //         no ⚙). Consomem o teto TODAS as 7 categorias pessoais
+        //         (Σ usoDireto). Exibe Teto configurado / Total utilizado /
+        //         Saldo restante (>= 0) / Valor excedente. Passar do teto é
+        //         permitido; excedente = max(0, total − teto), rateado 50/50
+        //         (rfTetoExcMarcio / rfTetoExcRenata).
+        //     (2) LIMITES INDIVIDUAIS por categoria compartilhada (RF_COMPART:
+        //         Mercado, Gasolina, Almoço) — o que passa do limite da
+        //         categoria é rateado 50/50 no "Usado" de Retirada Márcio /
+        //         Retirada Renata (a categoria fica exibida no teto). Retirada
+        //         negativa = estorno.
+        //   Config (⚙) — distribuição progressiva dentro do Teto: 'Teto Mensal'
+        //   + RF_CONFIG_CATS (Pró-labore Márcio/Renata, Mercado, Gasolina,
+        //   Almoço) + 'Demais Despesas' (auto = saldo restante do teto). Salvar
+        //   só habilita quando Σ limites == Teto (rfConfigRecalcular). Isso é só
+        //   a etapa de configuração — as regras de utilização não mudam. (As
+        //   chaves 'Pró-labore Márcio/Renata' e 'Demais Despesas' ficam salvas
+        //   mas ainda não são lidas na utilização.)
+        //   EMPRESA  — demonstrativo único "Pró-labore Total": os MESMOS 4
+        //              números do Teto Mensal (Teto configurado / Total
+        //              utilizado / Saldo restante / Valor excedente), rotulados
+        //              como custo real mensal das despesas pessoais pra empresa.
+        //              Sem os dois cartões Márcio/Renata — detalhe fica na aba
+        //              Pessoal. Demais categorias Empresa só somam, sem limite.
+        // Limites em localStorage `rf_limites_pessoal` — objeto {chave: valor}
+        // ('Teto Mensal' + um limite por categoria compartilhada). A config fica
+        // escondida: só abre
         // pelo ⚙ (rfConfigAbrir/rfConfigFechar), sem senha. Fonte de retiradas
         // (rfRetiradas) é vazia até o Registrar do módulo Retirada gravar de
         // verdade — aí basta retornar {tipo:'pessoal'|'empresa', categoria,
         // valor, data} já filtrado pelo período; os totais se consolidam sozinhos.
         const RF_LIMITES_KEY = 'rf_limites_pessoal';
-        const RF_COMPART = ['Mercado', 'Gasolina', 'Almoço', 'Despesas da Casa', 'Outras Despesas Domésticas'];
+        // Chave do Teto Mensal de Despesas no localStorage rf_limites_pessoal.
+        const RF_TETO_KEY = 'Teto Mensal';
+        // "Demais Despesas" — bucket automático da Configuração: recebe o que
+        // sobra do Teto depois dos 5 limites manuais (Pró-labore Márcio/Renata,
+        // Mercado, Gasolina, Almoço). Calculado, não digitado.
+        const RF_DEMAIS_KEY = 'Demais Despesas';
+        // Campos de limite MANUAIS da Configuração (⚙), nesta ordem, distribuídos
+        // dentro do Teto Mensal. "Demais Despesas" fecha o saldo automaticamente
+        // (ver rfConfigRecalcular). Estes são só a etapa de configuração — as
+        // regras de utilização não mudam.
+        const RF_CONFIG_CATS = ['Pró-labore Márcio', 'Pró-labore Renata', 'Mercado', 'Gasolina', 'Almoço'];
+        // Categorias compartilhadas: excedente (uso acima do limite individual)
+        // rateado 50/50 para Retirada Márcio / Retirada Renata (que NÃO entram
+        // neste cálculo). Independente do Teto Mensal.
+        const RF_COMPART = ['Mercado', 'Gasolina', 'Almoço'];
+        // Rótulo de exibição (a chave da categoria segue curta em MF_RET_CATEGORIAS
+        // / RF_COMPART / localStorage; só a apresentação ganha o detalhamento).
+        const RF_LABELS = { 'Despesa Fixa': 'Despesa Fixa da Casa (Aluguel, Luz, Água e Internet)' };
+        function rfLabel(cat) { return RF_LABELS[cat] || cat; }
         function rfLimites() {
             try { return JSON.parse(localStorage.getItem(RF_LIMITES_KEY) || '{}') || {}; } catch (e) { return {}; }
         }
@@ -7110,15 +7397,65 @@
         }
         function rfConfigAbrir() {
             const limites = rfLimites();
-            const campo = cat =>
-                `<div class="fin-field"><label>${escapeHtml(cat)}</label>`
-                + `<input type="text" inputmode="numeric" data-rf-cat="${escapeHtml(cat)}" value="${limites[cat] ? String(limites[cat]) : ''}" placeholder="Ex: 1500"></div>`;
-            document.getElementById('rfLimitesInputs').innerHTML = MF_RET_CATEGORIAS.pessoal.map(campo).join('');
-            document.getElementById('rfLimitesEmpresaInputs').innerHTML = campo('Pró-labore');
+            const campo = (cat, label, ph, ro) =>
+                `<div class="fin-field"><label>${escapeHtml(label || rfLabel(cat))}</label>`
+                + `<input type="text" inputmode="numeric" data-rf-cat="${escapeHtml(cat)}"`
+                + ` value="${limites[cat] ? String(limites[cat]) : ''}" placeholder="${ph || 'Ex: 1500'}"`
+                + `${ro ? ' readonly' : ' oninput="rfConfigRecalcular()"'}></div>`;
+            document.getElementById('rfLimitesInputs').innerHTML =
+                campo(RF_TETO_KEY, 'Teto Mensal de Despesas (Pessoal/Família)', 'Ex: 8000')
+                + '<div class="fin-section-title" style="margin-top:6px;">Distribuir o teto</div>'
+                + RF_CONFIG_CATS.map(c => campo(c)).join('')
+                + campo(RF_DEMAIS_KEY, 'Demais Despesas (calculado — saldo restante do teto)', '', true);
             document.getElementById('rfConfigModal').classList.add('active');
+            rfConfigRecalcular();
         }
         function rfConfigFechar() {
             document.getElementById('rfConfigModal').classList.remove('active');
+        }
+        // Distribuição progressiva dos limites dentro do Teto Mensal. Recalcula a
+        // cada tecla: "Demais Despesas" fecha o saldo que sobra; o botão Salvar
+        // só habilita quando a soma de todos os limites == Teto (Diferença 0).
+        function rfConfigRecalcular() {
+            const val = cat => {
+                const el = document.querySelector(`#rfConfigModal input[data-rf-cat="${cat.replace(/"/g, '\\"')}"]`);
+                return el ? (Number(String(el.value || '').replace(/\D/g, '')) || 0) : 0;
+            };
+            const teto = val(RF_TETO_KEY);
+            const manual = RF_CONFIG_CATS.reduce((s, c) => s + val(c), 0);
+            const demais = Math.max(0, teto - manual);        // saldo que sobra
+            const totalDist = manual + demais;                // = teto se manual<=teto
+            const saldoDisp = Math.max(0, teto - manual);     // quanto falta distribuir
+            const dif = teto - totalDist;                     // 0 = fecha; <0 = estourou
+
+            const demaisInp = document.querySelector(`#rfConfigModal input[data-rf-cat="${RF_DEMAIS_KEY}"]`);
+            if (demaisInp) demaisInp.value = demais ? String(demais) : '0';
+
+            const setR = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = rfFmt(v); };
+            setR('rfCfgTeto', teto);
+            setR('rfCfgDistribuido', totalDist);
+            setR('rfCfgSaldo', saldoDisp);
+            setR('rfCfgDemais', demais);
+            setR('rfCfgDiferenca', dif);
+            const difEl = document.getElementById('rfCfgDiferenca');
+            if (difEl) difEl.classList.toggle('neg', dif !== 0);
+
+            const valido = teto > 0 && dif === 0;
+            const st = document.getElementById('rfCfgStatus');
+            if (st) {
+                if (!teto) {
+                    st.className = 'fin-aviso';
+                    st.textContent = 'Informe o Teto Mensal de Despesas para começar a distribuir.';
+                } else if (valido) {
+                    st.className = 'fin-ok';
+                    st.textContent = 'Configuração válida — o Teto Mensal fecha com a soma de todos os limites.';
+                } else {
+                    st.className = 'fin-aviso';
+                    st.textContent = 'A configuração não fecha com o Teto Mensal. Ajuste os valores antes de salvar.';
+                }
+            }
+            const btn = document.getElementById('rfConfigSalvarBtn');
+            if (btn) btn.disabled = !valido;
         }
         function loadPlanejamento() {
             const sec = document.getElementById('rfSecPessoal');
@@ -7148,6 +7485,40 @@
             usoExibido['Retirada Márcio'] += rateioCada;
             usoExibido['Retirada Renata'] += rateioCada;
 
+            // Teto Mensal de Despesas — controle geral: consome o teto a soma de
+            // TODAS as 7 categorias pessoais (usoDireto, valor real gasto).
+            // Passar do teto é permitido; excedente = max(0, total − teto),
+            // rateado 50/50 entre Márcio e Renata. Conceito separado do rateio
+            // por categoria acima e do Pró-labore individual (Empresa).
+            // Passar do teto é permitido: o Saldo é limitado a 0 (nunca negativo)
+            // e o que passou vai pro Valor excedente, rateado 50/50 Márcio/Renata.
+            // Sem teto configurado (0) o controle fica inativo (saldo/excedente 0).
+            const teto = Number(limites[RF_TETO_KEY]) || 0;
+            const tetoUsado = pcats.reduce((s, c) => s + (usoDireto[c] || 0), 0);
+            const tetoSaldo = teto > 0 ? Math.max(0, teto - tetoUsado) : 0;
+            const tetoExc = teto > 0 ? Math.max(0, tetoUsado - teto) : 0;
+            const tetoExcCada = tetoExc / 2;
+            const rfSetKV = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = rfFmt(val); };
+            const rfSetExc = (id, val) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = rfFmt(val);
+                el.style.color = val > 0 ? '#fbbf24' : 'var(--text)';
+            };
+            // Aba Pessoal — card "Teto Mensal de Despesas".
+            rfSetKV('rfTetoConfig', teto);
+            rfSetKV('rfTetoUsado', tetoUsado);
+            rfSetKV('rfTetoSaldo', tetoSaldo);
+            rfSetExc('rfTetoExcedente', tetoExc);
+            rfSetKV('rfTetoExcMarcio', tetoExcCada);
+            rfSetKV('rfTetoExcRenata', tetoExcCada);
+            // Aba Empresa — demonstrativo consolidado "Pró-labore Total" (mesmos
+            // números, visão da empresa: quanto saiu no mês pras despesas pessoais).
+            rfSetKV('rfProLaboreTetoConfig', teto);
+            rfSetKV('rfProLaboreTotalUsado', tetoUsado);
+            rfSetKV('rfProLaboreSaldoRestante', tetoSaldo);
+            rfSetExc('rfProLaboreExcedente', tetoExc);
+
             let tLim = 0, tUso = 0;
             document.getElementById('rfPessoalRows').innerHTML = pcats.map(cat => {
                 const lim = Number(limites[cat]) || 0;
@@ -7156,7 +7527,7 @@
                 tLim += lim; tUso += uso;
                 const tag = (cat === 'Retirada Márcio' || cat === 'Retirada Renata') && rateioCada > 0
                     ? ` <span class="fin-tag">inclui rateio ${rfFmt(rateioCada)}</span>` : '';
-                return `<tr><td>${escapeHtml(cat)}${tag}</td>`
+                return `<tr><td>${escapeHtml(rfLabel(cat))}${tag}</td>`
                     + `<td class="fin-table-amount">${rfFmt(lim)}</td>`
                     + `<td class="fin-table-amount${uso < 0 ? ' neg' : ''}">${rfFmt(uso)}</td>`
                     + `<td class="fin-table-amount${saldo < 0 ? ' neg' : ''}">${rfFmt(saldo)}</td></tr>`;
@@ -7170,20 +7541,12 @@
             pSaldoEl.classList.toggle('neg', (tLim - tUso) < 0);
 
             // ----- Empresa -----
-            // Pró-labore: cartão próprio, limite manual (pode ficar negativo).
-            const plLim = Number(limites['Pró-labore']) || 0;
-            const plUso = somaCat('empresa', 'Pró-labore');
-            const plSaldo = plLim - plUso;
-            document.getElementById('rfProLaboreLimite').textContent = rfFmt(plLim);
-            const plUsoEl = document.getElementById('rfProLaboreUsado');
-            plUsoEl.textContent = rfFmt(plUso);
-            plUsoEl.classList.toggle('neg', plUso < 0);
-            const plSaldoEl = document.getElementById('rfProLaboreSaldo');
-            plSaldoEl.textContent = rfFmt(plSaldo);
-            plSaldoEl.classList.toggle('neg', plSaldo < 0);
+            // O demonstrativo "Pró-labore Total" (4 indicadores) é preenchido
+            // junto com o card do Teto, logo acima — mesmos números. Não há mais
+            // os dois cartões separados Pró-labore Márcio / Pró-labore Renata.
 
-            // Tabela: demais categorias Empresa (sem Pró-labore, sem limite).
-            const ecats = MF_RET_CATEGORIAS.empresa.filter(c => c !== 'Pró-labore');
+            // Tabela Empresa: todas as categorias Empresa (não há mais Pró-labore aqui).
+            const ecats = MF_RET_CATEGORIAS.empresa;
             let tEmp = 0;
             document.getElementById('rfEmpresaRows').innerHTML = ecats.map(cat => {
                 const tot = somaCat('empresa', cat);
@@ -7197,8 +7560,13 @@
         window.rfPeriodoChange = rfPeriodoChange;
         window.rfConfigAbrir = rfConfigAbrir;
         window.rfConfigFechar = rfConfigFechar;
+        window.rfConfigRecalcular = rfConfigRecalcular;
 
         function rfSalvarLimites() {
+            // Trava dupla: o botão já fica disabled quando não fecha; aqui é só
+            // um cinto de segurança pra não gravar config incompleta.
+            const btn = document.getElementById('rfConfigSalvarBtn');
+            if (btn && btn.disabled) return;
             const out = {};
             document.querySelectorAll('#rfConfigModal input[data-rf-cat]').forEach(inp => {
                 const cat = inp.dataset.rfCat;
