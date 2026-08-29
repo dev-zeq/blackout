@@ -746,6 +746,13 @@
         .rel-sub-kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0 7px 16px; font-size: 12.5px; color: var(--text-faint); border-bottom: 1px solid rgba(255,255,255,0.04); }
         .rel-sub-kv:last-child { border-bottom: none; }
         /* Histórico Financeiro — lista de lançamentos editáveis (2026-08-29). */
+        .hist-filtros { display: flex; gap: 10px; margin-bottom: 12px; }
+        @media (max-width: 480px) { .hist-filtros { flex-direction: column; } }
+        .hist-filtros button { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color .15s, background .15s; }
+        .hist-filtros button.active { border-color: var(--accent); background: var(--accent-dim); }
+        .hist-filtros .hist-filtro-tit { font-size: 13px; font-weight: 800; }
+        .hist-filtros button.active .hist-filtro-tit { color: var(--accent-bright); }
+        .hist-filtros .hist-filtro-sub { font-size: 10.5px; color: var(--text-faint); }
         .hist-dia { margin: 14px 0 4px; font-size: 12px; font-weight: 800; color: var(--text-faint); text-transform: uppercase; letter-spacing: .5px; }
         .hist-dia .hist-dia-tag { font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--accent-bright); margin-left: 6px; }
         .hist-op { border: 1px solid var(--border); border-radius: 14px; padding: 11px 13px; margin-bottom: 8px; background: rgba(255,255,255,0.02); }
@@ -756,8 +763,8 @@
         .hist-op-val.pos { color: var(--accent-bright); }
         .hist-op-meta { font-size: 11.5px; color: var(--text-faint); margin-top: 3px; line-height: 1.45; }
         .hist-op-sub { font-size: 11.5px; color: var(--text-faint); padding: 3px 0 0 14px; }
-        .hist-op-acts { display: flex; gap: 8px; margin-top: 9px; }
-        .hist-op-acts button { flex: 1; padding: 7px 8px; font-size: 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; }
+        .hist-op-acts { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+        .hist-op-acts button { flex: none; padding: 4px 11px; font-size: 11px; border-radius: 8px; border: 1px solid var(--border-strong); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; }
         .hist-op-acts button.hist-del { color: #fca5a5; border-color: rgba(252,165,165,0.35); }
         .hist-op-acts button:disabled { opacity: .4; cursor: default; }
         .hist-edit { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 10px; }
@@ -1223,10 +1230,16 @@
                     <div class="fin-kv"><span class="fin-kv-label">− Saídas conhecidas <span style="color:var(--text-faint);">(retiradas, gráfica, reembolsos em dinheiro)</span></span><span class="fin-kv-value" id="mfFechSaidas" style="color:#fca5a5;">R$ 0,00</span></div>
                     <div class="fin-kv"><span class="fin-kv-label">− Sangrias do dia</span><span class="fin-kv-value" id="mfFechSangrias" style="color:#fca5a5;">R$ 0,00</span></div>
                     <div class="fin-kv"><span class="fin-kv-label">= Movimento conhecido do Caixa <span style="color:var(--text-faint);">(esperado)</span></span><span class="fin-kv-value" id="mfFechMovConhecido" style="font-size:16px;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Valor físico contado <span style="color:var(--text-faint);">(Notas + Moedas)</span></span><span class="fin-kv-value" id="mfFechContado" style="font-size:16px;">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Notas contadas</span><span class="fin-kv-value" id="mfFechNotasContado">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Moedas contadas</span><span class="fin-kv-value" id="mfFechMoedasContado">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">= Total contado <span style="color:var(--text-faint);">(Notas + Moedas)</span></span><span class="fin-kv-value" id="mfFechContado" style="font-size:16px;">R$ 0,00</span></div>
+                    <div class="fin-kv" id="mfFechExcedenteRow" style="display:none;"><span class="fin-kv-label"><b>= Receita em dinheiro do dia</b> <span style="color:var(--text-faint);">(excedente = contado − esperado)</span></span><span class="fin-kv-value" id="mfFechExcedente" style="font-size:17px; color:var(--accent-bright);">R$ 0,00</span></div>
                     <div class="fin-kv" id="mfFechDiferencaRow" style="display:none;"><span class="fin-kv-label"><b>Diferença de conferência</b> <span style="color:var(--text-faint);">(contado − esperado)</span></span><span class="fin-kv-value" id="mfFechDiferenca" style="font-size:17px;">R$ 0,00</span></div>
+                    <div class="fin-kv" id="mfFechCofreDestNRow" style="display:none;"><span class="fin-kv-label">→ vai para o Cofre de Notas <span style="color:var(--text-faint);">(notas − fundo)</span></span><span class="fin-kv-value" id="mfFechCofreDestN" style="color:var(--text-dim);">R$ 0,00</span></div>
+                    <div class="fin-kv" id="mfFechCofreDestMRow" style="display:none;"><span class="fin-kv-label">→ vai para o Cofre de Moedas</span><span class="fin-kv-value" id="mfFechCofreDestM" style="color:var(--text-dim);">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Fundo retido no Caixa da Loja <span style="color:var(--text-faint);">(base da próxima abertura)</span></span><span class="fin-kv-value" id="mfFechFundoRetido" style="color:var(--text-dim);">R$ 0,00</span></div>
                     <div class="fin-aviso" id="mfFechApuraAviso" style="display:none;"></div>
-                    <div class="fin-note" style="text-align:left; margin-top:8px;">O fechamento do Caixa da Loja é só <b>conferência</b>: compara o dinheiro contado com o movimento conhecido e mostra a diferença, se houver. Essa diferença <b>não</b> vira receita nem despesa e não é lançada. Nunca bloqueia o fechamento.</div>
+                    <div class="fin-note" style="text-align:left; margin-top:8px;">Você informa o <b>total contado</b> na gaveta (com os R$ 160 do fundo). O sistema separa o fundo do excedente sozinho: o <b>excedente</b> (contado − esperado, quando positivo) é a <b>receita em dinheiro do dia</b> e entra no resultado; o dinheiro acima do fundo vai para os Cofres; os R$ 160 ficam retidos no Caixa. Falta (diferença negativa) não vira despesa. Não gera RECEITA_SERVICOS nem AJUSTE_CAIXA.</div>
                 </div>
 
                 <!-- PAINEL B — "Qual foi o resultado financeiro do período?"
@@ -1236,7 +1249,7 @@
                 <div class="fin-section-title">Resultado Financeiro do Período</div>
                 <div class="fin-card" id="finPainelB">
                     <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Painel B — Resultado do dia</div>
-                    <div class="fin-kv" id="pbRowReceitaCaixa" style="display:none;"><span class="fin-kv-label">Receita de serviços em dinheiro <span style="color:var(--text-faint);">(Caixa da Loja — lançamentos anteriores)</span></span><span class="fin-kv-value" id="pbReceitaCaixa">R$ 0,00</span></div>
+                    <div class="fin-kv" id="pbRowReceitaCaixa" style="display:none;"><span class="fin-kv-label">Receita em dinheiro do dia <span style="color:var(--text-faint);">(excedente sobre o fundo de caixa)</span></span><span class="fin-kv-value" id="pbReceitaCaixa">R$ 0,00</span></div>
                     <div class="fin-kv" id="pbRowSicredi" style="display:none;"><span class="fin-kv-label">Receita eletrônica — Sicredi</span><span class="fin-kv-value" id="pbReceitaSicredi">R$ 0,00</span></div>
                     <div class="fin-kv" id="pbRowPagseguro" style="display:none;"><span class="fin-kv-label">Receita eletrônica — PagSeguro</span><span class="fin-kv-value" id="pbReceitaPagseguro">R$ 0,00</span></div>
                     <div class="fin-kv"><span class="fin-kv-label">Taxas de Troca por Pix</span><span class="fin-kv-value" id="pbTaxaPix">R$ 0,00</span></div>
@@ -1364,6 +1377,17 @@
                         </div>
                         <button type="button" id="histNextBtn" onclick="histMesNav(1)" aria-label="Próximo mês">›</button>
                     </div>
+                </div>
+                <!-- Duas áreas de filtro independentes (não misturam registros). -->
+                <div class="hist-filtros">
+                    <button type="button" data-hf="fechamento" class="active" onclick="histFiltroSet('fechamento')">
+                        <span class="hist-filtro-tit">Histórico do Fechamento de Caixa</span>
+                        <span class="hist-filtro-sub">Notas, moedas, PIX, apuração e diferença</span>
+                    </button>
+                    <button type="button" data-hf="movimentacao" onclick="histFiltroSet('movimentacao')">
+                        <span class="hist-filtro-tit">Histórico de Movimentação</span>
+                        <span class="hist-filtro-sub">Entradas, retiradas, transferências, sangrias</span>
+                    </button>
                 </div>
                 <div id="histLista"></div>
                 <div class="fin-msg" id="histMsg"></div>
@@ -5139,13 +5163,22 @@
                 const { data: existe, error: errCheck } = await supabase.from('lancamentos').select('id').eq('tipo', 'ABERTURA').eq('data', hoje).limit(1);
                 if (errCheck) throw new Error(errCheck.message);
                 if (existe && existe.length) { finMsg('finAbMsg', 'err', 'O caixa já foi aberto hoje.'); btn.disabled = false; return; }
+                await finCarregarContas();
                 const idCaixa = await finContaId('caixa_loja');
+                // Se o Caixa da Loja já tem saldo (o fundo que ficou retido do
+                // fechamento anterior), a abertura é SÓ CONFERÊNCIA — não injeta
+                // dinheiro novo (valor 0). Só injeta FC1+FC2 quando o caixa está zerado.
+                const saldoCaixa = Number(((FIN_CONTAS_BY_CHAVE.caixa_loja || {}).saldo) || 0);
+                const soConferencia = saldoCaixa > 0.005;
                 await finLancar({
-                    conta_id: idCaixa, data: hoje, valor: total, tipo: 'ABERTURA',
-                    descricao: 'Abertura de caixa', origem: 'abertura',
-                    meta: { fc1, fc2, total },
+                    conta_id: idCaixa, data: hoje, valor: soConferencia ? 0 : total, tipo: 'ABERTURA',
+                    descricao: soConferencia ? 'Abertura de caixa (conferência do fundo retido)' : 'Abertura de caixa',
+                    origem: 'abertura',
+                    meta: { fc1, fc2, total, so_conferencia: soConferencia, saldo_caixa_antes: Number(saldoCaixa.toFixed(2)) },
                 });
-                finMsg('finAbMsg', 'ok', `Caixa aberto — fundo de ${mfBRL(total)} registrado (FC1 ${mfBRL(fc1)} + FC2 ${mfBRL(fc2)}).`);
+                finMsg('finAbMsg', 'ok', soConferencia
+                    ? `Caixa aberto — fundo de ${mfBRL(total)} conferido (já estava no caixa; nada foi injetado).`
+                    : `Caixa aberto — fundo de ${mfBRL(total)} registrado (FC1 ${mfBRL(fc1)} + FC2 ${mfBRL(fc2)}).`);
                 await loadFinanceiroSaldos();
                 await finCarregarMovimentosDia();
             } catch (e) {
@@ -5188,7 +5221,11 @@
             const ehCaixa = l.contaChave === 'caixa_loja';
 
             if (tipo === 'ABERTURA') return { grupo: 'abertura', subgrupo: null, valorEconomico: 0, afetaGaveta: false, valorGaveta: 0 };
-            if (tipo === 'FECHAMENTO') return { grupo: 'fechamento', subgrupo: null, valorEconomico: 0, afetaGaveta: false, valorGaveta: 0 };
+            // FECHAMENTO.valor = contado − esperado (a diferença de conferência).
+            // Positivo = excedente = RECEITA EM DINHEIRO do dia (entra no resultado,
+            // sem virar RECEITA_SERVICOS). Negativo (falta) NÃO vira despesa —
+            // aparece só como diferença de conferência.
+            if (tipo === 'FECHAMENTO') return { grupo: 'receita', subgrupo: 'dinheiro', valorEconomico: Math.max(0, v), afetaGaveta: false, valorGaveta: 0 };
 
             // Receita apurada no fechamento (gerada automaticamente). É a única
             // receita "gravada"; RECEBIMENTO_SERVICO é só compatibilidade.
@@ -5254,7 +5291,7 @@
             const fundoAbertura = abertura ? (Number((abertura.meta || {}).total) || Number(abertura.valor) || 0) : 0;
             let entradas = 0, saidas = 0, sangrias = 0;
             rows.forEach(r => {
-                if (r.tipo === 'ABERTURA' || r.tipo === 'FECHAMENTO' || r.tipo === 'RECEITA_SERVICOS' || r.tipo === 'AJUSTE_CAIXA') return;
+                if (r.tipo === 'ABERTURA' || r.tipo === 'FECHAMENTO' || r.tipo === 'RECEITA_SERVICOS' || r.tipo === 'AJUSTE_CAIXA' || r.origem === 'fechamento') return;
                 const c = finClassificarLancamento({ tipo: r.tipo, valor: r.valor, contaChave: 'caixa_loja', meta: r.meta || {} });
                 if (!c.afetaGaveta) return;
                 if (c.grupo === 'sangria') sangrias += Math.abs(c.valorGaveta);
@@ -5274,9 +5311,21 @@
         //    eletrônica (informado − saldo do sistema) é apurada como receita.
         function finApurarReceitas() {
             const c = finFechCalcular();
-            const contadoCaixa = finValorNum('mfFechNotas') + finValorNum('mfFechMoedas');
+            const notasCaixa = finValorNum('mfFechNotas');
+            const moedasCaixa = finValorNum('mfFechMoedas');
+            const contadoCaixa = notasCaixa + moedasCaixa;
             const temContado = finCampoPreenchido('mfFechNotas') || finCampoPreenchido('mfFechMoedas');
             const diferencaCaixa = temContado ? Number((contadoCaixa - c.esperado).toFixed(2)) : 0;
+            // Excedente = receita em dinheiro do dia (contado − esperado, só a parte
+            // positiva). Vai pro resultado via a própria linha FECHAMENTO (classificada
+            // como receita), NÃO como RECEITA_SERVICOS.
+            const receitaDinheiro = Number((Math.max(0, diferencaCaixa)).toFixed(2));
+            // Ao fechar: as moedas inteiras vão pro Cofre de Moedas; das notas,
+            // descontam-se os R$ 160 do fundo e o restante vai pro Cofre de Notas.
+            const fundoRetido = Number((c.fundoAbertura || 0).toFixed(2));
+            const paraCofreNotas = Number((notasCaixa - fundoRetido).toFixed(2));
+            const paraCofreMoedas = Number(moedasCaixa.toFixed(2));
+            const notasInsuficientes = temContado && (notasCaixa + 0.005 < fundoRetido);
             const bancos = [];
             [['sicredi', 'mfFechSicredi'], ['pagseguro', 'mfFechPagseguro']].forEach(([chave, id]) => {
                 if (!finCampoPreenchido(id)) return;      // não informado → não apura
@@ -5298,8 +5347,9 @@
             };
             return {
                 fundoAbertura: c.fundoAbertura, entradas: c.entradas, saidas: c.saidas, sangrias: c.sangrias,
-                esperadoCaixa: c.esperado, contadoCaixa, temContado, diferencaCaixa, bancos, cofre,
-                temAbertura: c.temAbertura, jaFechado: c.jaFechado,
+                esperadoCaixa: c.esperado, notasCaixa, moedasCaixa, contadoCaixa, temContado, diferencaCaixa,
+                receitaDinheiro, fundoRetido, paraCofreNotas, paraCofreMoedas, notasInsuficientes,
+                bancos, cofre, temAbertura: c.temAbertura, jaFechado: c.jaFechado,
             };
         }
 
@@ -5311,7 +5361,21 @@
             set('mfFechSaidas', mfBRL(ap.saidas));
             set('mfFechSangrias', mfBRL(ap.sangrias));
             set('mfFechMovConhecido', mfBRL(ap.esperadoCaixa));
+            set('mfFechNotasContado', mfBRL(ap.notasCaixa));
+            set('mfFechMoedasContado', mfBRL(ap.moedasCaixa));
             set('mfFechContado', mfBRL(ap.contadoCaixa));
+            set('mfFechFundoRetido', mfBRL(ap.fundoRetido));
+            // Excedente = receita em dinheiro do dia
+            const excRow = document.getElementById('mfFechExcedenteRow');
+            if (excRow) excRow.style.display = (ap.temContado && ap.receitaDinheiro > 0.005) ? '' : 'none';
+            set('mfFechExcedente', mfBRL(ap.receitaDinheiro));
+            // Destinos do cofre
+            const dNRow = document.getElementById('mfFechCofreDestNRow');
+            if (dNRow) dNRow.style.display = (ap.temContado && ap.paraCofreNotas > 0.005) ? '' : 'none';
+            set('mfFechCofreDestN', mfBRL(Math.max(0, ap.paraCofreNotas)));
+            const dMRow = document.getElementById('mfFechCofreDestMRow');
+            if (dMRow) dMRow.style.display = (ap.temContado && ap.paraCofreMoedas > 0.005) ? '' : 'none';
+            set('mfFechCofreDestM', mfBRL(ap.paraCofreMoedas));
             // Contagem física do Cofre (só detalhe/conferência)
             set('mfFechCofreTotal', mfBRL(ap.cofre.total));
             set('mfFechCofreSistema', mfBRL(ap.cofre.sistema));
@@ -5323,21 +5387,24 @@
                 cdEl.textContent = (ap.cofre.diferenca < 0 ? '− ' : '+ ') + mfBRL(Math.abs(ap.cofre.diferenca));
                 cdEl.style.color = ap.cofre.diferenca < 0 ? '#fca5a5' : 'var(--accent-bright)';
             }
-            const temDif = ap.temContado && Math.abs(ap.diferencaCaixa) >= 0.005;
+            // "Diferença de conferência" só mostra quando é FALTA (negativa). O
+            // excedente positivo já aparece como "Receita em dinheiro do dia".
+            const temFalta = ap.temContado && ap.diferencaCaixa < -0.005;
             const difRow = document.getElementById('mfFechDiferencaRow');
-            if (difRow) difRow.style.display = temDif ? '' : 'none';
+            if (difRow) difRow.style.display = temFalta ? '' : 'none';
             const dif = document.getElementById('mfFechDiferenca');
             if (dif) {
-                dif.textContent = (ap.diferencaCaixa < 0 ? '− ' : '+ ') + mfBRL(Math.abs(ap.diferencaCaixa));
-                dif.style.color = ap.diferencaCaixa < 0 ? '#fca5a5' : 'var(--accent-bright)';
+                dif.textContent = '− ' + mfBRL(Math.abs(ap.diferencaCaixa));
+                dif.style.color = '#fca5a5';
             }
             const av = document.getElementById('mfFechApuraAviso');
             if (av) {
-                if (temDif) {
+                if (ap.notasInsuficientes) {
                     av.style.display = '';
-                    av.innerHTML = ap.diferencaCaixa < 0
-                        ? 'Contado <b>abaixo</b> do movimento conhecido em ' + mfBRL(Math.abs(ap.diferencaCaixa)) + ' — falta física ou movimentação não registrada. É <b>só conferência</b>: nada é lançado. Não impede o fechamento.'
-                        : 'Contado <b>acima</b> do movimento conhecido em ' + mfBRL(ap.diferencaCaixa) + ' — sobra física (ex.: venda em dinheiro não registrada). É <b>só conferência</b>: nada é lançado. Não impede o fechamento.';
+                    av.innerHTML = 'As <b>notas contadas</b> (' + mfBRL(ap.notasCaixa) + ') são menores que o <b>Fundo de Caixa</b> de ' + mfBRL(ap.fundoRetido) + ' — confira a contagem. O fechamento fica bloqueado até corrigir.';
+                } else if (temFalta) {
+                    av.style.display = '';
+                    av.innerHTML = 'Contado <b>abaixo</b> do movimento conhecido em ' + mfBRL(Math.abs(ap.diferencaCaixa)) + ' — falta física ou movimentação não registrada. É <b>só conferência</b>: não vira despesa e não é lançada.';
                 } else av.style.display = 'none';
             }
             finRenderResultado();
@@ -5375,6 +5442,11 @@
             rows.forEach(r => {
                 somaValores += Number(r.valor) || 0;
                 const chave = finContaChavePorId(r.conta_id);
+                // A linha FECHAMENTO carrega `contado − esperado`: a parte POSITIVA é
+                // receita em dinheiro (classificador → R.dinheiro); a parte NEGATIVA
+                // (falta, não lançada como despesa) neutraliza na identidade de
+                // consistência via N.fechamento.
+                if (r.tipo === 'FECHAMENTO') N.fechamento += Math.min(0, Number(r.valor) || 0);
                 const c = finClassificarLancamento({ tipo: r.tipo, valor: r.valor, contaChave: chave, meta: r.meta || {} });
                 if (c.grupo === 'receita') {
                     if (c.subgrupo === 'taxa_troca_pix') R.taxa_troca_pix += c.valorEconomico;
@@ -5388,7 +5460,7 @@
                 else if (c.grupo === 'ajuste') N.ajuste += Number(r.valor) || 0;
                 else if (c.grupo === 'transferencia_interna') {
                     if (c.subgrupo === 'troca_pix_principal') N.trocaPixPrincipal += Number((r.meta || {}).valor_desejado) || 0;
-                    else if ((Number(r.valor) || 0) < 0) N.transfQtd += 1;
+                    else if ((Number(r.valor) || 0) < 0 && r.origem !== 'fechamento') N.transfQtd += 1;
                 } else if (c.grupo === 'sangria') { if ((Number(r.valor) || 0) < 0) N.sangrias += Math.abs(Number(r.valor) || 0); }
                 else if (c.grupo === 'abertura') N.abertura += Number(r.valor) || 0;
                 else if (c.grupo === 'fechamento') N.fechamento += Number(r.valor) || 0;
@@ -5401,12 +5473,15 @@
             const rf = finCalcularResultado();
             const ap = finApurarReceitas();
             const temContagem = ap.temContado;
-            // Caixa da Loja NÃO gera receita (modelo "só conferência"). rf.R.dinheiro
-            // só aparece se houver lançamentos legados de RECEITA_SERVICOS de caixa.
+            // Excedente em dinheiro (contado − esperado, parte positiva) = receita do
+            // dia. Será carregado pela linha FECHAMENTO ao gravar (classificada como
+            // receita); aqui entra ao vivo no Painel B.
+            const excedente = temContagem ? ap.diferencaCaixa : 0;   // pode ser negativo (falta)
+            const receitaDinheiroLive = Math.max(0, excedente);
             const bancoLive = {};
             ap.bancos.forEach(b => { bancoLive[b.chave] = Math.max(0, b.receita); });
             const receita = {
-                dinheiro: rf.R.dinheiro,
+                dinheiro: rf.R.dinheiro + receitaDinheiroLive,
                 sicredi: (rf.R.eletronico.sicredi || 0) + (bancoLive.sicredi || 0),
                 pagseguro: (rf.R.eletronico.pagseguro || 0) + (bancoLive.pagseguro || 0),
                 taxa_troca_pix: rf.R.taxa_troca_pix,
@@ -5421,11 +5496,11 @@
             const fcFech = finValorNum('mfFechFC1') + finValorNum('mfFechFC2');
             const variacaoFundo = temContagem && (fcFech > 0) ? (fcFech - ap.fundoAbertura) : 0;
             // consistência projetada: Σ valores − Σ aberturas − Σ fechamentos − Σ ajustes == Resultado Financeiro.
-            // O FECHAMENTO que será gravado tem valor = −esperado (zera a gaveta contra o
-            // movimento conhecido); a diferença contado−esperado fica fora dos livros.
+            // O FECHAMENTO que será gravado tem valor = contado − esperado (excedente); a
+            // parte negativa (falta) neutraliza em somaFechProj. As pernas pro cofre somam 0.
             const somaBancoLive = (bancoLive.sicredi || 0) + (bancoLive.pagseguro || 0);
-            const somaProj = rf.somaValores + somaBancoLive + (temContagem ? -ap.esperadoCaixa : 0);
-            const somaFechProj = rf.N.fechamento + (temContagem ? -ap.esperadoCaixa : 0);
+            const somaProj = rf.somaValores + somaBancoLive + (temContagem ? excedente : 0);
+            const somaFechProj = rf.N.fechamento + (temContagem ? Math.min(0, excedente) : 0);
             const consistCalc = somaProj - rf.N.abertura - somaFechProj - ajusteNeutro;
             const consistDelta = consistCalc - resultadoFinanceiro;
             const consistOk = Math.abs(consistDelta) < 0.02;
@@ -5509,6 +5584,7 @@
             (rows || []).forEach(r => {
                 somaValores += Number(r.valor) || 0;
                 const chave = finContaChavePorId(r.conta_id);
+                if (r.tipo === 'FECHAMENTO') N.fechamento += Math.min(0, Number(r.valor) || 0);
                 const c = finClassificarLancamento({ tipo: r.tipo, valor: r.valor, contaChave: chave, meta: r.meta || {} });
                 if (c.grupo === 'receita') {
                     if (c.subgrupo === 'taxa_troca_pix') R.taxa_troca_pix += c.valorEconomico;
@@ -5522,7 +5598,7 @@
                 else if (c.grupo === 'ajuste') N.ajuste += Number(r.valor) || 0;
                 else if (c.grupo === 'transferencia_interna') {
                     if (c.subgrupo === 'troca_pix_principal') N.trocaPixPrincipal += Number((r.meta || {}).valor_desejado) || 0;
-                    else if ((Number(r.valor) || 0) < 0) N.transfQtd += 1;
+                    else if ((Number(r.valor) || 0) < 0 && r.origem !== 'fechamento') N.transfQtd += 1;
                 } else if (c.grupo === 'sangria') { if ((Number(r.valor) || 0) < 0) N.sangrias += Math.abs(Number(r.valor) || 0); }
                 else if (c.grupo === 'abertura') N.abertura += Number(r.valor) || 0;
                 else if (c.grupo === 'fechamento') N.fechamento += Number(r.valor) || 0;
@@ -5678,6 +5754,15 @@
         let histMeses = [];
         let histMesIdx = 0;
         let histOpsIndex = {};
+        let histFiltro = 'fechamento';   // 'fechamento' | 'movimentacao' — 2 áreas independentes
+        function histFiltroSet(f) {
+            histFiltro = f;
+            document.querySelectorAll('#finScreen-historico .hist-filtros button').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-hf') === f);
+            });
+            histRender();
+        }
+        window.histFiltroSet = histFiltroSet;
 
         function histMsg(kind, text) {
             const el = document.getElementById('histMsg');
@@ -5733,12 +5818,16 @@
         window.histMesNav = histMesNav;
 
         // Agrupa as linhas de um dia em "operações": as 2 pernas com o mesmo
-        // meta.par viram uma operação só; as demais são 1 operação cada.
+        // meta.par viram uma operação só; as demais são 1 operação cada. As pernas
+        // de transferência criadas PELO fechamento (origem='fechamento') não viram
+        // op própria — ficam anexadas ao FECHAMENTO do dia (op.cofreLegs).
         function histOpsDoDia(rows) {
             const ordered = rows.slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+            const cofreLegs = ordered.filter(r => r.origem === 'fechamento' && r.tipo === 'TRANSFERENCIA');
+            const rest = ordered.filter(r => !(r.origem === 'fechamento' && r.tipo === 'TRANSFERENCIA'));
             const ops = [];
             const porPar = {};
-            ordered.forEach(r => {
+            rest.forEach(r => {
                 const par = r.meta && r.meta.par;
                 if (par) {
                     if (porPar[par]) { porPar[par].rows.push(r); return; }
@@ -5748,7 +5837,17 @@
                     ops.push({ key: 'id:' + r.id, par: null, data: r.data, tipo: r.tipo, rows: [r] });
                 }
             });
+            if (cofreLegs.length) {
+                const fech = ops.find(o => o.tipo === 'FECHAMENTO');
+                if (fech) fech.cofreLegs = cofreLegs;
+            }
             return ops;
+        }
+        // Filtro por área (histFiltro): 'fechamento' = FECHAMENTO + RECEITA_SERVICOS;
+        // 'movimentacao' = tudo que é entrada/retirada/transferência/etc.
+        function histOpNoFiltro(op) {
+            if (histFiltro === 'fechamento') return op.tipo === 'FECHAMENTO' || op.tipo === 'RECEITA_SERVICOS' || op.tipo === 'RECEBIMENTO_SERVICO';
+            return op.tipo !== 'FECHAMENTO' && op.tipo !== 'RECEITA_SERVICOS' && op.tipo !== 'RECEBIMENTO_SERVICO';
         }
 
         // Descreve uma operação p/ exibição e edição.
@@ -5777,19 +5876,27 @@
             if (op.tipo === 'FECHAMENTO') {
                 const contado = Number(meta.contado_caixa) || 0;
                 const esperado = Number(meta.esperado_caixa) || 0;
+                const notas = (meta.notas_caixa != null) ? Number(meta.notas_caixa) : contado;
+                const moedas = (meta.moedas_caixa != null) ? Number(meta.moedas_caixa) : 0;
                 const dif = (meta.diferenca_caixa != null) ? Number(meta.diferenca_caixa) : (contado - esperado);
+                const excedente = Math.max(0, dif);
+                const fundoRet = Number(meta.fundo_retido) || Number(meta.fundo_abertura) || 160;
                 const cofre = meta.cofre || null;
-                const cofreInfo = (cofre && (cofre.informado || Number(cofre.total) > 0))
-                    ? ' · cofre notas ' + mfBRL(Number(cofre.notas) || 0) + ' + moedas ' + mfBRL(Number(cofre.moedas) || 0) + ' = ' + mfBRL(Number(cofre.total) || 0)
-                        + (Math.abs(Number(cofre.diferenca) || 0) >= 0.005 ? ' (dif ' + ((Number(cofre.diferenca) || 0) < 0 ? '−' : '+') + mfBRL(Math.abs(Number(cofre.diferenca) || 0)) + ')' : '')
-                    : '';
+                const bancoTxt = (meta.receitas_banco || []).map(b => (FIN_CONTA_LABEL[b.conta] || b.conta) + ' ' + mfBRL(Number(b.valor) || 0)).join(' · ');
+                const linha1 = 'notas ' + mfBRL(notas) + ' · moedas ' + mfBRL(moedas) + ' · total ' + mfBRL(contado)
+                    + (bancoTxt ? ' · PIX: ' + bancoTxt : '');
+                const linha2 = 'esperado ' + mfBRL(esperado)
+                    + (excedente > 0.005 ? ' · receita em dinheiro ' + mfBRL(excedente) : '')
+                    + (dif < -0.005 ? ' · falta de conferência − ' + mfBRL(Math.abs(dif)) : (excedente <= 0.005 ? ' · confere' : ''))
+                    + ' · fundo retido ' + mfBRL(fundoRet)
+                    + (cofre && (cofre.informado || Number(cofre.total) > 0) ? ' · contagem cofre ' + mfBRL(Number(cofre.total) || 0) : '');
                 return { titulo: 'Fechamento de caixa', valor: null, sinal: 0,
-                    metaTxt: 'contado ' + mfBRL(contado) + ' · esperado ' + mfBRL(esperado)
-                        + (Math.abs(dif) >= 0.005 ? ' · diferença de conferência ' + (dif < 0 ? '−' : '+') + mfBRL(Math.abs(dif)) : ' · confere')
-                        + cofreInfo,
-                    desc, editKind: 'fechamento', editValor: contado,
+                    metaTxt: linha1 + '\n' + linha2,
+                    desc, editKind: 'fechamento',
+                    editNotas: notas, editMoedas: moedas, editValor: contado,
                     editCofreNotas: cofre ? (Number(cofre.notas) || 0) : 0,
                     editCofreMoedas: cofre ? (Number(cofre.moedas) || 0) : 0,
+                    esperado, fundoRet, receitasBanco: (meta.receitas_banco || []),
                     legado: (Number(meta.receita_caixa) || 0) > 0.005 };
             }
             if (op.tipo === 'ABERTURA') {
@@ -5828,12 +5935,19 @@
             const d = histOpDescribe(op);
             const valTxt = d.valor == null ? '' : ((d.sinal < 0 ? '− ' : d.sinal > 0 ? '+ ' : '') + mfBRL(Math.abs(d.valor)));
             const valCls = d.sinal < 0 ? 'neg' : d.sinal > 0 ? 'pos' : '';
+            const metaHtml = escapeHtml(d.metaTxt).replace(/\n/g, '<br>') + (d.desc ? ' · ' + escapeHtml(d.desc) : '');
+            let subHtml = '';
+            (op.cofreLegs || []).forEach(r => {
+                if ((Number(r.valor) || 0) <= 0) return;   // só a perna de crédito (no cofre)
+                subHtml += `<div class="hist-op-sub">→ ${mfBRL(Number(r.valor) || 0)} para o ${histOpConta(r)}</div>`;
+            });
             return `<div class="hist-op">
                 <div class="hist-op-top">
                     <span class="hist-op-tipo">${escapeHtml(d.titulo)}</span>
                     <span class="hist-op-val ${valCls}">${valTxt}</span>
                 </div>
-                <div class="hist-op-meta">${escapeHtml(d.metaTxt)}${d.desc ? ' · ' + escapeHtml(d.desc) : ''}</div>
+                <div class="hist-op-meta">${metaHtml}</div>
+                ${subHtml}
                 <div class="hist-op-acts">
                     <button type="button" onclick="histEditar('${op.key}')">Editar</button>
                     <button type="button" class="hist-del" onclick="histExcluir('${op.key}')">Excluir</button>
@@ -5857,13 +5971,18 @@
             if (!doMes.length) { wrap.innerHTML = '<div class="hist-vazio">Nenhum lançamento neste mês.</div>'; return; }
             const dias = Array.from(new Set(doMes.map(r => r.data))).sort().reverse();
             let html = '';
+            let algumaOp = false;
             dias.forEach(dia => {
                 const rowsD = doMes.filter(r => r.data === dia);
                 const fechado = rowsD.some(r => r.tipo === 'FECHAMENTO');
+                const opsFiltradas = histOpsDoDia(rowsD).filter(histOpNoFiltro);
+                if (!opsFiltradas.length) return;
+                algumaOp = true;
                 html += `<div class="hist-dia">${histDataBR(dia)}${fechado ? '<span class="hist-dia-tag">dia fechado</span>' : ''}</div>`;
-                histOpsDoDia(rowsD).forEach(op => { histOpsIndex[op.key] = op; html += histOpHtml(op); });
+                opsFiltradas.forEach(op => { histOpsIndex[op.key] = op; html += histOpHtml(op); });
             });
-            wrap.innerHTML = html;
+            wrap.innerHTML = algumaOp ? html
+                : ('<div class="hist-vazio">Nenhum ' + (histFiltro === 'fechamento' ? 'fechamento / entrada' : 'movimentação') + ' neste mês.</div>');
         }
         window.histRender = histRender;
 
@@ -5875,28 +5994,56 @@
             if (jaAberto) return;
             const d = histOpDescribe(op);
             const isFech = d.editKind === 'fechamento';
+            const acts = `<div class="hist-op-acts">
+                    <button type="button" onclick="histSalvar('${key}')">Salvar</button>
+                    <button type="button" onclick="histEditar('${key}')">Cancelar</button>
+                </div>`;
+            if (isFech) {
+                // Form detalhado do fechamento: Notas, Moedas, PIX por banco, contagem do cofre, descrição.
+                const bancosHtml = (d.receitasBanco || []).map((b, i) =>
+                    `<label>PIX / eletrônico — ${escapeHtml(FIN_CONTA_LABEL[b.conta] || b.conta)}</label>
+                     <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditPix-${key}-${i}" data-pixconta="${escapeHtml(b.conta)}" oninput="histEditFechCalc('${key}')" placeholder="Ex: 0,00"><div class="extenso-valor"></div>`
+                ).join('');
+                box.innerHTML = `
+                    <label>Notas contadas</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditN-${key}" oninput="histEditFechCalc('${key}')" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                    <label>Moedas contadas</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditM-${key}" oninput="histEditFechCalc('${key}')" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                    ${bancosHtml}
+                    <label>Cofre — Notas (contagem física)</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditCN-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                    <label>Cofre — Moedas (contagem física)</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditCM-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                    <label>Descrição</label>
+                    <input type="text" id="histEditT-${key}" maxlength="200">
+                    <div class="hist-edit-locked" id="histEditFechInfo-${key}">—</div>
+                    <div class="hist-edit-locked">Data <b>${histDataBR(op.data)}</b> bloqueada. Ao salvar: os saldos de Caixa da Loja e Cofres são recalculados, sem criar RECEITA_SERVICOS nem AJUSTE_CAIXA.${d.legado ? ' <span style="color:#fca5a5;">Fechamento anterior ao modelo atual; a reconciliação automática não roda neste dia.</span>' : ''}</div>
+                    ${acts}`;
+                box.style.display = '';
+                const setF = (id, val) => { const e = document.getElementById(id); if (e) { e.value = histFmtInput(val); histLegenda(e); } };
+                setF('histEditN-' + key, d.editNotas || 0);
+                setF('histEditM-' + key, d.editMoedas || 0);
+                (d.receitasBanco || []).forEach((b, i) => setF('histEditPix-' + key + '-' + i, Number(b.valor) || 0));
+                setF('histEditCN-' + key, d.editCofreNotas || 0);
+                setF('histEditCM-' + key, d.editCofreMoedas || 0);
+                const t = document.getElementById('histEditT-' + key); if (t) t.value = d.desc || '';
+                histEditFechCalc(key);
+                return;
+            }
             const contasTxt = (d.editKind === 'transfer' || d.editKind === 'trocapix')
                 ? op.rows.map(histOpConta).join(' / ') : histOpConta(op.rows[0]);
-            const valLabel = isFech ? 'Valor contado (Notas + Moedas)' : (d.editKind === 'trocapix' ? 'Valor desejado' : 'Valor');
-            let extra = '';
-            if (d.editKind === 'trocapix') {
-                extra = `<label>Desconto (opcional)</label><input type="text" inputmode="decimal" data-role="valor-cents" id="histEditD2-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>`;
-            } else if (isFech) {
-                extra = `<label>Cofre — Notas (contagem)</label><input type="text" inputmode="decimal" data-role="valor-cents" id="histEditCN-${key}" oninput="histEditCofreCalc('${key}')" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
-                <label>Cofre — Moedas (contagem)</label><input type="text" inputmode="decimal" data-role="valor-cents" id="histEditCM-${key}" oninput="histEditCofreCalc('${key}')" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
-                <div class="hist-edit-locked" id="histEditCofreInfo-${key}">Total do Cofre: R$ 0,00</div>`;
-            }
+            const valLabel = d.editKind === 'trocapix' ? 'Valor desejado' : 'Valor';
+            const extra = d.editKind === 'trocapix'
+                ? `<label>Desconto (opcional)</label><input type="text" inputmode="decimal" data-role="valor-cents" id="histEditD2-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>`
+                : '';
             box.innerHTML = `
                 <label>${valLabel}</label>
                 <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditV-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
                 ${extra}
                 <label>Descrição</label>
                 <input type="text" id="histEditT-${key}" maxlength="200">
-                <div class="hist-edit-locked">Data <b>${histDataBR(op.data)}</b> e conta <b>${escapeHtml(contasTxt)}</b> ficam bloqueadas.${isFech ? ' O valor contado e a contagem do cofre são só conferência — não mudam saldo nem viram lançamento.' : ''}${d.legado ? ' <span style="color:#fca5a5;">Fechamento anterior ao modelo de conferência; a reconciliação automática não roda neste dia.</span>' : ''}</div>
-                <div class="hist-op-acts">
-                    <button type="button" onclick="histSalvar('${key}')">Salvar</button>
-                    <button type="button" onclick="histEditar('${key}')">Cancelar</button>
-                </div>`;
+                <div class="hist-edit-locked">Data <b>${histDataBR(op.data)}</b> e conta <b>${escapeHtml(contasTxt)}</b> ficam bloqueadas.</div>
+                ${acts}`;
             box.style.display = '';
             const v = document.getElementById('histEditV-' + key);
             if (v) { v.value = histFmtInput(d.editValor); histLegenda(v); }
@@ -5904,32 +6051,61 @@
                 const dd = document.getElementById('histEditD2-' + key);
                 if (dd && d.editDesconto) { dd.value = histFmtInput(d.editDesconto); histLegenda(dd); }
             }
-            if (isFech) {
-                const cn = document.getElementById('histEditCN-' + key);
-                const cm = document.getElementById('histEditCM-' + key);
-                if (cn) { cn.value = histFmtInput(d.editCofreNotas || 0); histLegenda(cn); }
-                if (cm) { cm.value = histFmtInput(d.editCofreMoedas || 0); histLegenda(cm); }
-                histEditCofreCalc(key);
-            }
             const t = document.getElementById('histEditT-' + key); if (t) t.value = d.desc || '';
         }
         window.histEditar = histEditar;
 
-        function histEditCofreCalc(key) {
+        // Recálculo ao vivo do form de edição do FECHAMENTO (Notas/Moedas → total,
+        // excedente, diferença e destinos do cofre).
+        function histEditFechCalc(key) {
             const op = histOpsIndex[key]; if (!op) return;
-            const meta = (op.rows[0] || {}).meta || {};
-            const csist = Number((meta.cofre || {}).saldo_sistema);
-            const sistema = Number.isFinite(csist) ? csist
-                : (Number(((FIN_CONTAS_BY_CHAVE.cofre_notas || {}).saldo)) || 0) + (Number(((FIN_CONTAS_BY_CHAVE.cofre_moedas || {}).saldo)) || 0);
-            const n = parseBRLDecimal((document.getElementById('histEditCN-' + key) || {}).value);
-            const m = parseBRLDecimal((document.getElementById('histEditCM-' + key) || {}).value);
-            const tot = histRound2(n + m);
-            const dif = histRound2(tot - sistema);
-            const el = document.getElementById('histEditCofreInfo-' + key);
-            if (el) el.innerHTML = 'Total do Cofre: <b>' + mfBRL(tot) + '</b> · sistema ' + mfBRL(sistema)
-                + (Math.abs(dif) >= 0.005 ? ' · diferença ' + (dif < 0 ? '−' : '+') + mfBRL(Math.abs(dif)) : ' · confere');
+            const d = histOpDescribe(op);
+            const esperado = Number(d.esperado) || 0;
+            const fundoRet = Number(d.fundoRet) || 160;
+            const n = parseBRLDecimal((document.getElementById('histEditN-' + key) || {}).value);
+            const m = parseBRLDecimal((document.getElementById('histEditM-' + key) || {}).value);
+            const total = histRound2(n + m);
+            const dif = histRound2(total - esperado);
+            const exc = Math.max(0, dif);
+            const paraCofreN = histRound2(n - fundoRet);
+            const el = document.getElementById('histEditFechInfo-' + key);
+            if (!el) return;
+            if (n + 0.005 < fundoRet) {
+                el.innerHTML = '<span style="color:#fca5a5;">Notas contadas (' + mfBRL(n) + ') menores que o Fundo de Caixa de ' + mfBRL(fundoRet) + ' — não dá pra salvar.</span>';
+                return;
+            }
+            el.innerHTML = 'Total contado <b>' + mfBRL(total) + '</b> · esperado ' + mfBRL(esperado)
+                + (exc > 0.005 ? ' · <b>receita em dinheiro ' + mfBRL(exc) + '</b>' : (dif < -0.005 ? ' · falta − ' + mfBRL(Math.abs(dif)) : ' · confere'))
+                + '<br>→ Cofre de Notas ' + mfBRL(Math.max(0, paraCofreN)) + ' · → Cofre de Moedas ' + mfBRL(m) + ' · fundo retido ' + mfBRL(fundoRet);
         }
-        window.histEditCofreCalc = histEditCofreCalc;
+        window.histEditFechCalc = histEditFechCalc;
+
+        // Reconcilia UMA perna (notas OU moedas) do fechamento pro cofre: ajusta o
+        // par existente, cria se não existe, ou apaga se o alvo virou 0.
+        async function histReconciliarPernaCofre(data, fechCofre, contaChaveCofre, alvo, cofreLegs) {
+            alvo = histRound2(alvo);
+            const legs = (cofreLegs || []).filter(r => (r.meta || {}).fech_cofre === fechCofre);
+            const negLeg = legs.find(r => (Number(r.valor) || 0) < 0);
+            const posLeg = legs.find(r => (Number(r.valor) || 0) > 0);
+            const desc = fechCofre === 'notas' ? 'Fechamento — notas do caixa para o Cofre de Notas' : 'Fechamento — moedas do caixa para o Cofre de Moedas';
+            if (alvo > 0.005) {
+                if (negLeg && posLeg) {
+                    await dbUpdate('lancamentos', { valor: -alvo }, { id: negLeg.id });
+                    await dbUpdate('lancamentos', { valor: alvo }, { id: posLeg.id });
+                } else {
+                    const idCaixa = await finContaId('caixa_loja');
+                    const idCofre = await finContaId(contaChaveCofre);
+                    const par = finUUID();
+                    await dbInsert('lancamentos', [
+                        { conta_id: idCaixa, data, valor: -alvo, tipo: 'TRANSFERENCIA', descricao: desc, origem: 'fechamento', meta: { par, fech_cofre: fechCofre } },
+                        { conta_id: idCofre, data, valor: alvo, tipo: 'TRANSFERENCIA', descricao: desc, origem: 'fechamento', meta: { par, fech_cofre: fechCofre } },
+                    ]);
+                }
+            } else {
+                if (negLeg) await dbDelete('lancamentos', { id: negLeg.id });
+                if (posLeg) await dbDelete('lancamentos', { id: posLeg.id });
+            }
+        }
 
         async function histSalvar(key) {
             const op = histOpsIndex[key]; if (!op) return;
@@ -5971,8 +6147,15 @@
                     await dbUpdate('lancamentos', { valor: recebido, descricao: desc || cx.descricao, meta: { ...(cx.meta || {}), valor_desejado: D, taxa, desconto, receita } }, { id: cx.id });
                 } else if (d.editKind === 'fechamento') {
                     const baseMeta = first.meta || {};
-                    const contado = histRound2(novo);
                     const esperado = Number(baseMeta.esperado_caixa) || 0;
+                    const fundoRet = Number(baseMeta.fundo_retido) || Number(baseMeta.fundo_abertura) || 160;
+                    const notas = histRound2(parseBRLDecimal((document.getElementById('histEditN-' + key) || {}).value));
+                    const moedas = histRound2(parseBRLDecimal((document.getElementById('histEditM-' + key) || {}).value));
+                    if (notas + 0.005 < fundoRet) throw new Error('As notas contadas (' + mfBRL(notas) + ') são menores que o Fundo de Caixa de ' + mfBRL(fundoRet) + ' — confira a contagem.');
+                    const contado = histRound2(notas + moedas);
+                    const dif = histRound2(contado - esperado);
+                    const paraCofreNotas = histRound2(notas - fundoRet);
+                    const paraCofreMoedas = histRound2(moedas);
                     // contagem física do cofre — só detalhe/conferência dentro do fechamento
                     const cn = histRound2(parseBRLDecimal((document.getElementById('histEditCN-' + key) || {}).value));
                     const cm = histRound2(parseBRLDecimal((document.getElementById('histEditCM-' + key) || {}).value));
@@ -5980,9 +6163,24 @@
                     const csist = Number((baseMeta.cofre || {}).saldo_sistema);
                     const sistema = Number.isFinite(csist) ? csist
                         : (Number(((FIN_CONTAS_BY_CHAVE.cofre_notas || {}).saldo)) || 0) + (Number(((FIN_CONTAS_BY_CHAVE.cofre_moedas || {}).saldo)) || 0);
-                    await dbUpdate('lancamentos', { descricao: desc || first.descricao, meta: { ...baseMeta,
-                        contado_caixa: contado, diferenca_caixa: histRound2(contado - esperado),
+                    // 1) linha FECHAMENTO — valor = excedente (contado − esperado); nunca cria RECEITA_SERVICOS/AJUSTE_CAIXA
+                    await dbUpdate('lancamentos', { valor: dif, descricao: desc || first.descricao, meta: { ...baseMeta,
+                        notas_caixa: notas, moedas_caixa: moedas, contado_caixa: contado,
+                        diferenca_caixa: dif, receita_dinheiro: histRound2(Math.max(0, dif)),
+                        fundo_retido: fundoRet, para_cofre_notas: paraCofreNotas, para_cofre_moedas: paraCofreMoedas,
                         cofre: { notas: cn, moedas: cm, total: ctot, saldo_sistema: histRound2(sistema), diferenca: histRound2(ctot - sistema), informado: (cn > 0 || cm > 0) } } }, { id: first.id });
+                    // 2) PIX / eletrônico por banco → atualiza cada RECEITA_SERVICOS de banco do fechamento
+                    const pixInputs = document.querySelectorAll('#histEdit-' + key + ' input[data-pixconta]');
+                    for (const inp of pixInputs) {
+                        const contaChave = inp.getAttribute('data-pixconta');
+                        const novoPix = histRound2(parseBRLDecimal(inp.value));
+                        const linha = histCache.find(r => r.data === op.data && r.tipo === 'RECEITA_SERVICOS' && r.origem === 'fechamento' && ((r.meta || {}).conta_chave === contaChave));
+                        if (linha && histRound2(Number(linha.valor)) !== novoPix) await dbUpdate('lancamentos', { valor: novoPix }, { id: linha.id });
+                    }
+                    // 3) reconcilia as pernas pro cofre (por destino: notas / moedas)
+                    const cofreLegs = op.cofreLegs || histCache.filter(r => r.data === op.data && r.origem === 'fechamento' && r.tipo === 'TRANSFERENCIA');
+                    await histReconciliarPernaCofre(op.data, 'notas', 'cofre_notas', paraCofreNotas, cofreLegs);
+                    await histReconciliarPernaCofre(op.data, 'moedas', 'cofre_moedas', paraCofreMoedas, cofreLegs);
                 } else {
                     await dbUpdate('lancamentos', { valor: histRound2(novo), descricao: desc || first.descricao }, { id: first.id });
                 }
@@ -6012,7 +6210,7 @@
             try {
                 if (op.tipo === 'FECHAMENTO') {
                     const lote = histCache.filter(r => r.data === op.data && r.origem === 'fechamento'
-                        && (r.tipo === 'FECHAMENTO' || r.tipo === 'RECEITA_SERVICOS' || r.tipo === 'AJUSTE_CAIXA'));
+                        && (r.tipo === 'FECHAMENTO' || r.tipo === 'RECEITA_SERVICOS' || r.tipo === 'AJUSTE_CAIXA' || r.tipo === 'TRANSFERENCIA'));
                     for (const r of lote) await dbDelete('lancamentos', { id: r.id });
                 } else {
                     const idsExcluidos = op.rows.map(r => r.id);
@@ -6030,8 +6228,9 @@
 
         // Recalcula a conferência do FECHAMENTO de um dia depois que uma
         // movimentação daquele dia foi editada/excluída. ESCRITA ÚNICA: dbUpdate
-        // na própria linha FECHAMENTO (valor = −esperado recalculado + meta).
-        // NÃO cria, edita nem apaga RECEITA_SERVICOS ou AJUSTE_CAIXA de caixa.
+        // na própria linha FECHAMENTO (valor = contado − esperado recalculado + meta).
+        // NÃO cria, edita nem apaga RECEITA_SERVICOS/AJUSTE_CAIXA de caixa, nem as
+        // pernas pro cofre (dependem da contagem física, não do movimento conhecido).
         async function histReconciliarDia(data) {
             let rows;
             try {
@@ -6052,7 +6251,7 @@
             const fundoAbertura = abertura ? (Number((abertura.meta || {}).total) || Number(abertura.valor) || 0) : 0;
             let entradas = 0, saidas = 0, sangrias = 0;
             caixaRows.forEach(r => {
-                if (['ABERTURA', 'FECHAMENTO', 'RECEITA_SERVICOS', 'AJUSTE_CAIXA'].indexOf(r.tipo) >= 0) return;
+                if (['ABERTURA', 'FECHAMENTO', 'RECEITA_SERVICOS', 'AJUSTE_CAIXA'].indexOf(r.tipo) >= 0 || r.origem === 'fechamento') return;
                 const c = finClassificarLancamento({ tipo: r.tipo, valor: r.valor, contaChave: 'caixa_loja', meta: r.meta || {} });
                 if (!c.afetaGaveta) return;
                 if (c.grupo === 'sangria') sangrias += Math.abs(c.valorGaveta);
@@ -6061,17 +6260,18 @@
             });
             const esperado = histRound2(fundoAbertura + entradas - saidas - sangrias);
             const contado = Number((F.meta || {}).contado_caixa) || 0;
-            const rowsAgg = rows.map(r => r.id === F.id ? Object.assign({}, r, { valor: -esperado }) : r);
+            const novoValorF = histRound2(contado - esperado);   // excedente (contado − esperado)
+            const rowsAgg = rows.map(r => r.id === F.id ? Object.assign({}, r, { valor: novoValorF }) : r);
             const A = relAgregar(rowsAgg);
             const novoMeta = Object.assign({}, F.meta || {}, {
                 fundo_abertura: fundoAbertura, entradas: histRound2(entradas), saidas: histRound2(saidas), sangrias: histRound2(sangrias),
-                esperado_caixa: esperado, diferenca_caixa: histRound2(contado - esperado),
+                esperado_caixa: esperado, diferenca_caixa: novoValorF, receita_dinheiro: histRound2(Math.max(0, novoValorF)),
                 resultado_operacional: histRound2(A.resultadoOperacional), resultado_financeiro: histRound2(A.resultadoFinanceiro),
             });
-            const precisaValor = histRound2(Number(F.valor)) !== -esperado;
+            const precisaValor = histRound2(Number(F.valor)) !== novoValorF;
             const precisaMeta = JSON.stringify(F.meta || {}) !== JSON.stringify(novoMeta);
             if (precisaValor || precisaMeta) {
-                await dbUpdate('lancamentos', { valor: -esperado, meta: novoMeta }, { id: F.id });
+                await dbUpdate('lancamentos', { valor: novoValorF, meta: novoMeta }, { id: F.id });
             }
         }
 
@@ -6106,13 +6306,18 @@
                 if (!(finCampoPreenchido('mfFechNotas') || finCampoPreenchido('mfFechMoedas'))) {
                     finMsg('mfFechMsg', 'err', 'Informe o valor físico contado (Notas + Moedas).'); btn.disabled = false; return;
                 }
+                if (ap.notasInsuficientes) {
+                    finMsg('mfFechMsg', 'err', `As notas contadas (${mfBRL(ap.notasCaixa)}) são menores que o Fundo de Caixa de ${mfBRL(ap.fundoRetido)} — confira a contagem.`); btn.disabled = false; return;
+                }
                 const proj = finResultadoProjetado();
                 const hoje = todayISO();
                 const idCaixa = await finContaId('caixa_loja');
                 const rows = [];
-                // Modelo "só conferência": o Caixa da Loja NÃO gera RECEITA_SERVICOS
-                // nem AJUSTE_CAIXA. A diferença contado−esperado só é registrada em
-                // meta para exibição — não é lançada.
+                // Opção 3 preservada: o Caixa da Loja NÃO gera RECEITA_SERVICOS nem
+                // AJUSTE_CAIXA. O excedente (contado − esperado, parte positiva = receita
+                // em dinheiro do dia) é carregado pela própria linha FECHAMENTO. O
+                // dinheiro acima do fundo sai da gaveta para os Cofres (transferência
+                // interna neutra). O fundo (R$ 160) fica retido no Caixa da Loja.
                 for (const b of ap.bancos) {
                     if (b.receita > 0.005) {
                         const idB = await finContaId(b.chave);
@@ -6123,13 +6328,31 @@
                         });
                     }
                 }
+                if (ap.paraCofreNotas > 0.005) {
+                    const idCofreN = await finContaId('cofre_notas');
+                    const par = finUUID();
+                    rows.push(
+                        { conta_id: idCaixa, data: hoje, valor: -Number(ap.paraCofreNotas.toFixed(2)), tipo: 'TRANSFERENCIA', descricao: 'Fechamento — notas do caixa para o Cofre de Notas', origem: 'fechamento', meta: { par, fech_cofre: 'notas' } },
+                        { conta_id: idCofreN, data: hoje, valor: Number(ap.paraCofreNotas.toFixed(2)), tipo: 'TRANSFERENCIA', descricao: 'Fechamento — notas do caixa para o Cofre de Notas', origem: 'fechamento', meta: { par, fech_cofre: 'notas' } },
+                    );
+                }
+                if (ap.paraCofreMoedas > 0.005) {
+                    const idCofreM = await finContaId('cofre_moedas');
+                    const par = finUUID();
+                    rows.push(
+                        { conta_id: idCaixa, data: hoje, valor: -Number(ap.paraCofreMoedas.toFixed(2)), tipo: 'TRANSFERENCIA', descricao: 'Fechamento — moedas do caixa para o Cofre de Moedas', origem: 'fechamento', meta: { par, fech_cofre: 'moedas' } },
+                        { conta_id: idCofreM, data: hoje, valor: Number(ap.paraCofreMoedas.toFixed(2)), tipo: 'TRANSFERENCIA', descricao: 'Fechamento — moedas do caixa para o Cofre de Moedas', origem: 'fechamento', meta: { par, fech_cofre: 'moedas' } },
+                    );
+                }
                 rows.push({
-                    conta_id: idCaixa, data: hoje, valor: Number((-ap.esperadoCaixa).toFixed(2)), tipo: 'FECHAMENTO',
+                    conta_id: idCaixa, data: hoje, valor: Number((ap.contadoCaixa - ap.esperadoCaixa).toFixed(2)), tipo: 'FECHAMENTO',
                     descricao: 'Fechamento de caixa', origem: 'fechamento',
                     meta: {
-                        fundo_abertura: ap.fundoAbertura, entradas: ap.entradas, saidas: ap.saidas, sangrias: ap.sangrias,
+                        fundo_abertura: ap.fundoAbertura, fundo_retido: ap.fundoRetido, entradas: ap.entradas, saidas: ap.saidas, sangrias: ap.sangrias,
                         esperado_caixa: ap.esperadoCaixa, contado_caixa: ap.contadoCaixa,
-                        diferenca_caixa: ap.diferencaCaixa,
+                        notas_caixa: ap.notasCaixa, moedas_caixa: ap.moedasCaixa,
+                        diferenca_caixa: ap.diferencaCaixa, receita_dinheiro: ap.receitaDinheiro,
+                        para_cofre_notas: ap.paraCofreNotas, para_cofre_moedas: ap.paraCofreMoedas,
                         cofre: { notas: ap.cofre.notas, moedas: ap.cofre.moedas, total: ap.cofre.total, saldo_sistema: ap.cofre.sistema, diferenca: ap.cofre.diferenca, informado: ap.cofre.informado },
                         receitas_banco: ap.bancos.filter(b => b.receita > 0.005).map(b => ({ conta: b.chave, informado: b.informado, valor: Number(b.receita.toFixed(2)) })),
                         bancos_nao_apurados: ap.bancos.filter(b => b.receita <= 0.005).map(b => ({ conta: b.chave, informado: b.informado, esperado: b.esperado })),
@@ -6140,10 +6363,11 @@
                 });
                 await finLancar(rows);
                 const totBanco = ap.bancos.reduce((s, b) => s + Math.max(0, b.receita), 0);
-                finMsg('mfFechMsg', 'ok', `Caixa fechado (conferência).`
-                    + (Math.abs(ap.diferencaCaixa) >= 0.005 ? ` Diferença de conferência do Caixa: ${(ap.diferencaCaixa < 0 ? '−' : '+')}${mfBRL(Math.abs(ap.diferencaCaixa))} (só conferência, não lançada).` : ' Caixa confere com o movimento conhecido.')
+                finMsg('mfFechMsg', 'ok', `Caixa fechado.`
+                    + (ap.receitaDinheiro > 0.005 ? ` Receita em dinheiro do dia: ${mfBRL(ap.receitaDinheiro)}.` : (ap.diferencaCaixa < -0.005 ? ` Falta de conferência: −${mfBRL(Math.abs(ap.diferencaCaixa))} (não lançada como despesa).` : ' Caixa confere com o movimento conhecido.'))
+                    + (ap.paraCofreNotas > 0.005 || ap.paraCofreMoedas > 0.005 ? ` Para o Cofre: ${mfBRL(Math.max(0, ap.paraCofreNotas))} em notas + ${mfBRL(ap.paraCofreMoedas)} em moedas.` : '')
                     + (totBanco > 0.005 ? ` Receita eletrônica apurada: ${mfBRL(totBanco)}.` : '')
-                    + ` Resultado do dia: ${mfBRL(proj.resultadoFinanceiro)}. O caixa foi zerado para o próximo dia.`);
+                    + ` Fundo de ${mfBRL(ap.fundoRetido)} retido no Caixa da Loja. Resultado do dia: ${mfBRL(proj.resultadoFinanceiro)}.`);
                 await finCarregarMovimentosDia();
                 await finCarregarResultado();
                 await finCarregarContas();

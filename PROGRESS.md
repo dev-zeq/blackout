@@ -2093,3 +2093,37 @@ Estado resultante (confirmado): `lancamentos` 10 → **4** (ABERTURA +160 + as 3
 - Editar contrato/declaração/currículo: registros salvos *antes* dessa versão de cada formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
 - Os outros 3 modelos em branco (Autônomo, Trabalho, União Estável) ainda usam o modal HTML de sempre — se o usuário mandar o PDF de algum deles, é só acrescentar uma linha em `MODELOS_EM_BRANCO_PDF` (ver seção acima). Os 2 de Declaração de Residência (Para mim/Para terceiros) já usam PDF arquivado.
 - Endereço do Locatário (locação comercial) continua com Rua/Número separados — não fazia parte do pedido de unificação desta sessão; se um dia quiserem padronizar também, é a mesma receita já aplicada ao Locador/Imóvel.
+
+## Fechamento: excedente em dinheiro é receita + Notas/Moedas separados pro Cofre + Histórico com 2 áreas (2026-08-29)
+
+Três pedidos num só, todos em `paineldecontrole/index.html`. **Opção 3 preservada: o Caixa da Loja nunca gera `RECEITA_SERVICOS` nem `AJUSTE_CAIXA`.**
+
+### PARTE 1 — modelo do fechamento
+- **Notas e Moedas separadas** no fechamento (`#mfFechNotas` + `#mfFechMoedas`). `contado = Notas + Moedas`. Informa-se o **total físico contado incluindo os R$ 160** do fundo — o sistema separa sozinho.
+- `esperado` = fundo de abertura + Σ entradas reais no caixa − Σ saídas − Σ sangrias (só lançamentos já registrados). O `forEach` que reconstrói o esperado (`finFechCalcular`, `histReconciliarDia`) agora **pula `r.origem === 'fechamento'`** (as pernas pro cofre não são "saída conhecida").
+- **Excedente = `contado − esperado`**. Parte **positiva = "Receita em dinheiro do dia"**: entra no Resultado Financeiro / Painel B / Relatórios como **linha calculada**, carregada pela própria linha `FECHAMENTO` (`finClassificarLancamento` ramo `FECHAMENTO` → `{ grupo:'receita', subgrupo:'dinheiro', valorEconomico: Math.max(0,v) }`), **sem** criar `RECEITA_SERVICOS`. Parte **negativa (falta)** não vira despesa — só "Diferença de Conferência".
+- Consistência: `Σvalores − N.abertura − N.fechamento − N.ajuste == Resultado Financeiro` continua valendo — `finCalcularResultado`/`relAgregar` fazem `if (r.tipo==='FECHAMENTO') N.fechamento += Math.min(0, r.valor)` (só a falta neutraliza; o excedente positivo fica como receita). `finResultadoProjetado` espelha via `somaFechProj = rf.N.fechamento + Math.min(0, excedente)`.
+- **`FECHAMENTO.valor = round2(contado − esperado)`** (era `−esperado`). `meta` ganha `notas_caixa`, `moedas_caixa`, `fundo_retido`, `para_cofre_notas`, `para_cofre_moedas`, `receita_dinheiro`.
+- Ao fechar, o dinheiro **acima do fundo move de verdade**: par `TRANSFERENCIA` neutro (`origem:'fechamento'`, `meta.par`, `meta.fech_cofre`): **moedas inteiras → `cofre_moedas`**; **notas − 160 → `cofre_notas`**. Os R$ 160 ficam retidos no `caixa_loja`. Saldo do exemplo (Fundo 160, vendas 340, contado 500): `caixa_loja` +160 (abertura) +340 (FECHAMENTO) −340 (transf.) = **160**; `cofre_notas` **+340**; `cofre_moedas` **+0**; `fundo_caixa` **inalterado**.
+- **Notas contadas < R$ 160 → bloqueia o fechamento** (`ap.notasInsuficientes`), nenhuma linha gravada.
+- **Abertura vira só conferência quando o caixa já tem saldo**: `finAbrirCaixa` → `soConferencia = saldo(caixa_loja) > 0.005` → grava `ABERTURA` com `valor: 0` (`meta.so_conferencia`), só injeta FC1+FC2 quando o caixa está zerado. `finFechCalcular` usa `Number(meta.total) || Number(valor)` → `fundoAbertura` continua 160.
+
+### PARTE 2 — Histórico: botões Editar/Excluir compactos
+CSS `.hist-op-acts` → `justify-content: flex-end`; `.hist-op-acts button` → `flex:none; padding:4px 11px; font-size:11px; border-radius:8px`. Pílulas pequenas à direita. Sem mudança de comportamento.
+
+### PARTE 3 — Histórico: 2 áreas de filtro independentes
+- Navegador de mês intacto no cabeçalho. Abaixo, `.hist-filtros` com 2 botões: **"Histórico do Fechamento de Caixa"** (`histFiltro='fechamento'` → só `FECHAMENTO` + `RECEITA_SERVICOS`/`RECEBIMENTO_SERVICO`) e **"Histórico de Movimentação"** (`'movimentacao'` → todo o resto). `histFiltroSet(f)` marca o botão ativo e re-renderiza. Dia sem op no filtro ativo não renderiza o cabeçalho; mês vazio mostra aviso próprio.
+- `histOpsDoDia`: as pernas `TRANSFERENCIA` `origem='fechamento'` **não viram op própria** — ficam em `op.cofreLegs` anexadas ao `FECHAMENTO` do dia (sub-linhas read-only "→ R$ X para o Cofre de Notas/Moedas").
+- **Edição detalhada do fechamento** (`histEditar` ramo `isFech`): form dedicado com **Notas contadas**, **Moedas contadas**, **um campo PIX/eletrônico por banco** daquele fechamento (`data-pixconta`), contagem física do Cofre (Notas/Moedas) e Descrição. `histEditFechCalc(key)` recalcula ao vivo total/excedente/diferença/destinos e mostra o aviso de bloqueio se Notas < fundo.
+- `histSalvar` ramo `fechamento` (reescrito): bloqueia se `notas < (meta.fundo_retido || meta.fundo_abertura || 160)`; `dbUpdate` da linha `FECHAMENTO` (`valor = round2(contado − esperado_caixa)` + meta); `dbUpdate` do `valor` de cada `RECEITA_SERVICOS` de banco (match por `meta.conta_chave`); **reconcilia as pernas pro cofre por destino** via `histReconciliarPernaCofre(data, fechCofre, contaChave, alvo, cofreLegs)` — par existe → `dbUpdate` das 2 pernas; não existe e alvo > 0 → `dbInsert` novo par (`finUUID`); alvo ≤ 0 e par existe → `dbDelete`. **Nunca cria `RECEITA_SERVICOS`/`AJUSTE_CAIXA` de caixa.**
+- `histExcluir` ramo `FECHAMENTO`: o lote apagado passou a incluir `r.tipo === 'TRANSFERENCIA'` (`origem='fechamento'`) — as pernas pro cofre somem junto; o trigger reverte os saldos; o dia volta a "aberto".
+
+### Testado no `kihnavaovspdjnegcraj` (transação com ROLLBACK, baseline `_base` dinâmico — produção intocada)
+**14/14 PASS**, exercitando o trigger real `trg_lancamentos_saldo`:
+- **Exemplo aprovado** (abertura 160, Notas 500/Moedas 0): `caixa_loja` delta **+160**, `cofre_notas` **+340**, `cofre_moedas` **0**, `fundo_caixa` **0**; consistência `Σ(500) − abertura(160) − Σmin(0,FECH)(0) = 340`.
+- **Editar Notas 500→600**: `FECHAMENTO.valor` 340→440 + as 2 pernas do cofre 340→440 → `caixa_loja` continua **+160**, `cofre_notas` **+440**, sem duplicar.
+- **Excluir o fechamento** (FECHAMENTO + pernas TRANSFERENCIA): `caixa_loja` volta a **+160** (só a abertura), `cofre_notas` **0**.
+- **Falta** (esperado 260, contado 160, `FECHAMENTO.valor −100`): `caixa_loja` volta ao fundo (**+160**), `cofre_notas` **−100** (transferência de entrada que gerou o esperado), consistência `= 0`, nenhuma despesa.
+- Limpeza → todas as contas idênticas ao `_base`.
+
+**Fora de escopo (anotado):** dupla representação Fundo de Caixa (conta `fundo_caixa` = 160) × R$ 160 retidos no `caixa_loja` — a seção "Cofre" da tela início pode parecer somar o fundo 2×.
