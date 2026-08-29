@@ -2026,6 +2026,12 @@ Dia de teste `2026-01-15` (`TESTE_HIST_*`): ABERTURA 200 · gráfica −79 (Sicr
 
 **PUBLICADO** em `main` em 2026-08-29 (commit junto com o campo de centavos e a remoção dos botões "Copiar link"). Clique-a-clique na UI de produção fica com o usuário (a UI está atrás da senha da equipe).
 
+### Contagem física do Cofre dentro do Fechamento (2026-08-29, PUBLICADO)
+Detalhamento da contagem — **não** vira lançamento, receita nem ajuste; é só conferência guardada dentro do próprio `FECHAMENTO` (`meta.cofre`).
+- **Fechamento de Caixa**: card novo "Contagem física do Cofre" com `Cofre — Notas`, `Cofre — Moedas`, `= Total do Cofre` (auto), `Cofre no sistema` (= saldo `cofre_notas` + `cofre_moedas`) e `Diferença do cofre` (contado − sistema, só quando ≠ 0). `finApurarReceitas()` devolve `ap.cofre = {notas, moedas, total, sistema, diferenca, informado}`; `finFecharCaixa()` grava `meta.cofre = {notas, moedas, total, saldo_sistema, diferenca, informado}`.
+- **Histórico Financeiro**: a linha do fechamento mostra `cofre notas X + moedas Y = Z (dif D)`; o form de edição do fechamento ganhou `Cofre — Notas` / `Cofre — Moedas` com recálculo ao vivo de total e diferença (`histEditCofreCalc`); `histSalvar` regrava `meta.cofre` (contra o `saldo_sistema` guardado). `histReconciliarDia` **preserva** `meta.cofre` (só reescreve as chaves do caixa).
+- `FECHAMENTO.valor` e todos os saldos **intactos**; Regra 6 mantida. Testado em transação com ROLLBACK (16/16 PASS, baseline dinâmico).
+
 ### Ajuste do saldo inicial do Cofre de Notas (2026-08-29)
 O usuário conferiu o cofre fisicamente na noite anterior ao primeiro fechamento: **Cofre de Notas tinha R$ 577,00**, não 713. Corrigido direto em `contas` (project `kihnavaovspdjnegcraj`), sem lançamento: `saldo_inicial` 713 → **577**, `saldo` 563 → **427,00** (577 − 140 − 10 das duas retiradas do cofre já registradas). Demais contas inalteradas.
 
