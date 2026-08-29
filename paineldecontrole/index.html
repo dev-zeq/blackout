@@ -262,11 +262,6 @@
         .link-row:hover { background: rgba(255,255,255,0.03); }
         .link-row .arrow { color: var(--accent-bright); font-size: 15px; }
         .link-row-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-        .btn-copy-link {
-            background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
-            padding: 7px 10px; font-size: 14px; cursor: pointer; line-height: 1; color: var(--text);
-        }
-        .btn-copy-link:active { transform: scale(0.94); }
         /* Busca inteligente do módulo de Currículos (2026-08-21) — filtro em
            tempo real na lista de pedidos, tipo "Ctrl+F" só que sem precisar
            abrir a busca do navegador. Só existe aqui (viewCurriculo) — não
@@ -277,10 +272,6 @@
         .curriculo-busca-input:focus { outline: none; border-color: var(--accent); }
         .curriculo-busca-limpar { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--surface-2); color: var(--text-dim); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .curriculo-busca-limpar:active { transform: translateY(-50%) scale(0.92); }
-        .menu-tile-copy {
-            position: absolute; top: 6px; right: 6px; background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: 8px; padding: 4px 6px; font-size: 12px; line-height: 1; cursor: pointer; color: var(--text);
-        }
         @media (max-width: 420px) {
             .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
             .menu-tile { padding: 14px 4px; border-radius: 14px; }
@@ -754,6 +745,26 @@
         .rel-destaque-sub { font-size: 11.5px; color: var(--text-faint); margin-bottom: 12px; }
         .rel-sub-kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0 7px 16px; font-size: 12.5px; color: var(--text-faint); border-bottom: 1px solid rgba(255,255,255,0.04); }
         .rel-sub-kv:last-child { border-bottom: none; }
+        /* Histórico Financeiro — lista de lançamentos editáveis (2026-08-29). */
+        .hist-dia { margin: 14px 0 4px; font-size: 12px; font-weight: 800; color: var(--text-faint); text-transform: uppercase; letter-spacing: .5px; }
+        .hist-dia .hist-dia-tag { font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--accent-bright); margin-left: 6px; }
+        .hist-op { border: 1px solid var(--border); border-radius: 14px; padding: 11px 13px; margin-bottom: 8px; background: rgba(255,255,255,0.02); }
+        .hist-op-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .hist-op-tipo { font-size: 13px; font-weight: 700; }
+        .hist-op-val { font-size: 14px; font-weight: 800; white-space: nowrap; }
+        .hist-op-val.neg { color: #fca5a5; }
+        .hist-op-val.pos { color: var(--accent-bright); }
+        .hist-op-meta { font-size: 11.5px; color: var(--text-faint); margin-top: 3px; line-height: 1.45; }
+        .hist-op-sub { font-size: 11.5px; color: var(--text-faint); padding: 3px 0 0 14px; }
+        .hist-op-acts { display: flex; gap: 8px; margin-top: 9px; }
+        .hist-op-acts button { flex: 1; padding: 7px 8px; font-size: 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; }
+        .hist-op-acts button.hist-del { color: #fca5a5; border-color: rgba(252,165,165,0.35); }
+        .hist-op-acts button:disabled { opacity: .4; cursor: default; }
+        .hist-edit { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 10px; }
+        .hist-edit label { display: block; font-size: 11.5px; color: var(--text-faint); margin: 6px 0 3px; }
+        .hist-edit input, .hist-edit textarea { width: 100%; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 13px; font-family: inherit; padding: 9px 10px; }
+        .hist-edit .hist-edit-locked { font-size: 11.5px; color: var(--text-faint); margin-top: 6px; }
+        .hist-vazio { font-size: 12.5px; color: var(--text-faint); text-align: center; padding: 22px 8px; }
         /* Mensagem de resultado dos botões Registrar/Abrir/Fechar (motor de lançamentos). */
         .fin-msg { margin-top: 10px; font-size: 12.5px; line-height: 1.5; border-radius: 12px; padding: 10px 12px; display: none; }
         .fin-msg.show { display: block; }
@@ -1066,12 +1077,12 @@
                     <div class="fin-field-row">
                         <div class="fin-field">
                             <label>Fundo Caixa 1</label>
-                            <input type="text" inputmode="numeric" data-role="valor-extenso" id="finAbFC1" oninput="aberturaCaixaConferir()" placeholder="Ex: 2500">
+                            <input type="text" inputmode="decimal" data-role="valor-cents" id="finAbFC1" oninput="aberturaCaixaConferir()" placeholder="Ex: 2500,00">
                             <div class="extenso-valor"></div>
                         </div>
                         <div class="fin-field">
                             <label>Fundo Caixa 2</label>
-                            <input type="text" inputmode="numeric" data-role="valor-extenso" id="finAbFC2" oninput="aberturaCaixaConferir()" placeholder="Ex: 2500">
+                            <input type="text" inputmode="decimal" data-role="valor-cents" id="finAbFC2" oninput="aberturaCaixaConferir()" placeholder="Ex: 2500,00">
                             <div class="extenso-valor"></div>
                         </div>
                     </div>
@@ -1103,6 +1114,11 @@
                         <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
                         <span class="fin-nav-btn-label">Relatórios Financeiros</span>
                         <span class="fin-nav-btn-sub">Parcial do mês e meses anteriores</span>
+                    </button>
+                    <button type="button" class="fin-nav-btn" onclick="financeiroTela('historico')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M3 12h18M3 19h18"/><path d="M8 5v14"/></svg></span>
+                        <span class="fin-nav-btn-label">Histórico Financeiro</span>
+                        <span class="fin-nav-btn-sub">Corrigir ou excluir lançamentos</span>
                     </button>
                 </div>
                 <div class="fin-note">Etapa 1 — apenas layout e navegação. Registro de Pix, retiradas, sangria, transferências etc. ficam no módulo "Movimentação Financeira".</div>
@@ -1150,43 +1166,23 @@
                     <div class="fin-note" style="text-align:left;">Fundo de Caixa 1 e 2 = contagem final das reservas, guardada como referência da <b>próxima abertura</b>. Saldo dos bancos só se você quiser apurar Pix/cartão do dia — vazio = não apura aquele canal.</div>
                 </div>
 
-                <div class="fin-card">
-                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M4 6h16v13H4z"/></svg> Ajuste de conferência <span style="color:var(--text-faint); text-transform:none; font-weight:400;">(opcional)</span></div>
-                    <div class="fin-note" style="text-align:left; margin:0 0 10px;">Preencha só se você <b>sabe</b> que houve erro/perda (ex.: troco a mais). Vazio = toda a diferença positiva é receita apurada.</div>
-                    <div class="fin-field-row">
-                        <div class="fin-field">
-                            <label>Valor do ajuste</label>
-                            <input type="text" inputmode="decimal" id="mfFechAjusteValor" oninput="mfFechamentoConferir()" placeholder="Ex: 20,00">
-                        </div>
-                        <div class="fin-field">
-                            <label>Tipo</label>
-                            <div class="fin-radio-row" style="margin-top:6px;">
-                                <label class="fin-radio"><input type="radio" name="mfFechAjuste" value="faltou" onchange="mfFechamentoConferir()"> Faltou</label>
-                                <label class="fin-radio"><input type="radio" name="mfFechAjuste" value="sobrou" onchange="mfFechamentoConferir()"> Sobrou</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="fin-field"><label>Motivo</label><textarea id="mfFechAjusteMotivo" rows="1" placeholder="Ex: troco a mais para um cliente"></textarea></div>
-                </div>
-
-                <!-- PAINEL A — "Quanto dinheiro deveria existir fisicamente na gaveta?"
-                     O sistema reconstrói o movimento CONHECIDO do Caixa (abertura +
-                     entradas − saídas − sangrias) e a RECEITA em dinheiro é o que
-                     falta para o contado bater. Nada de receita é lançado no dia.
-                     Ver finApurarReceitas() / mfFechamentoConferir(). -->
-                <div class="fin-section-title">Apuração da Receita — Caixa da Loja</div>
+                <!-- PAINEL A — CONFERÊNCIA do Caixa da Loja (2026-08-29): o sistema
+                     reconstrói o movimento CONHECIDO do Caixa (abertura + entradas
+                     − saídas − sangrias) e compara com o dinheiro contado. A
+                     diferença é SÓ conferência — não vira receita nem despesa e
+                     não é lançada. Ver finApurarReceitas() / mfFechamentoConferir(). -->
+                <div class="fin-section-title">Conferência do Caixa da Loja</div>
                 <div class="fin-card">
                     <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/></svg> Painel A — Caixa físico</div>
                     <div class="fin-kv"><span class="fin-kv-label">Fundo de abertura <span style="color:var(--text-faint);">(FC1 + FC2 de hoje)</span></span><span class="fin-kv-value" id="mfFechFundoAbertura">R$ 0,00</span></div>
                     <div class="fin-kv"><span class="fin-kv-label">+ Entradas conhecidas <span style="color:var(--text-faint);">(Troca por Pix, transferências para o caixa)</span></span><span class="fin-kv-value" id="mfFechEntradas" style="color:var(--accent-bright);">R$ 0,00</span></div>
                     <div class="fin-kv"><span class="fin-kv-label">− Saídas conhecidas <span style="color:var(--text-faint);">(retiradas, gráfica, reembolsos em dinheiro)</span></span><span class="fin-kv-value" id="mfFechSaidas" style="color:#fca5a5;">R$ 0,00</span></div>
                     <div class="fin-kv"><span class="fin-kv-label">− Sangrias do dia</span><span class="fin-kv-value" id="mfFechSangrias" style="color:#fca5a5;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">= Movimento conhecido do Caixa</span><span class="fin-kv-value" id="mfFechMovConhecido" style="font-size:16px;">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">= Movimento conhecido do Caixa <span style="color:var(--text-faint);">(esperado)</span></span><span class="fin-kv-value" id="mfFechMovConhecido" style="font-size:16px;">R$ 0,00</span></div>
                     <div class="fin-kv"><span class="fin-kv-label">Valor físico contado <span style="color:var(--text-faint);">(Notas + Moedas)</span></span><span class="fin-kv-value" id="mfFechContado" style="font-size:16px;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Ajuste de conferência</span><span class="fin-kv-value" id="mfFechAjusteResumo">—</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label"><b>= RECEITA DE SERVIÇOS EM DINHEIRO</b> <span style="color:var(--text-faint);">(apurada)</span></span><span class="fin-kv-value" id="mfFechReceitaCaixa" style="font-size:17px; color:var(--accent-bright);">R$ 0,00</span></div>
+                    <div class="fin-kv" id="mfFechDiferencaRow" style="display:none;"><span class="fin-kv-label"><b>Diferença de conferência</b> <span style="color:var(--text-faint);">(contado − esperado)</span></span><span class="fin-kv-value" id="mfFechDiferenca" style="font-size:17px;">R$ 0,00</span></div>
                     <div class="fin-aviso" id="mfFechApuraAviso" style="display:none;"></div>
-                    <div class="fin-note" style="text-align:left; margin-top:8px;">O sistema reconstrói tudo que conhece; a receita é o que falta para o contado bater. Nunca bloqueia o fechamento.</div>
+                    <div class="fin-note" style="text-align:left; margin-top:8px;">O fechamento do Caixa da Loja é só <b>conferência</b>: compara o dinheiro contado com o movimento conhecido e mostra a diferença, se houver. Essa diferença <b>não</b> vira receita nem despesa e não é lançada. Nunca bloqueia o fechamento.</div>
                 </div>
 
                 <!-- PAINEL B — "Qual foi o resultado financeiro do período?"
@@ -1196,7 +1192,7 @@
                 <div class="fin-section-title">Resultado Financeiro do Período</div>
                 <div class="fin-card" id="finPainelB">
                     <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Painel B — Resultado do dia</div>
-                    <div class="fin-kv"><span class="fin-kv-label">Receita de serviços em dinheiro <span style="color:var(--text-faint);">(Caixa da Loja)</span></span><span class="fin-kv-value" id="pbReceitaCaixa">R$ 0,00</span></div>
+                    <div class="fin-kv" id="pbRowReceitaCaixa" style="display:none;"><span class="fin-kv-label">Receita de serviços em dinheiro <span style="color:var(--text-faint);">(Caixa da Loja — lançamentos anteriores)</span></span><span class="fin-kv-value" id="pbReceitaCaixa">R$ 0,00</span></div>
                     <div class="fin-kv" id="pbRowSicredi" style="display:none;"><span class="fin-kv-label">Receita eletrônica — Sicredi</span><span class="fin-kv-value" id="pbReceitaSicredi">R$ 0,00</span></div>
                     <div class="fin-kv" id="pbRowPagseguro" style="display:none;"><span class="fin-kv-label">Receita eletrônica — PagSeguro</span><span class="fin-kv-value" id="pbReceitaPagseguro">R$ 0,00</span></div>
                     <div class="fin-kv"><span class="fin-kv-label">Taxas de Troca por Pix</span><span class="fin-kv-value" id="pbTaxaPix">R$ 0,00</span></div>
@@ -1218,7 +1214,7 @@
                     </details>
                     <div class="fin-ok" id="pbConsistOk" style="display:none;">Verificação: OK — a soma dos lançamentos fecha com o resultado.</div>
                     <div class="fin-aviso" id="pbConsistAviso" style="display:none;"></div>
-                    <div class="fin-note" style="text-align:left; margin-top:8px;">Transferências, sangrias e o principal da Troca por Pix não são lucro; só a taxa efetiva é receita. Receita não é lançada no dia — é apurada aqui.</div>
+                    <div class="fin-note" style="text-align:left; margin-top:8px;">Transferências, sangrias e o principal da Troca por Pix não são lucro; só a taxa efetiva é receita. O Caixa da Loja é <b>só conferência</b> — a diferença entre contado e esperado não entra no resultado. Receita eletrônica (Sicredi/PagSeguro) é apurada pela variação do saldo informado no fechamento.</div>
                 </div>
 
                 <button type="button" class="fin-submit" id="mfFecharBtn" onclick="finFecharCaixa()">Fechar Caixa</button>
@@ -1298,6 +1294,36 @@
                 <div class="fin-note" id="relVazioNota" style="display:none; text-align:left;">Nenhum dia fechado neste mês ainda — o relatório fica zerado. Assim que você fechar o caixa de um dia, ele entra aqui automaticamente.</div>
                 <div class="fin-msg" id="relMsg"></div>
             </div>
+
+            <!-- TELA: Histórico Financeiro ---------------------------------
+                 Lista os lançamentos reais mês a mês e permite CORRIGIR
+                 (valor + descrição; data e conta bloqueadas) ou EXCLUIR um
+                 lançamento existente. Nunca cria lançamento de correção. Ao
+                 salvar/excluir, recalcula saldos (trigger), reconcilia a
+                 conferência do fechamento do dia (histReconciliarDia — só
+                 recalcula a própria linha FECHAMENTO, nunca cria RECEITA_SERVICOS
+                 nem AJUSTE_CAIXA de caixa) e atualiza relatórios.
+                 Ver histInit / histRender / histSalvar / histExcluir. -->
+            <div class="fin-screen" id="finScreen-historico">
+                <button type="button" class="fin-back" onclick="financeiroTela('inicio')">← Financeiro</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M3 12h18M3 19h18"/><path d="M8 5v14"/></svg></span>
+                    <h2>Histórico Financeiro</h2>
+                </div>
+                <div class="fin-note" style="text-align:left;">Corrija o <b>valor</b> ou a <b>descrição</b> de um lançamento, ou exclua-o. Data e conta ficam bloqueadas. Ao salvar, os saldos, a conferência do fechamento do dia e os relatórios são recalculados automaticamente — sem criar lançamentos de correção.</div>
+                <div class="fin-card">
+                    <div class="rel-mesnav">
+                        <button type="button" id="histPrevBtn" onclick="histMesNav(-1)" aria-label="Mês anterior">‹</button>
+                        <div style="flex:1;">
+                            <div class="rel-mes-label" id="histMesLabel">—</div>
+                            <div class="rel-mes-sub" id="histMesSub">—</div>
+                        </div>
+                        <button type="button" id="histNextBtn" onclick="histMesNav(1)" aria-label="Próximo mês">›</button>
+                    </div>
+                </div>
+                <div id="histLista"></div>
+                <div class="fin-msg" id="histMsg"></div>
+            </div>
         </div>
 
         <!-- ============================================================
@@ -1355,7 +1381,7 @@
                     </div>
                     <div class="fin-field" id="mfRetValorField">
                         <label>Valor</label>
-                        <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetValor" placeholder="Ex: 2500">
+                        <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRetValor" placeholder="Ex: 2500,00">
                         <div class="extenso-valor"></div>
                     </div>
                     <div class="fin-field">
@@ -1396,18 +1422,18 @@
                         <div class="fin-field-row">
                             <div class="fin-field">
                                 <label>Aluguel</label>
-                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfeAluguel" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 1000">
+                                <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRetDfeAluguel" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 1000,00">
                                 <div class="extenso-valor"></div>
                             </div>
                             <div class="fin-field">
                                 <label>Energia Elétrica</label>
-                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfeEnergia" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 200">
+                                <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRetDfeEnergia" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 200,00">
                                 <div class="extenso-valor"></div>
                             </div>
                         </div>
                         <div class="fin-field">
                             <label>Internet</label>
-                            <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfeInternet" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 150">
+                            <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRetDfeInternet" oninput="mfRetiradaDespesaFixaEmpresaTotal()" placeholder="Ex: 150,00">
                             <div class="extenso-valor"></div>
                         </div>
                         <div class="fin-kv"><span class="fin-kv-label">Despesa Fixa Empresa <span style="color:var(--text-faint);">(Aluguel + Energia + Internet)</span></span><span class="fin-kv-value" id="mfRetDfeTotal" style="color:var(--accent-bright); font-size:16px;">R$ 0,00</span></div>
@@ -1433,24 +1459,24 @@
                         <div class="fin-field-row">
                             <div class="fin-field">
                                 <label>Aluguel</label>
-                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfAluguel" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 1000">
+                                <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRetDfAluguel" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 1000,00">
                                 <div class="extenso-valor"></div>
                             </div>
                             <div class="fin-field">
                                 <label>Energia Elétrica</label>
-                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfEnergia" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 150">
+                                <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRetDfEnergia" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 150,00">
                                 <div class="extenso-valor"></div>
                             </div>
                         </div>
                         <div class="fin-field-row">
                             <div class="fin-field">
                                 <label>Água</label>
-                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfAgua" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 80">
+                                <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRetDfAgua" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 80,00">
                                 <div class="extenso-valor"></div>
                             </div>
                             <div class="fin-field">
                                 <label>Internet</label>
-                                <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRetDfInternet" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 100">
+                                <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRetDfInternet" oninput="mfRetiradaDespesaFixaTotal()" placeholder="Ex: 100,00">
                                 <div class="extenso-valor"></div>
                             </div>
                         </div>
@@ -1601,7 +1627,7 @@
                     </div>
                     <div class="fin-field">
                         <label>Valor desejado</label>
-                        <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfTpValor" oninput="mfTrocaPixCalcular()" placeholder="Ex: 500">
+                        <input type="text" inputmode="decimal" data-role="valor-cents" id="mfTpValor" oninput="mfTrocaPixCalcular()" placeholder="Ex: 500,00">
                         <div class="extenso-valor"></div>
                     </div>
                     <div class="fin-field">
@@ -1615,7 +1641,7 @@
                     <label class="fin-check"><input type="checkbox" id="mfTpDescontoOn" onchange="mfTrocaPixCalcular()"> Aplicar desconto</label>
                     <div class="fin-field" id="mfTpDescontoCampo" style="display:none; margin-top:12px;">
                         <label>Valor do desconto</label>
-                        <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfTpDesconto" oninput="mfTrocaPixCalcular()" placeholder="Ex: 20">
+                        <input type="text" inputmode="decimal" data-role="valor-cents" id="mfTpDesconto" oninput="mfTrocaPixCalcular()" placeholder="Ex: 20,00">
                         <div class="extenso-valor"></div>
                     </div>
                     <div class="fin-field" id="mfTpFinalCampo" style="display:none;">
@@ -1716,7 +1742,7 @@
                 <div class="fin-card">
                     <div class="fin-field">
                         <label>Valor</label>
-                        <input type="text" inputmode="numeric" data-role="valor-extenso" id="mfRbValor" oninput="mfReembolsoValidar()" placeholder="Ex: 2500">
+                        <input type="text" inputmode="decimal" data-role="valor-cents" id="mfRbValor" oninput="mfReembolsoValidar()" placeholder="Ex: 2500,00">
                         <div class="extenso-valor"></div>
                     </div>
                     <div class="fin-field">
@@ -1864,7 +1890,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="fin-field"><label>Valor</label><input type="text" inputmode="numeric" data-role="valor-extenso" id="mfTrValor" oninput="mfTransferenciaClassificar()" placeholder="Ex: 2500"><div class="extenso-valor"></div></div>
+                    <div class="fin-field"><label>Valor</label><input type="text" inputmode="decimal" data-role="valor-cents" id="mfTrValor" oninput="mfTransferenciaClassificar()" placeholder="Ex: 2500,00"><div class="extenso-valor"></div></div>
                     <div class="fin-field"><label>Observação</label><textarea id="mfTrObs" placeholder="Opcional"></textarea></div>
                     <button type="button" class="fin-submit" id="mfTrSubmit" onclick="mfRegistrarTransferencia()">Transferir</button>
                     <div class="fin-msg" id="mfTrMsg"></div>
@@ -1891,7 +1917,6 @@
                 <div class="link-row">
                     <span style="cursor:pointer;" onclick="window.open('contrato-form.html', '_blank', 'noopener')">📃 Link — Contrato (cliente escolhe o tipo)</span>
                     <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('contrato-form.html', this)" title="Copiar link">📋</button>
                         <span class="arrow" style="cursor:pointer;" onclick="window.open('contrato-form.html', '_blank', 'noopener')">↗</span>
                     </span>
                 </div>
@@ -1983,7 +2008,6 @@
                 <div class="link-row">
                     <span style="cursor:pointer;" onclick="window.open('prestador-form.html', '_blank', 'noopener')">🧾 Link — Orçamento de Prestação de Serviço</span>
                     <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('prestador-form.html', this)" title="Copiar link">📋</button>
                         <span class="arrow" style="cursor:pointer;" onclick="window.open('prestador-form.html', '_blank', 'noopener')">↗</span>
                     </span>
                 </div>
@@ -2159,7 +2183,6 @@
                 <div class="link-row">
                     <span style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">📝 Link — Formulário do Cliente</span>
                     <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('curriculo-form.html', this)" title="Copiar link">📋</button>
                         <span class="arrow" style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">↗</span>
                     </span>
                 </div>
@@ -2968,13 +2991,48 @@
         function limparExtensosValor(root) {
             (root || document).querySelectorAll('.extenso-valor').forEach(el => { el.textContent = ''; });
         }
+
+        // ---------- Campo de valor COM CENTAVOS (padrão BR "63,12") ----------
+        // Usado só no Financeiro / Movimentação Financeira (data-role="valor-cents").
+        // Igual ao valor-extenso (reais inteiros), mas aceita UMA vírgula decimal
+        // e até 2 casas; a legenda mostra "R$ 63,12 — sessenta e três reais e
+        // doze centavos". Não altera nenhum cálculo: os leitores usam
+        // parseBRLDecimal()/finValorNum() — o mesmo parser decimal do fechamento.
+        function parseBRLDecimal(v) {
+            let s = String(v || '').trim().replace(/[^\d.,\-]/g, '');
+            if (!s) return 0;
+            if (s.indexOf(',') > -1) s = s.replace(/\./g, '').replace(',', '.');
+            const n = parseFloat(s);
+            return isFinite(n) ? n : 0;
+        }
+        function limparValorCentsDigitado(el) {
+            let s = String(el.value || '').replace(/[^\d,]/g, '');
+            const i = s.indexOf(',');
+            if (i > -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/,/g, '').slice(0, 2);
+            s = s.replace(/^0+(?=\d)/, '');
+            if (el.value !== s) el.value = s;
+            return s;
+        }
+        function atualizarExtensoValorCents(legendaEl, str) {
+            if (!legendaEl) return;
+            const n = parseBRLDecimal(str);
+            legendaEl.textContent = n > 0
+                ? `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} — ${extensoReais(n)}`
+                : '';
+        }
+
         document.addEventListener('input', (e) => {
             const el = e.target;
-            if (!el || el.dataset.role !== 'valor-extenso') return;
-            const digits = aplicarLimpezaValorDigitado(el);
+            if (!el) return;
+            const role = el.dataset.role;
+            if (role !== 'valor-extenso' && role !== 'valor-cents') return;
             let leg = el.nextElementSibling;
             while (leg && !leg.classList.contains('extenso-valor')) leg = leg.nextElementSibling;
-            atualizarExtensoValor(leg, digits);
+            if (role === 'valor-cents') {
+                atualizarExtensoValorCents(leg, limparValorCentsDigitado(el));
+            } else {
+                atualizarExtensoValor(leg, aplicarLimpezaValorDigitado(el));
+            }
         });
 
         const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
@@ -3289,6 +3347,9 @@
                 if (fin && fin.classList.contains('active') && document.getElementById('finScreen-relatorios').classList.contains('active')) {
                     relInit();
                 }
+                if (fin && fin.classList.contains('active') && document.getElementById('finScreen-historico') && document.getElementById('finScreen-historico').classList.contains('active')) {
+                    histInit();
+                }
             });
         }
 
@@ -3525,31 +3586,6 @@
             div.textContent = str ?? '';
             return div.innerHTML;
         }
-
-        // Copia um link (relativo vira absoluto) pra área de transferência —
-        // usado nos botões 📋 ao lado dos links de formulário, pra facilitar
-        // mandar pro cliente por WhatsApp sem precisar abrir a página.
-        async function copyLinkToClipboard(url, btnEl) {
-            const absUrl = new URL(url, window.location.href).href;
-            try {
-                await navigator.clipboard.writeText(absUrl);
-            } catch (error) {
-                const ta = document.createElement('textarea');
-                ta.value = absUrl;
-                ta.style.position = 'fixed';
-                ta.style.opacity = '0';
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-            }
-            if (!btnEl) return;
-            const original = btnEl.textContent;
-            btnEl.textContent = '✅';
-            btnEl.disabled = true;
-            setTimeout(() => { btnEl.textContent = original; btnEl.disabled = false; }, 1500);
-        }
-        window.copyLinkToClipboard = copyLinkToClipboard;
 
         async function deleteEntry(id) {
             if (!confirm('Excluir esta entrada? Essa ação não pode ser desfeita.')) return;
@@ -4190,8 +4226,7 @@
                 // (Configurações), ou o endereço padrão. Aspas simples viram %27
                 // pra não quebrar o atributo onclick inline.
                 const url = resolveWebLink(key, item.label, item.url).replace(/'/g, '%27');
-                return `<div class="menu-tile enabled" style="position:relative;" onclick="window.open('${url}', '_blank', 'noopener')">
-                    <button class="menu-tile-copy" onclick="event.stopPropagation(); copyLinkToClipboard('${url}', this)" title="Copiar link">📋</button>
+                return `<div class="menu-tile enabled" onclick="window.open('${url}', '_blank', 'noopener')">
                     <div class="menu-icon">🔗</div>
                     <div class="menu-label">${escapeHtml(item.label)}</div>
                 </div>`;
@@ -4427,6 +4462,7 @@
             if (nome === 'inicio') { loadFinanceiroSaldos(); finCarregarRefFechamento().then(aberturaCaixaConferir); }
             if (nome === 'fechamento') { Promise.all([finCarregarMovimentosDia(), finCarregarResultado()]).then(mfFechamentoConferir); }
             if (nome === 'relatorios') { relInit(); }
+            if (nome === 'historico') { histInit(); }
             const cont = document.querySelector('.container');
             if (cont) cont.scrollIntoView({ behavior: 'auto', block: 'start' });
         }
@@ -4518,7 +4554,7 @@
         // Soma dos 4 campos fixos da Despesa Fixa Pessoal (Aluguel + Energia +
         // Água + Internet) = valor total da retirada nessa categoria.
         function mfRetiradaDespesaFixaTotal() {
-            const dig = id => { const el = document.getElementById(id); return el ? (Number(String(el.value).replace(/\D/g, '')) || 0) : 0; };
+            const dig = id => parseBRLDecimal((document.getElementById(id) || {}).value);
             const total = dig('mfRetDfAluguel') + dig('mfRetDfEnergia') + dig('mfRetDfAgua') + dig('mfRetDfInternet');
             const el = document.getElementById('mfRetDfTotal');
             if (el) el.textContent = mfBRL(total);
@@ -4527,7 +4563,7 @@
         // Soma dos 3 campos fixos da Despesa Fixa Empresa (Aluguel + Energia +
         // Internet, SEM Água) = valor total da retirada nessa categoria.
         function mfRetiradaDespesaFixaEmpresaTotal() {
-            const dig = id => { const el = document.getElementById(id); return el ? (Number(String(el.value).replace(/\D/g, '')) || 0) : 0; };
+            const dig = id => parseBRLDecimal((document.getElementById(id) || {}).value);
             const total = dig('mfRetDfeAluguel') + dig('mfRetDfeEnergia') + dig('mfRetDfeInternet');
             const el = document.getElementById('mfRetDfeTotal');
             if (el) el.textContent = mfBRL(total);
@@ -4592,7 +4628,7 @@
             return 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
         function mfTrocaPixCalcular() {
-            const dig = id => Number(String((document.getElementById(id) || {}).value || '').replace(/\D/g, ''));
+            const dig = id => parseBRLDecimal((document.getElementById(id) || {}).value);
             const valor = dig('mfTpValor');
             const taxa = mfTrocaPixTaxa(valor);
             const total = mfTrocaPixArredComercial(valor + taxa);
@@ -4661,7 +4697,7 @@
         // gravação fica pra etapa de regras. O filtro de período do histórico
         // espelha o de retiradas.
         function mfReembolsoValidar() {
-            const valorNum = Number(String((document.getElementById('mfRbValor') || {}).value || '').replace(/\D/g, '')) || 0;
+            const valorNum = parseBRLDecimal((document.getElementById('mfRbValor') || {}).value);
             const origem = (document.getElementById('mfRbOrigem') || {}).value || '';
             const btn = document.getElementById('mfRbSubmit');
             if (btn) btn.disabled = !(valorNum > 0 && origem);
@@ -4721,7 +4757,7 @@
             const g = id => document.getElementById(id);
             const origem = (g('mfTrOrigem') || {}).value || '';
             const destino = (g('mfTrDestino') || {}).value || '';
-            const valor = Number(String((g('mfTrValor') || {}).value || '').replace(/\D/g, '')) || 0;
+            const valor = parseBRLDecimal((g('mfTrValor') || {}).value);
             const sangria = origem === 'caixa_loja';
             const lblO = FIN_CONTA_LABEL[origem] || origem;
             const lblD = FIN_CONTA_LABEL[destino] || destino;
@@ -4756,7 +4792,6 @@
         //                valor = −saldo atual). Diferença é só informativa.
         // Nada de piso zero: saldo devedor é válido (ex.: Sicredi −908,81).
         // ============================================================
-        function finValorInt(id) { const el = document.getElementById(id); return el ? (Number(String(el.value || '').replace(/\D/g, '')) || 0) : 0; }
         function finUUID() { try { return crypto.randomUUID(); } catch (_) { return 'p-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); } }
         function finMsg(id, kind, text) { const el = document.getElementById(id); if (el) { el.className = 'fin-msg show ' + kind; el.textContent = text; } }
         function finMsgClear(id) { const el = document.getElementById(id); if (el) { el.className = 'fin-msg'; el.textContent = ''; } }
@@ -4788,10 +4823,10 @@
             if (categoria === 'Despesa Fixa') {
                 valor = finalidade === 'empresa' ? mfRetiradaDespesaFixaEmpresaTotal() : mfRetiradaDespesaFixaTotal();
                 meta.despesa_fixa = finalidade === 'empresa'
-                    ? { aluguel: finValorInt('mfRetDfeAluguel'), energia: finValorInt('mfRetDfeEnergia'), internet: finValorInt('mfRetDfeInternet') }
-                    : { aluguel: finValorInt('mfRetDfAluguel'), energia: finValorInt('mfRetDfEnergia'), agua: finValorInt('mfRetDfAgua'), internet: finValorInt('mfRetDfInternet') };
+                    ? { aluguel: finValorNum('mfRetDfeAluguel'), energia: finValorNum('mfRetDfeEnergia'), internet: finValorNum('mfRetDfeInternet') }
+                    : { aluguel: finValorNum('mfRetDfAluguel'), energia: finValorNum('mfRetDfEnergia'), agua: finValorNum('mfRetDfAgua'), internet: finValorNum('mfRetDfInternet') };
             } else {
-                valor = finValorInt('mfRetValor');
+                valor = finValorNum('mfRetValor');
             }
             if (descricao) meta.descricao = descricao;
 
@@ -4825,12 +4860,12 @@
         // ---------- TROCA POR PIX ----------
         async function mfRegistrarTrocaPix() {
             const btn = document.getElementById('mfTpSubmit');
-            const valorDesejado = finValorInt('mfTpValor');
+            const valorDesejado = finValorNum('mfTpValor');
             if (!(valorDesejado >= 1)) return finMsg('mfTpMsg', 'err', 'Informe o valor desejado.');
             const taxa = mfTrocaPixTaxa(valorDesejado);
             const total = mfTrocaPixArredComercial(valorDesejado + taxa);
             const descontoOn = !!(document.getElementById('mfTpDescontoOn') || {}).checked;
-            const desconto = descontoOn ? finValorInt('mfTpDesconto') : 0;
+            const desconto = descontoOn ? finValorNum('mfTpDesconto') : 0;
             const caixaRecebido = total - desconto;          // dinheiro que o cliente entregou
             const pixEnviado = valorDesejado;                 // Pix que saiu do Sicredi
             const receita = caixaRecebido - pixEnviado;       // ganho real = só a taxa (após desconto)
@@ -4866,7 +4901,7 @@
         // ---------- REEMBOLSO ----------
         async function mfRegistrarReembolso() {
             const btn = document.getElementById('mfRbSubmit');
-            const valor = finValorInt('mfRbValor');
+            const valor = finValorNum('mfRbValor');
             const origem = (document.getElementById('mfRbOrigem') || {}).value || '';
             const obs = ((document.getElementById('mfRbObs') || {}).value || '').trim();
             if (!(valor > 0)) return finMsg('mfRbMsg', 'err', 'Informe um valor maior que zero.');
@@ -4901,7 +4936,7 @@
             const btn = document.getElementById('mfTrSubmit');
             const origem = (document.getElementById('mfTrOrigem') || {}).value || '';
             const destino = (document.getElementById('mfTrDestino') || {}).value || '';
-            const valor = finValorInt('mfTrValor');
+            const valor = finValorNum('mfTrValor');
             const obs = ((document.getElementById('mfTrObs') || {}).value || '').trim();
             if (!origem || !destino) return finMsg('mfTrMsg', 'err', 'Escolha a origem e o destino.');
             if (origem === destino) return finMsg('mfTrMsg', 'err', 'Origem e destino não podem ser a mesma conta.');
@@ -4945,8 +4980,8 @@
         // ---------- ABERTURA DE CAIXA ----------
         async function finAbrirCaixa() {
             const btn = document.getElementById('finAbrirBtn');
-            const fc1 = finValorInt('finAbFC1');
-            const fc2 = finValorInt('finAbFC2');
+            const fc1 = finValorNum('finAbFC1');
+            const fc2 = finValorNum('finAbFC2');
             const total = fc1 + fc2;
             if (!(total > 0)) return finMsg('finAbMsg', 'err', 'Informe o Fundo de Caixa 1 e/ou 2.');
             btn.disabled = true; finMsg('finAbMsg', 'busy', 'Abrindo o caixa…');
@@ -5046,16 +5081,12 @@
         }
         window.finClassificarLancamento = finClassificarLancamento;
 
-        // Parser decimal (aceita "1.234,56" ou "1234.56" ou "1234"); usado só nos
-        // campos do fechamento, onde centavos importam (saldo de banco, moedas).
+        // Parser decimal (aceita "1.234,56" ou "1234.56" ou "1234"); usado nos
+        // campos do fechamento e, desde 2026-08-29, em todos os campos de valor
+        // do Financeiro/Movimentação Financeira (centavos no padrão BR).
         function finValorNum(id) {
             const el = document.getElementById(id);
-            if (!el) return 0;
-            let s = String(el.value || '').trim().replace(/[^\d.,\-]/g, '');
-            if (!s) return 0;
-            if (s.indexOf(',') > -1) s = s.replace(/\./g, '').replace(',', '.');
-            const n = parseFloat(s);
-            return isFinite(n) ? n : 0;
+            return el ? parseBRLDecimal(el.value) : 0;
         }
         function finCampoPreenchido(id) { const el = document.getElementById(id); return !!(el && String(el.value || '').trim()); }
 
@@ -5080,17 +5111,18 @@
             return { fundoAbertura, entradas, saidas, sangrias, esperado, temAbertura: !!abertura, jaFechado: rows.some(r => r.tipo === 'FECHAMENTO') };
         }
 
-        // Apura a receita do dia por conta = valor informado − movimento conhecido.
-        // Caixa da Loja: contado (Notas+Moedas) − esperado − ajuste.
-        // Bancos: só se o saldo final for informado; receita = informado − saldo do sistema.
+        // Conferência do dia (2026-08-29 — modelo "só conferência"):
+        //  - Caixa da Loja: NÃO vira receita. Só compara contado (Notas+Moedas)
+        //    com o movimento conhecido (esperado). `diferencaCaixa = contado −
+        //    esperado` é exibida quando ≠ 0 e NÃO é lançada (nem receita, nem
+        //    ajuste). Ver finFecharCaixa / mfFechamentoConferir.
+        //  - Bancos: inalterado — se o saldo final foi informado, a variação
+        //    eletrônica (informado − saldo do sistema) é apurada como receita.
         function finApurarReceitas() {
             const c = finFechCalcular();
             const contadoCaixa = finValorNum('mfFechNotas') + finValorNum('mfFechMoedas');
-            const ajusteTipo = (document.querySelector('input[name="mfFechAjuste"]:checked') || {}).value || '';
-            const ajusteVal = finValorNum('mfFechAjusteValor');
-            const ajuste = ajusteVal > 0 ? (ajusteTipo === 'faltou' ? -ajusteVal : (ajusteTipo === 'sobrou' ? ajusteVal : 0)) : 0;
-            const motivo = ((document.getElementById('mfFechAjusteMotivo') || {}).value || '').trim();
-            const receitaCaixa = contadoCaixa - c.esperado - ajuste;
+            const temContado = finCampoPreenchido('mfFechNotas') || finCampoPreenchido('mfFechMoedas');
+            const diferencaCaixa = temContado ? Number((contadoCaixa - c.esperado).toFixed(2)) : 0;
             const bancos = [];
             [['sicredi', 'mfFechSicredi'], ['pagseguro', 'mfFechPagseguro']].forEach(([chave, id]) => {
                 if (!finCampoPreenchido(id)) return;      // não informado → não apura
@@ -5100,7 +5132,7 @@
             });
             return {
                 fundoAbertura: c.fundoAbertura, entradas: c.entradas, saidas: c.saidas, sangrias: c.sangrias,
-                esperadoCaixa: c.esperado, contadoCaixa, ajuste, ajusteTipo, motivo, receitaCaixa, bancos,
+                esperadoCaixa: c.esperado, contadoCaixa, temContado, diferencaCaixa, bancos,
                 temAbertura: c.temAbertura, jaFechado: c.jaFechado,
             };
         }
@@ -5114,15 +5146,21 @@
             set('mfFechSangrias', mfBRL(ap.sangrias));
             set('mfFechMovConhecido', mfBRL(ap.esperadoCaixa));
             set('mfFechContado', mfBRL(ap.contadoCaixa));
-            set('mfFechAjusteResumo', ap.ajuste === 0 ? '—' : (ap.ajuste < 0 ? '− ' : '+ ') + mfBRL(Math.abs(ap.ajuste)));
-            const rc = document.getElementById('mfFechReceitaCaixa');
-            if (rc) { rc.textContent = mfBRL(ap.receitaCaixa); rc.style.color = ap.receitaCaixa < -0.005 ? '#fca5a5' : 'var(--accent-bright)'; }
+            const temDif = ap.temContado && Math.abs(ap.diferencaCaixa) >= 0.005;
+            const difRow = document.getElementById('mfFechDiferencaRow');
+            if (difRow) difRow.style.display = temDif ? '' : 'none';
+            const dif = document.getElementById('mfFechDiferenca');
+            if (dif) {
+                dif.textContent = (ap.diferencaCaixa < 0 ? '− ' : '+ ') + mfBRL(Math.abs(ap.diferencaCaixa));
+                dif.style.color = ap.diferencaCaixa < 0 ? '#fca5a5' : 'var(--accent-bright)';
+            }
             const av = document.getElementById('mfFechApuraAviso');
-            const temContagem = finCampoPreenchido('mfFechNotas') || finCampoPreenchido('mfFechMoedas');
             if (av) {
-                if (temContagem && ap.receitaCaixa < -0.005) {
+                if (temDif) {
                     av.style.display = '';
-                    av.innerHTML = 'Contado <b>abaixo</b> do movimento conhecido em ' + mfBRL(Math.abs(ap.receitaCaixa)) + ' — provável perda ou movimentação não registrada. Informe um ajuste ou revise as movimentações. Não impede o fechamento.';
+                    av.innerHTML = ap.diferencaCaixa < 0
+                        ? 'Contado <b>abaixo</b> do movimento conhecido em ' + mfBRL(Math.abs(ap.diferencaCaixa)) + ' — falta física ou movimentação não registrada. É <b>só conferência</b>: nada é lançado. Não impede o fechamento.'
+                        : 'Contado <b>acima</b> do movimento conhecido em ' + mfBRL(ap.diferencaCaixa) + ' — sobra física (ex.: venda em dinheiro não registrada). É <b>só conferência</b>: nada é lançado. Não impede o fechamento.';
                 } else av.style.display = 'none';
             }
             finRenderResultado();
@@ -5185,12 +5223,13 @@
         function finResultadoProjetado() {
             const rf = finCalcularResultado();
             const ap = finApurarReceitas();
-            const temContagem = finCampoPreenchido('mfFechNotas') || finCampoPreenchido('mfFechMoedas');
-            const recDinheiroLive = Math.max(0, ap.receitaCaixa);
+            const temContagem = ap.temContado;
+            // Caixa da Loja NÃO gera receita (modelo "só conferência"). rf.R.dinheiro
+            // só aparece se houver lançamentos legados de RECEITA_SERVICOS de caixa.
             const bancoLive = {};
             ap.bancos.forEach(b => { bancoLive[b.chave] = Math.max(0, b.receita); });
             const receita = {
-                dinheiro: rf.R.dinheiro + recDinheiroLive,
+                dinheiro: rf.R.dinheiro,
                 sicredi: (rf.R.eletronico.sicredi || 0) + (bancoLive.sicredi || 0),
                 pagseguro: (rf.R.eletronico.pagseguro || 0) + (bancoLive.pagseguro || 0),
                 taxa_troca_pix: rf.R.taxa_troca_pix,
@@ -5199,23 +5238,23 @@
             const totalDespesas = rf.D.empresa + rf.D.grafica + rf.D.reembolso;
             const resultadoOperacional = totalReceitas - totalDespesas;
             const resultadoFinanceiro = resultadoOperacional - rf.retiradaSocio;
-            // ajuste efetivo: manual, ou auto quando receita em dinheiro fica negativa
-            let ajusteEfetivo = ap.ajuste;
-            if (temContagem && ap.receitaCaixa < -0.005 && ap.ajuste === 0) ajusteEfetivo = ap.contadoCaixa - ap.esperadoCaixa;
-            const ajusteNeutro = rf.N.ajuste + ajusteEfetivo;
+            // ajuste neutro: só dados legados (AJUSTE_CAIXA não é mais criado).
+            const ajusteNeutro = rf.N.ajuste;
             // variação do fundo (informativo)
             const fcFech = finValorNum('mfFechFC1') + finValorNum('mfFechFC2');
             const variacaoFundo = temContagem && (fcFech > 0) ? (fcFech - ap.fundoAbertura) : 0;
-            // consistência projetada: Σ valores − Σ aberturas − Σ fechamentos − Σ ajustes == Resultado Financeiro
+            // consistência projetada: Σ valores − Σ aberturas − Σ fechamentos − Σ ajustes == Resultado Financeiro.
+            // O FECHAMENTO que será gravado tem valor = −esperado (zera a gaveta contra o
+            // movimento conhecido); a diferença contado−esperado fica fora dos livros.
             const somaBancoLive = (bancoLive.sicredi || 0) + (bancoLive.pagseguro || 0);
-            const somaProj = rf.somaValores + recDinheiroLive + somaBancoLive + ajusteEfetivo + (temContagem ? -ap.contadoCaixa : 0);
-            const somaFechProj = rf.N.fechamento + (temContagem ? -ap.contadoCaixa : 0);
+            const somaProj = rf.somaValores + somaBancoLive + (temContagem ? -ap.esperadoCaixa : 0);
+            const somaFechProj = rf.N.fechamento + (temContagem ? -ap.esperadoCaixa : 0);
             const consistCalc = somaProj - rf.N.abertura - somaFechProj - ajusteNeutro;
             const consistDelta = consistCalc - resultadoFinanceiro;
             const consistOk = Math.abs(consistDelta) < 0.02;
             return {
                 ap, rf, receita, totalReceitas, totalDespesas, resultadoOperacional, resultadoFinanceiro,
-                retiradaSocio: rf.retiradaSocio, N: rf.N, ajusteEfetivo, ajusteNeutro, variacaoFundo,
+                retiradaSocio: rf.retiradaSocio, N: rf.N, ajusteNeutro, variacaoFundo, diferencaCaixa: ap.diferencaCaixa,
                 temContagem, consistOk, consistDelta,
             };
         }
@@ -5225,6 +5264,7 @@
             const x = finResultadoProjetado();
             const set = (id, s) => { const e = document.getElementById(id); if (e) e.textContent = s; };
             set('pbReceitaCaixa', mfBRL(x.receita.dinheiro));
+            const rowRC = document.getElementById('pbRowReceitaCaixa'); if (rowRC) rowRC.style.display = x.receita.dinheiro > 0.005 ? '' : 'none';
             set('pbReceitaSicredi', mfBRL(x.receita.sicredi));
             set('pbReceitaPagseguro', mfBRL(x.receita.pagseguro));
             set('pbTaxaPix', mfBRL(x.receita.taxa_troca_pix));
@@ -5447,6 +5487,387 @@
         }
         window.relRender = relRender;
 
+        // ============================================================
+        // HISTÓRICO FINANCEIRO (2026-08-29) — lista os lançamentos reais mês a
+        // mês e permite CORRIGIR (valor + descrição; data e conta bloqueadas) ou
+        // EXCLUIR um lançamento existente. Preserva a estrutura de 1 perna e de
+        // 2 pernas (meta.par). Nunca cria lançamento de "correção": o motor de
+        // saldos (trigger em `lancamentos`) recalcula os saldos pelo delta do
+        // UPDATE/DELETE, e histReconciliarDia() recalcula SÓ a própria linha
+        // FECHAMENTO do dia (valor = −esperado + meta) — NUNCA cria/edita/apaga
+        // RECEITA_SERVICOS nem AJUSTE_CAIXA do Caixa da Loja.
+        // ============================================================
+        let histCache = [];
+        let histMeses = [];
+        let histMesIdx = 0;
+        let histOpsIndex = {};
+
+        function histMsg(kind, text) {
+            const el = document.getElementById('histMsg');
+            if (!el) return;
+            el.className = 'fin-msg show ' + kind;
+            el.textContent = text;
+            if (kind === 'ok') setTimeout(() => { if (el && el.textContent === text) { el.className = 'fin-msg'; el.textContent = ''; } }, 4000);
+        }
+        const histRound2 = n => Number((Number(n) || 0).toFixed(2));
+        function histFmtInput(n) {
+            n = Number(n) || 0;
+            return Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',');
+        }
+        function histLegenda(el) {
+            let leg = el && el.nextElementSibling;
+            while (leg && !leg.classList.contains('extenso-valor')) leg = leg.nextElementSibling;
+            atualizarExtensoValorCents(leg, el ? el.value : '');
+        }
+        function histDataBR(d) { return String(d || '').split('-').reverse().join('/'); }
+        function histOpConta(r) { const k = finContaChavePorId(r.conta_id); return FIN_CONTA_LABEL[k] || k || '—'; }
+
+        async function histCarregar() {
+            try {
+                await finCarregarContas();
+                const { data, error } = await supabase.from('lancamentos')
+                    .select('id,conta_id,data,valor,tipo,descricao,origem,meta,created_at')
+                    .order('data', { ascending: false }).order('created_at', { ascending: true });
+                if (error) throw new Error(error.message);
+                histCache = data || [];
+            } catch (_) { histCache = []; }
+        }
+
+        async function histInit() {
+            histMsg('busy', 'Carregando lançamentos…');
+            await histCarregar();
+            const mesAtual = todayISO().slice(0, 7);
+            const set = new Set(histCache.map(r => String(r.data || '').slice(0, 7)).filter(Boolean));
+            set.add(mesAtual);
+            histMeses = Array.from(set).sort();
+            histMesIdx = histMeses.indexOf(mesAtual);
+            if (histMesIdx < 0) histMesIdx = histMeses.length - 1;
+            const el = document.getElementById('histMsg'); if (el) { el.className = 'fin-msg'; el.textContent = ''; }
+            histRender();
+        }
+        window.histInit = histInit;
+
+        function histMesNav(delta) {
+            const n = histMesIdx + delta;
+            if (n < 0 || n >= histMeses.length) return;
+            histMesIdx = n;
+            histRender();
+        }
+        window.histMesNav = histMesNav;
+
+        // Agrupa as linhas de um dia em "operações": as 2 pernas com o mesmo
+        // meta.par viram uma operação só; as demais são 1 operação cada.
+        function histOpsDoDia(rows) {
+            const ordered = rows.slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+            const ops = [];
+            const porPar = {};
+            ordered.forEach(r => {
+                const par = r.meta && r.meta.par;
+                if (par) {
+                    if (porPar[par]) { porPar[par].rows.push(r); return; }
+                    const op = { key: 'par:' + par, par, data: r.data, tipo: r.tipo, rows: [r] };
+                    porPar[par] = op; ops.push(op);
+                } else {
+                    ops.push({ key: 'id:' + r.id, par: null, data: r.data, tipo: r.tipo, rows: [r] });
+                }
+            });
+            return ops;
+        }
+
+        // Descreve uma operação p/ exibição e edição.
+        function histOpDescribe(op) {
+            const first = op.rows[0];
+            const meta = first.meta || {};
+            const desc = first.descricao || '';
+            if (op.tipo === 'TRANSFERENCIA' || op.tipo === 'SANGRIA') {
+                const neg = op.rows.find(r => Number(r.valor) < 0) || op.rows[0];
+                const pos = op.rows.find(r => Number(r.valor) > 0) || op.rows[op.rows.length - 1];
+                const v = Math.abs(Number(neg.valor) || 0);
+                return { titulo: op.tipo === 'SANGRIA' ? 'Sangria' : 'Transferência interna', valor: v, sinal: 0,
+                    metaTxt: histOpConta(neg) + ' → ' + histOpConta(pos), desc, editKind: 'transfer', editValor: v };
+            }
+            if (op.tipo === 'TROCA_PIX') {
+                const pix = op.rows.find(r => (r.meta || {}).perna === 'pix_enviado') || op.rows.find(r => Number(r.valor) < 0);
+                const cx = op.rows.find(r => (r.meta || {}).perna === 'caixa_recebido') || op.rows.find(r => Number(r.valor) > 0);
+                const cxMeta = (cx && cx.meta) || {};
+                const D = Number(pix && pix.meta && pix.meta.valor_desejado) || Math.abs(Number(pix && pix.valor) || 0);
+                return { titulo: 'Troca por Pix', valor: D, sinal: 0,
+                    metaTxt: 'Sicredi → Caixa da Loja · taxa ' + mfBRL(Number(cxMeta.taxa) || 0)
+                        + ((Number(cxMeta.desconto) || 0) ? ' · desconto ' + mfBRL(cxMeta.desconto) : '')
+                        + ' · recebido ' + mfBRL(Number(cx && cx.valor) || 0),
+                    desc, editKind: 'trocapix', editValor: D, editDesconto: Number(cxMeta.desconto) || 0 };
+            }
+            if (op.tipo === 'FECHAMENTO') {
+                const contado = Number(meta.contado_caixa) || 0;
+                const esperado = Number(meta.esperado_caixa) || 0;
+                const dif = (meta.diferenca_caixa != null) ? Number(meta.diferenca_caixa) : (contado - esperado);
+                return { titulo: 'Fechamento de caixa', valor: null, sinal: 0,
+                    metaTxt: 'contado ' + mfBRL(contado) + ' · esperado ' + mfBRL(esperado)
+                        + (Math.abs(dif) >= 0.005 ? ' · diferença de conferência ' + (dif < 0 ? '−' : '+') + mfBRL(Math.abs(dif)) : ' · confere'),
+                    desc, editKind: 'fechamento', editValor: contado, legado: (Number(meta.receita_caixa) || 0) > 0.005 };
+            }
+            if (op.tipo === 'ABERTURA') {
+                return { titulo: 'Abertura de caixa', valor: Number(first.valor) || 0, sinal: 1,
+                    metaTxt: histOpConta(first), desc, editKind: 'abertura', editValor: Number(first.valor) || 0 };
+            }
+            if (op.tipo === 'RETIRADA') {
+                const fin = meta.finalidade === 'empresa' ? 'Empresa' : 'Pessoal';
+                const cat = meta.categoria ? (' · ' + meta.categoria) : '';
+                return { titulo: 'Retirada', valor: Math.abs(Number(first.valor) || 0), sinal: -1,
+                    metaTxt: histOpConta(first) + ' · ' + fin + cat, desc, editKind: 'simples-neg', editValor: Math.abs(Number(first.valor) || 0) };
+            }
+            if (op.tipo === 'REEMBOLSO') {
+                return { titulo: 'Reembolso', valor: Math.abs(Number(first.valor) || 0), sinal: -1,
+                    metaTxt: histOpConta(first), desc, editKind: 'simples-neg', editValor: Math.abs(Number(first.valor) || 0) };
+            }
+            if (op.tipo === 'RECEITA_SERVICOS' || op.tipo === 'RECEBIMENTO_SERVICO') {
+                const k = finContaChavePorId(first.conta_id);
+                const ehBanco = (k === 'sicredi' || k === 'pagseguro');
+                return { titulo: ehBanco ? 'Recebimento eletrônico' : 'Receita em dinheiro (lançamento antigo)',
+                    valor: Math.abs(Number(first.valor) || 0), sinal: 1,
+                    metaTxt: histOpConta(first) + (first.origem === 'fechamento' ? ' · apurado no fechamento' : ''),
+                    desc, editKind: 'simples-pos', editValor: Math.abs(Number(first.valor) || 0) };
+            }
+            if (op.tipo === 'AJUSTE_CAIXA') {
+                const v = Number(first.valor) || 0;
+                return { titulo: 'Ajuste de caixa (lançamento antigo)', valor: Math.abs(v), sinal: v < 0 ? -1 : 1,
+                    metaTxt: histOpConta(first), desc, editKind: 'ajuste', editValor: Math.abs(v) };
+            }
+            return { titulo: op.tipo || 'Lançamento', valor: Math.abs(Number(first.valor) || 0), sinal: (Number(first.valor) || 0) < 0 ? -1 : 1,
+                metaTxt: histOpConta(first), desc, editKind: 'simples', editValor: Number(first.valor) || 0 };
+        }
+
+        function histOpHtml(op) {
+            const d = histOpDescribe(op);
+            const valTxt = d.valor == null ? '' : ((d.sinal < 0 ? '− ' : d.sinal > 0 ? '+ ' : '') + mfBRL(Math.abs(d.valor)));
+            const valCls = d.sinal < 0 ? 'neg' : d.sinal > 0 ? 'pos' : '';
+            return `<div class="hist-op">
+                <div class="hist-op-top">
+                    <span class="hist-op-tipo">${escapeHtml(d.titulo)}</span>
+                    <span class="hist-op-val ${valCls}">${valTxt}</span>
+                </div>
+                <div class="hist-op-meta">${escapeHtml(d.metaTxt)}${d.desc ? ' · ' + escapeHtml(d.desc) : ''}</div>
+                <div class="hist-op-acts">
+                    <button type="button" onclick="histEditar('${op.key}')">Editar</button>
+                    <button type="button" class="hist-del" onclick="histExcluir('${op.key}')">Excluir</button>
+                </div>
+                <div class="hist-edit" id="histEdit-${op.key}" style="display:none;"></div>
+            </div>`;
+        }
+
+        function histRender() {
+            const wrap = document.getElementById('histLista');
+            if (!wrap) return;
+            histOpsIndex = {};
+            const setT = (id, s) => { const e = document.getElementById(id); if (e) e.textContent = s; };
+            const key = histMeses[histMesIdx] || todayISO().slice(0, 7);
+            const mesAtual = todayISO().slice(0, 7);
+            const prev = document.getElementById('histPrevBtn'); if (prev) prev.disabled = histMesIdx <= 0;
+            const next = document.getElementById('histNextBtn'); if (next) next.disabled = histMesIdx >= histMeses.length - 1;
+            setT('histMesLabel', relMesRotulo(key) + (key === mesAtual ? ' (mês atual)' : ''));
+            const doMes = histCache.filter(r => String(r.data || '').slice(0, 7) === key);
+            setT('histMesSub', doMes.length ? (doMes.length + (doMes.length === 1 ? ' lançamento' : ' lançamentos')) : 'sem lançamentos');
+            if (!doMes.length) { wrap.innerHTML = '<div class="hist-vazio">Nenhum lançamento neste mês.</div>'; return; }
+            const dias = Array.from(new Set(doMes.map(r => r.data))).sort().reverse();
+            let html = '';
+            dias.forEach(dia => {
+                const rowsD = doMes.filter(r => r.data === dia);
+                const fechado = rowsD.some(r => r.tipo === 'FECHAMENTO');
+                html += `<div class="hist-dia">${histDataBR(dia)}${fechado ? '<span class="hist-dia-tag">dia fechado</span>' : ''}</div>`;
+                histOpsDoDia(rowsD).forEach(op => { histOpsIndex[op.key] = op; html += histOpHtml(op); });
+            });
+            wrap.innerHTML = html;
+        }
+        window.histRender = histRender;
+
+        function histEditar(key) {
+            const op = histOpsIndex[key]; if (!op) return;
+            const box = document.getElementById('histEdit-' + key); if (!box) return;
+            const jaAberto = box.style.display !== 'none';
+            document.querySelectorAll('#histLista .hist-edit').forEach(e => { e.style.display = 'none'; e.innerHTML = ''; });
+            if (jaAberto) return;
+            const d = histOpDescribe(op);
+            const isFech = d.editKind === 'fechamento';
+            const contasTxt = (d.editKind === 'transfer' || d.editKind === 'trocapix')
+                ? op.rows.map(histOpConta).join(' / ') : histOpConta(op.rows[0]);
+            const valLabel = isFech ? 'Valor contado (Notas + Moedas)' : (d.editKind === 'trocapix' ? 'Valor desejado' : 'Valor');
+            const extra = d.editKind === 'trocapix'
+                ? `<label>Desconto (opcional)</label><input type="text" inputmode="decimal" data-role="valor-cents" id="histEditD2-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>`
+                : '';
+            box.innerHTML = `
+                <label>${valLabel}</label>
+                <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditV-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                ${extra}
+                <label>Descrição</label>
+                <input type="text" id="histEditT-${key}" maxlength="200">
+                <div class="hist-edit-locked">Data <b>${histDataBR(op.data)}</b> e conta <b>${escapeHtml(contasTxt)}</b> ficam bloqueadas.${isFech ? ' O valor contado é só conferência — não muda saldo.' : ''}${d.legado ? ' <span style="color:#fca5a5;">Fechamento anterior ao modelo de conferência; a reconciliação automática não roda neste dia.</span>' : ''}</div>
+                <div class="hist-op-acts">
+                    <button type="button" onclick="histSalvar('${key}')">Salvar</button>
+                    <button type="button" onclick="histEditar('${key}')">Cancelar</button>
+                </div>`;
+            box.style.display = '';
+            const v = document.getElementById('histEditV-' + key);
+            if (v) { v.value = histFmtInput(d.editValor); histLegenda(v); }
+            if (d.editKind === 'trocapix') {
+                const dd = document.getElementById('histEditD2-' + key);
+                if (dd && d.editDesconto) { dd.value = histFmtInput(d.editDesconto); histLegenda(dd); }
+            }
+            const t = document.getElementById('histEditT-' + key); if (t) t.value = d.desc || '';
+        }
+        window.histEditar = histEditar;
+
+        async function histSalvar(key) {
+            const op = histOpsIndex[key]; if (!op) return;
+            const d = histOpDescribe(op);
+            const first = op.rows[0];
+            const novo = parseBRLDecimal((document.getElementById('histEditV-' + key) || {}).value);
+            const desc = ((document.getElementById('histEditT-' + key) || {}).value || '').trim();
+            if (d.editKind !== 'fechamento' && !(novo > 0)) { histMsg('err', 'Informe um valor maior que zero.'); return; }
+            histMsg('busy', 'Salvando…');
+            try {
+                if (d.editKind === 'simples-neg') {
+                    await dbUpdate('lancamentos', { valor: -Math.abs(histRound2(novo)), descricao: desc || first.descricao }, { id: first.id });
+                } else if (d.editKind === 'simples-pos') {
+                    await dbUpdate('lancamentos', { valor: Math.abs(histRound2(novo)), descricao: desc || first.descricao }, { id: first.id });
+                } else if (d.editKind === 'abertura') {
+                    const v = Math.abs(histRound2(novo));
+                    await dbUpdate('lancamentos', { valor: v, descricao: desc || first.descricao, meta: { ...(first.meta || {}), total: v } }, { id: first.id });
+                } else if (d.editKind === 'ajuste') {
+                    const sign = (Number(first.valor) || 0) < 0 ? -1 : 1;
+                    await dbUpdate('lancamentos', { valor: sign * Math.abs(histRound2(novo)), descricao: desc || first.descricao }, { id: first.id });
+                } else if (d.editKind === 'transfer') {
+                    const neg = op.rows.find(r => Number(r.valor) < 0) || op.rows[0];
+                    const pos = op.rows.find(r => Number(r.valor) > 0) || op.rows[op.rows.length - 1];
+                    const v = Math.abs(histRound2(novo));
+                    await dbUpdate('lancamentos', { valor: -v, descricao: desc || neg.descricao }, { id: neg.id });
+                    await dbUpdate('lancamentos', { valor: v, descricao: desc || pos.descricao }, { id: pos.id });
+                } else if (d.editKind === 'trocapix') {
+                    const D = histRound2(novo);
+                    const desconto = histRound2(parseBRLDecimal((document.getElementById('histEditD2-' + key) || {}).value));
+                    if (!(D >= 1)) throw new Error('Valor desejado inválido (mínimo 1).');
+                    const taxa = histRound2(mfTrocaPixTaxa(D));
+                    const total = mfTrocaPixArredComercial(D + taxa);
+                    const recebido = histRound2(total - desconto);
+                    if (!(recebido > 0)) throw new Error('Valor final inválido — confira o desconto.');
+                    const receita = histRound2(recebido - D);
+                    const pix = op.rows.find(r => (r.meta || {}).perna === 'pix_enviado') || op.rows.find(r => Number(r.valor) < 0);
+                    const cx = op.rows.find(r => (r.meta || {}).perna === 'caixa_recebido') || op.rows.find(r => Number(r.valor) > 0);
+                    await dbUpdate('lancamentos', { valor: -D, descricao: desc || pix.descricao, meta: { ...(pix.meta || {}), valor_desejado: D } }, { id: pix.id });
+                    await dbUpdate('lancamentos', { valor: recebido, descricao: desc || cx.descricao, meta: { ...(cx.meta || {}), valor_desejado: D, taxa, desconto, receita } }, { id: cx.id });
+                } else if (d.editKind === 'fechamento') {
+                    const contado = histRound2(novo);
+                    const esperado = Number((first.meta || {}).esperado_caixa) || 0;
+                    await dbUpdate('lancamentos', { descricao: desc || first.descricao, meta: { ...(first.meta || {}), contado_caixa: contado, diferenca_caixa: histRound2(contado - esperado) } }, { id: first.id });
+                } else {
+                    await dbUpdate('lancamentos', { valor: histRound2(novo), descricao: desc || first.descricao }, { id: first.id });
+                }
+                if (d.editKind !== 'fechamento') await histReconciliarDia(op.data);
+                histMsg('ok', 'Lançamento atualizado. Saldos, conferência e relatórios recalculados.');
+                await histAposMudanca();
+            } catch (e) {
+                histMsg('err', 'Erro ao salvar: ' + (e && e.message ? e.message : e));
+            }
+        }
+        window.histSalvar = histSalvar;
+
+        async function histExcluir(key) {
+            const op = histOpsIndex[key]; if (!op) return;
+            const d = histOpDescribe(op);
+            let msg;
+            if (op.tipo === 'FECHAMENTO') {
+                msg = 'Excluir o FECHAMENTO de ' + histDataBR(op.data) + '?\n\n'
+                    + 'O dia deixa de estar fechado; as receitas eletrônicas apuradas nesse fechamento também são removidas e os saldos voltam ao estado anterior ao fechamento. Nenhum lançamento de correção é criado.';
+            } else if (op.rows.length > 1) {
+                msg = 'Excluir esta ' + d.titulo.toLowerCase() + ' (as duas pernas) de ' + histDataBR(op.data) + '?\n\nOs saldos e relatórios serão recalculados. Nenhum lançamento de correção é criado.';
+            } else {
+                msg = 'Excluir "' + d.titulo + '" de ' + mfBRL(Math.abs(Number(op.rows[0].valor) || 0)) + ' em ' + histDataBR(op.data) + '?\n\nOs saldos e relatórios serão recalculados. Nenhum lançamento de correção é criado.';
+            }
+            if (!window.confirm(msg)) return;
+            histMsg('busy', 'Excluindo…');
+            try {
+                if (op.tipo === 'FECHAMENTO') {
+                    const lote = histCache.filter(r => r.data === op.data && r.origem === 'fechamento'
+                        && (r.tipo === 'FECHAMENTO' || r.tipo === 'RECEITA_SERVICOS' || r.tipo === 'AJUSTE_CAIXA'));
+                    for (const r of lote) await dbDelete('lancamentos', { id: r.id });
+                } else {
+                    const idsExcluidos = op.rows.map(r => r.id);
+                    for (const r of op.rows) await dbDelete('lancamentos', { id: r.id });
+                    const aindaFechado = histCache.some(r => r.data === op.data && r.tipo === 'FECHAMENTO' && idsExcluidos.indexOf(r.id) < 0);
+                    if (aindaFechado) await histReconciliarDia(op.data);
+                }
+                histMsg('ok', 'Lançamento excluído. Saldos, conferência e relatórios recalculados.');
+                await histAposMudanca();
+            } catch (e) {
+                histMsg('err', 'Erro ao excluir: ' + (e && e.message ? e.message : e));
+            }
+        }
+        window.histExcluir = histExcluir;
+
+        // Recalcula a conferência do FECHAMENTO de um dia depois que uma
+        // movimentação daquele dia foi editada/excluída. ESCRITA ÚNICA: dbUpdate
+        // na própria linha FECHAMENTO (valor = −esperado recalculado + meta).
+        // NÃO cria, edita nem apaga RECEITA_SERVICOS ou AJUSTE_CAIXA de caixa.
+        async function histReconciliarDia(data) {
+            let rows;
+            try {
+                const { data: d, error } = await supabase.from('lancamentos')
+                    .select('id,conta_id,valor,tipo,meta,data,origem').eq('data', data);
+                if (error) throw new Error(error.message);
+                rows = d || [];
+            } catch (_) { return; }
+            const F = rows.find(r => r.tipo === 'FECHAMENTO');
+            if (!F) return;                               // dia aberto → nada a reconciliar
+            await finCarregarContas();
+            const caixaId = FIN_CONTAS_BY_CHAVE.caixa_loja && FIN_CONTAS_BY_CHAVE.caixa_loja.id;
+            const legado = (Number((F.meta || {}).receita_caixa) || 0) > 0.005
+                || rows.some(r => r.tipo === 'RECEITA_SERVICOS' && r.conta_id === caixaId);
+            if (legado) { histMsg('err', 'Fechamento anterior ao modelo de conferência — a reconciliação automática não roda neste dia. Refaça o fechamento se precisar.'); return; }
+            const caixaRows = rows.filter(r => r.conta_id === caixaId);
+            const abertura = caixaRows.find(r => r.tipo === 'ABERTURA');
+            const fundoAbertura = abertura ? (Number((abertura.meta || {}).total) || Number(abertura.valor) || 0) : 0;
+            let entradas = 0, saidas = 0, sangrias = 0;
+            caixaRows.forEach(r => {
+                if (['ABERTURA', 'FECHAMENTO', 'RECEITA_SERVICOS', 'AJUSTE_CAIXA'].indexOf(r.tipo) >= 0) return;
+                const c = finClassificarLancamento({ tipo: r.tipo, valor: r.valor, contaChave: 'caixa_loja', meta: r.meta || {} });
+                if (!c.afetaGaveta) return;
+                if (c.grupo === 'sangria') sangrias += Math.abs(c.valorGaveta);
+                else if (c.valorGaveta > 0) entradas += c.valorGaveta;
+                else saidas += Math.abs(c.valorGaveta);
+            });
+            const esperado = histRound2(fundoAbertura + entradas - saidas - sangrias);
+            const contado = Number((F.meta || {}).contado_caixa) || 0;
+            const rowsAgg = rows.map(r => r.id === F.id ? Object.assign({}, r, { valor: -esperado }) : r);
+            const A = relAgregar(rowsAgg);
+            const novoMeta = Object.assign({}, F.meta || {}, {
+                fundo_abertura: fundoAbertura, entradas: histRound2(entradas), saidas: histRound2(saidas), sangrias: histRound2(sangrias),
+                esperado_caixa: esperado, diferenca_caixa: histRound2(contado - esperado),
+                resultado_operacional: histRound2(A.resultadoOperacional), resultado_financeiro: histRound2(A.resultadoFinanceiro),
+            });
+            const precisaValor = histRound2(Number(F.valor)) !== -esperado;
+            const precisaMeta = JSON.stringify(F.meta || {}) !== JSON.stringify(novoMeta);
+            if (precisaValor || precisaMeta) {
+                await dbUpdate('lancamentos', { valor: -esperado, meta: novoMeta }, { id: F.id });
+            }
+        }
+
+        async function histAposMudanca() {
+            try { await finCarregarContas(); } catch (_) {}
+            try { await loadFinanceiroSaldos(); } catch (_) {}
+            const finView = document.getElementById('viewFinanceiro');
+            if (finView && finView.classList.contains('active')) {
+                const fech = document.getElementById('finScreen-fechamento');
+                if (fech && fech.classList.contains('active')) {
+                    try { await Promise.all([finCarregarMovimentosDia(), finCarregarResultado()]); mfFechamentoConferir(); } catch (_) {}
+                }
+                const rel = document.getElementById('finScreen-relatorios');
+                if (rel && rel.classList.contains('active')) { try { await relInit(); } catch (_) {} }
+            }
+            const plan = document.getElementById('viewPlanejamento');
+            if (plan && plan.classList.contains('active')) { try { await rfCarregarMovimentos(); } catch (_) {} }
+            try { await histCarregar(); } catch (_) {}
+            histRender();
+        }
+
         async function finFecharCaixa() {
             const btn = document.getElementById('mfFecharBtn');
             btn.disabled = true; finMsg('mfFechMsg', 'busy', 'Fechando o caixa…');
@@ -5464,21 +5885,9 @@
                 const hoje = todayISO();
                 const idCaixa = await finContaId('caixa_loja');
                 const rows = [];
-                const ajuste = Number((proj.ajusteEfetivo || 0).toFixed(2));
-                if (ajuste !== 0) {
-                    rows.push({
-                        conta_id: idCaixa, data: hoje, valor: ajuste, tipo: 'AJUSTE_CAIXA',
-                        descricao: ap.motivo || (ap.ajuste === 0 ? 'Diferença não explicada no fechamento' : ('Ajuste de conferência (' + (ajuste < 0 ? 'faltou' : 'sobrou') + ')')),
-                        origem: 'fechamento', meta: { motivo: ap.motivo || (ap.ajuste === 0 ? 'auto' : null) },
-                    });
-                }
-                if (ap.receitaCaixa > 0.005) {
-                    rows.push({
-                        conta_id: idCaixa, data: hoje, valor: Number(ap.receitaCaixa.toFixed(2)), tipo: 'RECEITA_SERVICOS',
-                        descricao: 'Receita de serviços apurada no fechamento', origem: 'fechamento',
-                        meta: { forma: 'dinheiro', conta_chave: 'caixa_loja', apurado: true },
-                    });
-                }
+                // Modelo "só conferência": o Caixa da Loja NÃO gera RECEITA_SERVICOS
+                // nem AJUSTE_CAIXA. A diferença contado−esperado só é registrada em
+                // meta para exibição — não é lançada.
                 for (const b of ap.bancos) {
                     if (b.receita > 0.005) {
                         const idB = await finContaId(b.chave);
@@ -5490,13 +5899,12 @@
                     }
                 }
                 rows.push({
-                    conta_id: idCaixa, data: hoje, valor: Number((-ap.contadoCaixa).toFixed(2)), tipo: 'FECHAMENTO',
+                    conta_id: idCaixa, data: hoje, valor: Number((-ap.esperadoCaixa).toFixed(2)), tipo: 'FECHAMENTO',
                     descricao: 'Fechamento de caixa', origem: 'fechamento',
                     meta: {
                         fundo_abertura: ap.fundoAbertura, entradas: ap.entradas, saidas: ap.saidas, sangrias: ap.sangrias,
                         esperado_caixa: ap.esperadoCaixa, contado_caixa: ap.contadoCaixa,
-                        ajuste: ajuste, motivo_ajuste: ap.motivo || null,
-                        receita_caixa: Math.max(0, Number(ap.receitaCaixa.toFixed(2))),
+                        diferenca_caixa: ap.diferencaCaixa,
                         receitas_banco: ap.bancos.filter(b => b.receita > 0.005).map(b => ({ conta: b.chave, informado: b.informado, valor: Number(b.receita.toFixed(2)) })),
                         bancos_nao_apurados: ap.bancos.filter(b => b.receita <= 0.005).map(b => ({ conta: b.chave, informado: b.informado, esperado: b.esperado })),
                         fc1: finValorNum('mfFechFC1'), fc2: finValorNum('mfFechFC2'),
@@ -5506,9 +5914,10 @@
                 });
                 await finLancar(rows);
                 const totBanco = ap.bancos.reduce((s, b) => s + Math.max(0, b.receita), 0);
-                finMsg('mfFechMsg', 'ok', `Caixa fechado. Receita apurada: dinheiro ${mfBRL(Math.max(0, ap.receitaCaixa))}`
-                    + (totBanco > 0.005 ? ` + eletrônica ${mfBRL(totBanco)}` : '')
-                    + `. Resultado do dia: ${mfBRL(proj.resultadoFinanceiro)}. O caixa foi zerado para o próximo dia.`);
+                finMsg('mfFechMsg', 'ok', `Caixa fechado (conferência).`
+                    + (Math.abs(ap.diferencaCaixa) >= 0.005 ? ` Diferença de conferência do Caixa: ${(ap.diferencaCaixa < 0 ? '−' : '+')}${mfBRL(Math.abs(ap.diferencaCaixa))} (só conferência, não lançada).` : ' Caixa confere com o movimento conhecido.')
+                    + (totBanco > 0.005 ? ` Receita eletrônica apurada: ${mfBRL(totBanco)}.` : '')
+                    + ` Resultado do dia: ${mfBRL(proj.resultadoFinanceiro)}. O caixa foi zerado para o próximo dia.`);
                 await finCarregarMovimentosDia();
                 await finCarregarResultado();
                 await finCarregarContas();
@@ -5547,7 +5956,7 @@
             const ok = document.getElementById('finAbOk');
             const fc1El = document.getElementById('finAbFC1');
             const fc2El = document.getElementById('finAbFC2');
-            const dig = el => (el ? (Number(String(el.value).replace(/\D/g, '')) || 0) : 0);
+            const dig = el => parseBRLDecimal(el && el.value);
 
             const algumPreenchido = !!((fc1El && fc1El.value.trim()) || (fc2El && fc2El.value.trim()));
             const informado = dig(fc1El) + dig(fc2El);
@@ -6224,7 +6633,6 @@
                         <span>${item.label}</span>
                         <div style="display:flex; gap:8px;">
                             <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="window.open('${item.url}', '_blank', 'noopener')">🖥️ Preencher pelo Sistema</button>
-                            <button class="btn-copy-link" onclick="copyLinkToClipboard('${item.url}', this)" title="Copiar link do sistema">📋</button>
                         </div>
                         <div style="display:flex; gap:8px;">
                             ${item.modelosEmBranco.map(m => `<button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirOuImprimirModeloEmBranco('${m.tipo}')">${m.label}</button>`).join('')}
@@ -6238,7 +6646,6 @@
                         <div style="display:flex; gap:8px;">
                             <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="window.open('${item.url}', '_blank', 'noopener')">🖥️ Preencher pelo Sistema</button>
                             <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirOuImprimirModeloEmBranco('${item.tipoModelo}')">📄 Modelo em Branco</button>
-                            <button class="btn-copy-link" onclick="copyLinkToClipboard('${item.url}', this)" title="Copiar link do sistema">📋</button>
                         </div>
                     </div>`;
                 }
@@ -6246,7 +6653,6 @@
                 <div class="link-row">
                     <span style="cursor:pointer;" onclick="window.open('${item.url}', '_blank', 'noopener')">${item.label}</span>
                     <span class="link-row-actions">
-                        <button class="btn-copy-link" onclick="event.stopPropagation(); copyLinkToClipboard('${item.url}', this)" title="Copiar link">📋</button>
                         <span class="arrow" style="cursor:pointer;" onclick="window.open('${item.url}', '_blank', 'noopener')">↗</span>
                     </span>
                 </div>`;
@@ -6432,7 +6838,7 @@
         // módulo hoje (confirmado por busca no código antes de implementar), só
         // faz sentido aqui. Web Share API do navegador (celular) quando
         // disponível; sem suporte (a maioria dos desktops), copia o texto pro
-        // clipboard — mesmo mecanismo de copyLinkToClipboard() acima.
+        // clipboard (navigator.clipboard, com fallback de textarea + execCommand).
         async function compartilharPrestador(id) {
             const d = declaracoesPendentesCache.find(x => x.id === id);
             if (!d) return;

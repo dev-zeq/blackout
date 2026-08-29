@@ -1981,6 +1981,51 @@ Só entram **dias já fechados** = existe um lançamento `tipo='FECHAMENTO'` naq
 
 **PUBLICADO** em `main` (GitHub Pages → lanblackout.com) em 2026-08-29.
 
+## Campos de valor do Financeiro aceitam vírgula/centavos (2026-08-29)
+
+Todos os campos de valor do Financeiro / Movimentação Financeira passaram a aceitar centavos no padrão BR (`63,12`). Antes só aceitavam reais inteiros (dígitos), porque o componente compartilhado `data-role="valor-extenso"` (usado também nos contratos/recibo, que devem seguir em reais inteiros) limpava tudo que não fosse dígito.
+
+- Novo componente paralelo `data-role="valor-cents"` + `inputmode="decimal"`: aceita **uma** vírgula e até 2 casas; legenda ao vivo "R$ 63,12 — sessenta e três reais e doze centavos".
+- `parseBRLDecimal(v)` — parser único (`"63,12"→63.12`, `"1.234,56"→1234.56`, `"2500"→2500`). `finValorNum(id)` passou a delegar a ele; `finValorInt` removido (9 chamadas → `finValorNum`); 6 leitores inline `replace(/\D/g,'')` trocados.
+- 14 campos convertidos: Retirada (valor + 7 de Despesa Fixa), Troca por Pix (valor + desconto), Reembolso, Transferência/Sangria, Abertura (FC1/FC2). Fechamento já aceitava (usava `finValorNum` desde o PASSO 4). Contratos/Recibo/`#viewCaixa` (sem menu) intactos.
+- Nenhuma fórmula, faixa de taxa, arredondamento ou regra de gravação alterada.
+
+## Fechamento vira conferência + Histórico Financeiro editável (2026-08-29) — **aguardando revisão/publicação**
+
+### Parte A — o Fechamento do Caixa da Loja é só CONFERÊNCIA (revisão do PASSO 4)
+Decisão do usuário: o Caixa da Loja **não gera receita automática** no fechamento. O sistema só compara `contado` × `esperado` (movimento conhecido) e **exibe a diferença** quando houver — sem lançar `RECEITA_SERVICOS` de caixa nem `AJUSTE_CAIXA`. A parte **eletrônica continua**: Sicredi/PagSeguro seguem apurando receita eletrônica por `informado − esperado` quando o saldo do banco é informado no fechamento.
+
+- `finApurarReceitas()` — sem `ajuste`/`receitaCaixa`; devolve `diferencaCaixa = round2(contado − esperado)` + `bancos` (inalterado).
+- `finFecharCaixa()` — não grava mais `AJUSTE_CAIXA` nem `RECEITA_SERVICOS` de caixa. `FECHAMENTO.valor = −esperado` (era `−contado`) → zera a gaveta contra o movimento conhecido; a diferença fica só em `meta.diferenca_caixa`. `RECEITA_SERVICOS` de banco continua igual.
+- Painel A: linha "RECEITA DE SERVIÇOS EM DINHEIRO" e "Ajuste de conferência" → **uma** linha "Diferença de conferência (contado − esperado)", só quando ≠ 0. Card "Ajuste de conferência (opcional)" e campos `mfFechAjuste*` **removidos**.
+- Painel B / `finResultadoProjetado()` — sem `recDinheiroLive`/auto-ajuste; `receita.dinheiro` = só dados legados. Identidade de consistência `Σvalores − abertura − fechamento − ajuste == Resultado Financeiro` continua válida (verificada por álgebra e SQL: `consistDelta = 0`).
+- Relatórios (`relAgregar`/`relRender`) — sem mudança de lógica (o classificador ainda reconhece linhas legadas).
+- **Consequência assumida** (confirmada pelo usuário 3×): venda em dinheiro deixa de entrar no Resultado Financeiro; o `contado − esperado` é só conferência, fora dos livros.
+
+### Parte B — nova tela Financeiro › Histórico Financeiro (`#finScreen-historico`)
+Lista os lançamentos reais mês a mês (navegador de mês reusando `rel-mesnav`) e permite **corrigir** (só `valor` + `descrição`; **data e conta bloqueadas**) ou **excluir** (com `confirm()` claro). **Nunca cria lançamento de correção.**
+
+- `histInit/histCarregar/histRender` — agrupa por dia; junta as 2 pernas com o mesmo `meta.par` numa linha (Transferência/Sangria/Troca por Pix); `FECHAMENTO` mostra contado/esperado/diferença; `RECEITA_SERVICOS` de banco tem linha própria editável.
+- `histSalvar` por tipo: `RETIRADA`/`REEMBOLSO` → `valor = −|novo|`; `ABERTURA` → `valor` + `meta.total`; `TRANSFERENCIA`/`SANGRIA` → 2 `dbUpdate` (−v / +v); `TROCA_PIX` → recalcula taxa/total/recebido/receita (reusa `mfTrocaPixTaxa`/`mfTrocaPixArredComercial`) e grava as 2 pernas; `RECEITA_SERVICOS` de banco → `valor = |novo|`; `FECHAMENTO` → edita `meta.contado_caixa`/`diferenca_caixa` (o `valor` **não** muda — zero impacto em saldo).
+- `histExcluir`: 1 perna → 1 `dbDelete`; 2 pernas → 2 `dbDelete`; `FECHAMENTO` → apaga o lote do dia (`FECHAMENTO` + `RECEITA_SERVICOS`/`AJUSTE_CAIXA` `origem='fechamento'`), o dia volta a "aberto".
+- **`histReconciliarDia(data)`** — roda depois de editar/excluir uma **movimentação** de um dia que tem `FECHAMENTO`. **Escrita ÚNICA: `dbUpdate` na própria linha `FECHAMENTO`** (`valor = −esperado` recalculado + `meta`). Recalcula `esperado = fundo + Σ(linhas do Caixa da Loja, exceto ABERTURA/FECHAMENTO/RECEITA_SERVICOS/AJUSTE_CAIXA)`; o trigger de saldo cancela o delta da edição → `caixa_loja.saldo` volta a **0**. **NUNCA** cria/edita/apaga `RECEITA_SERVICOS` nem `AJUSTE_CAIXA` de caixa (Regra 6). Fechamento legado (com `meta.receita_caixa` ou `RECEITA_SERVICOS` de caixa no dia) → não reconcilia, mostra aviso.
+- `histAposMudanca()` — recarrega contas + `loadFinanceiroSaldos()` + (se abertos) fechamento/relatórios/Resumo + re-render do histórico. Realtime de `lancamentos` também chama `histInit()` se a tela estiver aberta.
+- CSS `.hist-*`.
+
+### Testado no `kihnavaovspdjnegcraj` via SQL numa transação com **ROLLBACK** (zero efeito em produção — saldos e contagem de lançamentos idênticos antes/depois; dados reais de 2026-08-29 não tocados)
+Dia de teste `2026-01-15` (`TESTE_HIST_*`): ABERTURA 200 · gráfica −79 (Sicredi) · retirada de caixa −30 · transferência −50/+50 · sangria −40/+40 · recebimento eletrônico +100 (Sicredi) · FECHAMENTO `valor −80` (esperado 80, contado 85). **37/37 checagens PASS**:
+- Editar gráfica `79 → 79,11` (dia fechado): 1 UPDATE, Sicredi −0,11, `caixa=0`, 0 linhas de receita/ajuste de caixa criadas, sem duplicação.
+- Editar retirada de caixa `30 → 41,11` (dia fechado): `caixa=0`, `F.valor −68,89`, `meta.esperado 68,89` / `diferenca 16,11`, sem receita/ajuste de caixa.
+- Editar transferência `50 → 55` e sangria `40 → 25` (2 pernas): pernas somam 0, saldos das contas certos, `F.valor` acompanha o esperado, `caixa=0`.
+- Editar recebimento eletrônico `100 → 120`: só `sicredi +20`, `caixa=0`, nada de receita/ajuste de caixa.
+- Editar contado do FECHAMENTO `85 → 90`: `F.valor` intacto, `diferenca 11,11`, saldos intactos.
+- Excluir gráfica (dia fechado): `sicredi +79,11`, `caixa=0`, sem lançamento de correção.
+- Excluir o FECHAMENTO: lote removido, `caixa` volta ao pré-fechamento (78,89 = esperado), dia sem FECHAMENTO.
+- Regra 6 conferida em todos os passos: 0 `RECEITA_SERVICOS`/`AJUSTE_CAIXA` de caixa criados.
+- Limpeza + baseline: saldos idênticos ao início, 8 lançamentos (inalterado).
+
+Falta: clique-a-clique na UI de produção (a UI fica atrás da senha da equipe). Só `paineldecontrole/index.html` mudou. **Não publicado.**
+
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
 - Editar contrato/declaração/currículo: registros salvos *antes* dessa versão de cada formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
