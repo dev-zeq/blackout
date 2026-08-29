@@ -1990,7 +1990,7 @@ Todos os campos de valor do Financeiro / Movimentação Financeira passaram a ac
 - 14 campos convertidos: Retirada (valor + 7 de Despesa Fixa), Troca por Pix (valor + desconto), Reembolso, Transferência/Sangria, Abertura (FC1/FC2). Fechamento já aceitava (usava `finValorNum` desde o PASSO 4). Contratos/Recibo/`#viewCaixa` (sem menu) intactos.
 - Nenhuma fórmula, faixa de taxa, arredondamento ou regra de gravação alterada.
 
-## Fechamento vira conferência + Histórico Financeiro editável (2026-08-29) — **aguardando revisão/publicação**
+## Fechamento vira conferência + Histórico Financeiro editável (2026-08-29) — **PUBLICADO** (`main` → lanblackout.com)
 
 ### Parte A — o Fechamento do Caixa da Loja é só CONFERÊNCIA (revisão do PASSO 4)
 Decisão do usuário: o Caixa da Loja **não gera receita automática** no fechamento. O sistema só compara `contado` × `esperado` (movimento conhecido) e **exibe a diferença** quando houver — sem lançar `RECEITA_SERVICOS` de caixa nem `AJUSTE_CAIXA`. A parte **eletrônica continua**: Sicredi/PagSeguro seguem apurando receita eletrônica por `informado − esperado` quando o saldo do banco é informado no fechamento.
@@ -2024,7 +2024,10 @@ Dia de teste `2026-01-15` (`TESTE_HIST_*`): ABERTURA 200 · gráfica −79 (Sicr
 - Regra 6 conferida em todos os passos: 0 `RECEITA_SERVICOS`/`AJUSTE_CAIXA` de caixa criados.
 - Limpeza + baseline: saldos idênticos ao início, 8 lançamentos (inalterado).
 
-Falta: clique-a-clique na UI de produção (a UI fica atrás da senha da equipe). Só `paineldecontrole/index.html` mudou. **Não publicado.**
+**PUBLICADO** em `main` em 2026-08-29 (commit junto com o campo de centavos e a remoção dos botões "Copiar link"). Clique-a-clique na UI de produção fica com o usuário (a UI está atrás da senha da equipe).
+
+### Ajuste do saldo inicial do Cofre de Notas (2026-08-29)
+O usuário conferiu o cofre fisicamente na noite anterior ao primeiro fechamento: **Cofre de Notas tinha R$ 577,00**, não 713. Corrigido direto em `contas` (project `kihnavaovspdjnegcraj`), sem lançamento: `saldo_inicial` 713 → **577**, `saldo` 563 → **427,00** (577 − 140 − 10 das duas retiradas do cofre já registradas). Demais contas inalteradas.
 
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
