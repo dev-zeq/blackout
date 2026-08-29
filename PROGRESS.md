@@ -2040,6 +2040,20 @@ O usuário conferiu o cofre fisicamente na noite anterior ao primeiro fechamento
 ### Como o fechamento trata o Fundo de Caixa na contagem (esclarecimento, sem mudança de código)
 Pergunta do usuário. No modelo de conferência atual: no campo **"Caixa da Loja — Notas/Moedas"** informa-se **o total contado na gaveta, INCLUINDO os R$ 160 do fundo**. O "Movimento conhecido / esperado" já carrega esses R$ 160 (via a ABERTURA), então `contado − esperado` cancela o fundo dos dois lados automaticamente e o excedente aparece como a **"Diferença de conferência"**. **Não** se subtrai o fundo antes — informar só o excedente gera uma "falta" falsa de R$ 160. Os campos "Fundo de Caixa 1 / Fundo de Caixa 2" são a contagem final da reserva (referência da próxima abertura), não entram nesse cálculo.
 
+## Controle visual Abrir / Fechar Caixa (2026-08-29) — **PUBLICADO** — só interface
+
+Pedido do usuário: deixar claro na tela **Financeiro › início** se o caixa está aberto ou fechado, com botão de ação que troca sozinho. **Nenhuma regra financeira alterada** — só HTML/CSS/JS de interface.
+
+- Seção "Abertura de Caixa" → **"Controle de Caixa"**: badge de status `#finCaixaStatus` + botão único `#finCaixaBtn` (`onclick="finCaixaAcao()"`).
+- **`finCaixaEstado()`** — lê `finMovDiaCache` (lançamentos do caixa_loja de hoje): `FECHAMENTO` presente → `encerrado`; `ABERTURA` sem fechamento → `aberto`; nenhum → `fechado`.
+- **`finCaixaStatusRender()`** — ajusta badge + botão + esconde/mostra o bloco de abertura (`#finAberturaBloco` com os campos FC1/FC2):
+  - **fechado**: badge vermelho "Caixa fechado"; botão verde de destaque **ABRIR CAIXA** (`finAbrirCaixa()`); bloco de abertura visível.
+  - **aberto**: badge verde "Caixa aberto · fundo de abertura R$ X"; botão vermelho **FECHAR CAIXA** → `financeiroTela('fechamento')`; bloco de abertura oculto.
+  - **encerrado**: badge cinza "Caixa fechado · dia já encerrado"; botão **ABRIR CAIXA** desabilitado; bloco oculto.
+- Re-render: `financeiroTela('inicio')` (carrega `finCarregarMovimentosDia` antes), no fim de `finAbrirCaixa()` (finally) e de `finFecharCaixa()`, e no realtime de `lancamentos` quando a tela início está ativa.
+- CSS novo: `.fin-caixa-status` (`.aberto`/`.fechado`/`.encerrado`), `.fin-btn-caixa` (`.abrir` verde / `.fechar` vermelho). Cores dos tokens existentes (`--accent`/`#4ade80`, `--danger`/`#ef4444`, `--text-dim`).
+- `finAbrirCaixa()` passou a referenciar o botão por `#finCaixaBtn` (era `#finAbrirBtn`).
+
 ## Folha de Pagamento (Retirada da Empresa) + saldo acumulado de pró-labore (2026-08-29) — **PUBLICADO**
 
 Nova categoria **"Folha de Pagamento"** em Retirada da Empresa, com beneficiário **Márcio / Renata / Terceiros**. É um `RETIRADA` comum de **uma perna** (`valor: -Math.abs(v)`) — **nunca cria `RECEITA_SERVICOS` nem `AJUSTE_CAIXA`**, não quebra a Opção 3 nem os relatórios.
