@@ -1775,6 +1775,187 @@ Pedido: a Configuração (⚙) passa a distribuir o **Teto Mensal** entre os lim
 
 **Não publicado** — aguardando revisão.
 
+### Quadro "Orçamento por categoria — Pessoal" puxa TODOS os limites da ⚙ + Despesas Fixas com 4 sub-campos + config compacta (2026-08-28)
+
+Pedido (2 mensagens): (1) o quadro **Orçamento por categoria — Pessoal** deve listar **todas** as categorias com o **Limite exato configurado** (nada em branco): Retirada Márcio, Retirada Renata, Mercado, Gasolina, Almoço, Despesa Fixa, Demais Despesas. 3 colunas Limite / Usado / Saldo restante; Usado = soma dos lançamentos reais no período (atualiza sozinho); Saldo = Limite − Usado (ex.: retirada R$ 300 no nome do Márcio → Usado R$ 300, Saldo −R$ 300). (2) Config (⚙): Teto Mensal (base) → Pró-labore Márcio/Renata, Mercado, Gasolina, Almoço (manuais) → **Despesas Fixas com 4 campos numéricos** (Aluguel, Água, Energia Elétrica, Internet) cuja **soma vira o limite** de Despesa Fixa → **Demais Despesas** automático (saldo do teto). Soma sempre fecha com o teto. **Interface compacta** (campos/botões menores, grade de 2 colunas). Não mexer nas regras já definidas. Só `paineldecontrole/index.html`.
+
+- **`RF_PESSOAL_LINHAS`** (nova) — mapa `{ label, limKey, usoCats }` de cada linha do quadro Pessoal → **chave EXATA** do limite salvo na ⚙ e categorias de retirada que somam no "Usado". `Retirada Márcio` ← limite `Pró-labore Márcio`; `Retirada Renata` ← `Pró-labore Renata`; Mercado/Gasolina/Almoço iguais; `Despesa Fixa` ← `Despesa Fixa` (soma dos 4); `Demais Despesas` ← `Demais Despesas`, Usado = lançamentos `Outras Despesas Domésticas`. `loadPlanejamento` agora renderiza sobre `RF_PESSOAL_LINHAS` (era `MF_RET_CATEGORIAS.pessoal` lendo `limites[cat]` — só Mercado/Gasolina/Almoço batiam). Usado = `usoDireto` real (Σ lançamentos), Saldo = Limite − Usado, `.neg` (vermelho) quando negativo. Rodapé Total = Σ limite / Σ usado / Σ saldo.
+- **Rateio 50/50 por categoria removido do quadro** — o bloco `RF_COMPART` (excedente de Mercado/Gasolina/Almoço injetado no "Usado" de Retirada Márcio/Renata + tag "inclui rateio") saiu inteiro; contradizia "Usado = lançamentos reais". Const `RF_COMPART` apagada. O rateio do **excedente do Teto Mensal** (card do topo, `rfTetoExcMarcio/Renata`) continua igual.
+- **Config (⚙)** — `RF_DF_KEY = 'Despesa Fixa'` + `RF_DF_CAMPOS` (4: `DF Aluguel`, `DF Água`, `DF Energia`, `DF Internet`). `rfConfigAbrir` monta: Teto (full) → "Distribuir o teto" → grade 2-col com os 5 manuais + Demais Despesas (readonly) → sub-título "Despesas Fixas — a soma dos 4 vira o limite" → grade 2-col com os 4 sub-campos → `Despesa Fixa (soma automática dos 4)` (readonly). `rfConfigRecalcular` ganhou `dfSum = Σ RF_DF_CAMPOS`; `distribuido = manual + dfSum`; `demais = max(0, teto − distribuido)`; grava o input readonly de `Despesa Fixa` e o de `Demais Despesas`; Salvar habilita só quando `teto > 0 && dif === 0`. `RF_CONFIG_CATS` seguem 5 (sem Despesa Fixa — ela é o grupo de 4). `rfSalvarLimites` inalterado (genérico) — persiste `Teto Mensal`, os 5, `DF Aluguel/Água/Energia/Internet`, `Despesa Fixa` (total) e `Demais Despesas`; poda chaves órfãs.
+- **CSS `#rfConfigModal` (novo bloco escopado)** — modal compacto: `max-width` 460/520px, `.fin-field` `margin-bottom:6px`, label 9.5px, input `padding:7px 10px; font-size:13px`, `.rf-cfg-grid` (grid 2-col, gap 4/10px), `.rf-cfg-sub` (sub-título pequeno), `.fin-kv` 11.5px, botões `padding:9px 14px; font-size:13/12px`.
+- **Persistência** — `rfRetiradas()` continua `[]` até o módulo Retirada gravar; quando gravar, o Usado do quadro liga sozinho (Σ por `usoCats`). Comentários HTML/JS e a nota da aba Pessoal reescritos.
+
+**Testado ao vivo** (harness local, mock `window.__rfRetiradasMock` temporário — adicionado e **removido** depois; `localStorage rf_limites_pessoal` de teste limpo no fim): config — exemplo do pedido (teto 8000; Márcio/Renata 1500; Mercado 1000; Gasolina/Almoço 500; DF 900+100+300+200=1500) → **Demais Despesas R$ 1.500,00**, Diferença R$ 0,00, "Configuração válida", Salvar habilitado. Estouro (Almoço 4000) → Diferença **R$ -2.000,00** (vermelho), Salvar travado. Reabrir a ⚙ → 12 campos pré-preenchidos do `localStorage` (DF total e Demais readonly). Quadro Pessoal — 7 linhas, cada uma com o limite exato (Retirada Márcio/Renata R$ 1.500, Despesa Fixa R$ 1.500 rótulo "Despesa Fixa da Casa (Aluguel, Água, Energia e Internet)", Demais Despesas R$ 1.500), Usado R$ 0,00, Saldo = Limite, rodapé R$ 8.000 / R$ 0,00 / R$ 8.000. Com mock de lançamentos: **Retirada Márcio R$ 300 → Usado R$ 300,00 / Saldo R$ 1.200,00**; Mercado R$ 1.300 (limite 1.000) → Usado R$ 1.300,00 / **Saldo −R$ 300,00 (vermelho)**; Gasolina estorno −50 → Usado −R$ 50,00 / Saldo R$ 550,00; Outras Despesas Domésticas R$ 250 → linha "Demais Despesas" Usado R$ 250,00 / Saldo R$ 1.250,00; rodapé Usado R$ 3.300,00 / Saldo R$ 4.700,00; card Teto Usado R$ 3.300,00 / Saldo R$ 4.700,00. Remover o mock → Usado volta a R$ 0,00. Sem erro no console.
+
+**Não publicado** — aguardando revisão.
+
+## Auditoria do fluxo financeiro + remoção "Prestadora" + Central de Links Web (2026-08-28)
+
+### Auditoria (só leitura — nada alterado)
+Estado real do fluxo abrir caixa → lançar → limites/teto/excedente → fechar batendo:
+- **Motor de saldos = pronto e correto.** Tabelas `contas`/`lancamentos` no Supabase (`kihnavaovspdjnegcraj`), seed das 6 contas intacto, trigger `trg_lancamentos_saldo` + `fn_lancamento_ajusta_saldo()` ativos (testado insert/update/delete com rollback: +250→250, update→300, delete→0), `fn_recalcular_saldo_conta()` presente, RLS + realtime nas 2, `db-write` v9 com `lancamentos`/`contas` liberados. `loadFinanceiroSaldos()` lê `contas` e realtime atualiza os cartões. **0 lançamentos gravados** — nada escreve nessa base ainda.
+- **Cálculo da Troca por Pix = correto** (`mfTrocaPixTaxa`/`mfTrocaPixArredComercial`), testado contra a planilha (200→11/211, 500→27,50/527,50, 800→40/840, 1500→67,50/1.567,50, 150→10/160, desconto 10 em 800→final 830/receita 30). Só na tela — não vira lançamento.
+- **Consolidação do Resumo Financeiro = correta quando recebe dados**, mas `rfRetiradas()` retorna `[]` fixo → Usado/Teto/Excedente ficam R$ 0,00.
+- **Só visual, sem handler** (confirmado no DOM, `onclick:null`): botões **Abrir Caixa**, **Fechar Caixa**, **Registrar** (Retirada / Troca por Pix), **Registrar Reembolso** (ainda `disabled` fixo), **Transferir**, e Filtrar/Limpar dos históricos. Históricos = `<tr>` fictícias no HTML. `mfFechamentoConferir()` tem `sangrias = 0` hardcoded e só soma Notas+Moedas digitados; não há cálculo "esperado × contado". `aberturaCaixaRefFechamentoAnterior()` lê um `localStorage` que ninguém grava → o card de conferência da abertura nunca aparece. Seção **"Cofre"** e limites do Resumo = valores fixos / `localStorage`, não banco.
+- **Módulo antigo `#viewCaixa`**: ainda grava (`retiradas`/`sangria`/`grafica_despesas`/`pix_recebidos`/`fechamentos_caixa`), mas **fora do menu** e **desconectado** do motor novo (não move `contas.saldo` nem alimenta o Resumo).
+- **Falta pra fechar o caixa batendo hoje:** (1) Retirada grava `lancamentos` (dar id ao select "Origem do valor" e mapear → `chave` da conta; sinal negativo); (2) `rfRetiradas()` lê `lancamentos` do período; (3) Abrir Caixa persiste o fundo + grava a referência de conferência; (4) Fechar Caixa calcula saldo esperado do Caixa da Loja (abertura + entradas − saídas − sangrias, dos lançamentos do dia) e compara com o contado. Pix/reembolso/transferência/históricos/cofre entram depois.
+
+### "Prestadora" removido por completo
+Era um sub-painel de link único (Google Form "Formulário do Cliente") — redundante com o módulo nativo **Prestação de Serviço** (`viewPrestador`, intacto). Removidos de `paineldecontrole/index.html`: entrada em `MENU_ITEMS` (`{icon:'prestadora',key:'prestadora'}`), `SUBPANELS.prestadora`, ícone `ICONS.prestadora` e a menção no comentário do ícone `prestador`. Verificado: 0 ocorrências de `prestadora`/`Prestadora` no arquivo; `viewsInitialized`/`pendingCounts`/realtime não referenciavam; `openSubPanel('prestadora')` já cai no guard `if(!panel) return`.
+
+### Central de Links Web (Configurações)
+Novo `⚙` no header (ao lado do `🔔`, mesma classe `.notif-config-btn`) → modal `#configModal` "⚙ Configurações" › seção **Links Web**. Lista **Nome + URL atual + Editar**, agrupada (Menu principal + cada sub-painel). Editar → input com a URL atual + **Salvar** / **Cancelar** (+ **Restaurar padrão** quando há override). **69 links** catalogados automaticamente.
+- **Cobre só botões de site externo**: itens de `SUBPANELS` + `MENU_ITEMS` com `action.type==='link'` (Tirar Fundo, Email, WhatsApp). **Não toca** em links de formulário interno (os `window.open('*-form.html')` das telas, e o "Preencher pelo Sistema" do declProc ficaram intactos).
+- **Sem tabela / sem IA**: overrides em `localStorage['blackout_web_links']` = `{ "grupo||Nome": "url" }` (grupo = `'menu'` ou a key do sub-painel). Catálogo derivado de `MENU_ITEMS`/`SUBPANELS` por `webLinksCatalogo()`; `resolveWebLink(grupo, nome, urlPadrao)` devolve o override ou o padrão.
+- **Aplicado em**: `openSubPanel()` (usa `resolveWebLink(key, item.label, item.url)`, aspa simples → `%27` no `onclick` inline) e `handleMenuClick()` (path `type:'link'`). O padrão em `MENU_ITEMS`/`SUBPANELS` **nunca é mutado** → "Restaurar padrão" sempre volta ao original. Salvar com a URL == padrão remove o override. Validação: exige `^https?://`.
+- Funções (todas em `window`): `abrirConfig`/`fecharConfig`/`renderConfigWebLinks`/`cfgEditarLink`/`cfgSalvarLink`/`cfgResetLink`. CSS escopado em `#configModal .cfg-*`.
+
+**Testado ao vivo** (harness local): menu sem "Prestadora" (20 tiles, "Prestação de Serviço" segue lá); modal com 69 linhas em 9 grupos, nenhuma "Prestadora"; editar Exames › "Lab. Camboriú" → Salvar grava `{"exames||Lab. Camboriú":"…"}`, badge "alterado", `openSubPanel('exames')` passa a abrir a URL nova; "Restaurar padrão" limpa e o tile volta ao endereço original; URL inválida → alert e não grava; override de "Tirar Fundo" (menu) aplicado no `handleMenuClick`. Sem erro no console. `localStorage` de teste limpo no fim.
+
+**Não publicado** — aguardando revisão.
+
+## PASSO 2 — Integração real do fluxo financeiro no motor de lançamentos (2026-08-28)
+
+Todo botão "Registrar / Abrir / Fechar" do módulo **Financeiro** e **Movimentação Financeira** agora grava em `lancamentos` (via `db-write` v9, trigger `trg_lancamentos_saldo` ajusta `contas.saldo`). Nada do módulo Caixa antigo foi reativado; nenhuma tabela legada usada. Só `paineldecontrole/index.html`. Módulo de Relatórios **não** foi criado (pedido explícito — depois).
+
+### Modelo de dados (`lancamentos.tipo` / `meta`)
+- **`ABERTURA`** — `conta_id=caixa_loja`, `valor = FC1+FC2` (injeta o fundo do dia), `meta:{fc1,fc2,total}`. Um por dia (bloqueia 2ª).
+- **`RETIRADA`** — `conta_id`=origem escolhida, `valor = −|valor|`, `meta:{finalidade:'empresa'|'pessoal', categoria, descricao?, despesa_fixa?{aluguel,energia,agua?,internet}}`. Despesa Fixa: valor = soma dos 3 (Empresa) / 4 (Pessoal) campos fixos.
+- **`TROCA_PIX`** — 2 linhas, `meta.par` liga: `sicredi valor=−valorDesejado` (perna `pix_enviado`) + `caixa_loja valor=+（total−desconto)` (perna `caixa_recebido`, `meta:{valor_desejado,taxa,desconto,receita}`). **`receita = dinheiro recebido − Pix enviado` = só a taxa (após desconto).** Valor desejado nunca é lucro.
+- **`REEMBOLSO`** — banco/cofre: `conta_id`=origem, `valor=−|valor|`. **Caixa da Loja: `valor=0`** (não mexe no saldo agora), `meta:{somente_relatorio:true, valor_bruto}` — entra na conferência do fechamento.
+- **`TRANSFERENCIA`** / **`SANGRIA`** — 2 linhas (`origem −`, `destino +`), `meta.par`, `meta:{origem,destino,sangria}`. Origem = `caixa_loja` ⇒ `tipo='SANGRIA'`. Nunca receita/despesa.
+- **`FECHAMENTO`** — `conta_id=caixa_loja`, `valor = −(saldo atual do caixa_loja)` (zera a gaveta pro próximo dia), `meta:{fundo_abertura,entradas,saidas,sangrias,reemb_caixa,esperado,contado,diferenca,fc1,fc2,sicredi_informado,pagseguro_informado}`. Um por dia.
+
+### Cálculo do esperado no Fechamento (`finFechCalcular` / `mfFechamentoConferir`)
+`esperado = fundo_abertura + entradas_em_dinheiro − saidas_fisicas − sangrias − reembolsos_do_caixa`, onde tudo vem de `lancamentos` do dia com `conta_id = caixa_loja`. `contado = Notas + Moedas` informados. `diferenca = contado − esperado` — **só informativa, nunca bloqueia**. Na tela, "Saídas físicas" já soma `reembolsos_do_caixa` pra a conta bater visualmente.
+
+### Conferência da Abertura (`finCarregarRefFechamento` / `aberturaCaixaConferir`)
+Referência = `meta.fc1 + meta.fc2` do **último `FECHAMENTO`** no banco (substituiu o `localStorage['fin_abertura_ref_fechamento']`, que ninguém preenchia). Sem fechamento anterior ⇒ nenhuma mensagem. Diferença ⇒ só aviso; botão "Abrir Caixa" nunca desabilita.
+
+### Resumo Financeiro (`rfCarregarMovimentos` / `rfRetiradas`)
+`rfRetiradas()` deixou de retornar `[]`: agora lê `lancamentos` `tipo='RETIRADA'` (cache `rfMovsCache`, recarregado ao abrir o Resumo e por realtime), mapeando `{tipo:meta.finalidade, categoria:meta.categoria, valor:|valor|, data}` e filtrando pelo período (Mês atual / intervalo). Alimenta Usado / Saldo restante / Teto / Excedente / categorias Pessoal e Empresa automaticamente. Limites continuam em `localStorage` (não faziam parte deste passo).
+
+### HTML/JS mexidos
+- `<select>` de conta ganharam `value` = chave (`sicredi`/`pagseguro`/`caixa_loja`/`cofre_notas`/`cofre_moedas`/`fundo_caixa`); `mfReembolsoValidar`/`mfTransferenciaClassificar` ajustados pra ler a chave + `FIN_CONTA_LABEL`.
+- ids novos: `mfRetValor`, `mfRetOrigem`, `mfRbObs`, `mfTrObs`, `mfFechSicredi/Pagseguro/FC1/FC2`, botões `mfRetSubmit`/`mfTpSubmit`/`mfRbSubmit`/`mfTrSubmit`/`finAbrirBtn`/`mfFecharBtn` + `<div class="fin-msg">` de resultado em cada tela (CSS `.fin-msg`).
+- Card do fechamento reescrito: "Conferência do Caixa da Loja" (fundo abertura / +entradas / −saídas / −sangrias / = esperado / contado / diferença / status).
+- Cache `FIN_CONTAS_BY_CHAVE` + `finContaId(chave)`; realtime novo em `lancamentos` (atualiza Resumo e conferência do fechamento se abertos); `openView('planejamento')` chama `rfCarregarMovimentos()`.
+
+### Testado ao vivo contra produção (`kihnavaovspdjnegcraj`) — dados inseridos, conferidos e **apagados** no fim (`lancamentos` = 0, saldos = seed)
+Payloads dos botões capturados no harness (dbInsert real interceptado) e depois replicados via SQL com dia completo: ABERTURA 2500 → RETIRADA Pessoal/Gasolina −120 (Sicredi) → TROCA_PIX 500 (Sicredi −500 / Caixa +527,50, receita 27,50) → REEMBOLSO PagSeguro −80 → REEMBOLSO Caixa da Loja valor 0 (bruto 30) → SANGRIA Caixa da Loja→Sicredi 300.
+- **Trigger:** Sicredi −908,81 → **−1.228,81**; PagSeguro 107,53 → **27,53**; Caixa da Loja 0 → **2.727,50**; cofres/fundo intactos. Saldo devedor mantido, sem piso zero.
+- **Sem lucro indevido:** Σ de todos os `valor` = 2.327,50 = fundo 2.500 (físico) + taxa 27,50 (receita real) − 120 − 80; sangria/transferência somam 0. Nenhuma linha `tipo` de receita/lucro.
+- **Fechamento (tela):** fundo 2.500,00 + entradas 527,50 − saídas 30,00 − sangrias 300,00 = **esperado 2.697,50**; contado 2.697 → **diferença −R$ 0,50 ("Falta de…")**; contado 2.698 → **+R$ 0,50 ("Sobra de…")**. `FECHAMENTO` (valor −2.727,50) zerou o Caixa da Loja → **0,00**.
+- **Conferência da abertura:** referência 2.500 lida do `FECHAMENTO`; informado 2.500 → "sem diferença" (verde); informado 2.400 → aviso "−R$ 100,00 … pode indicar que mexeram no fundo"; botão nunca bloqueia; campo vazio → card some.
+- **Resumo Financeiro:** aba Pessoal › **Gasolina Usado R$ 120,00 / Saldo −R$ 120,00**; rodapé Usado R$ 120,00; **Teto › Total utilizado R$ 120,00**. Cartões "Saldos por conta" refletiram todos os saldos novos.
+- **Limpeza:** `DELETE ... WHERE meta->>'_teste'='audit-passo2'` → trigger reverteu todos os saldos ao `saldo_inicial` exato; `lancamentos` = 0.
+- Console sem erro do app (module carregou inteiro; só os `ERR_CONNECTION_CLOSED` de sempre do server estático do harness).
+
+### O que ainda falta (fora do escopo deste passo)
+- Históricos das telas (Retirada / Troca Pix / Reembolso) seguem com **linhas fictícias** — trocar por SELECT em `lancamentos` + ligar Filtrar/Limpar.
+- Seção **"Cofre"** ainda com valores fixos no HTML.
+- **Limites/Teto** do Resumo ainda em `localStorage` (não banco).
+- **Sem tela de venda/receita** — o fluxo não trabalha com vendas (decisão do usuário); se um dia entrar dinheiro de venda, precisa de uma entrada `TROCA_PIX`-like ou nova.
+- **Relatório mensal** — pedido explícito de deixar pra depois.
+- Fechamento não grava snapshot de Sicredi/PagSeguro como conferência dos bancos (só guarda em `meta`); comparação banco-informado × sistema pode entrar depois.
+
+**Não publicado** — aguardando revisão/aprovação.
+
+## PASSO 3 — Painel A (Conferência do Caixa Físico) + Painel B (Resultado Financeiro) via classificador único (2026-08-28)
+
+Especificação aprovada pelo usuário (pontos a–g fechados). Fonte única = `lancamentos`; **1 classificador puro** produz as 2 projeções, **sem duplicar lançamento**. Só `paineldecontrole/index.html`. Sem migration (só o novo valor de `tipo`).
+
+### Implementado (ordem do bloco 13 da spec)
+1. **`finClassificarLancamento(l)`** — puro. Entrada `{tipo, valor(sinal), contaChave, meta}` → `{grupo, subgrupo, valorEconomico, afetaGaveta, valorGaveta}`. `grupo` ∈ receita / despesa / retirada_socio / sangria / transferencia_interna / abertura / fechamento. Regras: ABERTURA/FECHAMENTO/TRANSFERENCIA/SANGRIA = `valorEconomico 0`; `TROCA_PIX` perna `caixa_recebido` = `valorEconomico` só `meta.receita` (a taxa) e `valorGaveta` = valor inteiro recebido; perna `pix_enviado` = neutra; `RETIRADA` finalidade pessoal → `retirada_socio`, categoria "Gráfica" → subgrupo grafica; `afetaGaveta`/`valorGaveta` só quando `contaChave==='caixa_loja'`.
+2. **Reembolso do Caixa da Loja** agora grava `valor: −Math.abs(valor)` REAL (ponto c) — deixou de ser `valor 0` + `meta.valor_bruto`. `meta` enxuta `{origem_conta, descricao}`. Classificador mantém fallback defensivo (`v!==0 ? |v| : meta.valor_bruto`).
+3. **Painel A** — `finFechCalcular()` reescrito sobre o classificador: `esperado = fundo_abertura + Σ(valorGaveta>0) − Σ(|valorGaveta<0| exceto sangria) − Σ(sangrias)`. Removido o termo `reembCaixa` (reembolso do caixa agora entra em `saidas`). `mfFechamentoConferir()` exibe fundo / +entradas / −saídas / −sangrias / = esperado / contado / diferença / status; chama `finRenderResultado()` no fim. Card renomeado como "Painel A". Inputs `#mfFechFC1/FC2` ganharam `oninput="mfFechamentoConferir()"` (alimentam a variação do fundo do Painel B ao vivo).
+4. **`RECEBIMENTO_SERVICO`** — tipo novo. Tela `#mfScreen-recebimento` (tile "Recebimento / Serviço" no `#mfScreen-inicio`): Data (Hoje/Especificar), Forma (`dinheiro`/`pix`/`cartao`), Conta de destino (6 contas, default pela forma), Valor, Descrição. `mfRegistrarRecebimento()` grava `{conta_id, valor:+v, tipo:'RECEBIMENTO_SERVICO', origem:'recebimento', meta:{forma, descricao}}`. É receita; a conta de destino define se entra na gaveta.
+5. **Categoria "Gráfica"** — adicionada em `MF_RET_CATEGORIAS.empresa` e no `<select>` `#mfRetCatEmpresaSel`. Sem tipo novo — é `RETIRADA` empresa `meta.categoria='Gráfica'`. Nenhuma lógica especial na tela (só "Despesa Fixa" tem tratamento próprio).
+6. **Painel B** — `finResultadoCache` + `finCarregarResultado(dia)` (SELECT `lancamentos` do dia, todas as contas) + `finContaChavePorId()` + `finCalcularResultado()` (agrega receitas dinheiro/pix/cartão/taxa_troca_pix, despesas empresa/gráfica/reembolso, retirada_socio, neutros troca_pix_principal/sangrias/transferências/abertura/fechamento/variação do fundo) + `finRenderResultado()`. `RESULTADO_OPERACIONAL = totalReceitas − totalDespesas`; `RESULTADO_FINANCEIRO = RESULTADO_OPERACIONAL − retirada_socio`. **Checagem de consistência:** `Σ valores − Σ aberturas − Σ fechamentos == RESULTADO_FINANCEIRO` (tolerância 0,005) → card "Consistência: OK / DIVERGÊNCIA de R$ X". Card `#finPainelB` no `#finScreen-fechamento`, com seção "Movimentações neutras" recolhível.
+7. **Realtime + navegação** — `financeiroTela('fechamento')`, `finPosGravacao()` e a assinatura realtime `lancamentos` passaram a carregar os DOIS caches (`finCarregarMovimentosDia` + `finCarregarResultado`) e re-renderizar os dois painéis. `finFecharCaixa()`: `meta` do FECHAMENTO perdeu `reemb_caixa`, ganhou `resultado_operacional`/`resultado_financeiro` (snapshot); recarrega o resultado depois de fechar.
+
+### Testado ao vivo contra produção (`kihnavaovspdjnegcraj`) — dia completo, depois **apagado** (`lancamentos` = 0, contas de volta ao seed; **não havia dado real anterior**)
+Payloads dos 11 botões capturados no harness (dbInsert interceptado) e replicados via SQL. Operações: **Abertura** FC1 1.000 + FC2 500 → **Recebimento dinheiro** 300 (Caixa) → **Recebimento Pix** 200 (PagSeguro) → **Recebimento cartão** 150 (PagSeguro) → **Troca por Pix** 400 (taxa 22, Sicredi −400 / Caixa +422) → **Retirada pessoal** Almoço 60 (Caixa) → **Retirada empresa** Manutenção 90 (PagSeguro) → **Gráfica** 130 (Caixa) → **Reembolso** Sicredi 40 → **Transferência** Cofre Notas → Cofre Moedas 36 → **Sangria** Caixa → Sicredi 1.000 → **Fechamento** (contado 1.032).
+
+| Verificação | Esperado | Encontrado |
+|---|---|---|
+| Saldos (motor/trigger) | Sicredi −348,81 · PagSeguro 367,53 · Cofre Notas 200,00 · Cofre Moedas 36,00 · Fundo 160,00 · Caixa da Loja 1.032,00 → 0,00 pós-fechamento | idênticos; `recalc == saldo` em todas (15 lançamentos, cada op tocou sua conta 1×, sem duplicação) |
+| **Painel A** — fundo 1.500 + entradas 722 − saídas 190 − sangrias 1.000 | esperado **1.032,00** | 1.032,00 · contado 1.032 → **diferença 0 "CONFERE"** · falta (−5) e sobra (+8) exibem aviso, nunca bloqueiam · variação do fundo com FC 1.700 → **R$ 200,00** |
+| **Painel B** — receitas dinheiro 300 / Pix 200 / cartão 150 / taxa 22 = **672** · despesas empresa 90 / gráfica 130 / reembolso 40 = **260** · sócio 60 | Operacional **412,00** · Financeiro **352,00** | idênticos · neutros: troca-pix principal **400** · sangrias **1.000** · transferências **1** · fundo **0** |
+| Consistência | `820 − 1.500 − (−1.032) = 352` = Resultado Financeiro | **OK** (antes e depois do FECHAMENTO) |
+| Transferência/Sangria como lucro | 0 | ambas `valorEconomico 0` |
+| Principal da Troca por Pix como lucro | 0 (só a taxa 22 é receita) | confirmado |
+| Saldo negativo | Sicredi/… permitido, sem piso | Sicredi transitou −1.348,81 → −348,81 normalmente |
+| Limpeza | `lancamentos` = 0, contas = seed | confirmado; nenhum dado real anterior existia |
+
+Console sem erro do app (module carrega inteiro; só `ERR_CONNECTION_CLOSED` do servidor estático do harness).
+
+### Fora deste passo (inalterado)
+Relatório Mensal · seletor de período do Painel B · históricos reais das telas · seção "Cofre" ler do banco · limites/Teto do Resumo no banco.
+
+**Não publicado** — aguardando sua revisão/autorização para o primeiro dia real.
+
+## PASSO 4 — Modelo de reconciliação: receita apurada, sem lançar serviço a serviço (2026-08-29) — **PUBLICADO**
+
+Revisão de fundo pedida pelo usuário: **durante o dia não se lança nenhuma receita**. Só entram lançamentos de movimento real (retiradas, gráfica, reembolsos, transferências, sangrias, Troca por Pix). No fechamento o sistema **reconstrói o movimento conhecido** e calcula a receita como *"o que falta para explicar o dinheiro contado"*.
+
+### Regras aprovadas (pontos a–e)
+- **a)** Pix/cartão: apurados pela **variação do saldo bancário informado no fechamento** — nunca digitados durante o expediente. Campo opcional; se não informar o saldo final da conta, aquele canal não apura receita (não inventa).
+- **b)** Tela de "Recebimento de serviço" **removida** (`#mfScreen-recebimento` + tile + `mfRegistrarRecebimento`). Tipo `RECEBIMENTO_SERVICO` mantido só internamente para compatibilidade.
+- **c)** **Ajuste de conferência** opcional no fechamento (valor + "faltou/sobrou" + motivo). Vazio → a diferença positiva vira receita apurada. Preenchido → separa essa diferença da receita (lançamento `AJUSTE_CAIXA`, **neutro** no resultado).
+- **d)** Abertura/fechamento inalterados: ABERTURA injeta FC1+FC2 no Caixa da Loja; FECHAMENTO zera a gaveta (`valor = −contado`).
+- **e)** Cofre **não** entra na abertura.
+
+### Implementado em `paineldecontrole/index.html`
+- **Classificador** `finClassificarLancamento`: novos tipos `RECEITA_SERVICOS` (grupo receita; dinheiro se Caixa, eletrônico se banco; entra na gaveta se Caixa) e `AJUSTE_CAIXA` (grupo ajuste; `valorEconomico 0`; move a gaveta pelo valor com sinal).
+- **`finValorNum(id)`** — parser decimal ("1.234,56" → 1234.56) usado só nos campos do fechamento; telas de transação seguem em reais inteiros. **`finCampoPreenchido(id)`**.
+- **`finApurarReceitas()`** — lê `finFechCalcular()` + campos. `contadoCaixa = Notas + Moedas`. `ajuste = faltou ? −v : sobrou ? +v : 0`. `receitaCaixa = contado − movimentoConhecido − ajuste`. Para Sicredi/PagSeguro, se o saldo final foi informado: `receita = informado − saldo_atual_da_conta`.
+- **`mfFechamentoConferir()`** → Painel A: Fundo de Abertura · Entradas · Saídas · Sangrias · **Movimento conhecido** · Contado · Ajuste · **Receita apurada em dinheiro** (vermelho se < 0).
+- **`finResultadoProjetado()`** — junta o cache (lançamentos já gravados) + a apuração ao vivo + as linhas que o fechamento vai gravar. **`finRenderResultado()`** → Painel B: Receita caixa / Sicredi / PagSeguro / taxa Troca-Pix → Total · Despesas empresa / gráfica / reembolso → Total · **Resultado Operacional** · Retiradas de sócio · **Resultado Financeiro**. Linhas de banco só aparecem se houver receita apurada naquele canal. Neutros: principal da Troca-Pix, sangrias, transferências, ajuste, variação do fundo.
+- **Consistência**: `Σ valores − Σ ABERTURA − Σ FECHAMENTO − Σ AJUSTE_CAIXA == Resultado Financeiro` (mostrada só enquanto há contagem em tela).
+- **`finFecharCaixa()`** — grava, num único insert em lote: `AJUSTE_CAIXA` (se ajuste ≠ 0) + 1 `RECEITA_SERVICOS` por conta com receita > 0 (`meta.apurado=true`, `meta.conta_chave`) + `FECHAMENTO` (`valor = −contado`). A gaveta fecha em 0 (pré-close + receita − ajuste − contado).
+- HTML do fechamento: campos `inputmode="decimal"` (Notas/Moedas/FC1/FC2/Sicredi/PagSeguro), card "Ajuste de conferência (opcional)", Painel A e Painel B reescritos.
+
+### Testado ao vivo contra produção (`kihnavaovspdjnegcraj`) — 2 cenários completos pelo **Edge Function real** (`db-write`), depois **apagados** (`lancamentos` = 0)
+
+**Cenário 1** — Abertura 500 (FC 300+200) · Troca-Pix 400 (taxa 22 → Sicredi −400 / Caixa +422) · Retirada pessoal Almoço 60 · Gráfica 40 · Retirada empresa Manutenção 90 (PagSeguro) · Reembolso Sicredi 30 · Transferência Cofre Notas→Moedas 25 · Sangria Caixa→Sicredi 300. Fechamento: contado **900**, PagSeguro informado **167,53**, Sicredi não informado, sem ajuste.
+
+| Verificação | Esperado | Encontrado |
+|---|---|---|
+| Saldos após os 11 movimentos | Sicredi −1.038,81 · PagSeguro 17,53 · Cofre Notas 211 · Cofre Moedas 25 · Fundo 160 · Caixa 522 | idênticos |
+| Painel A | fundo 500 + entradas 422 − saídas 100 − sangrias 300 = **522** · contado 900 · **receita dinheiro 378** | idênticos |
+| Painel B | receita 378 + 150 (PagSeguro 167,53−17,53) + taxa 22 = **550** · despesas 90+40+30 = **160** · sócio 60 · **Operacional 390** · **Financeiro 330** | idênticos · linha Sicredi oculta, linha PagSeguro visível |
+| Fechamento gravado | RECEITA_SERVICOS Caixa +378 · RECEITA_SERVICOS PagSeguro +150 · FECHAMENTO Caixa −900 · sem AJUSTE | idêntico · Caixa da Loja → **0,00** · PagSeguro → 167,53 |
+| Consistência | `−70 − 500 − (−900) − 0 = 330` | **OK** |
+
+**Cenário 2 (ajuste + centavos)** — Abertura 200 · Retirada empresa Consumíveis 15. Fechamento: contado **362,75** (Notas 350,50 + Moedas 12,25), **ajuste "faltou" 5,00** ("teste perda de caixa"), sem banco.
+
+| Verificação | Esperado | Encontrado |
+|---|---|---|
+| Painel A | mov. conhecido 185 · contado 362,75 · ajuste −5,00 · **receita dinheiro 182,75** | idênticos |
+| Painel B | receita 182,75 − despesa 15 · **Operacional / Financeiro 167,75** · neutro ajuste −5,00 | idênticos |
+| Fechamento gravado | AJUSTE_CAIXA −5,00 (motivo gravado) · RECEITA_SERVICOS +182,75 · FECHAMENTO −362,75 | idêntico · Caixa da Loja → **0,00** |
+| Consistência | `0 − 200 − (−362,75) − (−5) = 167,75` | **OK** |
+
+Trigger de saldo: `recalc == saldo` em todas as contas nos dois cenários; DELETE reverteu tudo ao seed (delta correto em INSERT/UPDATE/DELETE). Console sem erro do app.
+
+### Saldos reais iniciais gravados (`contas.saldo` e `saldo_inicial`)
+| Conta | Saldo |
+|---|---|
+| Sicredi | **− R$ 994,00** |
+| PagSeguro | **R$ 0,00** |
+| Cofre de Notas | **R$ 713,00** |
+| Cofre de Moedas | **R$ 8,50** |
+| Fundo de Caixa | **R$ 160,00** |
+| Caixa da Loja | **R$ 0,00** |
+
+`lancamentos` = 0 (nenhum dado real anterior existia). Cofre **não** somado à abertura.
+
+### Fora deste passo (continua pendente)
+Relatório Mensal · seletor de período do Painel B · históricos reais das telas (ainda `<tr>` fictício) · seção "Cofre" ler do banco · limites/Teto do Resumo no banco.
+
+**PUBLICADO** em `main` (GitHub Pages → lanblackout.com) em 2026-08-29.
+
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
 - Editar contrato/declaração/currículo: registros salvos *antes* dessa versão de cada formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
