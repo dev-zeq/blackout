@@ -1429,6 +1429,7 @@
                         <select id="mfRetCatEmpresaSel" onchange="mfRetiradaCategoria()">
                             <option value="">Selecione</option>
                             <option>Despesa Fixa</option>
+                            <option>Folha de Pagamento</option>
                             <option>Gráfica</option>
                             <option>Manutenção</option>
                             <option>Consumíveis</option>
@@ -1436,6 +1437,21 @@
                             <option>Juros de cartão</option>
                             <option>Juros diversos</option>
                         </select>
+                    </div>
+                    <!-- Folha de Pagamento (Empresa): beneficiário. Márcio/Renata =
+                         abate do pró-labore do sócio (retirada de sócio no resultado;
+                         nunca bloqueia; saldo devedor rola pro mês seguinte).
+                         Terceiros = despesa normal da loja. Só controle de saldo
+                         acumulado — não é limite. Ver rfFolhaSaldo(). -->
+                    <div class="fin-field" id="mfRetFolhaField" style="display:none;">
+                        <label>Folha de Pagamento — beneficiário *</label>
+                        <select id="mfRetFolhaBenef" onchange="mfRetiradaCategoria()">
+                            <option value="">Selecione</option>
+                            <option>Márcio</option>
+                            <option>Renata</option>
+                            <option>Terceiros</option>
+                        </select>
+                        <div class="fin-note" style="text-align:left; margin-top:6px;">Márcio ou Renata: abate do pró-labore do sócio (não bloqueia; saldo devedor rola pro mês seguinte). Terceiros: despesa normal da loja.</div>
                     </div>
                     <!-- Despesa Fixa (Empresa): 3 campos fixos (sem Água). A soma
                          é o valor total da retirada nesta categoria. -->
@@ -2141,6 +2157,21 @@
                     <div class="fin-kv"><span class="fin-kv-label">Valor excedente <span style="color:var(--text-faint);">(acima do teto)</span></span><span class="fin-kv-value" id="rfProLaboreExcedente">R$ 0,00</span></div>
                     <div class="fin-note" style="text-align:left; margin-top:10px;">Consolidado das categorias pessoais/familiares que saem da empresa no mês selecionado: <b>Retirada Márcio, Retirada Renata, Mercado, Gasolina, Almoço, Despesa Fixa da Casa, Outras Despesas Domésticas</b>. É o mesmo teto da aba Pessoal, visto pelo lado da empresa. Passar do teto é permitido — o excedente segue a divisão 50% / 50% entre Márcio e Renata já definida. O detalhe por retirada fica na aba <b>Pessoal</b>.</div>
                 </div>
+
+                <!-- Saldo acumulado de Pró-labore (Folha de Pagamento) — SÓ controle
+                     de saldo, não é limite: nunca bloqueia a retirada. Cada mês
+                     credita o pró-labore mensal (⚙, congelado por mês em
+                     localStorage rf_folha_prolabore) e abate a Folha paga no mês;
+                     o saldo devedor rola pro mês seguinte. Não vira lançamento.
+                     Ver rfFolhaSaldo() / rfFolhaRender(). -->
+                <div class="fin-section-title">Saldo acumulado de Pró-labore <span style="color:var(--text-faint); text-transform:none; font-weight:400;">— Folha de Pagamento</span></div>
+                <div class="fin-card" id="rfFolhaCard">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> Controle de saldo <span style="color:var(--text-faint); text-transform:none; font-weight:400;">— não é limite de retirada</span></div>
+                    <div id="rfFolhaMarcio"></div>
+                    <div id="rfFolhaRenata" style="margin-top:14px; border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;"></div>
+                    <div class="fin-note" style="text-align:left; margin-top:10px;">Cada mês credita o pró-labore mensal configurado na <b>⚙</b> e abate a Folha de Pagamento paga naquele mês (só Márcio/Renata; Terceiros é despesa da loja). O saldo (positivo ou <b>devedor</b>) rola para o mês seguinte. <b>Nunca bloqueia</b> a retirada e <b>não vira lançamento</b>. O valor mensal é congelado por mês — mudar a ⚙ depois só vale dos meses seguintes.</div>
+                </div>
+
                 <div class="fin-section-title">Custos por categoria — Empresa</div>
                 <div class="fin-table-wrap">
                     <div class="fin-table-scroll">
@@ -4554,10 +4585,13 @@
             const dfPessoal = pcat === 'Despesa Fixa';
             const df = dfEmpresa || dfPessoal;
             const outras = pcat === 'Outras Despesas Domésticas';
+            const folha = ecat === 'Folha de Pagamento';
 
             const setDisp = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
             setDisp('mfRetDespesaFixa', dfPessoal);
             setDisp('mfRetDespesaFixaEmpresa', dfEmpresa);
+            setDisp('mfRetFolhaField', folha);
+            if (!folha) { const fb = document.getElementById('mfRetFolhaBenef'); if (fb) fb.value = ''; }
             setDisp('mfRetValorField', !df);
             setDisp('mfRetDescricaoField', !df);
 
@@ -4594,7 +4628,7 @@
         // Categorias por tipo de retirada — reusadas no filtro do "Histórico de
         // retiradas". Só alimentam o <select>; nenhuma regra/consulta real ainda.
         const MF_RET_CATEGORIAS = {
-            empresa: ['Despesa Fixa', 'Gráfica', 'Manutenção', 'Consumíveis', 'Reembolso', 'Juros de cartão', 'Juros diversos'],
+            empresa: ['Despesa Fixa', 'Folha de Pagamento', 'Gráfica', 'Manutenção', 'Consumíveis', 'Reembolso', 'Juros de cartão', 'Juros diversos'],
             pessoal: ['Retirada Márcio', 'Retirada Renata', 'Mercado', 'Gasolina', 'Almoço', 'Despesa Fixa', 'Outras Despesas Domésticas'],
         };
         function mfRetiradaFiltroTipo() {
@@ -4841,6 +4875,7 @@
             const dataEsp = document.querySelector('input[name="mfRetData"][value="especificar"]');
             const data = (dataEsp && dataEsp.checked) ? ((document.getElementById('mfRetDataInput') || {}).value || '') : todayISO();
 
+            const folhaBenef = (document.getElementById('mfRetFolhaBenef') || {}).value || '';
             let valor, meta = { finalidade, categoria };
             if (categoria === 'Despesa Fixa') {
                 valor = finalidade === 'empresa' ? mfRetiradaDespesaFixaEmpresaTotal() : mfRetiradaDespesaFixaTotal();
@@ -4850,10 +4885,16 @@
             } else {
                 valor = finValorNum('mfRetValor');
             }
+            // Folha de Pagamento (Empresa): grava só o beneficiário em meta. É um
+            // RETIRADA normal de UMA perna — não cria RECEITA_SERVICOS nem
+            // AJUSTE_CAIXA. Márcio/Renata → retirada de sócio (classificador);
+            // Terceiros → despesa da empresa. Só controle de saldo, não bloqueia.
+            if (categoria === 'Folha de Pagamento') meta.folha_beneficiario = folhaBenef;
             if (descricao) meta.descricao = descricao;
 
             if (!finalidade) return finMsg('mfRetMsg', 'err', 'Escolha se a retirada é de Empresa ou Pessoal.');
             if (!categoria) return finMsg('mfRetMsg', 'err', 'Escolha a categoria da retirada.');
+            if (categoria === 'Folha de Pagamento' && !folhaBenef) return finMsg('mfRetMsg', 'err', 'Escolha o beneficiário da Folha de Pagamento (Márcio, Renata ou Terceiros).');
             if (!origem) return finMsg('mfRetMsg', 'err', 'Escolha a origem do valor.');
             if (!data) return finMsg('mfRetMsg', 'err', 'Informe a data da retirada.');
             if (!(valor > 0)) return finMsg('mfRetMsg', 'err', 'Informe um valor maior que zero.');
@@ -4867,9 +4908,12 @@
                     descricao: descricao || (finalidade + ' · ' + categoria),
                     origem: 'retirada', meta,
                 });
-                finMsg('mfRetMsg', 'ok', `Retirada de ${mfBRL(valor)} registrada — saída de ${FIN_CONTA_LABEL[origem] || origem}. Resumo Financeiro atualizado.`);
+                finMsg('mfRetMsg', 'ok', `Retirada de ${mfBRL(valor)} registrada`
+                    + (categoria === 'Folha de Pagamento' ? ` — Folha de Pagamento · ${folhaBenef}` : '')
+                    + ` — saída de ${FIN_CONTA_LABEL[origem] || origem}. Resumo Financeiro atualizado.`);
                 const v = document.getElementById('mfRetValor'); if (v) { v.value = ''; const l = v.parentElement && v.parentElement.querySelector('.extenso-valor'); if (l) l.textContent = ''; }
                 const d = document.getElementById('mfRetDescricao'); if (d) d.value = '';
+                const fb = document.getElementById('mfRetFolhaBenef'); if (fb) fb.value = '';
                 ['mfRetDfAluguel', 'mfRetDfEnergia', 'mfRetDfAgua', 'mfRetDfInternet', 'mfRetDfeAluguel', 'mfRetDfeEnergia', 'mfRetDfeInternet'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
                 mfRetiradaDespesaFixaTotal(); mfRetiradaDespesaFixaEmpresaTotal();
                 await finPosGravacao();
@@ -5082,7 +5126,12 @@
                     valorEconomico: Number(m.receita) || 0, afetaGaveta: true, valorGaveta: v };
             }
             if (tipo === 'RETIRADA') {
-                const socio = m.finalidade === 'pessoal';
+                // Folha de Pagamento p/ Márcio ou Renata = retirada de sócio (abate
+                // do pró-labore); p/ Terceiros = despesa normal da empresa. Não cria
+                // lançamento nenhum a mais; só muda em qual linha do resultado entra.
+                const folhaSocio = m.categoria === 'Folha de Pagamento'
+                    && (m.folha_beneficiario === 'Márcio' || m.folha_beneficiario === 'Renata');
+                const socio = m.finalidade === 'pessoal' || folhaSocio;
                 const grafica = m.categoria === 'Gráfica';
                 return { grupo: socio ? 'retirada_socio' : 'despesa',
                     subgrupo: grafica ? 'grafica' : (socio ? null : 'despesa_empresa'),
@@ -5667,8 +5716,9 @@
             if (op.tipo === 'RETIRADA') {
                 const fin = meta.finalidade === 'empresa' ? 'Empresa' : 'Pessoal';
                 const cat = meta.categoria ? (' · ' + meta.categoria) : '';
+                const benef = meta.folha_beneficiario ? (' · ' + meta.folha_beneficiario) : '';
                 return { titulo: 'Retirada', valor: Math.abs(Number(first.valor) || 0), sinal: -1,
-                    metaTxt: histOpConta(first) + ' · ' + fin + cat, desc, editKind: 'simples-neg', editValor: Math.abs(Number(first.valor) || 0) };
+                    metaTxt: histOpConta(first) + ' · ' + fin + cat + benef, desc, editKind: 'simples-neg', editValor: Math.abs(Number(first.valor) || 0) };
             }
             if (op.tipo === 'REEMBOLSO') {
                 return { titulo: 'Reembolso', valor: Math.abs(Number(first.valor) || 0), sinal: -1,
@@ -9046,6 +9096,98 @@
         function rfFmt(n) {
             return 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
+
+        // ===== Saldo acumulado de Pró-labore (Folha de Pagamento) — 2026-08-29 =====
+        // SÓ controle de saldo, nunca bloqueia retirada, NÃO cria lançamento nenhum
+        // (nem receita, nem ajuste de caixa). A Folha de Pagamento já é um RETIRADA
+        // comum; aqui é só leitura/exibição. O pró-labore mensal de cada sócio é
+        // CONGELADO POR MÊS neste ledger — mudar o valor na ⚙ depois NÃO reescreve
+        // meses já decorridos, só vale dos meses seguintes em diante.
+        const RF_FOLHA_PL_KEY = 'rf_folha_prolabore';
+        function rfFolhaLedger() {
+            try { return JSON.parse(localStorage.getItem(RF_FOLHA_PL_KEY) || '{}') || {}; } catch (e) { return {}; }
+        }
+        function rfFolhaLedgerSalvar(obj) {
+            try { localStorage.setItem(RF_FOLHA_PL_KEY, JSON.stringify(obj || {})); } catch (e) {}
+        }
+        // meses inteiros entre dois "YYYY-MM" (inclusive); 0 se ym2 < ym1.
+        function rfMesesEntre(ym1, ym2) {
+            if (!ym1 || !ym2) return 0;
+            const [y1, m1] = ym1.split('-').map(Number);
+            const [y2, m2] = ym2.split('-').map(Number);
+            const n = (y2 - y1) * 12 + (m2 - m1) + 1;
+            return n > 0 ? n : 0;
+        }
+        function rfYmAdd(ym, k) {
+            const [y, m] = ym.split('-').map(Number);
+            const t = (y * 12 + (m - 1)) + k;
+            return Math.floor(t / 12) + '-' + String((t % 12) + 1).padStart(2, '0');
+        }
+        // Mês-alvo do card = fim do período selecionado no Resumo (ou mês atual).
+        function rfFolhaAlvoMes() {
+            const esp = document.querySelector('input[name="rfPeriodo"][value="especificar"]');
+            if (esp && esp.checked) {
+                const fim = (document.getElementById('rfDataFim') || {}).value || '';
+                if (fim) return fim.slice(0, 7);
+            }
+            return todayISO().slice(0, 7);
+        }
+        // Saldo acumulado de pró-labore de um sócio ('Márcio' | 'Renata').
+        function rfFolhaSaldo(socio) {
+            const mensalAtual = Number(rfLimites()['Pró-labore ' + socio]) || 0;
+            const lancs = (rfMovsCache || []).filter(m => m.categoria === 'Folha de Pagamento' && m.folha === socio);
+            const alvo = rfFolhaAlvoMes();
+            const mesAtual = todayISO().slice(0, 7);
+            if (!lancs.length) {
+                return { mensalAtual, temDados: false, desde: null, alvo, nMeses: 0, creditado: 0, pago: 0, saldo: 0 };
+            }
+            const meses = lancs.map(m => String(m.data || '').slice(0, 7)).filter(Boolean).sort();
+            const desde = meses[0];
+            const nMeses = rfMesesEntre(desde, alvo);
+            // Congelamento: cada mês JÁ DECORRIDO (do 1º lançamento até o mês
+            // atual) ganha uma foto do valor da config e nunca mais muda. Meses
+            // futuros nunca são congelados — pegam o valor atual só como projeção.
+            // Assim, mudar a ⚙ depois só afeta os meses seguintes, nunca os
+            // anteriores.
+            const ledger = rfFolhaLedger();
+            if (!ledger[socio]) ledger[socio] = {};
+            let mudou = false;
+            for (let ym = desde; ym <= mesAtual; ym = rfYmAdd(ym, 1)) {
+                if (ledger[socio][ym] === undefined) { ledger[socio][ym] = mensalAtual; mudou = true; }
+                if (rfMesesEntre(desde, ym) > 600) break;   // trava de segurança
+            }
+            if (mudou) rfFolhaLedgerSalvar(ledger);
+            let creditado = 0;
+            for (let ym = desde, i = 0; i < nMeses; ym = rfYmAdd(ym, 1), i++) {
+                const v = ledger[socio][ym];
+                creditado += (v === undefined ? mensalAtual : Number(v) || 0);
+            }
+            const pago = lancs.filter(m => String(m.data || '').slice(0, 7) <= alvo).reduce((s, m) => s + (Number(m.valor) || 0), 0);
+            return { mensalAtual, temDados: true, desde, alvo, nMeses, creditado, pago, saldo: creditado - pago };
+        }
+        function rfFolhaRenderSocio(elId, socio) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const s = rfFolhaSaldo(socio);
+            const mesLbl = ym => { const p = String(ym || '').split('-'); return p.length === 2 ? (p[1] + '/' + p[0]) : (ym || '—'); };
+            if (!s.temDados) {
+                el.innerHTML = `<div class="fin-kv"><span class="fin-kv-label"><b>${socio}</b></span><span class="fin-kv-value" style="color:var(--text-dim);">sem folha registrada</span></div>`
+                    + `<div class="fin-kv"><span class="fin-kv-label">Pró-labore mensal (⚙)</span><span class="fin-kv-value">${rfFmt(s.mensalAtual)}</span></div>`;
+                return;
+            }
+            const devedor = s.saldo < -0.005;
+            el.innerHTML =
+                `<div class="fin-kv"><span class="fin-kv-label"><b>${socio}</b></span><span class="fin-kv-value" style="color:var(--text-faint);">desde ${mesLbl(s.desde)}</span></div>`
+                + `<div class="fin-kv"><span class="fin-kv-label">Pró-labore mensal</span><span class="fin-kv-value">${rfFmt(s.mensalAtual)}</span></div>`
+                + `<div class="fin-kv"><span class="fin-kv-label">Meses acumulados <span style="color:var(--text-faint);">(até ${mesLbl(s.alvo)})</span></span><span class="fin-kv-value">${s.nMeses}</span></div>`
+                + `<div class="fin-kv"><span class="fin-kv-label">Total creditado</span><span class="fin-kv-value">${rfFmt(s.creditado)}</span></div>`
+                + `<div class="fin-kv"><span class="fin-kv-label">Pago via Folha de Pagamento</span><span class="fin-kv-value" style="color:#fca5a5;">${rfFmt(s.pago)}</span></div>`
+                + `<div class="fin-kv"><span class="fin-kv-label"><b>= Saldo acumulado</b></span><span class="fin-kv-value" style="font-size:16px; color:${devedor ? '#fca5a5' : 'var(--accent-bright)'};">${rfFmt(s.saldo)}${devedor ? ' <span style="font-size:11px; font-weight:400;">(devedor — rola pro mês seguinte)</span>' : ''}</span></div>`;
+        }
+        function rfFolhaRender() {
+            rfFolhaRenderSocio('rfFolhaMarcio', 'Márcio');
+            rfFolhaRenderSocio('rfFolhaRenata', 'Renata');
+        }
         // Retiradas reais do banco (lançamentos tipo RETIRADA) — a integração do
         // passo 2 (2026-08-28) substituiu a lista fictícia/localStorage. Cache
         // recarregado ao abrir o Resumo e a cada lançamento novo (realtime).
@@ -9060,6 +9202,7 @@
                 rfMovsCache = (data || []).map(r => ({
                     tipo: (r.meta && r.meta.finalidade) || 'pessoal',
                     categoria: (r.meta && r.meta.categoria) || '',
+                    folha: (r.meta && r.meta.folha_beneficiario) || '',
                     valor: Math.abs(Number(r.valor) || 0),
                     data: r.data,
                 }));
@@ -9239,14 +9382,21 @@
             // os dois cartões separados Pró-labore Márcio / Pró-labore Renata.
 
             // Tabela Empresa: todas as categorias Empresa (não há mais Pró-labore aqui).
+            // "Folha de Pagamento" mostra SÓ Terceiros (o que é despesa da loja) —
+            // Márcio/Renata ficam só no card "Saldo acumulado de Pró-labore" abaixo,
+            // pra não dar aparência de duplicidade (despesa × retirada de sócio).
             const ecats = MF_RET_CATEGORIAS.empresa;
             let tEmp = 0;
             document.getElementById('rfEmpresaRows').innerHTML = ecats.map(cat => {
-                const tot = somaCat('empresa', cat);
+                const tot = cat === 'Folha de Pagamento'
+                    ? movs.filter(m => m.tipo === 'empresa' && m.categoria === cat && m.folha === 'Terceiros').reduce((s, m) => s + (Number(m.valor) || 0), 0)
+                    : somaCat('empresa', cat);
                 tEmp += tot;
-                return `<tr><td>${escapeHtml(cat)}</td><td class="fin-table-amount">${rfFmt(tot)}</td></tr>`;
+                const lbl = cat === 'Folha de Pagamento' ? 'Folha de Pagamento (Terceiros)' : cat;
+                return `<tr><td>${escapeHtml(lbl)}</td><td class="fin-table-amount">${rfFmt(tot)}</td></tr>`;
             }).join('');
             document.getElementById('rfEmpresaTotal').textContent = rfFmt(tEmp);
+            rfFolhaRender();
         }
         window.loadPlanejamento = loadPlanejamento;
         window.rfTab = rfTab;

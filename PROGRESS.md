@@ -2035,6 +2035,28 @@ Detalhamento da contagem — **não** vira lançamento, receita nem ajuste; é s
 ### Ajuste do saldo inicial do Cofre de Notas (2026-08-29)
 O usuário conferiu o cofre fisicamente na noite anterior ao primeiro fechamento: **Cofre de Notas tinha R$ 577,00**, não 713. Corrigido direto em `contas` (project `kihnavaovspdjnegcraj`), sem lançamento: `saldo_inicial` 713 → **577**, `saldo` 563 → **427,00** (577 − 140 − 10 das duas retiradas do cofre já registradas). Demais contas inalteradas.
 
+## Folha de Pagamento (Retirada da Empresa) + saldo acumulado de pró-labore (2026-08-29) — **PUBLICADO**
+
+Nova categoria **"Folha de Pagamento"** em Retirada da Empresa, com beneficiário **Márcio / Renata / Terceiros**. É um `RETIRADA` comum de **uma perna** (`valor: -Math.abs(v)`) — **nunca cria `RECEITA_SERVICOS` nem `AJUSTE_CAIXA`**, não quebra a Opção 3 nem os relatórios.
+
+### Regras
+- **Márcio / Renata** → `finClassificarLancamento` classifica como `retirada_socio` (via `folhaSocio` = categoria 'Folha de Pagamento' + beneficiário Márcio|Renata). Não afeta o Resultado Operacional; reduz o Resultado Financeiro depois. A identidade `Σvalores − abertura − fechamento − ajuste == Resultado Financeiro` continua válida (a retirada `-|v|` reduz igualmente os dois lados).
+- **Terceiros** → cai no default `despesa` / `despesa_empresa` (afeta o Resultado Operacional).
+- **Não é limite**: a única validação nova é "escolher o beneficiário". O saldo acumulado nunca bloqueia a retirada.
+
+### Saldo acumulado de pró-labore (card novo no Resumo Financeiro › Empresa)
+- `rfFolhaSaldo(socio)` (Márcio/Renata): `mensalAtual` = `rf_limites_pessoal['Pró-labore '+socio]`; `lancs` = `rfMovsCache` filtrado por categoria 'Folha de Pagamento' + `folha === socio` (`rfCarregarMovimentos` passou a mapear `folha: meta.folha_beneficiario`); `desde` = 1º mês com lançamento de Folha; `alvo` = fim do período do Resumo (ou mês atual); `nMeses = rfMesesEntre(desde, alvo)`; `creditado = Σ ledger[mês]` (ou `mensalAtual` p/ meses ainda não congelados); `pago = Σ lancs com mês ≤ alvo`; `saldo = creditado − pago`.
+- **Carrego do saldo devedor**: como `saldo(M) = Σ_{desde..M}(mensal) − Σ_{desde..M}(pago)`, tem-se `saldo(M+1) = saldo(M) + mensal_(M+1) − pago_(M+1)` — o negativo rola inteiro pro mês seguinte.
+- **Armazenado por mês (imutável a mudança de config)**: novo localStorage `rf_folha_prolabore` = `{ "Márcio": { "YYYY-MM": valorMensal }, "Renata": {…} }`. `rfFolhaSaldo` congela cada mês **já decorrido** (do 1º lançamento até o mês atual) no valor da ⚙ vigente; meses futuros nunca são congelados. Mudar a ⚙ depois **só** afeta meses seguintes. Corrigir um mês já congelado = editar o localStorage à mão (fora de escopo). Editar/excluir o **lançamento** de Folha pelo Histórico recalcula normalmente (correção deliberada).
+- Card em `#rfSecEmpresa` (`#rfFolhaCard`, `rfFolhaRender()` chamado no fim da seção Empresa de `loadPlanejamento`): por sócio — Pró-labore mensal · Meses acumulados (desde MM/AAAA) · Total creditado · Pago via Folha · **= Saldo acumulado** (verde ≥ 0 / vermelho "devedor" < 0).
+- Tabela "Custos por categoria — Empresa": a linha **"Folha de Pagamento (Terceiros)"** soma **só** `folha === 'Terceiros'` — Márcio/Renata ficam só no card de saldo, sem aparência de duplicidade.
+
+### Histórico Financeiro
+`histOpDescribe` mostra ` · <beneficiário>` na linha da retirada. Edição continua `simples-neg` (valor + descrição; beneficiário/conta travados). `histReconciliarDia` não muda nada — Folha do Caixa da Loja num dia fechado entra no `esperado` como qualquer retirada e o `FECHAMENTO` é recalculado (sem `RECEITA_SERVICOS`/`AJUSTE_CAIXA`).
+
+### Testado no `kihnavaovspdjnegcraj` (transação com ROLLBACK, baseline dinâmico — produção intocada)
+**15/15 PASS**: Folha/Márcio −500 + Folha/Terceiros −300 de Sicredi → Sicredi −800, **0** `RECEITA_SERVICOS`/`AJUSTE_CAIXA` no dia, 2 linhas (uma perna cada); classificação: Márcio → `retiradaSocio` 500, Terceiros → `despesa` 300, `somaValores −800 == −(300+500)`. Folha/Renata −40 do Caixa da Loja num dia fechado, editada p/ −55 → `histReconciliarDia` ajustou só o `FECHAMENTO` (`−60 → −45`), `caixa=0`, `diferenca_caixa` recomputada (62−45=17), **0** receita/ajuste de caixa, sem duplicação. Cálculo do saldo acumulado conferido à mão (accrual mensal + carrego do devedor + imutabilidade a mudança de config).
+
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
 - Editar contrato/declaração/currículo: registros salvos *antes* dessa versão de cada formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
