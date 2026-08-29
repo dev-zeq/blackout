@@ -744,6 +744,16 @@
         .fin-status-chip { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.06); color: var(--text-dim); border: 1px solid var(--border-strong); }
         .fin-aviso { margin-top: 12px; font-size: 12px; line-height: 1.5; color: #fbbf24; background: rgba(251,191,36,0.10); border: 1px solid rgba(251,191,36,0.28); border-radius: 12px; padding: 10px 12px; }
         .fin-ok { margin-top: 12px; font-size: 12px; line-height: 1.5; color: #4ade80; background: rgba(74,222,128,0.10); border: 1px solid rgba(74,222,128,0.28); border-radius: 12px; padding: 10px 12px; }
+        /* Relatórios Financeiros */
+        .rel-mesnav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .rel-mesnav button { width: 40px; height: 40px; flex: none; border-radius: 12px; border: 1px solid var(--border-strong); background: rgba(255,255,255,0.05); color: var(--text); font-size: 20px; line-height: 1; cursor: pointer; }
+        .rel-mesnav button:disabled { opacity: .32; cursor: default; }
+        .rel-mes-label { font-size: 16px; font-weight: 800; text-align: center; }
+        .rel-mes-sub { font-size: 11.5px; color: var(--text-faint); text-align: center; margin-top: 2px; }
+        .rel-destaque { font-size: 30px; font-weight: 800; letter-spacing: -.5px; margin: 2px 0 2px; }
+        .rel-destaque-sub { font-size: 11.5px; color: var(--text-faint); margin-bottom: 12px; }
+        .rel-sub-kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0 7px 16px; font-size: 12.5px; color: var(--text-faint); border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .rel-sub-kv:last-child { border-bottom: none; }
         /* Mensagem de resultado dos botões Registrar/Abrir/Fechar (motor de lançamentos). */
         .fin-msg { margin-top: 10px; font-size: 12.5px; line-height: 1.5; border-radius: 12px; padding: 10px 12px; display: none; }
         .fin-msg.show { display: block; }
@@ -1082,12 +1092,17 @@
                 <button type="button" class="fin-submit" id="finAbrirBtn" onclick="finAbrirCaixa()">Abrir Caixa</button>
                 <div class="fin-msg" id="finAbMsg"></div>
 
-                <div class="fin-section-title">Fechamento</div>
+                <div class="fin-section-title">Fechamento e relatórios</div>
                 <div class="fin-nav-grid">
                     <button type="button" class="fin-nav-btn" onclick="financeiroTela('fechamento')">
                         <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg></span>
                         <span class="fin-nav-btn-label">Fechamento de Caixa</span>
                         <span class="fin-nav-btn-sub">Encerrar o dia</span>
+                    </button>
+                    <button type="button" class="fin-nav-btn" onclick="financeiroTela('relatorios')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+                        <span class="fin-nav-btn-label">Relatórios Financeiros</span>
+                        <span class="fin-nav-btn-sub">Parcial do mês e meses anteriores</span>
                     </button>
                 </div>
                 <div class="fin-note">Etapa 1 — apenas layout e navegação. Registro de Pix, retiradas, sangria, transferências etc. ficam no módulo "Movimentação Financeira".</div>
@@ -1208,6 +1223,80 @@
 
                 <button type="button" class="fin-submit" id="mfFecharBtn" onclick="finFecharCaixa()">Fechar Caixa</button>
                 <div class="fin-msg" id="mfFechMsg"></div>
+            </div>
+
+            <!-- TELA: Relatórios Financeiros --------------------------------
+                 Consolida os lançamentos JÁ GRAVADOS, mês a mês. Regra única:
+                 só entram DIAS JÁ FECHADOS (têm um lançamento FECHAMENTO na
+                 data). O dia de hoje, se ainda aberto, nunca aparece; assim
+                 que o caixa é fechado ele passa a contar sozinho. O mês
+                 corrente é "parcial" (até o último dia fechado); meses
+                 anteriores são consultáveis pelo seletor, sem apagar nada.
+                 Mesma fonte e mesmo classificador do Painel B / Resumo. -->
+            <div class="fin-screen" id="finScreen-relatorios">
+                <button type="button" class="fin-back" onclick="financeiroTela('inicio')">← Financeiro</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+                    <h2>Relatórios Financeiros</h2>
+                </div>
+
+                <div class="fin-card">
+                    <div class="rel-mesnav">
+                        <button type="button" id="relPrevBtn" onclick="relMesNav(-1)" aria-label="Mês anterior">‹</button>
+                        <div style="flex:1;">
+                            <div class="rel-mes-label" id="relMesLabel">—</div>
+                            <div class="rel-mes-sub" id="relMesSub">—</div>
+                        </div>
+                        <button type="button" id="relNextBtn" onclick="relMesNav(1)" aria-label="Próximo mês">›</button>
+                    </div>
+                    <div class="fin-note" id="relCobertura" style="text-align:left; margin-top:10px;">—</div>
+                </div>
+
+                <div class="fin-card" id="relDestaqueCard">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Resultado Financeiro do período</div>
+                    <div class="rel-destaque" id="relResultadoFin">R$ 0,00</div>
+                    <div class="rel-destaque-sub" id="relResultadoFinSub">após retiradas de sócio</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Resultado Operacional <span style="color:var(--text-faint);">(receitas − despesas)</span></span><span class="fin-kv-value" id="relResultadoOper">R$ 0,00</span></div>
+                </div>
+
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Receitas por canal</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Dinheiro <span style="color:var(--text-faint);">(Caixa da Loja)</span></span><span class="fin-kv-value" id="relRecDinheiro">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Pix / cartão <span style="color:var(--text-faint);">(recebimentos eletrônicos)</span></span><span class="fin-kv-value" id="relRecEletronico">R$ 0,00</span></div>
+                    <div id="relRecEletronicoDet"></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Taxa de Troca por Pix</span><span class="fin-kv-value" id="relRecTaxaPix">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label"><b>Total de receitas</b></span><span class="fin-kv-value" id="relRecTotal" style="color:var(--accent-bright);">R$ 0,00</span></div>
+                </div>
+
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 23V1M17 19H9.5a3.5 3.5 0 0 1 0-7h5a3.5 3.5 0 0 0 0-7H6"/></svg> Despesas e retiradas</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Despesas da empresa</span><span class="fin-kv-value" id="relDespEmpresa" style="color:#fca5a5;">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Gráfica</span><span class="fin-kv-value" id="relDespGrafica" style="color:#fca5a5;">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Reembolsos</span><span class="fin-kv-value" id="relDespReembolso" style="color:#fca5a5;">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label"><b>Total de despesas</b></span><span class="fin-kv-value" id="relDespTotal" style="color:#fca5a5;">R$ 0,00</span></div>
+                    <div class="fin-kv" style="margin-top:6px;"><span class="fin-kv-label">Retiradas de sócio <span style="color:var(--text-faint);">(retirada pessoal)</span></span><span class="fin-kv-value" id="relRetiradaSocio" style="color:#fca5a5;">R$ 0,00</span></div>
+                </div>
+
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg> Dias fechados no período</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Dias com caixa fechado</span><span class="fin-kv-value" id="relDiasFechados">0</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Dias com movimento ainda em aberto <span style="color:var(--text-faint);">(não entram)</span></span><span class="fin-kv-value" id="relDiasAbertos">0</span></div>
+                </div>
+
+                <details style="margin-bottom:16px;">
+                    <summary style="cursor:pointer; font-size:12px; color:var(--text-faint); padding:4px 2px;">Movimentações neutras (não entram no resultado)</summary>
+                    <div class="fin-card" style="margin-top:8px;">
+                        <div class="fin-kv"><span class="fin-kv-label">Troca por Pix — principal</span><span class="fin-kv-value" id="relNeutroTrocaPix" style="color:var(--text-dim);">R$ 0,00</span></div>
+                        <div class="fin-kv"><span class="fin-kv-label">Sangrias</span><span class="fin-kv-value" id="relNeutroSangrias" style="color:var(--text-dim);">R$ 0,00</span></div>
+                        <div class="fin-kv"><span class="fin-kv-label">Transferências internas</span><span class="fin-kv-value" id="relNeutroTransf" style="color:var(--text-dim);">0</span></div>
+                        <div class="fin-kv"><span class="fin-kv-label">Ajustes de conferência</span><span class="fin-kv-value" id="relNeutroAjuste" style="color:var(--text-dim);">R$ 0,00</span></div>
+                    </div>
+                </details>
+
+                <div class="fin-ok" id="relConsistOk" style="display:none;">Verificação: OK — a soma dos lançamentos do período fecha com o resultado.</div>
+                <div class="fin-aviso" id="relConsistAviso" style="display:none;"></div>
+                <div class="fin-note" id="relVazioNota" style="display:none; text-align:left;">Nenhum dia fechado neste mês ainda — o relatório fica zerado. Assim que você fechar o caixa de um dia, ele entra aqui automaticamente.</div>
+                <div class="fin-msg" id="relMsg"></div>
             </div>
         </div>
 
@@ -3197,6 +3286,9 @@
                 if (fin && fin.classList.contains('active') && document.getElementById('finScreen-fechamento').classList.contains('active')) {
                     Promise.all([finCarregarMovimentosDia(), finCarregarResultado()]).then(mfFechamentoConferir);
                 }
+                if (fin && fin.classList.contains('active') && document.getElementById('finScreen-relatorios').classList.contains('active')) {
+                    relInit();
+                }
             });
         }
 
@@ -4334,6 +4426,7 @@
             });
             if (nome === 'inicio') { loadFinanceiroSaldos(); finCarregarRefFechamento().then(aberturaCaixaConferir); }
             if (nome === 'fechamento') { Promise.all([finCarregarMovimentosDia(), finCarregarResultado()]).then(mfFechamentoConferir); }
+            if (nome === 'relatorios') { relInit(); }
             const cont = document.querySelector('.container');
             if (cont) cont.scrollIntoView({ behavior: 'auto', block: 'start' });
         }
@@ -5163,6 +5256,196 @@
             }
         }
         window.finRenderResultado = finRenderResultado;
+
+        // ============================================================
+        // RELATÓRIOS FINANCEIROS (2026-08-29) — consolida os lançamentos JÁ
+        // gravados, mês a mês. Regra única e uniforme: só entram DIAS JÁ
+        // FECHADOS (existe um lançamento tipo FECHAMENTO naquela data). O dia
+        // de hoje, enquanto aberto, nunca aparece; ao fechar o caixa ele passa
+        // a contar sozinho (o próximo relRender pega o FECHAMENTO novo). O mês
+        // corrente é parcial (até o último dia fechado); meses anteriores são
+        // consultáveis pelo seletor, sem apagar nada. Mesma fonte
+        // (`lancamentos`) e mesmo classificador do Painel B.
+        // ============================================================
+        let relCache = [];
+        let relMeses = [];
+        let relMesIdx = 0;
+
+        async function relCarregarTudo() {
+            try {
+                await finCarregarContas();
+                const { data, error } = await supabase.from('lancamentos')
+                    .select('id,conta_id,valor,tipo,meta,data').order('data', { ascending: true });
+                if (error) throw new Error(error.message);
+                relCache = data || [];
+            } catch (_) { relCache = []; }
+        }
+
+        // Agregador puro — espelha finCalcularResultado(), mas sobre um conjunto
+        // arbitrário de linhas (as de um mês, já filtradas por dia fechado).
+        function relAgregar(rows) {
+            const R = { dinheiro: 0, taxa_troca_pix: 0, eletronico: {} };
+            const D = { empresa: 0, grafica: 0, reembolso: 0 };
+            let retiradaSocio = 0;
+            const N = { trocaPixPrincipal: 0, sangrias: 0, transfQtd: 0, abertura: 0, fechamento: 0, ajuste: 0 };
+            let somaValores = 0;
+            (rows || []).forEach(r => {
+                somaValores += Number(r.valor) || 0;
+                const chave = finContaChavePorId(r.conta_id);
+                const c = finClassificarLancamento({ tipo: r.tipo, valor: r.valor, contaChave: chave, meta: r.meta || {} });
+                if (c.grupo === 'receita') {
+                    if (c.subgrupo === 'taxa_troca_pix') R.taxa_troca_pix += c.valorEconomico;
+                    else if (c.subgrupo === 'dinheiro') R.dinheiro += c.valorEconomico;
+                    else { const k = (r.meta || {}).conta_chave || chave || 'eletronico'; R.eletronico[k] = (R.eletronico[k] || 0) + c.valorEconomico; }
+                } else if (c.grupo === 'despesa') {
+                    if (c.subgrupo === 'grafica') D.grafica += Math.abs(c.valorEconomico);
+                    else if (c.subgrupo === 'reembolso') D.reembolso += Math.abs(c.valorEconomico);
+                    else D.empresa += Math.abs(c.valorEconomico);
+                } else if (c.grupo === 'retirada_socio') retiradaSocio += Math.abs(c.valorEconomico);
+                else if (c.grupo === 'ajuste') N.ajuste += Number(r.valor) || 0;
+                else if (c.grupo === 'transferencia_interna') {
+                    if (c.subgrupo === 'troca_pix_principal') N.trocaPixPrincipal += Number((r.meta || {}).valor_desejado) || 0;
+                    else if ((Number(r.valor) || 0) < 0) N.transfQtd += 1;
+                } else if (c.grupo === 'sangria') { if ((Number(r.valor) || 0) < 0) N.sangrias += Math.abs(Number(r.valor) || 0); }
+                else if (c.grupo === 'abertura') N.abertura += Number(r.valor) || 0;
+                else if (c.grupo === 'fechamento') N.fechamento += Number(r.valor) || 0;
+            });
+            const eletronicoTotal = Object.keys(R.eletronico).reduce((s, k) => s + R.eletronico[k], 0);
+            const totalReceitas = R.dinheiro + eletronicoTotal + R.taxa_troca_pix;
+            const totalDespesas = D.empresa + D.grafica + D.reembolso;
+            const resultadoOperacional = totalReceitas - totalDespesas;
+            const resultadoFinanceiro = resultadoOperacional - retiradaSocio;
+            const consistDelta = somaValores - N.abertura - N.fechamento - N.ajuste - resultadoFinanceiro;
+            return { R, D, retiradaSocio, N, somaValores, eletronicoTotal, totalReceitas, totalDespesas,
+                resultadoOperacional, resultadoFinanceiro, consistDelta };
+        }
+
+        function relMesRotulo(key) {
+            const p = String(key || '').split('-');
+            if (p.length < 2) return key || '—';
+            const dt = new Date(Number(p[0]), Number(p[1]) - 1, 1);
+            const s = dt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        async function relInit() {
+            const msg = document.getElementById('relMsg');
+            if (msg) { msg.className = 'fin-msg busy'; msg.textContent = 'Carregando lançamentos…'; }
+            await relCarregarTudo();
+            const mesAtual = todayISO().slice(0, 7);
+            const set = new Set(relCache.map(r => String(r.data || '').slice(0, 7)).filter(Boolean));
+            set.add(mesAtual);
+            relMeses = Array.from(set).sort();
+            relMesIdx = relMeses.indexOf(mesAtual);
+            if (relMesIdx < 0) relMesIdx = relMeses.length - 1;
+            if (msg) { msg.className = 'fin-msg'; msg.textContent = ''; }
+            relRender();
+        }
+        window.relInit = relInit;
+
+        function relMesNav(delta) {
+            const n = relMesIdx + delta;
+            if (n < 0 || n >= relMeses.length) return;
+            relMesIdx = n;
+            relRender();
+        }
+        window.relMesNav = relMesNav;
+
+        function relRender() {
+            const set = (id, s) => { const e = document.getElementById(id); if (e) e.textContent = s; };
+            const showEl = (id, on) => { const e = document.getElementById(id); if (e) e.style.display = on ? '' : 'none'; };
+            const key = relMeses[relMesIdx] || todayISO().slice(0, 7);
+            const mesAtual = todayISO().slice(0, 7);
+            const ehParcial = key === mesAtual;
+            const hoje = todayISO();
+
+            // navegação
+            const prev = document.getElementById('relPrevBtn'); if (prev) prev.disabled = relMesIdx <= 0;
+            const next = document.getElementById('relNextBtn'); if (next) next.disabled = relMesIdx >= relMeses.length - 1;
+            set('relMesLabel', relMesRotulo(key) + (ehParcial ? ' (parcial)' : ''));
+
+            // linhas do mês + conjunto de dias fechados
+            const doMes = relCache.filter(r => String(r.data || '').slice(0, 7) === key);
+            const diasFechados = new Set(doMes.filter(r => r.tipo === 'FECHAMENTO').map(r => r.data));
+            const diasComMov = new Set(doMes.filter(r => r.tipo !== 'FECHAMENTO').map(r => r.data));
+            const diasAbertos = Array.from(diasComMov).filter(d => !diasFechados.has(d));
+            const considerados = doMes.filter(r => diasFechados.has(r.data));
+            const ultimoFechado = diasFechados.size ? Array.from(diasFechados).sort().slice(-1)[0] : null;
+
+            const A = relAgregar(considerados);
+            const temDados = diasFechados.size > 0;
+
+            set('relMesSub', diasFechados.size
+                ? (diasFechados.size + (diasFechados.size === 1 ? ' dia fechado' : ' dias fechados'))
+                : 'nenhum dia fechado');
+
+            // texto de cobertura
+            let cob;
+            if (!temDados) {
+                cob = ehParcial
+                    ? 'Este mês ainda não teve nenhum fechamento de caixa. O relatório entra em ação assim que você fechar o primeiro dia.'
+                    : 'Não há nenhum dia fechado neste mês.';
+            } else {
+                const dd = ultimoFechado.split('-').reverse().join('/');
+                cob = 'Consolida os dias já fechados até ' + dd + '.';
+                if (ehParcial) cob += ' O mês ainda está em andamento — é um parcial.';
+                if (ehParcial && diasComMov.has(hoje) && !diasFechados.has(hoje)) {
+                    cob += ' O dia de hoje (' + hoje.split('-').reverse().join('/') + ') ainda está aberto e não entra.';
+                }
+            }
+            set('relCobertura', cob);
+            showEl('relVazioNota', !temDados);
+
+            // DESTAQUE
+            const rfEl = document.getElementById('relResultadoFin');
+            if (rfEl) { rfEl.textContent = mfBRL(A.resultadoFinanceiro); rfEl.style.color = A.resultadoFinanceiro < 0 ? '#fca5a5' : 'var(--accent-bright)'; }
+            set('relResultadoFinSub', temDados
+                ? ('após retiradas de sócio · ' + relMesRotulo(key) + (ehParcial ? ' (parcial)' : ''))
+                : 'sem dias fechados — resultado zerado');
+            const roEl = document.getElementById('relResultadoOper');
+            if (roEl) { roEl.textContent = mfBRL(A.resultadoOperacional); roEl.style.color = A.resultadoOperacional < 0 ? '#fca5a5' : 'var(--text)'; }
+
+            // RECEITAS
+            set('relRecDinheiro', mfBRL(A.R.dinheiro));
+            set('relRecEletronico', mfBRL(A.eletronicoTotal));
+            set('relRecTaxaPix', mfBRL(A.R.taxa_troca_pix));
+            set('relRecTotal', mfBRL(A.totalReceitas));
+            const det = document.getElementById('relRecEletronicoDet');
+            if (det) {
+                const chaves = Object.keys(A.R.eletronico).filter(k => Math.abs(A.R.eletronico[k]) > 0.005);
+                det.innerHTML = chaves.map(k =>
+                    '<div class="rel-sub-kv"><span>' + (FIN_CONTA_LABEL[k] || k) + '</span><span>' + mfBRL(A.R.eletronico[k]) + '</span></div>'
+                ).join('');
+            }
+
+            // DESPESAS
+            set('relDespEmpresa', mfBRL(A.D.empresa));
+            set('relDespGrafica', mfBRL(A.D.grafica));
+            set('relDespReembolso', mfBRL(A.D.reembolso));
+            set('relDespTotal', mfBRL(A.totalDespesas));
+            set('relRetiradaSocio', mfBRL(A.retiradaSocio));
+
+            // DIAS
+            set('relDiasFechados', String(diasFechados.size));
+            set('relDiasAbertos', String(diasAbertos.length));
+
+            // NEUTROS
+            set('relNeutroTrocaPix', mfBRL(A.N.trocaPixPrincipal));
+            set('relNeutroSangrias', mfBRL(A.N.sangrias));
+            set('relNeutroTransf', String(A.N.transfQtd) + (A.N.transfQtd === 1 ? ' movimentação' : ' movimentações'));
+            set('relNeutroAjuste', (A.N.ajuste < 0 ? '− ' : A.N.ajuste > 0 ? '+ ' : '') + mfBRL(Math.abs(A.N.ajuste)));
+
+            // CONSISTÊNCIA
+            const ok = document.getElementById('relConsistOk');
+            const av = document.getElementById('relConsistAviso');
+            if (!temDados) { if (ok) ok.style.display = 'none'; if (av) av.style.display = 'none'; }
+            else if (Math.abs(A.consistDelta) < 0.02) { if (ok) ok.style.display = ''; if (av) av.style.display = 'none'; }
+            else {
+                if (ok) ok.style.display = 'none';
+                if (av) { av.style.display = ''; av.innerHTML = 'Verificação: <b>divergência de ' + mfBRL(Math.abs(A.consistDelta)) + '</b> no período — algum dia fechado tem lançamento inconsistente.'; }
+            }
+        }
+        window.relRender = relRender;
 
         async function finFecharCaixa() {
             const btn = document.getElementById('mfFecharBtn');

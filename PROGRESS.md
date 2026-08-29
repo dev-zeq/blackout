@@ -1956,6 +1956,31 @@ Relatório Mensal · seletor de período do Painel B · históricos reais das te
 
 **PUBLICADO** em `main` (GitHub Pages → lanblackout.com) em 2026-08-29.
 
+## Tela "Relatórios Financeiros" — consolidação mensal só de dias fechados (2026-08-29) — **PUBLICADO**
+
+Nova `.fin-screen` `#finScreen-relatorios` dentro do Financeiro (tile em "Fechamento e relatórios"; `financeiroTela('relatorios')` → `relInit()`). Mesma fonte (`lancamentos`) e mesmo classificador do Painel B — nenhum cálculo novo, nada duplicado, tudo somente leitura.
+
+### Regra única de corte
+Só entram **dias já fechados** = existe um lançamento `tipo='FECHAMENTO'` naquela `data`. Vale igual para o parcial do mês corrente e para meses anteriores. O dia de hoje, enquanto aberto, nunca aparece; ao fechar o caixa ele passa a contar sozinho (o `relInit` seguinte enxerga o FECHAMENTO novo; realtime em `lancamentos` re-renderiza se a tela estiver aberta).
+
+### Implementado em `paineldecontrole/index.html`
+- **`relCarregarTudo()`** — `select id,conta_id,valor,tipo,meta,data` de `lancamentos` (sem filtro), `order data`. Erro → `relCache=[]`.
+- **`relAgregar(rows)`** — agregador puro que espelha `finCalcularResultado()` sobre um conjunto arbitrário de linhas. Devolve `R{dinheiro,taxa_troca_pix,eletronico{chave}}`, `D{empresa,grafica,reembolso}`, `retiradaSocio`, `N{trocaPixPrincipal,sangrias,transfQtd,abertura,fechamento,ajuste}`, `somaValores`, `eletronicoTotal`, `totalReceitas/Despesas`, `resultadoOperacional`, `resultadoFinanceiro`, `consistDelta` (= `somaValores − N.abertura − N.fechamento − N.ajuste − resultadoFinanceiro`).
+- **`relInit()`** — carrega, monta `relMeses` = união dos `data.slice(0,7)` existentes ∪ mês corrente, ordenada; `relMesIdx` no mês corrente. **`relMesNav(±1)`** com clamp; setas `#relPrevBtn/#relNextBtn` desativam nas pontas.
+- **`relRender()`** — para o mês selecionado: `diasFechados` = Set de datas com FECHAMENTO; `considerados` = linhas cujo `data ∈ diasFechados`; `A = relAgregar(considerados)`. Preenche: destaque **Resultado Financeiro** (verde/`#fca5a5`) + Resultado Operacional; Receitas por canal (Dinheiro / **Pix-cartão** = `eletronicoTotal` com sublinhas por conta em `#relRecEletronicoDet` / Taxa de Troca por Pix / Total); Despesas empresa/gráfica/reembolso + Retiradas de sócio; contagem dias fechados × dias com movimento ainda aberto; `<details>` de neutros; linha de consistência OK/aviso (escondida se `!temDados`). Mês corrente ganha sufixo "(parcial)" e o texto de cobertura avisa quando "o dia de hoje ainda está aberto e não entra". Zero lançamentos → tudo R$ 0,00, nota `#relVazioNota`, sem `NaN`.
+- `financeiroTela` e o realtime de `lancamentos` chamam `relInit()` quando a tela está ativa.
+- CSS `.rel-mesnav / .rel-mes-label / .rel-destaque / .rel-sub-kv`.
+
+### Testado ao vivo vs. produção (`kihnavaovspdjnegcraj`), depois **apagado** (`lancamentos`=0, saldos intactos)
+- **Banco zerado, zero lançamentos:** todos os campos R$ 0,00, setas desativadas, aviso de "nenhum fechamento", **sem erro / sem `NaN` / sem `undefined`**.
+- **Funcional:** Jul/27 fechado · Ago/27 fechado (Troca-Pix + receita eletrônica PagSeguro + retirada pessoal) · Ago/29 (hoje) com movimento **aberto**. Agosto parcial mostrou só Ago/27 (Financeiro **75**, dias fechados 1 / em aberto 1, aviso do dia de hoje); Julho mostrou Financeiro **30** sem "(parcial)"; navegação estável ida-e-volta; ao **fechar** Ago/29 o dia entrou sozinho (dias fechados 2 / 0, Dinheiro 140, Financeiro **110**). Consistência "OK" em todos os períodos.
+
+### Pendências conhecidas
+- **Pix × cartão não são separados** — a apuração eletrônica é pela variação do saldo do banco, então aparecem juntos como "Pix / cartão" com detalhe por conta. Separar de verdade exige escolher a forma no fechamento (adiado, ajuste pequeno).
+- Sem export/PDF; sem seleção de intervalo livre (só mês a mês).
+
+**PUBLICADO** em `main` (GitHub Pages → lanblackout.com) em 2026-08-29.
+
 - Não há campo de reajuste automático nem geração de boleto/cobrança — é só o texto do contrato.
 - O formulário não valida CPF/CNPJ (formato), só verifica se o campo foi preenchido. **Ainda não implementado** — chegou a ser discutido em 2026-08-16 (checagem de dígito verificador de CPF e CNPJ, com máscara nos campos `${p}_cpf`, `fiador_cpf`, `test1_cpf`, `test2_cpf`), mas o usuário pediu pra deixar pra depois.
 - Editar contrato/declaração/currículo: registros salvos *antes* dessa versão de cada formulário não têm os campos soltos de rua/número/complemento — ao editar um desses, o campo "Rua" recebe o endereço inteiro composto e "Número"/"Complemento" ficam em branco pro usuário ajustar manualmente (não dá pra separar com segurança um endereço já junto).
