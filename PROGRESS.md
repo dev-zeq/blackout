@@ -2341,3 +2341,68 @@ Verificado no static server: `index.html` parseia sem `SyntaxError` (funções p
   Concordância de gênero certa (declarante masc. → "proprietário/locador"; declarada fem. → "domiciliada/locatária"). Só o declarante assina. Prévia entregue ao usuário.
 
 Pendente: aprovação do usuário e publicação (`main`) dos 2 arquivos (`declaracao-residencia-form.html` + `index.html`).
+
+## Atalhos rápidos — ícones de WhatsApp/Instagram/Facebook/Gmail/Hotmail no cabeçalho (2026-08-30) — NÃO publicado
+
+Pedido: transformar WhatsApp, Instagram, Facebook e e-mails em ícones de acesso rápido, reaproveitando a área de **Configuração de Links** (⚙) — só ampliando-a com um campo para cada um (WhatsApp, Instagram, Facebook, Gmail, Hotmail). Mostrar como ícones clicáveis no cabeçalho. **Não** vira serviço do painel (nada em `MENU_ITEMS`/`SUBPANELS`, sem backend) — é só atalho visual. Mais: opção de mostrar/ocultar os ícones. Testar sem publicar. Link do Gmail informado pelo usuário: `https://mail.google.com/mail/u/0/?tab=rm&ogbl#inbox`.
+
+Editado só `paineldecontrole/index.html`:
+- **CSS:** `.header-atalhos` / `.header-atalho` (ícone 40×40 no mesmo estilo dos botões 🔔/⚙ do header; 36×36 em < 560px) + `#configModal .cfg-atalho-*` (linha ícone + nome + input) e `.cfg-atalho-toggle-row`.
+- **Header (`#viewHome` container direito):** `<div class="header-atalhos" id="headerAtalhos">` antes do `#notifConfigBtn`; o wrapper flex do cluster ganhou `flex-wrap:wrap`.
+- **Modal ⚙ (`#configModal`):** nova seção "Atalhos rápidos" depois de "Links Web" — hint deixando claro que não vira serviço, switch **"Mostrar ícones no cabeçalho"** (`#cfgAtalhosVisiveis` → `cfgToggleAtalhosVisiveis()`) e `#cfgAtalhosList` (5 linhas montadas por JS).
+- **JS novo** (depois de `cfgResetLink`): `ATALHOS_KEY = 'blackout_atalhos_sociais'`; `ATALHOS_ICONS` (reusa `ICONS.whatsapp`/`ICONS.email` p/ WhatsApp e Gmail; SVGs próprios p/ Instagram, Facebook e Hotmail-bandeja); `ATALHOS_DEFS` (5, com URL padrão cada). `carregarAtalhos()` → `{whatsapp,instagram,facebook,gmail,hotmail,visivel}`; **1ª vez (nada salvo) entra com os padrões preenchidos** para os ícones já funcionarem; depois de salvo, campo vazio fica vazio. `salvarAtalhos()` grava o objeto inteiro. `renderHeaderAtalhos()` monta `<a target="_blank" rel="noopener">` só para URLs `^https?://` e só se `visivel` — se `visivel:false` esvazia o container. `renderConfigAtalhos()` preenche o switch + as 5 linhas. `cfgSalvarAtalho(inp)` (onchange de cada input): valida `^https?://` ou vazio (senão `alert` + reverte pro valor salvo), grava, `renderHeaderAtalhos()`. `cfgToggleAtalhosVisiveis()` grava `visivel` e re-renderiza. Tudo exportado em `window`.
+- **`abrirConfig()`** também chama `renderConfigAtalhos()`; **`unlockApp()`** também chama `renderHeaderAtalhos()`.
+- **Intocado:** `MENU_ITEMS`/`SUBPANELS`, `WEB_LINKS_KEY`/`resolveWebLink`/`renderConfigWebLinks` e todo o resto do painel. Os itens "Email"/"WhatsApp" que já existiam no menu principal continuam iguais.
+
+Verificado no static server (porta 8790, sem login, `appContainer` forçado visível): sem `SyntaxError` (só o 404 de recurso estático pré-existente); as 4 funções em `window`. Cenários exercitados via console: default (nada salvo) → 5 ícones no header com os hrefs/titles/`target=_blank rel=noopener` certos e SVG dentro; editar Instagram → header atualiza + persiste; limpar Facebook → ícone some (4 no header), `facebook:""` no storage; URL inválida no WhatsApp → `alert` + reverte pro valor salvo, storage intacto; switch off → header esvazia + `visivel:false`; switch on → ícones voltam; reabrir ⚙ → inputs refletem o storage (Instagram editado, Facebook vazio). Screenshots do header (5 ícones ao lado de 🔔/⚙) e da seção "Atalhos rápidos" no modal entregues ao usuário. `localStorage` de teste limpo ao fim.
+
+### Reduzido para 3 ícones — só WhatsApp, Hotmail e Gmail (2026-08-30, mesmo dia) — NÃO publicado
+
+Pedido do usuário: manter só WhatsApp (link atual), Hotmail (link atual) e Gmail — este com **ícone simples com a letra "G"**. Remover Facebook e Instagram (e quaisquer outras redes). Mesmo tamanho/alinhamento.
+
+- `ATALHOS_ICONS`: removidas as entradas `instagram` e `facebook`; `gmail` deixou de usar `ICONS.email` e virou um SVG de texto só — `<text ... font-size="20" font-weight="700">G</text>` (letra "G" simples, sem círculo). `whatsapp` e `hotmail` inalterados.
+- `ATALHOS_DEFS`: agora só 3 — `whatsapp` / `hotmail` / `gmail` (nessa ordem), com as mesmas URLs padrão de antes.
+- Comentário do bloco e o `cfg-hint` do modal atualizados para "WhatsApp, Hotmail e Gmail".
+- `carregarAtalhos()` só lê chaves de `ATALHOS_DEFS`, então um `localStorage` antigo com `instagram`/`facebook` é **ignorado em silêncio** (sem migração, sem erro).
+- Nada mais no painel tocado.
+
+Verificado no static server: só 3 `<a.header-atalho>` no header (WhatsApp, Hotmail, Gmail), na ordem certa, hrefs padrão certos; objeto salvo antigo com instagram/facebook → continua só 3 ícones; ícone do Gmail = `<text>G</text>`; modal com 3 linhas + hint novo; tamanho computado do ícone = **40×40, igual ao botão 🔔** (alinhamento mantido). Sem `SyntaxError` (só o 404 estático pré-existente). Screenshots (header com os 3 ícones + seção do modal) entregues. `localStorage` de teste limpo.
+
+### Removidos os cards "Email" e "WhatsApp" da grade de serviços (2026-08-30, mesmo dia) — NÃO publicado
+
+Como os atalhos rápidos de WhatsApp e e-mail agora vivem no cabeçalho, os dois cards `{ type: 'link' }` correspondentes saíram do `MENU_ITEMS` (`paineldecontrole/index.html`): `{ icon:'email', label:'Email', url: outlook }` e `{ icon:'whatsapp', label:'WhatsApp', url: web.whatsapp }`. Trocados por um comentário explicando a mudança.
+
+- Grade da Home: de **20 → 18** cards; a ordem e todos os outros serviços seguem idênticos. "Tirar Fundo" (o outro `type:'link'` do menu) continua.
+- `ICONS.email` / `ICONS.whatsapp` **mantidos** no catálogo — `ATALHOS_ICONS` reusa os dois.
+- `handleMenuClick` / `renderMenu` iteram por índice recalculado, então nada quebrou; a seção "Links Web" da ⚙ (montada de `MENU_ITEMS` com `type:'link'`) agora lista só "Tirar Fundo" sob "Menu principal".
+- Nenhuma regra ou outro trecho de layout tocado.
+
+Verificado no static server: `#menuGrid` com 18 tiles, sem "Email"/"WhatsApp", demais rótulos e ordem intactos; "Links Web" → "Menu principal" só com "Tirar Fundo"; seção "Atalhos rápidos" e os 3 ícones do cabeçalho inalterados; sem `SyntaxError` (só o 404 estático pré-existente). Screenshot da grade entregue.
+
+### "Telefonia" → "Telefonia e Internet" (2026-08-30, mesmo dia) — NÃO publicado
+
+Só troca de rótulo (`paineldecontrole/index.html`), a pedido do usuário — o sub-painel agora reúne prestadoras de telefonia **e** de internet. Dois pontos:
+- `MENU_ITEMS`: `label: 'Telefonia'` → `label: 'Telefonia e Internet'` (mesmo `icon`/`action`/`key: 'telefonia'`).
+- `SUBPANELS.telefonia.title`: `'📞 Telefonia'` → `'📞 Telefonia e Internet'`.
+- **Nada mais:** os 8 links (Vivo, Oi, Ultra Wifi, Minha Claro, CCS Telecom, CCS 2ª Via, Acqua Telecom, Voue Telecom), URLs, ícone e comportamento intactos. `key` do sub-painel continua `telefonia`.
+
+Verificado no static server: card da Home mostra "TELEFONIA E INTERNET" na mesma posição/ícone; abrir o sub-painel → cabeçalho "📞 Telefonia e Internet" com os 8 links; sem `SyntaxError` (só o 404 estático pré-existente). Screenshots entregues.
+
+### Removido o título "🖤 Painel de Serviços Blackout" da Home (2026-08-30, mesmo dia) — NÃO publicado
+
+A pedido do usuário. Removido só o `<div class="menu-title">🖤 Painel de Serviços Blackout</div>` de dentro de `#viewHome` (`paineldecontrole/index.html`), trocado por um comentário. A grade `#menuGrid` agora começa logo abaixo do cabeçalho.
+- A classe `.menu-title` **continua no CSS** (usada pela tela de Orçamento de Impressões, `#viewOrcamento`).
+- Cabeçalho ("Painel de Controle" / "BlackOut"), os 3 ícones de acesso rápido e todo o resto: inalterados.
+
+Verificado no static server: `#viewHome .menu-title` não existe mais; primeiro filho de `#viewHome` = `#homeCaixaLembrete`; 18 tiles e 3 ícones do cabeçalho intactos; sem `SyntaxError` (só o 404 estático pré-existente). Screenshot entregue.
+
+### PUBLICADO — bloco "Atalhos rápidos" inteiro (2026-08-30)
+
+Aprovado pelo usuário ("salvar tudo que temos pendente no progress e depois publicar"). Um único commit em `main` com todas as sub-etapas acima:
+1. Seção "Atalhos rápidos" na ⚙ + ícones clicáveis no cabeçalho (`localStorage['blackout_atalhos_sociais']`, sem backend, fora do `MENU_ITEMS`).
+2. Reduzido para 3 ícones: **WhatsApp / Hotmail / Gmail** (Gmail = ícone "G"). Instagram/Facebook removidos.
+3. Cards "Email" e "WhatsApp" removidos da grade de serviços (20 → 18 tiles).
+4. "Telefonia" → "Telefonia e Internet" (rótulo do card + título do sub-painel; links intactos).
+5. Título "🖤 Painel de Serviços Blackout" removido do `#viewHome`.
+
+Comentários internos (header + CSS) ajustados de "WhatsApp/Instagram/Facebook/Gmail/Hotmail" para "WhatsApp/Hotmail/Gmail". Só `paineldecontrole/index.html` + `PROGRESS.md`. Testes ao vivo logado ainda pendentes (feitos só no static server); publicado a pedido do usuário.
