@@ -2406,3 +2406,122 @@ Aprovado pelo usuário ("salvar tudo que temos pendente no progress e depois pub
 5. Título "🖤 Painel de Serviços Blackout" removido do `#viewHome`.
 
 Comentários internos (header + CSS) ajustados de "WhatsApp/Instagram/Facebook/Gmail/Hotmail" para "WhatsApp/Hotmail/Gmail". Só `paineldecontrole/index.html` + `PROGRESS.md`. Testes ao vivo logado ainda pendentes (feitos só no static server); publicado a pedido do usuário.
+
+## Remoção do "Histórico de Contratos e Documentos" (2026-08-30) — NÃO publicado
+
+Passo 3 de um plano aprovado em 3 etapas (mapa → análise de remoção → execução). Removida **só a implementação antiga do Histórico** (tabela `contratos` + modais manuais), no `paineldecontrole/index.html`. **Nada no Supabase tocado** (sem DDL/DML, Edge Function `db-write` intacta). "Contratos pendentes" (tabela `declaracoes_pendentes`), Declarações, Procurações, Prestação de Serviço e Currículos preservados.
+
+**Removido (100% exclusivo do Histórico):**
+- HTML: bloco `.table-container` "📑 Histórico de Contratos e Documentos" dentro de `#viewTermos` (`#termoCount`, `#termoRows`, barra de ações ＋ Novo Termo / ＋ Novo Compra e Venda / 🔄 Atualizar, barra `#selContratos*`); modais `#termoModal` e `#cvModal` inteiros.
+- JS: `loadContratos` + `contratosCache`; `openContratoFicha`; `abrirContratoFormatado`; `deleteContrato`; `openTermoModal`/`closeTermoModal`/`saveTermo`; `openCVModal`/`closeCVModal`/`saveCV`; `upsertPessoa`/`upsertAtivo` (confirmados exclusivos de saveTermo+saveCV); helpers dos forms Termo/CV (`toggleResponsavelFields`, `onTermoCidadeChange`/`onTermoBairroChange`/`termoCidadeFinal`/`termoBairroFinal`/`onTermoForoCidadeChange`/`termoForoManualFinal`, `toggleCVPagamento`/`onCVCidadeChange`/`onCVBairroChange`/`cvCidadeFinal`/`cvBairroFinal`/`onCVForoCidadeChange`/`cvForoManualFinal`); instância `selContratos` (+ `window.selContratos`).
+- Realtime: `assinarRealtimeTabela('contratos', …)` (única assinatura dessa tabela).
+- Chamadas: token `loadContratos();` retirado do ramo `view === 'termos'` de `openView()` e do `setInterval` de 30s (mantido `loadDeclaracoesPendentes()`); `closeTermoModal();` retirado do handler de Escape; listener de clique-fora de `#termoModal` removido.
+
+**Preservado (compartilhado / dados):** `declaracoes_pendentes`, `loadDeclaracoesPendentes`, `declaracoesPendentesCache`, todo o bloco "Contratos pendentes"; `montarContrato`, `TIPOS` (inclusive `origem:'contratos'`), `TIPO_CONTRATO_LABELS`, `EDICAO_FORMULARIO`, `declFormatadoAtual`, `#declFormatadoModal`, `#fichaCurriculoModal`; `criarSelecaoMultipla` (fábrica — só a instância `selContratos` saiu); `assinarRealtimeTabela` (função — só a assinatura de `contratos` saiu); `callDbWrite`/`dbInsert`/`dbUpdate`/`dbUpsert`/`dbDelete`; `openView`/`goHome`/navegação; card de menu "Contratos" (abre "Contratos pendentes"); realtime de `curriculos`/`declaracoes_pendentes`/`recibos`/`contas`.
+- **Mantidos de propósito, agora sem uso** (ver "CUIDADO — na dúvida não remova"): `CIDADES_BAIRROS` e `bairroSelectOptions` (dado de endereço reutilizável). Comentários com menção textual a `loadContratos()` dentro de `criarSelecaoMultipla` e de `TIPOS.TERMO_DE_RESPONSABILIDADE` foram deixados intactos (não são código).
+- Chaves inertes deixadas nos objetos compartilhados: `TIPOS.TERMO_DE_RESPONSABILIDADE`; labels/entradas `CV_VEICULO_*` e `TERMO_DE_RESPONSABILIDADE` em `TIPO_CONTRATO_LABELS`/`EDICAO_FORMULARIO`.
+
+**Diff:** `paineldecontrole/index.html`, 1 arquivo, ~967 remoções / ~29 inserções (as inserções são comentários-marcador + 3 linhas editadas). Fora dos comentários, as únicas linhas alteradas: os 2 `{ loadDeclaracoesPendentes(); }` e o handler de Escape sem `closeTermoModal()`.
+
+**Testes (static server porta 8790, sem login):**
+- Painel carrega sem `SyntaxError`/`ReferenceError` (só o 404 de recurso estático pré-existente). O único "erro" no console é `window.openView is not a function`, disparado por um script de teste meu, não pela página (openView nunca foi global neste projeto).
+- Todos os símbolos removidos → `undefined` em `window`; todos os compartilhados preservados → presentes.
+- `#viewTermos` agora tem **1** `.table-container` = "📃 Contratos pendentes" (screenshot). `#termoModal`/`#cvModal`/`#termoRows`/`#termoCount`/`#selContratosSelAll` não existem mais no DOM.
+- "Contratos pendentes" carrega (`loadDeclaracoesPendentes` → "0 registros"; a linha pendente existente é uma Declaração, aparece em Declarações e Procurações).
+- Fluxo compartilhado exercitado via Declarações e Procurações (mesmas funções de "Contratos pendentes"): card renderiza, **ficha** abre (`#fichaCurriculoModal`), **formatar** abre `#declFormatadoModal` e `montarContrato` renderiza o texto completo (786 chars, com `<h1>`), botão **Editar** visível, handlers `marcarDeclaracaoProcessada`/`deleteDeclaracaoPendente`/`abrirEdicaoDeclFormatado` presentes (não cliquei em processar/excluir pra não alterar dados de produção).
+- Prestação de Serviço (view ativa, 0 registros) e Currículo (view ativa, 12 registros) abrem sem erro.
+- **Zero** `.from('contratos')` / `dbInsert|dbUpdate|dbDelete|dbUpsert('contratos')` no arquivo — o painel não tem mais nenhum caminho de leitura/escrita na tabela `contratos`.
+
+**Falta:** aprovação do usuário. Não publicado, não criado o novo Histórico.
+
+## Novo "Histórico de Contratos" (só contratos, via status ARQUIVADO) (2026-08-30) — NÃO publicado
+
+Recria o Histórico, agora **exclusivamente de contratos**, em cima da própria `declaracoes_pendentes` (Opção A do plano). **Stackeado sobre a remoção do Histórico antigo (Passo 3), que também segue sem publicar.**
+
+**Migração (única alteração estrutural):** `apply_migration declaracoes_pendentes_status_allow_arquivado` — `DROP`/`ADD` da constraint `declaracoes_pendentes_status_check`, de `CHECK (status IN ('PENDENTE','PROCESSADO'))` para `CHECK (status IN ('PENDENTE','PROCESSADO','ARQUIVADO'))`. Aditiva, não toca linha nenhuma. Backup/verificação antes: 1 linha (`DECLARACAO_RESIDENCIA`, `PENDENTE`) — intacta no fim. `tipo_contrato` CHECK, policies, realtime: não tocados. **Nenhuma tabela criada; `contratos`/`contratos_arquivados` não usadas.**
+
+**Frontend (`paineldecontrole/index.html`):**
+- HTML: 2ª `.table-container` em `#viewTermos` → "📑 Histórico de Contratos" (`#histContratosCount`, `#histContratosRows`) + `.hist-busca-bar` (`#histContratosBusca` texto + `#histContratosTipo` select dos 3 tipos). CSS `.hist-busca-bar`.
+- `HIST_CONTRATO_TIPOS = ['CONTRATO_CV_VEICULO','CONTRATO_CV_IMOVEL','CONTRATO_LOCACAO_IMOVEL']` (whitelist explícita).
+- `loadHistoricoContratos()` → `.eq('status','ARQUIVADO').in('tipo_contrato', HIST_CONTRATO_TIPOS)` + `.filter()` client como 2ª guarda. Cache `historicoContratosCache`.
+- `renderHistoricoContratos()` + `histFiltrarLista()` (busca client-side: nome pessoa_a/pessoa_b case-insensitive; CPF normalizado `replace(/\D/g,'')` só casa com ≥3 dígitos; filtro por tipo). `histOnBusca`/`histOnTipo`.
+- Ações: `histVerFicha` / `histFormatar` — injetam a linha do cache do Histórico no `declaracoesPendentesCache` (dedupe por id, síncrono) e chamam `openDeclaracaoFicha` / `abrirDeclFormatado` **sem alterar** essas funções; `histVerFicha` ajusta só o texto do `#fichaTitulo` de "(pendente)" → "(arquivado)".
+- `arquivarContrato(id)` → guard whitelist + `confirm` + `dbUpdate('declaracoes_pendentes', { status:'ARQUIVADO', processado_em: <now> }, { id })` + reload dos 3. `desarquivarContrato(id)` → `dbUpdate(... { status:'PENDENTE', processado_em: null } ...)` + reload. Carimbo de data/hora usa a coluna existente `processado_em` (nenhuma coluna nova; `dados` nunca entra no payload).
+- Botão `📥` só nos cards de "Contratos pendentes" cujo `tipo_contrato ∈ HIST_CONTRATO_TIPOS`.
+- Hooks: `loadHistoricoContratos()` adicionado ao realtime de `declaracoes_pendentes`, ao init de `openView('termos')` e ao `setInterval` de 30s. `loadDeclaracoesPendentes`/`loadPendingCounts` **não** mudaram (já filtram `status='PENDENTE'`, então o arquivado some sozinho).
+
+**Testes (static server + SQL contra produção, com limpeza):** criado 1 `CONTRATO_CV_VEICULO` de teste (+ 1 procuração e 1 prestação ARQUIVADAS pra provar exclusão). Verificado: contrato aparece nos pendentes com 📥; `arquivarContrato()`/`desarquivarContrato()` reais emitem só `update` de `status`(+`processado_em`) no próprio `id` (fetch stub — sem insert/delete, sem `dados` no payload); após arquivar (UPDATE real), some dos pendentes (0) e aparece no Histórico (1) com botões 👁️/📄/↩️ e badge atualizado; busca por nome A ("joao"), nome B ("maria souza"), CPF com máscara ("123.456.789-00"), CPF dígitos ("98765432100") e CPF parcial ("987654") → todas casam; busca inexistente → "Nenhum contrato encontrado"; filtro CONTRATO_CV_VEICULO → 1, CONTRATO_LOCACAO_IMOVEL → 0; **Ver ficha** abre `#fichaCurriculoModal` com os 2 nomes e título "(arquivado)"; **Formatar** abre `#declFormatadoModal` e `montarContrato` renderiza o contrato completo (~3200 chars, `<h1>`, texto "CONTRATO DE COMPRA E VENDA DE VEÍCULO USADO"); **Desarquivar** volta pros pendentes e some do Histórico; procuração/prestação ARQUIVADAS **não** aparecem no Histórico; guard de `arquivarContrato()` numa declaração → alerta e **não** grava; sem `SyntaxError`. Integridade: linha de teste sempre única (nunca duplicou), `data_pedido`/`dados` intactos; **3 linhas de teste apagadas** ao fim → produção de volta a 1 linha idêntica ao início.
+
+**Falta:** aprovação do usuário para publicar (Passo 3 + Passo 4 juntos) no `main`.
+
+## Links de formulário: botões 📋 Copiar link / 🔗 Abrir link (2026-08-30) — NÃO publicado
+
+Pedido: ao lado de cada link de formulário, dois botões — **📋 Copiar link** e **🔗 Abrir link** — usando a MESMA URL que já estava lá. Nada mais muda. Só `paineldecontrole/index.html`.
+
+- Helper novo `copiarLinkFormulario(url, btn)` (perto de `escapeHtml`): resolve `new URL(url, location.href).href`, `navigator.clipboard.writeText` (feedback "✅ Copiado" no botão por ~1,6s), fallback `window.prompt` se o clipboard não estiver disponível. `window.copiarLinkFormulario`. Helper `linkFormAcoesHtml(url)` monta o `<span class="link-row-actions">` com os 2 botões (usado nas linhas dinâmicas).
+- CSS: `.link-row` ganhou `gap:10px; flex-wrap:wrap`; `.link-row-actions` ganhou `flex-wrap:wrap`; classe nova `.link-row-btn` (botão compacto).
+- Linhas estáticas — o `↗` (`<span class="arrow" onclick="window.open(...)">`) virou os 2 botões, mesma URL:
+  - `#viewTermos` → `contrato-form.html`
+  - `#viewPrestador` → `prestador-form.html`
+  - `#viewCurriculo` → `curriculo-form.html`
+  (o `onclick` de abrir do `<span>` do rótulo também saiu — o texto deixou de ser clicável; abrir agora é pelo botão 🔗.)
+- Linhas dinâmicas de Declarações e Procurações (`selecionarCategoriaDeclProc`):
+  - Procurações (linha simples com `↗`) → `linkFormAcoesHtml(item.url)` (📋 + 🔗).
+  - Declarações (linhas com "🖥️ Preencher pelo Sistema" + "📄 Modelo em Branco") → ganharam só o **📋 Copiar link** ao lado (o "Preencher pelo Sistema" já é o "abrir"); layout/demais botões inalterados.
+- Nenhuma URL alterada; nenhum outro comportamento tocado.
+
+**Testado (static server):** as 4 linhas estáticas + as 3 de procuração mostram 📋/🔗 com os `onclick` certos e sem o `↗` antigo; as 4 de declaração mostram "🖥️ Preencher pelo Sistema" + "📋 Copiar link" (+ modelos). Copiar: `navigator.clipboard.writeText` recebe a URL absoluta correta (`…/contrato-form.html`, `…/procuracao-simples-form.html`), botão vira "✅ Copiado" e volta sozinho; fallback prompt não dispara quando o clipboard funciona. Abrir: `window.open(<mesma url>, '_blank', 'noopener')`. Sem `SyntaxError`. Screenshots (Currículo e Contratos) entregues.
+
+**Falta:** aprovação do usuário para publicar. (Continua empilhado com Passo 3 + Histórico novo, tudo sem publicar.)
+
+## Padronização dos 3 módulos no padrão "Histórico de Contratos" (2026-08-30) — NÃO publicado
+
+Aprovado. Replica Pendentes → Arquivar/Excluir → Histórico (busca + Ver ficha + Formatar + Desarquivar + seleção múltipla + exclusão em massa) em Declarações e Procurações, Prestação de Serviço e Currículos, mesmo mecanismo `status='ARQUIVADO'` do Contratos, sem tabela nova, sem duplicar/apagar. Também retrofitou seleção múltipla no Histórico de Contratos para os 4 ficarem idênticos.
+
+**Migrações (backup antes: declaracoes_pendentes 1×PENDENTE, curriculos 12×PENDENTE, 0 ARQUIVADO):**
+- Decl/Proc e Prestação: **nenhuma** — `declaracoes_pendentes.status` já aceitava `ARQUIVADO`.
+- Currículos: `apply_migration curriculos_status_allow_arquivado` — `curriculos_status_check` de `('PENDENTE','FEITO')` → `('PENDENTE','FEITO','ARQUIVADO')`. Aditiva, 0 linha alterada. `FEITO` continua na lista de trabalho; só `ARQUIVADO` sai.
+
+**Código (`paineldecontrole/index.html`):**
+- Fábrica `criarHistoricoDeclPend(cfg)` — genérica p/ módulos da tabela `declaracoes_pendentes`; cache/DOM/seleção próprios; whitelist explícita de `tipo_contrato` (+ `.filter()` client de reforço); Arquivar/Desarquivar = `dbUpdate('declaracoes_pendentes', {status, processado_em}, {id})`; Ver ficha/Formatar injetam a linha no `declaracoesPendentesCache` no clique e chamam `openDeclaracaoFicha`/`abrirDeclFormatado` (inalteradas); título da ficha vira "(arquivado)".
+- Instâncias `histDeclProc` (7 tipos) e `histPrestador` (`PRESTACAO_SERVICO`). Prestação: `camposBusca` inclui nome A/B, empresa do cliente, empresa do prestador; docs = CPF A/B + CNPJ cliente + CNPJ prestador (normalizados).
+- Currículos: histórico próprio (tabela `curriculos`), sai do MESMO `curriculosCache` (uma carga alimenta as duas listas); `curriculosAtivos()`/`curriculosArquivados()`; `renderHistoricoCurriculos` reusa `_busca` (nome/telefone/whatsapp/email/endereço/cidade + todo o `dados`); `arquivarCurriculo`/`desarquivarCurriculo` = `dbUpdate('curriculos', {status}, {id})`. Ficha/foto/Formatado/IA/Impressão reaproveitados (leem de `curriculosCache` por id). `filtrarCurriculos` e a contagem passaram a usar `curriculosAtivos()` (exclui ARQUIVADO da lista principal; FEITO permanece).
+- Botão 📥 Arquivar nos cards de pendentes dos 3 (`renderDeclProcRows`, `renderPrestadorRows`, `renderCurriculoRows`). DeclProc gate por whitelist.
+- HTML: 2ª `.table-container` "📑 Histórico de …" em `#viewDeclProc`, `#viewPrestador`, `#viewCurriculo` (mesma `.hist-busca-bar` + `.bulk-select-bar` + rows). Toggle Declarações/Procurações mantido (o Histórico tem filtro de tipo próprio, independente).
+- Retrofit Contratos: `selHistContratos` + `.bulk-select-bar` no Histórico de Contratos.
+- Hooks: `histDeclProc.load()`/`histPrestador.load()` no realtime de `declaracoes_pendentes`, no `openView` (declProc/prestador) e no `setInterval` de 30s (+ branches novas p/ declProc/prestador/curriculo). Currículos: `loadCurriculos()` passou a chamar `renderHistoricoCurriculos()`; realtime de `curriculos` já cobre.
+- **Não alterado:** formulários públicos, `db-write`, `openDeclaracaoFicha`/`abrirDeclFormatado`/`montarContrato`/`openFichaModal`/`abrirFormatado`/`printCurriculo`, `loadPendingCounts` (já filtra `PENDENTE`), `criarSelecaoMultipla`.
+
+Testes: relatório separado por módulo abaixo. Produção restaurada ao estado inicial (todas as linhas de teste apagadas; migrações permanecem). Falta: aprovação do usuário para publicar (Passos 3→7 empilhados).
+
+## "📥 Arquivar selecionados" na barra de seleção múltipla dos módulos padronizados (2026-08-30) — NÃO publicado
+
+Pedido: botão "📥 Arquivar selecionados" ao lado de "🗑️ Excluir selecionados" na barra de seleção múltipla **já existente** das listas de pendentes dos 4 módulos padronizados, com a mesma lógica do botão individual de arquivar; confirmação com a quantidade; PENDENTE → ARQUIVADO preservando os dados; nada mais muda.
+
+- Novo método `arquivarSelecionados(tabela, recarregar, comCarimbo=true)` em `criarSelecaoMultipla` — **aditivo** (mesma assinatura/estrutura de `excluirSelecionados`): pega `idsAtuais ∩ selecionados`, `confirm` com contagem (texto singular/plural), `Promise.all(ids.map(id => dbUpdate(tabela, patch, {id})))` com `patch = {status:'ARQUIVADO'[, processado_em:<now>]}`, `limpar()` + `recarregar()`. `comCarimbo=false` para `curriculos` (sem coluna `processado_em`). Nenhuma referência existente de `criarSelecaoMultipla` afetada.
+- Botão `.btn-bulk-arquivar` (estilo neutro) adicionado **só** nas 4 barras de pendentes: `#selDeclPendBulkAcoes` (Contratos → `arquivarSelecionados('declaracoes_pendentes', {reload pendentes+counts+loadHistoricoContratos})`), `#selDeclProcBulkAcoes` (→ `+histDeclProcLoad`), `#selPrestadorBulkAcoes` (→ `+histPrestadorLoad`), `#selCurriculosBulkAcoes` (`'curriculos', {reload}, false`). As barras dos Históricos **não** foram tocadas (lá a ação é Desarquivar). Recibos e qualquer outra lista: intocados.
+- CSS: `.btn-bulk-arquivar` / `:hover`.
+
+Testes (static server + SQL, com limpeza): método presente nas 4 instâncias; as 4 barras de pendentes mostram "📥 Arquivar selecionados" + "🗑️ Excluir selecionados"; barras dos Históricos seguem só com "Excluir". Via fetch-stub: Contratos (2 sel) → confirm "Arquivar 2 registros selecionados? Eles saem dos pendentes e vão para o Histórico. Nada é apagado — dá para desarquivar depois." + **2** `update {status:'ARQUIVADO', processado_em}` em `declaracoes_pendentes`, um por id (sem insert/delete, sem `dados`); Currículos (2 sel) → **2** `update {status:'ARQUIVADO'}` em `curriculos` (sem `processado_em`); DeclProc/Prestação (1 sel) → texto singular "Ele sai … vai …" + 1 call; **0 selecionados → não pede confirm, não chama nada**. Via SQL (flip real dos 6+2 registros de teste): pendentes zeram e os Históricos recebem (Contratos 2, Decl/Proc 2, Prestação 2, Currículos 2; lista principal de currículos volta a 12). Sem `SyntaxError`. Registros de teste apagados; produção de volta a `declaracoes_pendentes` 1×PENDENTE / `curriculos` 12×PENDENTE.
+
+**Falta:** aprovação do usuário para publicar (empilhado com os passos anteriores, tudo sem publicar).
+
+## Remoção do "Formatado com IA" dos Currículos (2026-08-30) — NÃO publicado
+
+Pedido: o formato de currículo gerado por IA não será mais usado na produção. Remover o ícone 🤖 "Formatado com IA" e suas funções. **Manter** a revisão/correção automática que roda antes de gerar (habitual). Só `paineldecontrole/index.html`, nenhuma migração.
+
+**Removido (era exclusivo do caminho IA):**
+- HTML: botão 🤖 "Formatado com IA" (`abrirFormatado(id, true)`) nos cards da lista principal e do Histórico de Currículos; botão `#formatadoBtnRegerar` ("🔄 Gerar de novo") do `#formatadoModal`.
+- JS: `gerarComIA()` (chamava a Edge Function `curriculo-ia`), `regerarComIA()` (+ `window.`), `cvHeaderHtml()`, `markdownSimplesParaHtml()`. `abrirFormatado(id, useIA)` → `abrirFormatado(id)` (só o caminho template; título fixo "📄 … — formatado"). `printCurriculo()` perdeu o ramo `if (c.ia_texto)` (agora sempre o template). Listener de edição de currículo (`window 'message'`) deixou de zerar `ia_texto`/`ia_header`/`ia_gerado_em` e chama `abrirFormatado(id)`.
+- CSS: `.cv-header` / `.cv-header img.cv-photo` / `.cv-id` / `.cv-sub` / `.cv-contact` + os 2 overrides `#printArea .cv-header/.cv-sub/.cv-contact` (só o cabeçalho de texto corrido da IA usava).
+
+**Mantido / não afetado (verificado por busca de referências):**
+- **Correção automática antes de gerar**: `revisarOrtografiaCurriculo()` (Edge Function `curriculo-revisao`) e `identificarPrimeiroNomeReferencia()` (Edge Function `curriculo-referencia-nome`) + `aplicarRevisaoCv2`/`extrair*` — continuam rodando em `abrirFormatado()` e `printCurriculo()` exatamente como antes.
+- Formatado por template (`formatarCurriculoLayout`/`formatarCurriculoLayoutAjustado`, classes `.cv2-*`), ficha + upload de foto (`openFichaModal`/`salvarFotoCurriculo`), impressão, editar (`abrirEdicaoCurriculo`), toggle FEITO/PENDENTE, Arquivar/Desarquivar/Histórico, busca — intactos.
+- `titleCase()` — mantido (usado por declarações, contratos e o layout do currículo).
+- **Banco:** nenhuma migração. Colunas `ia_texto`/`ia_header`/`ia_gerado_em` **mantidas** na tabela `curriculos` — hoje **0 de 12** currículos têm qualquer valor nelas (verificado por SQL), então nada a preservar/perder; ficam inertes (nunca mais lidas/gravadas pelo painel). Edge Function `curriculo-ia` **não** foi apagada — fica implantada porém sem nenhum chamador no painel.
+- Declarações/Procurações/Prestação: `#declFormatadoModal` + `montarContrato` são outro fluxo, não tocados (Formatar testado, ok).
+
+**Testes (static server):** sem `SyntaxError`; `regerarComIA`/`gerarComIA`/`cvHeaderHtml`/`markdownSimplesParaHtml` = `undefined`/removidas; `abrirFormatado` agora com aridade 1; `#formatadoBtnRegerar` fora do DOM; nenhuma referência viva (fora de comentário) a símbolo de IA. Cards de currículo (lista e Histórico) sem 🤖 — só 🖨️/📄/(✅ ou ↩️)/📥/🗑️. 📄 "Formatado" abre, mostra "⏳ Preparando currículo…", roda a revisão e renderiza o template (`.cv2-*`, ~2.4k chars); botão Imprimir aparece; `printCurriculo()` popula `#printArea` com `.cv2-print-page` e chama `window.print`. Ficha + foto ok. Declarações "Formatar" ok (regressão). Screenshot entregue.
+
+**Falta:** aprovação do usuário para publicar (empilhado com os passos anteriores).

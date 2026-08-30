@@ -84,7 +84,17 @@
         .bulk-select-count { font-size: 12px; color: var(--text-dim); }
         .btn-bulk-delete { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.12); color: #ef4444; font-size: 12.5px; font-weight: 700; cursor: pointer; }
         .btn-bulk-delete:hover { background: rgba(239,68,68,0.2); }
+        /* 📥 Arquivar selecionados — ação neutra ao lado de "Excluir selecionados" (2026-08-30). */
+        .btn-bulk-arquivar { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-dim); font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .btn-bulk-arquivar:hover { color: var(--text); border-color: var(--accent); }
         .card-select-checkbox { width: 16px; height: 16px; margin-top: 3px; cursor: pointer; flex-shrink: 0; accent-color: var(--accent); }
+
+        /* Barra de busca do Histórico de Contratos (2026-08-30) — filtro
+           client-side por nome (Pessoa A/B) / CPF normalizado / tipo de contrato. */
+        .hist-busca-bar { display: flex; gap: 10px; flex-wrap: wrap; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+        .hist-busca-bar input, .hist-busca-bar select { padding: 8px 10px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 9px; color: var(--text); font-size: 12.5px; font-family: inherit; }
+        .hist-busca-bar input { flex: 1; min-width: 180px; }
+        .hist-busca-bar input:focus, .hist-busca-bar select:focus { outline: none; border-color: var(--accent); }
         /* Modo sanfona (Financeiro): cada bloco abre/fecha, só um resumo fica visível por padrão */
         details.acc { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
         details.acc > summary.acc-summary { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; user-select: none; }
@@ -295,11 +305,13 @@
         .back-btn:hover { color: var(--text); }
         .back-btn:active { color: var(--accent-bright); }
         .link-list { }
-        .link-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; font-size: 14px; color: var(--text); }
+        .link-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; font-size: 14px; color: var(--text); }
         .link-row:last-child { border-bottom: none; }
         .link-row:hover { background: rgba(255,255,255,0.03); }
         .link-row .arrow { color: var(--accent-bright); font-size: 15px; }
-        .link-row-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .link-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+        /* 📋 Copiar link / 🔗 Abrir link ao lado de cada link de formulário (2026-08-30). */
+        .link-row-btn { padding: 7px 11px; font-size: 12px; white-space: nowrap; border-radius: 9px; }
         /* Busca inteligente do módulo de Currículos (2026-08-21) — filtro em
            tempo real na lista de pedidos, tipo "Ctrl+F" só que sem precisar
            abrir a busca do navegador. Só existe aqui (viewCurriculo) — não
@@ -347,8 +359,6 @@
             #printArea h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #000; padding-bottom: 4px; margin: 18px 0 8px; }
             #printArea p { font-size: 13px; margin: 3px 0; line-height: 1.4; }
             #printArea .print-item { margin-bottom: 10px; }
-            #printArea .cv-header { border-bottom-color: #000; }
-            #printArea .cv-sub, #printArea .cv-contact { color: #333; }
             #printArea ul { margin: 4px 0; padding-left: 18px; }
             #printArea li { font-size: 13px; margin: 2px 0; }
             /* Formatação de Declarações/Contratos (montarContrato) — fonte maior e
@@ -379,14 +389,8 @@
             .locacao-assinaturas-print { margin-top: 8px; text-align: center; }
             .locacao-assinaturas-print p { margin: 0; }
         }
-        /* Currículo formatado com IA (markdown livre) — cabeçalho com foto + texto
-           corrido. O Formatado por template (sem IA) usa .cv2-* logo abaixo. */
-        .cv-header { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 2px solid var(--accent); }
-        .cv-header img.cv-photo { width: 76px; height: 76px; border-radius: 14px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--border); }
-        .cv-header .cv-id { flex: 1; min-width: 0; }
-        .cv-header h1 { font-size: 19px; margin: 0 0 4px; color: var(--text); }
-        .cv-header .cv-sub { font-size: 12px; color: var(--text-dim); margin: 0 0 2px; }
-        .cv-header .cv-contact { font-size: 12px; color: var(--accent-bright); margin: 0; }
+        /* .cv-header* removido com o "Formatado com IA" (2026-08-30) — o Formatado
+           por template usa .cv2-* logo abaixo. */
         #formatadoConteudo h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-bright); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin: 18px 0 8px; }
         #formatadoConteudo h1 { font-size: 18px; color: var(--text); margin: 0 0 4px; }
         #formatadoConteudo p { font-size: 13px; margin: 4px 0; line-height: 1.5; }
@@ -2084,15 +2088,17 @@
                     <span class="table-count" id="declPendCount">0 registros</span>
                 </div>
                 <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('contrato-form.html', '_blank', 'noopener')">📃 Link — Contrato (cliente escolhe o tipo)</span>
+                    <span>📃 Link — Contrato (cliente escolhe o tipo)</span>
                     <span class="link-row-actions">
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('contrato-form.html', '_blank', 'noopener')">↗</span>
+                        <button type="button" class="btn-secondary link-row-btn" onclick="copiarLinkFormulario('contrato-form.html', this)">📋 Copiar link</button>
+                        <button type="button" class="btn-secondary link-row-btn" onclick="window.open('contrato-form.html', '_blank', 'noopener')">🔗 Abrir link</button>
                     </span>
                 </div>
                 <div class="bulk-select-bar">
                     <label class="bulk-select-all"><input type="checkbox" id="selDeclPendSelAll" onchange="selDeclPend.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
                     <div class="bulk-select-acoes" id="selDeclPendBulkAcoes" style="display:none;">
                         <span class="bulk-select-count" id="selDeclPendBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-arquivar" onclick="selDeclPend.arquivarSelecionados('declaracoes_pendentes', async () => { await loadDeclaracoesPendentes(); loadPendingCounts(); await loadHistoricoContratos(); })">📥 Arquivar selecionados</button>
                         <button type="button" class="btn-bulk-delete" onclick="selDeclPend.excluirSelecionados('declaracoes_pendentes', async () => { await loadDeclaracoesPendentes(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
                     </div>
                 </div>
@@ -2101,28 +2107,36 @@
                 </div>
             </div>
 
+            <!-- Histórico de Contratos (2026-08-30) — mesma tabela
+                 `declaracoes_pendentes`, recorte `status = 'ARQUIVADO'` +
+                 tipo_contrato na whitelist HIST_CONTRATO_TIPOS (só os 3
+                 CONTRATO_*). Arquivar/Desarquivar só trocam o `status` do próprio
+                 registro (sem cópia, sem apagar, sem tocar em `dados`). NÃO inclui
+                 declaração/procuração/prestação. Ver loadHistoricoContratos()/
+                 renderHistoricoContratos()/arquivarContrato()/desarquivarContrato(). -->
             <div class="table-container" style="margin-top:16px;">
                 <div class="table-header">
-                    <h3>📑 Histórico de Contratos e Documentos</h3>
-                    <span class="table-count" id="termoCount">0 registros</span>
+                    <h3>📑 Histórico de Contratos</h3>
+                    <span class="table-count" id="histContratosCount">0 registros</span>
                 </div>
-                <div class="actions" style="padding:12px 20px; border-bottom: 1px solid var(--border);">
-                    <button class="btn-primary" onclick="openTermoModal()">＋ Novo Termo</button>
-                    <button class="btn-primary" onclick="openCVModal()">＋ Novo Compra e Venda</button>
-                    <button class="btn-secondary" onclick="loadContratos()">🔄 Atualizar</button>
+                <div class="hist-busca-bar">
+                    <input type="text" id="histContratosBusca" placeholder="Buscar por nome (Pessoa A ou B) ou CPF…" oninput="histOnBusca(this.value)">
+                    <select id="histContratosTipo" onchange="histOnTipo(this.value)">
+                        <option value="">Todos os tipos</option>
+                        <option value="CONTRATO_CV_VEICULO">Compra e Venda de Veículo</option>
+                        <option value="CONTRATO_CV_IMOVEL">Compra e Venda de Imóvel</option>
+                        <option value="CONTRATO_LOCACAO_IMOVEL">Locação de Imóvel</option>
+                    </select>
                 </div>
                 <div class="bulk-select-bar">
-                    <label class="bulk-select-all"><input type="checkbox" id="selContratosSelAll" onchange="selContratos.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
-                    <div class="bulk-select-acoes" id="selContratosBulkAcoes" style="display:none;">
-                        <span class="bulk-select-count" id="selContratosBulkCount">0 selecionados</span>
-                        <button type="button" class="btn-bulk-delete" onclick="selContratos.excluirSelecionados('contratos', loadContratos)">🗑️ Excluir selecionados</button>
+                    <label class="bulk-select-all"><input type="checkbox" id="selHistContratosSelAll" onchange="selHistContratos.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="selHistContratosBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="selHistContratosBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="selHistContratos.excluirSelecionados('declaracoes_pendentes', loadHistoricoContratos)">🗑️ Excluir selecionados</button>
                     </div>
                 </div>
-                <div id="termoRows">
-                    <div class="empty-state">
-                        <div class="empty-icon">📭</div>
-                        <div>Carregando...</div>
-                    </div>
+                <div id="histContratosRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                 </div>
             </div>
         </div>
@@ -2151,10 +2165,46 @@
                     <label class="bulk-select-all"><input type="checkbox" id="selDeclProcSelAll" onchange="selDeclProc.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
                     <div class="bulk-select-acoes" id="selDeclProcBulkAcoes" style="display:none;">
                         <span class="bulk-select-count" id="selDeclProcBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-arquivar" onclick="selDeclProc.arquivarSelecionados('declaracoes_pendentes', async () => { await loadDeclProcPendentes(); loadPendingCounts(); await histDeclProcLoad(); })">📥 Arquivar selecionados</button>
                         <button type="button" class="btn-bulk-delete" onclick="selDeclProc.excluirSelecionados('declaracoes_pendentes', async () => { await loadDeclProcPendentes(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
                     </div>
                 </div>
                 <div id="declProcRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                </div>
+            </div>
+
+            <!-- Histórico de Declarações e Procurações (2026-08-30) — mesma tabela
+                 `declaracoes_pendentes`, recorte status='ARQUIVADO' + whitelist dos
+                 7 tipos (4 declarações + 3 procurações). Mesmo mecanismo do
+                 Histórico de Contratos (criarHistoricoDeclPend). Não recebe
+                 contrato nem prestação de serviço. -->
+            <div class="table-container" style="margin-top:16px;">
+                <div class="table-header">
+                    <h3>📑 Histórico de Declarações e Procurações</h3>
+                    <span class="table-count" id="histDeclProcCount">0 registros</span>
+                </div>
+                <div class="hist-busca-bar">
+                    <input type="text" id="histDeclProcBusca" placeholder="Buscar por nome (Pessoa A ou B) ou CPF…" oninput="histDeclProcOnBusca(this.value)">
+                    <select id="histDeclProcTipo" onchange="histDeclProcOnTipo(this.value)">
+                        <option value="">Todos os tipos</option>
+                        <option value="DECLARACAO_RESIDENCIA">Declaração de Residência</option>
+                        <option value="DECLARACAO_AUTONOMO">Declaração de Autônomo</option>
+                        <option value="DECLARACAO_TRABALHO">Declaração de Trabalho</option>
+                        <option value="DECLARACAO_UNIAO_ESTAVEL">Declaração de União Estável</option>
+                        <option value="PROCURACAO_SIMPLES">Procuração Simples</option>
+                        <option value="PROCURACAO_DETRAN">Procuração Detran</option>
+                        <option value="TERMO_RESPONSABILIDADE_VEICULO">Termo de Responsabilidade de Veículo</option>
+                    </select>
+                </div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="histDeclProcSelSelAll" onchange="histDeclProcSel.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="histDeclProcSelBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="histDeclProcSelBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="histDeclProcSel.excluirSelecionados('declaracoes_pendentes', histDeclProcLoad)">🗑️ Excluir selecionados</button>
+                    </div>
+                </div>
+                <div id="histDeclProcRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                 </div>
             </div>
@@ -2175,19 +2225,45 @@
                     <span class="table-count" id="prestadorCount">0 registros</span>
                 </div>
                 <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('prestador-form.html', '_blank', 'noopener')">🧾 Link — Orçamento de Prestação de Serviço</span>
+                    <span>🧾 Link — Orçamento de Prestação de Serviço</span>
                     <span class="link-row-actions">
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('prestador-form.html', '_blank', 'noopener')">↗</span>
+                        <button type="button" class="btn-secondary link-row-btn" onclick="copiarLinkFormulario('prestador-form.html', this)">📋 Copiar link</button>
+                        <button type="button" class="btn-secondary link-row-btn" onclick="window.open('prestador-form.html', '_blank', 'noopener')">🔗 Abrir link</button>
                     </span>
                 </div>
                 <div class="bulk-select-bar">
                     <label class="bulk-select-all"><input type="checkbox" id="selPrestadorSelAll" onchange="selPrestador.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
                     <div class="bulk-select-acoes" id="selPrestadorBulkAcoes" style="display:none;">
                         <span class="bulk-select-count" id="selPrestadorBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-arquivar" onclick="selPrestador.arquivarSelecionados('declaracoes_pendentes', async () => { await loadPrestadorPendentes(); loadPendingCounts(); await histPrestadorLoad(); })">📥 Arquivar selecionados</button>
                         <button type="button" class="btn-bulk-delete" onclick="selPrestador.excluirSelecionados('declaracoes_pendentes', async () => { await loadPrestadorPendentes(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
                     </div>
                 </div>
                 <div id="prestadorRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                </div>
+            </div>
+
+            <!-- Histórico de Prestação de Serviço (2026-08-30) — mesma tabela
+                 `declaracoes_pendentes`, recorte status='ARQUIVADO' +
+                 tipo_contrato='PRESTACAO_SERVICO'. Mesmo mecanismo do Histórico de
+                 Contratos. Não recebe nenhum outro tipo de documento. -->
+            <div class="table-container" style="margin-top:16px;">
+                <div class="table-header">
+                    <h3>📑 Histórico de Prestação de Serviço</h3>
+                    <span class="table-count" id="histPrestadorCount">0 registros</span>
+                </div>
+                <div class="hist-busca-bar">
+                    <input type="text" id="histPrestadorBusca" placeholder="Buscar por nome, cliente, empresa, CPF ou CNPJ…" oninput="histPrestadorOnBusca(this.value)">
+                </div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="histPrestadorSelSelAll" onchange="histPrestadorSel.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="histPrestadorSelBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="histPrestadorSelBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="histPrestadorSel.excluirSelecionados('declaracoes_pendentes', histPrestadorLoad)">🗑️ Excluir selecionados</button>
+                    </div>
+                </div>
+                <div id="histPrestadorRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                 </div>
             </div>
@@ -2365,9 +2441,10 @@
                     <span class="table-count" id="curriculoCount">0 registros</span>
                 </div>
                 <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">📝 Link — Formulário do Cliente</span>
+                    <span>📝 Link — Formulário do Cliente</span>
                     <span class="link-row-actions">
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">↗</span>
+                        <button type="button" class="btn-secondary link-row-btn" onclick="copiarLinkFormulario('curriculo-form.html', this)">📋 Copiar link</button>
+                        <button type="button" class="btn-secondary link-row-btn" onclick="window.open('curriculo-form.html', '_blank', 'noopener')">🔗 Abrir link</button>
                     </span>
                 </div>
                 <div class="curriculo-busca-wrap">
@@ -2379,10 +2456,36 @@
                     <label class="bulk-select-all"><input type="checkbox" id="selCurriculosSelAll" onchange="selCurriculos.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
                     <div class="bulk-select-acoes" id="selCurriculosBulkAcoes" style="display:none;">
                         <span class="bulk-select-count" id="selCurriculosBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-arquivar" onclick="selCurriculos.arquivarSelecionados('curriculos', async () => { await loadCurriculos(); loadPendingCounts(); }, false)">📥 Arquivar selecionados</button>
                         <button type="button" class="btn-bulk-delete" onclick="selCurriculos.excluirSelecionados('curriculos', async () => { await loadCurriculos(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
                     </div>
                 </div>
                 <div id="curriculoRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                </div>
+            </div>
+
+            <!-- Histórico de Currículos (2026-08-30) — MESMA tabela `curriculos`,
+                 recorte status='ARQUIVADO'. FEITO NÃO é arquivado: continua na
+                 lista de trabalho acima. Arquivar/Desarquivar só trocam o `status`
+                 do próprio registro (sem cópia, sem apagar). Ficha/foto/formatado/
+                 IA/impressão reaproveitados. -->
+            <div class="table-container" style="margin-top:16px;">
+                <div class="table-header">
+                    <h3>📑 Histórico de Currículos</h3>
+                    <span class="table-count" id="histCurriculoCount">0 registros</span>
+                </div>
+                <div class="hist-busca-bar">
+                    <input type="text" id="histCurriculoBusca" placeholder="Buscar por nome, telefone, WhatsApp, e-mail, cidade…" oninput="histCurriculoOnBusca(this.value)">
+                </div>
+                <div class="bulk-select-bar">
+                    <label class="bulk-select-all"><input type="checkbox" id="selHistCurriculosSelAll" onchange="selHistCurriculos.toggleTodos(this.checked)"><span>Selecionar todos</span></label>
+                    <div class="bulk-select-acoes" id="selHistCurriculosBulkAcoes" style="display:none;">
+                        <span class="bulk-select-count" id="selHistCurriculosBulkCount">0 selecionados</span>
+                        <button type="button" class="btn-bulk-delete" onclick="selHistCurriculos.excluirSelecionados('curriculos', async () => { await loadCurriculos(); loadPendingCounts(); })">🗑️ Excluir selecionados</button>
+                    </div>
+                </div>
+                <div id="histCurriculoRows">
                     <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
                 </div>
             </div>
@@ -2569,7 +2672,6 @@
             <div id="formatadoConteudo" style="font-size:14px; color:var(--text-dim); line-height:1.6;"></div>
             <div class="modal-buttons">
                 <button type="button" class="btn-secondary" onclick="abrirEdicaoCurriculo()">✏️ Editar</button>
-                <button type="button" class="btn-secondary" id="formatadoBtnRegerar" style="display:none;" onclick="regerarComIA()">🔄 Gerar de novo</button>
                 <button type="button" class="btn-save" id="formatadoBtnImprimir" onclick="imprimirFormatado()">🖨️ Imprimir</button>
                 <button type="button" class="btn-cancel" onclick="closeFormatadoModal()">Fechar</button>
             </div>
@@ -2644,412 +2746,10 @@
         </div>
     </div>
 
-    <div class="modal" id="termoModal">
-        <div class="modal-content wide">
-            <h2>📄 Novo Termo de Responsabilidade</h2>
-            <form onsubmit="saveTermo(event)">
-                <div class="fieldset-title">👤 Proprietário</div>
-                <div class="form-group"><label>Nome completo</label><input type="text" id="t_prop_nome" required></div>
-                <div class="form-row">
-                    <div class="form-group"><label>CPF</label><input type="text" id="t_prop_cpf" inputmode="numeric"></div>
-                    <div class="form-group"><label>RG</label><input type="text" id="t_prop_rg"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Gênero</label>
-                        <select id="t_prop_genero"><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option></select>
-                    </div>
-                    <div class="form-group"><label>Estado civil</label><input type="text" id="t_prop_estado_civil"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Nacionalidade</label><input type="text" id="t_prop_nacionalidade" value="Brasileiro(a)"></div>
-                    <div class="form-group"><label>Profissão</label><input type="text" id="t_prop_profissao"></div>
-                </div>
-                <div class="form-group"><label>Endereço</label><input type="text" id="t_prop_endereco"></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Cidade</label>
-                        <select id="t_prop_cidade" onchange="onTermoCidadeChange('prop')">
-                            <option value="">Selecione</option>
-                            <option value="Camboriú">Camboriú</option>
-                            <option value="Balneário Camboriú">Balneário Camboriú</option>
-                            <option value="Itapema">Itapema</option>
-                            <option value="Itajaí">Itajaí</option>
-                            <option value="Outra">Outra</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Estado</label>
-                        <select id="t_prop_estado">
-                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
-                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
-                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
-                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
-                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
-                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group" id="t_prop_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="t_prop_cidade_outra"></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Bairro</label>
-                        <select id="t_prop_bairro" onchange="onTermoBairroChange('prop')" disabled><option value="">Selecione a cidade primeiro</option></select>
-                    </div>
-                    <div class="form-group" id="t_prop_bairro_outro_wrap" style="display:none;"><label>Qual bairro?</label><input type="text" id="t_prop_bairro_outro"></div>
-                </div>
-
-                <div class="checkbox-row">
-                    <input type="checkbox" id="t_mesmo_responsavel" checked onchange="toggleResponsavelFields()">
-                    <label for="t_mesmo_responsavel">Responsável é o próprio proprietário</label>
-                </div>
-
-                <div id="t_responsavel_fields" style="display:none;">
-                    <div class="fieldset-title">🧾 Responsável pelo veículo</div>
-                    <div class="form-group"><label>Nome completo</label><input type="text" id="t_resp_nome"></div>
-                    <div class="form-row">
-                        <div class="form-group"><label>CPF</label><input type="text" id="t_resp_cpf" inputmode="numeric"></div>
-                        <div class="form-group"><label>RG</label><input type="text" id="t_resp_rg"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Gênero</label>
-                            <select id="t_resp_genero"><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option></select>
-                        </div>
-                        <div class="form-group"><label>Estado civil</label><input type="text" id="t_resp_estado_civil"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Nacionalidade</label><input type="text" id="t_resp_nacionalidade" value="Brasileiro(a)"></div>
-                        <div class="form-group"><label>Profissão</label><input type="text" id="t_resp_profissao"></div>
-                    </div>
-                    <div class="form-group"><label>Endereço</label><input type="text" id="t_resp_endereco"></div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Cidade</label>
-                            <select id="t_resp_cidade" onchange="onTermoCidadeChange('resp')">
-                                <option value="">Selecione</option>
-                                <option value="Camboriú">Camboriú</option>
-                                <option value="Balneário Camboriú">Balneário Camboriú</option>
-                                <option value="Itapema">Itapema</option>
-                                <option value="Itajaí">Itajaí</option>
-                                <option value="Outra">Outra</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Estado</label>
-                            <select id="t_resp_estado">
-                                <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
-                                <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
-                                <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-                                <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
-                                <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
-                                <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
-                                <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group" id="t_resp_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="t_resp_cidade_outra"></div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Bairro</label>
-                            <select id="t_resp_bairro" onchange="onTermoBairroChange('resp')" disabled><option value="">Selecione a cidade primeiro</option></select>
-                        </div>
-                        <div class="form-group" id="t_resp_bairro_outro_wrap" style="display:none;"><label>Qual bairro?</label><input type="text" id="t_resp_bairro_outro"></div>
-                    </div>
-                </div>
-
-                <div class="fieldset-title">🚗 Veículo</div>
-                <div class="form-row">
-                    <div class="form-group"><label>Tipo de veículo</label><input type="text" id="t_tipo_veiculo" value="Automóvel" placeholder="Automóvel, Motocicleta..."></div>
-                    <div class="form-group"><label>Fabricante</label><input type="text" id="t_fabricante"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Modelo</label><input type="text" id="t_modelo"></div>
-                    <div class="form-group"><label>Ano fab./modelo</label><input type="text" id="t_ano" placeholder="2014/2014"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Cor</label><input type="text" id="t_cor"></div>
-                    <div class="form-group"><label>Placa</label><input type="text" id="t_placa" required></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Renavam</label><input type="text" id="t_renavam" inputmode="numeric"></div>
-                    <div class="form-group"><label>Chassi</label><input type="text" id="t_chassi"></div>
-                </div>
-
-                <div class="fieldset-title">⚖️ Foro</div>
-                <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">Por padrão usa a cidade do Proprietário (Lei 14.879/2024 exige vínculo com o domicílio de uma das partes). Só preencha abaixo se precisar de um foro diferente.</p>
-                <div class="form-row">
-                    <div class="form-group"><label>Cidade do foro (opcional)</label>
-                        <select id="t_foro_cidade" onchange="onTermoForoCidadeChange()">
-                            <option value="">Mesma do Proprietário</option>
-                            <option value="Camboriú">Camboriú</option>
-                            <option value="Balneário Camboriú">Balneário Camboriú</option>
-                            <option value="Itapema">Itapema</option>
-                            <option value="Itajaí">Itajaí</option>
-                            <option value="Outra">Outra</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Estado</label>
-                        <select id="t_foro_estado">
-                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
-                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
-                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
-                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
-                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
-                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group" id="t_foro_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="t_foro_cidade_outra"></div>
-
-                <div class="fieldset-title">🖋️ Testemunhas (opcional)</div>
-                <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">Sem testemunhas o documento perde força de título executivo (art. 784, III do CPC). Se não souber agora, deixe em branco — sai linha pra assinar à mão.</p>
-                <div class="form-row">
-                    <div class="form-group"><label>Testemunha 1 — nome</label><input type="text" id="t_test1_nome"></div>
-                    <div class="form-group"><label>Testemunha 1 — CPF</label><input type="text" id="t_test1_cpf" inputmode="numeric"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Testemunha 2 — nome</label><input type="text" id="t_test2_nome"></div>
-                    <div class="form-group"><label>Testemunha 2 — CPF</label><input type="text" id="t_test2_cpf" inputmode="numeric"></div>
-                </div>
-
-                <div class="modal-buttons">
-                    <button type="button" class="btn-cancel" onclick="closeTermoModal()">Cancelar</button>
-                    <button type="submit" class="btn-save">💾 Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="modal" id="cvModal">
-        <div class="modal-content wide">
-            <h2>🚗 Novo Contrato de Compra e Venda de Veículo</h2>
-            <form onsubmit="saveCV(event)">
-                <div class="form-group"><label>Variante</label>
-                    <select id="cv_variante" onchange="toggleCVPagamento()">
-                        <option value="CV_VEICULO_VISTA">À vista</option>
-                        <option value="CV_VEICULO_PRAZO_ENTRADA">A prazo, com entrada</option>
-                        <option value="CV_VEICULO_PRAZO_SEM_ENTRADA">A prazo, sem entrada</option>
-                        <option value="CV_VEICULO_VISTA_CARRO">À vista, entrada é outro veículo</option>
-                        <option value="CV_VEICULO_PRAZO_CARRO_PARCELAS">A prazo, entrada é outro veículo</option>
-                    </select>
-                </div>
-
-                <div class="fieldset-title">🧔 Vendedor</div>
-                <div class="form-group"><label>Nome completo</label><input type="text" id="cv_vend_nome" required></div>
-                <div class="form-row">
-                    <div class="form-group"><label>CPF</label><input type="text" id="cv_vend_cpf" inputmode="numeric"></div>
-                    <div class="form-group"><label>RG</label><input type="text" id="cv_vend_rg"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Gênero</label>
-                        <select id="cv_vend_genero"><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option></select>
-                    </div>
-                    <div class="form-group"><label>Estado civil</label><input type="text" id="cv_vend_estado_civil"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Nacionalidade</label><input type="text" id="cv_vend_nacionalidade" value="Brasileiro(a)"></div>
-                    <div class="form-group"><label>Profissão</label><input type="text" id="cv_vend_profissao"></div>
-                </div>
-                <div class="form-group"><label>Endereço</label><input type="text" id="cv_vend_endereco"></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Cidade</label>
-                        <select id="cv_vend_cidade" onchange="onCVCidadeChange('vend')">
-                            <option value="">Selecione</option>
-                            <option value="Camboriú">Camboriú</option>
-                            <option value="Balneário Camboriú">Balneário Camboriú</option>
-                            <option value="Itapema">Itapema</option>
-                            <option value="Itajaí">Itajaí</option>
-                            <option value="Outra">Outra</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Estado</label>
-                        <select id="cv_vend_estado">
-                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
-                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
-                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
-                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
-                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
-                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group" id="cv_vend_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="cv_vend_cidade_outra"></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Bairro</label>
-                        <select id="cv_vend_bairro" onchange="onCVBairroChange('vend')" disabled><option value="">Selecione a cidade primeiro</option></select>
-                    </div>
-                    <div class="form-group" id="cv_vend_bairro_outro_wrap" style="display:none;"><label>Qual bairro?</label><input type="text" id="cv_vend_bairro_outro"></div>
-                </div>
-
-                <div class="fieldset-title">🧾 Comprador</div>
-                <div class="form-group"><label>Nome completo</label><input type="text" id="cv_comp_nome" required></div>
-                <div class="form-row">
-                    <div class="form-group"><label>CPF</label><input type="text" id="cv_comp_cpf" inputmode="numeric"></div>
-                    <div class="form-group"><label>RG</label><input type="text" id="cv_comp_rg"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Gênero</label>
-                        <select id="cv_comp_genero"><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option></select>
-                    </div>
-                    <div class="form-group"><label>Estado civil</label><input type="text" id="cv_comp_estado_civil"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Nacionalidade</label><input type="text" id="cv_comp_nacionalidade" value="Brasileiro(a)"></div>
-                    <div class="form-group"><label>Profissão</label><input type="text" id="cv_comp_profissao"></div>
-                </div>
-                <div class="form-group"><label>Endereço</label><input type="text" id="cv_comp_endereco"></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Cidade</label>
-                        <select id="cv_comp_cidade" onchange="onCVCidadeChange('comp')">
-                            <option value="">Selecione</option>
-                            <option value="Camboriú">Camboriú</option>
-                            <option value="Balneário Camboriú">Balneário Camboriú</option>
-                            <option value="Itapema">Itapema</option>
-                            <option value="Itajaí">Itajaí</option>
-                            <option value="Outra">Outra</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Estado</label>
-                        <select id="cv_comp_estado">
-                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
-                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
-                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
-                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
-                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
-                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group" id="cv_comp_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="cv_comp_cidade_outra"></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Bairro</label>
-                        <select id="cv_comp_bairro" onchange="onCVBairroChange('comp')" disabled><option value="">Selecione a cidade primeiro</option></select>
-                    </div>
-                    <div class="form-group" id="cv_comp_bairro_outro_wrap" style="display:none;"><label>Qual bairro?</label><input type="text" id="cv_comp_bairro_outro"></div>
-                </div>
-
-                <div class="fieldset-title">🚗 Veículo</div>
-                <div class="form-row">
-                    <div class="form-group"><label>Tipo de veículo</label><input type="text" id="cv_tipo_veiculo" value="Carro" placeholder="Carro, Moto..."></div>
-                    <div class="form-group"><label>Fabricante</label><input type="text" id="cv_fabricante"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Modelo</label><input type="text" id="cv_modelo"></div>
-                    <div class="form-group"><label>Ano fab./modelo</label><input type="text" id="cv_ano" placeholder="2014/2014"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Cor</label><input type="text" id="cv_cor"></div>
-                    <div class="form-group"><label>Placa</label><input type="text" id="cv_placa" required></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Renavam</label><input type="text" id="cv_renavam" inputmode="numeric"></div>
-                    <div class="form-group"><label>Chassi</label><input type="text" id="cv_chassi"></div>
-                </div>
-
-                <div class="fieldset-title">💰 Pagamento</div>
-
-                <div id="cv_pag_vista">
-                    <div class="form-group"><label>Valor total</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_vista"><div class="extenso-valor"></div></div>
-                </div>
-
-                <div id="cv_pag_prazo_entrada" style="display:none;">
-                    <div class="form-row">
-                        <div class="form-group"><label>Valor total</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_pe"><div class="extenso-valor"></div></div>
-                        <div class="form-group"><label>Valor da entrada (dinheiro)</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_entrada_pe"><div class="extenso-valor"></div></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_pe"></div>
-                        <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_pe"></div>
-                    </div>
-                    <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">O dia do vencimento das parcelas seguintes é sempre o mesmo dia da 1ª parcela — não precisa informar separado.</p>
-                </div>
-
-                <div id="cv_pag_prazo_sem_entrada" style="display:none;">
-                    <div class="form-row">
-                        <div class="form-group"><label>Valor total</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_se"><div class="extenso-valor"></div></div>
-                        <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_se"></div>
-                    </div>
-                    <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_se"></div>
-                    <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">O dia do vencimento das parcelas seguintes é sempre o mesmo dia da 1ª parcela — não precisa informar separado.</p>
-                </div>
-
-                <div id="cv_pag_vista_carro" style="display:none;">
-                    <div class="form-group"><label>Valor total do negócio</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_vc"><div class="extenso-valor"></div></div>
-                    <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">A quantia em dinheiro (item b) é calculada sozinha: valor total menos o valor do veículo dado na entrada, preenchido abaixo.</p>
-                </div>
-
-                <div id="cv_pag_prazo_carro_parcelas" style="display:none;">
-                    <div class="form-row">
-                        <div class="form-group"><label>Valor total</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv_valor_total_pc"><div class="extenso-valor"></div></div>
-                        <div class="form-group"><label>Número de parcelas</label><input type="number" id="cv_num_parcelas_pc"></div>
-                    </div>
-                    <div class="form-group"><label>Data da 1ª parcela</label><input type="date" id="cv_data_primeira_parcela_pc"></div>
-                    <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">O valor restante (dividido nas parcelas) é calculado sozinho: valor total menos o valor do veículo dado na entrada, preenchido abaixo. Dia do vencimento é sempre o dia da 1ª parcela.</p>
-                </div>
-
-                <div id="cv_veiculo2" style="display:none;">
-                    <div class="fieldset-title">🚙 Veículo dado na entrada (de propriedade do Comprador)</div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Tipo de veículo</label><input type="text" id="cv2_tipo_veiculo" value="Moto" placeholder="Carro, Moto..."></div>
-                        <div class="form-group"><label>Fabricante</label><input type="text" id="cv2_fabricante"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Modelo</label><input type="text" id="cv2_modelo"></div>
-                        <div class="form-group"><label>Ano fab./modelo</label><input type="text" id="cv2_ano" placeholder="2014/2014"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Cor</label><input type="text" id="cv2_cor"></div>
-                        <div class="form-group"><label>Placa</label><input type="text" id="cv2_placa"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Renavam</label><input type="text" id="cv2_renavam" inputmode="numeric"></div>
-                        <div class="form-group"><label>Chassi</label><input type="text" id="cv2_chassi"></div>
-                    </div>
-                    <div class="form-group"><label>Valor atribuído a este veículo na negociação</label><input type="text" inputmode="numeric" data-role="valor-extenso" placeholder="Ex: 2500" id="cv2_valor"><div class="extenso-valor"></div></div>
-                </div>
-
-                <div class="fieldset-title">⚖️ Foro</div>
-                <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">Por padrão usa a cidade do Vendedor (Lei 14.879/2024 exige vínculo com o domicílio de uma das partes). Só preencha abaixo se precisar de um foro diferente.</p>
-                <div class="form-row">
-                    <div class="form-group"><label>Cidade do foro (opcional)</label>
-                        <select id="cv_foro_cidade" onchange="onCVForoCidadeChange()">
-                            <option value="">Mesma do Vendedor</option>
-                            <option value="Camboriú">Camboriú</option>
-                            <option value="Balneário Camboriú">Balneário Camboriú</option>
-                            <option value="Itapema">Itapema</option>
-                            <option value="Itajaí">Itajaí</option>
-                            <option value="Outra">Outra</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Estado</label>
-                        <select id="cv_foro_estado">
-                            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
-                            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
-                            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-                            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
-                            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
-                            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC" selected>SC</option>
-                            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group" id="cv_foro_cidade_outra_wrap" style="display:none;"><label>Qual cidade?</label><input type="text" id="cv_foro_cidade_outra"></div>
-
-                <div class="fieldset-title">🖋️ Testemunhas (opcional)</div>
-                <p style="font-size:12px; color:#8fa89a; margin:-4px 0 10px;">Sem testemunhas o documento perde força de título executivo (art. 784, III do CPC). Se não souber agora, deixe em branco — sai linha pra assinar à mão.</p>
-                <div class="form-row">
-                    <div class="form-group"><label>Testemunha 1 — nome</label><input type="text" id="cv_test1_nome"></div>
-                    <div class="form-group"><label>Testemunha 1 — CPF</label><input type="text" id="cv_test1_cpf" inputmode="numeric"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Testemunha 2 — nome</label><input type="text" id="cv_test2_nome"></div>
-                    <div class="form-group"><label>Testemunha 2 — CPF</label><input type="text" id="cv_test2_cpf" inputmode="numeric"></div>
-                </div>
-
-                <div class="modal-buttons">
-                    <button type="button" class="btn-cancel" onclick="closeCVModal()">Cancelar</button>
-                    <button type="submit" class="btn-save">💾 Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Modais #termoModal (Novo Termo de Responsabilidade) e #cvModal (Novo
+         Contrato de Compra e Venda de Veiculo) removidos junto com o Historico
+         de Contratos e Documentos (2026-08-30) -- eram usados so pelos botoes
+         daquele bloco. Nada no Supabase foi tocado. -->
 
     <div class="modal" id="pixModal">
         <div class="modal-content">
@@ -3374,14 +3074,32 @@
                 limpar();
                 if (recarregar) await recarregar();
             }
-            return { estaSelecionado, toggle, toggleTodos, definirListaAtual, limpar, excluirSelecionados, checkboxHtml };
+            // Arquivar em massa (2026-08-30) — mesma lógica do botão individual de
+            // arquivar: só troca `status` de PENDENTE para ARQUIVADO no próprio
+            // registro (sem cópia, sem apagar, `dados` intacto). `comCarimbo`
+            // grava `processado_em` (tabela declaracoes_pendentes); `curriculos`
+            // não tem essa coluna, então passa comCarimbo=false.
+            async function arquivarSelecionados(tabela, recarregar, comCarimbo = true) {
+                const ids = idsAtuais.filter(id => selecionados.has(id));
+                if (ids.length === 0) return;
+                const plural = ids.length !== 1;
+                if (!confirm(`Arquivar ${ids.length} registro${plural ? 's' : ''} selecionado${plural ? 's' : ''}? ${plural ? 'Eles saem' : 'Ele sai'} dos pendentes e ${plural ? 'vão' : 'vai'} para o Histórico. Nada é apagado — dá para desarquivar depois.`)) return;
+                const patch = comCarimbo ? { status: 'ARQUIVADO', processado_em: new Date().toISOString() } : { status: 'ARQUIVADO' };
+                try {
+                    await Promise.all(ids.map(id => dbUpdate(tabela, patch, { id })));
+                } catch (error) {
+                    alert('Erro ao arquivar em massa: ' + error.message);
+                }
+                limpar();
+                if (recarregar) await recarregar();
+            }
+            return { estaSelecionado, toggle, toggleTodos, definirListaAtual, limpar, excluirSelecionados, arquivarSelecionados, checkboxHtml };
         }
         const selCurriculos = criarSelecaoMultipla({ nome: 'selCurriculos' });
         window.selCurriculos = selCurriculos;
         const selDeclPend = criarSelecaoMultipla({ nome: 'selDeclPend' });
         window.selDeclPend = selDeclPend;
-        const selContratos = criarSelecaoMultipla({ nome: 'selContratos' });
-        window.selContratos = selContratos;
+        // selContratos removido com o Histórico de Contratos e Documentos (2026-08-30).
         const selDeclProc = criarSelecaoMultipla({ nome: 'selDeclProc' });
         window.selDeclProc = selDeclProc;
         const selRecibos = criarSelecaoMultipla({ nome: 'selRecibos' });
@@ -3574,9 +3292,9 @@
             // loadPrestadorPendentes() adicionado aqui (2026-08-26) em vez de uma
             // assinatura de realtime nova — a tabela declaracoes_pendentes já está
             // coberta por esta mesma assinatura, mesmo cuidado documentado acima.
-            assinarRealtimeTabela('declaracoes_pendentes', () => { loadDeclaracoesPendentes(); loadPendingCounts(); loadPrestadorPendentes(); },
+            assinarRealtimeTabela('declaracoes_pendentes', () => { loadDeclaracoesPendentes(); loadPendingCounts(); loadDeclProcPendentes(); loadPrestadorPendentes(); loadHistoricoContratos(); histDeclProc.load(); histPrestador.load(); },
                 (row) => notificarNovoRegistro(`Chegou uma nova solicitação — ${TIPO_CONTRATO_LABELS[row?.tipo_contrato] || 'documento'}`));
-            assinarRealtimeTabela('contratos', () => { loadContratos(); });
+            // assinatura realtime de `contratos` removida com o Histórico (2026-08-30).
             assinarRealtimeTabela('recibos', () => { loadRecibos(); });
             // Motor de saldos: quando um lançamento move o saldo de uma conta,
             // os cartões "Saldos por conta" se atualizam sozinhos (só recarrega
@@ -3852,6 +3570,34 @@
             return div.innerHTML;
         }
 
+        // 📋 Copiar link / 🔗 Abrir link ao lado de cada link de formulário
+        // (2026-08-30). Usa exatamente a mesma URL do link (resolvida para
+        // absoluta a partir da página atual). Não altera nenhum endereço.
+        function linkFormAcoesHtml(url) {
+            const u = String(url).replace(/'/g, "\\'");
+            return `<span class="link-row-actions">
+                <button type="button" class="btn-secondary link-row-btn" onclick="copiarLinkFormulario('${u}', this); event.stopPropagation();">📋 Copiar link</button>
+                <button type="button" class="btn-secondary link-row-btn" onclick="window.open('${u}', '_blank', 'noopener'); event.stopPropagation();">🔗 Abrir link</button>
+            </span>`;
+        }
+        function copiarLinkFormulario(url, btn) {
+            const full = new URL(url, window.location.href).href;
+            const feedback = (txt) => {
+                if (!btn) return;
+                const orig = btn.dataset.orig || btn.textContent;
+                btn.dataset.orig = orig;
+                btn.textContent = txt;
+                setTimeout(() => { btn.textContent = btn.dataset.orig; }, 1600);
+            };
+            const fallback = () => { try { window.prompt('Copie o link do formulário:', full); } catch (_) {} };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(full).then(() => feedback('✅ Copiado'), fallback);
+            } else {
+                fallback();
+            }
+        }
+        window.copiarLinkFormulario = copiarLinkFormulario;
+
         async function deleteEntry(id) {
             if (!confirm('Excluir esta entrada? Essa ação não pode ser desfeita.')) return;
             try {
@@ -3931,287 +3677,11 @@
             const lista = CIDADES_BAIRROS[cidade] || [];
             return '<option value="">Selecione</option>' + lista.map(b => `<option value="${escapeHtml(b)}" ${selected === b ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('') + `<option value="__outro__" ${selected === '__outro__' ? 'selected' : ''}>Outro</option>`;
         }
-        function onTermoCidadeChange(prefixo) {
-            const cidade = document.getElementById(`t_${prefixo}_cidade`).value;
-            const outraWrap = document.getElementById(`t_${prefixo}_cidade_outra_wrap`);
-            const bairroSel = document.getElementById(`t_${prefixo}_bairro`);
-            const bairroOutroWrap = document.getElementById(`t_${prefixo}_bairro_outro_wrap`);
-            if (cidade === 'Outra') {
-                outraWrap.style.display = '';
-                bairroSel.innerHTML = '<option value="">Selecione a cidade primeiro</option>';
-                bairroSel.disabled = true;
-                bairroOutroWrap.style.display = '';
-            } else if (cidade) {
-                outraWrap.style.display = 'none';
-                bairroSel.disabled = false;
-                bairroSel.innerHTML = bairroSelectOptions(cidade, '');
-                bairroOutroWrap.style.display = 'none';
-            } else {
-                outraWrap.style.display = 'none';
-                bairroSel.innerHTML = '<option value="">Selecione a cidade primeiro</option>';
-                bairroSel.disabled = true;
-                bairroOutroWrap.style.display = 'none';
-            }
-        }
-        window.onTermoCidadeChange = onTermoCidadeChange;
-        function onTermoBairroChange(prefixo) {
-            const bairro = document.getElementById(`t_${prefixo}_bairro`).value;
-            document.getElementById(`t_${prefixo}_bairro_outro_wrap`).style.display = bairro === '__outro__' ? '' : 'none';
-        }
-        window.onTermoBairroChange = onTermoBairroChange;
-        function termoCidadeFinal(prefixo) {
-            const cidade = document.getElementById(`t_${prefixo}_cidade`).value;
-            return cidade === 'Outra' ? cleanStr(document.getElementById(`t_${prefixo}_cidade_outra`).value) : (cidade || null);
-        }
-        function termoBairroFinal(prefixo) {
-            const cidade = document.getElementById(`t_${prefixo}_cidade`).value;
-            const bairro = document.getElementById(`t_${prefixo}_bairro`).value;
-            if (cidade === 'Outra' || bairro === '__outro__') return cleanStr(document.getElementById(`t_${prefixo}_bairro_outro`).value);
-            return bairro || null;
-        }
-
-        // Foro não tem bairro (é a comarca, não o endereço) — por isso não reusa
-        // onTermoCidadeChange/termoCidadeFinal acima, que dependem de um <select>
-        // de bairro que o foro não tem. Vazio = deriva da cidade do Proprietário
-        // na hora de formatar (ver resolverForo/cfg.foro); só grava algo em
-        // `dados` quando a equipe escolhe um foro diferente manualmente.
-        function onTermoForoCidadeChange() {
-            const cidade = document.getElementById('t_foro_cidade').value;
-            document.getElementById('t_foro_cidade_outra_wrap').style.display = cidade === 'Outra' ? '' : 'none';
-        }
-        window.onTermoForoCidadeChange = onTermoForoCidadeChange;
-        function termoForoManualFinal() {
-            const cidade = document.getElementById('t_foro_cidade').value;
-            if (!cidade) return null;
-            const cidadeFinal = cidade === 'Outra' ? cleanStr(document.getElementById('t_foro_cidade_outra').value) : cidade;
-            if (!cidadeFinal) return null;
-            return { cidade: cidadeFinal, estado: document.getElementById('t_foro_estado').value || null };
-        }
-
-        // ===== Compra e Venda de Veículo — formulário de criação =====
-        // Mesma lógica de cidade/bairro/foro do Termo acima, só que com
-        // prefixo `cv_` nos ids em vez de `t_` (as funções onTermoCidadeChange
-        // etc. têm o prefixo `t_` fixo no código, não dá pra reaproveitar direto).
-        function toggleCVPagamento() {
-            const tipo = document.getElementById('cv_variante').value;
-            document.getElementById('cv_pag_vista').style.display = tipo === 'CV_VEICULO_VISTA' ? '' : 'none';
-            document.getElementById('cv_pag_prazo_entrada').style.display = tipo === 'CV_VEICULO_PRAZO_ENTRADA' ? '' : 'none';
-            document.getElementById('cv_pag_prazo_sem_entrada').style.display = tipo === 'CV_VEICULO_PRAZO_SEM_ENTRADA' ? '' : 'none';
-            document.getElementById('cv_pag_vista_carro').style.display = tipo === 'CV_VEICULO_VISTA_CARRO' ? '' : 'none';
-            document.getElementById('cv_pag_prazo_carro_parcelas').style.display = tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS' ? '' : 'none';
-            document.getElementById('cv_veiculo2').style.display = (tipo === 'CV_VEICULO_VISTA_CARRO' || tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS') ? '' : 'none';
-        }
-        window.toggleCVPagamento = toggleCVPagamento;
-
-        function onCVCidadeChange(prefixo) {
-            const cidade = document.getElementById(`cv_${prefixo}_cidade`).value;
-            const outraWrap = document.getElementById(`cv_${prefixo}_cidade_outra_wrap`);
-            const bairroSel = document.getElementById(`cv_${prefixo}_bairro`);
-            const bairroOutroWrap = document.getElementById(`cv_${prefixo}_bairro_outro_wrap`);
-            if (cidade === 'Outra') {
-                outraWrap.style.display = '';
-                bairroSel.innerHTML = '<option value="">Selecione a cidade primeiro</option>';
-                bairroSel.disabled = true;
-                bairroOutroWrap.style.display = '';
-            } else if (cidade) {
-                outraWrap.style.display = 'none';
-                bairroSel.disabled = false;
-                bairroSel.innerHTML = bairroSelectOptions(cidade, '');
-                bairroOutroWrap.style.display = 'none';
-            } else {
-                outraWrap.style.display = 'none';
-                bairroSel.innerHTML = '<option value="">Selecione a cidade primeiro</option>';
-                bairroSel.disabled = true;
-                bairroOutroWrap.style.display = 'none';
-            }
-        }
-        window.onCVCidadeChange = onCVCidadeChange;
-        function onCVBairroChange(prefixo) {
-            const bairro = document.getElementById(`cv_${prefixo}_bairro`).value;
-            document.getElementById(`cv_${prefixo}_bairro_outro_wrap`).style.display = bairro === '__outro__' ? '' : 'none';
-        }
-        window.onCVBairroChange = onCVBairroChange;
-        function cvCidadeFinal(prefixo) {
-            const cidade = document.getElementById(`cv_${prefixo}_cidade`).value;
-            return cidade === 'Outra' ? cleanStr(document.getElementById(`cv_${prefixo}_cidade_outra`).value) : (cidade || null);
-        }
-        function cvBairroFinal(prefixo) {
-            const cidade = document.getElementById(`cv_${prefixo}_cidade`).value;
-            const bairro = document.getElementById(`cv_${prefixo}_bairro`).value;
-            if (cidade === 'Outra' || bairro === '__outro__') return cleanStr(document.getElementById(`cv_${prefixo}_bairro_outro`).value);
-            return bairro || null;
-        }
-        function onCVForoCidadeChange() {
-            const cidade = document.getElementById('cv_foro_cidade').value;
-            document.getElementById('cv_foro_cidade_outra_wrap').style.display = cidade === 'Outra' ? '' : 'none';
-        }
-        window.onCVForoCidadeChange = onCVForoCidadeChange;
-        function cvForoManualFinal() {
-            const cidade = document.getElementById('cv_foro_cidade').value;
-            if (!cidade) return null;
-            const cidadeFinal = cidade === 'Outra' ? cleanStr(document.getElementById('cv_foro_cidade_outra').value) : cidade;
-            if (!cidadeFinal) return null;
-            return { cidade: cidadeFinal, estado: document.getElementById('cv_foro_estado').value || null };
-        }
-
-        function openCVModal() {
-            document.getElementById('cvModal').classList.add('active');
-            toggleCVPagamento();
-        }
-        window.openCVModal = openCVModal;
-        function closeCVModal() {
-            document.getElementById('cvModal').classList.remove('active');
-            document.querySelectorAll('#cvModal form')[0].reset();
-            limparExtensosValor(document.getElementById('cvModal'));
-            onCVCidadeChange('vend');
-            onCVCidadeChange('comp');
-            onCVForoCidadeChange();
-            toggleCVPagamento();
-        }
-        window.closeCVModal = closeCVModal;
-
-        async function saveCV(e) {
-            e.preventDefault();
-            const btn = document.querySelector('#cvModal .btn-save');
-            const originalText = btn.textContent;
-            btn.textContent = '⏳ Salvando...';
-            btn.disabled = true;
-
-            try {
-                const tipo = document.getElementById('cv_variante').value;
-
-                const vendedorData = {
-                    nome: cleanStr(document.getElementById('cv_vend_nome').value),
-                    cpf: cleanDigits(document.getElementById('cv_vend_cpf').value),
-                    rg: cleanStr(document.getElementById('cv_vend_rg').value),
-                    genero: cleanStr(document.getElementById('cv_vend_genero').value),
-                    estado_civil: cleanStr(document.getElementById('cv_vend_estado_civil').value),
-                    nacionalidade: cleanStr(document.getElementById('cv_vend_nacionalidade').value),
-                    profissao: cleanStr(document.getElementById('cv_vend_profissao').value),
-                    endereco: cleanStr(document.getElementById('cv_vend_endereco').value),
-                    bairro: cvBairroFinal('vend'),
-                    cidade: cvCidadeFinal('vend'),
-                    estado: document.getElementById('cv_vend_estado').value || null,
-                };
-                if (!vendedorData.nome) throw new Error('Nome do vendedor é obrigatório');
-                const vendedorId = await upsertPessoa(vendedorData);
-
-                const compradorData = {
-                    nome: cleanStr(document.getElementById('cv_comp_nome').value),
-                    cpf: cleanDigits(document.getElementById('cv_comp_cpf').value),
-                    rg: cleanStr(document.getElementById('cv_comp_rg').value),
-                    genero: cleanStr(document.getElementById('cv_comp_genero').value),
-                    estado_civil: cleanStr(document.getElementById('cv_comp_estado_civil').value),
-                    nacionalidade: cleanStr(document.getElementById('cv_comp_nacionalidade').value),
-                    profissao: cleanStr(document.getElementById('cv_comp_profissao').value),
-                    endereco: cleanStr(document.getElementById('cv_comp_endereco').value),
-                    bairro: cvBairroFinal('comp'),
-                    cidade: cvCidadeFinal('comp'),
-                    estado: document.getElementById('cv_comp_estado').value || null,
-                };
-                if (!compradorData.nome) throw new Error('Nome do comprador é obrigatório');
-                const compradorId = await upsertPessoa(compradorData);
-
-                const placa = cleanStr(document.getElementById('cv_placa').value);
-                if (!placa) throw new Error('Placa é obrigatória');
-                const ativoId = await upsertAtivo({
-                    tipo: 'VEICULO',
-                    proprietario_id: vendedorId,
-                    fabricante: cleanStr(document.getElementById('cv_fabricante').value),
-                    modelo: cleanStr(document.getElementById('cv_modelo').value),
-                    ano_fabricacao_modelo: cleanStr(document.getElementById('cv_ano').value),
-                    placa: placa.toUpperCase(),
-                    cor: cleanStr(document.getElementById('cv_cor').value),
-                    chassi: cleanStr(document.getElementById('cv_chassi').value),
-                    renavam: cleanDigits(document.getElementById('cv_renavam').value),
-                });
-
-                const dados = {};
-                const tipoVeiculo = cleanStr(document.getElementById('cv_tipo_veiculo').value);
-                if (tipoVeiculo) dados.tipo_veiculo = tipoVeiculo;
-                if (tipo === 'CV_VEICULO_VISTA_CARRO' || tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS') {
-                    const tipoVeiculoEntrada = cleanStr(document.getElementById('cv2_tipo_veiculo').value);
-                    if (tipoVeiculoEntrada) dados.tipo_veiculo_entrada = tipoVeiculoEntrada;
-                }
-
-                if (tipo === 'CV_VEICULO_VISTA') {
-                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_vista').value) || 0;
-                    if (!dados.valor_total) throw new Error('Valor total é obrigatório');
-                } else if (tipo === 'CV_VEICULO_PRAZO_ENTRADA') {
-                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_pe').value) || 0;
-                    dados.valor_entrada = parseFloat(document.getElementById('cv_valor_entrada_pe').value) || 0;
-                    dados.num_parcelas = parseInt(document.getElementById('cv_num_parcelas_pe').value, 10) || 0;
-                    dados.data_primeira_parcela = document.getElementById('cv_data_primeira_parcela_pe').value || null;
-                    if (!dados.valor_total || !dados.num_parcelas || !dados.data_primeira_parcela) throw new Error('Valor total, número de parcelas e data da 1ª parcela são obrigatórios');
-                } else if (tipo === 'CV_VEICULO_PRAZO_SEM_ENTRADA') {
-                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_se').value) || 0;
-                    dados.num_parcelas = parseInt(document.getElementById('cv_num_parcelas_se').value, 10) || 0;
-                    dados.data_primeira_parcela = document.getElementById('cv_data_primeira_parcela_se').value || null;
-                    if (!dados.valor_total || !dados.num_parcelas || !dados.data_primeira_parcela) throw new Error('Valor total, número de parcelas e data da 1ª parcela são obrigatórios');
-                } else if (tipo === 'CV_VEICULO_VISTA_CARRO') {
-                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_vc').value) || 0;
-                    if (!dados.valor_total) throw new Error('Valor total é obrigatório');
-                } else if (tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS') {
-                    dados.valor_total = parseFloat(document.getElementById('cv_valor_total_pc').value) || 0;
-                    dados.num_parcelas = parseInt(document.getElementById('cv_num_parcelas_pc').value, 10) || 0;
-                    dados.data_primeira_parcela = document.getElementById('cv_data_primeira_parcela_pc').value || null;
-                    if (!dados.valor_total || !dados.num_parcelas || !dados.data_primeira_parcela) throw new Error('Valor total, número de parcelas e data da 1ª parcela são obrigatórios');
-                }
-
-                const foroManual = cvForoManualFinal();
-                if (foroManual) { dados.foro_cidade = foroManual.cidade; dados.foro_estado = foroManual.estado; }
-                const test1Nome = cleanStr(document.getElementById('cv_test1_nome').value);
-                if (test1Nome) { dados.testemunha_1_nome = test1Nome; dados.testemunha_1_cpf = cleanDigits(document.getElementById('cv_test1_cpf').value) || null; }
-                const test2Nome = cleanStr(document.getElementById('cv_test2_nome').value);
-                if (test2Nome) { dados.testemunha_2_nome = test2Nome; dados.testemunha_2_cpf = cleanDigits(document.getElementById('cv_test2_cpf').value) || null; }
-
-                const [contratoRow] = await dbInsert('contratos', {
-                    tipo_contrato: tipo,
-                    proprietario_id: vendedorId,
-                    responsavel_id: compradorId,
-                    ativo_id: ativoId,
-                    data_registro: new Date().toISOString(),
-                    dados,
-                });
-
-                // Variantes "com carro": o 2º veículo (dado na entrada) é do
-                // COMPRADOR, não do vendedor, e liga no contrato via
-                // contrato_ativos (papel:'entrada') em vez de contratos.ativo_id
-                // — que já está ocupado pelo veículo principal, do vendedor.
-                if (tipo === 'CV_VEICULO_VISTA_CARRO' || tipo === 'CV_VEICULO_PRAZO_CARRO_PARCELAS') {
-                    const valorEntradaVeiculo = parseFloat(document.getElementById('cv2_valor').value) || 0;
-                    if (!valorEntradaVeiculo) throw new Error('Valor do veículo dado na entrada é obrigatório');
-                    const ativo2Id = await upsertAtivo({
-                        tipo: 'VEICULO',
-                        proprietario_id: compradorId,
-                        fabricante: cleanStr(document.getElementById('cv2_fabricante').value),
-                        modelo: cleanStr(document.getElementById('cv2_modelo').value),
-                        ano_fabricacao_modelo: cleanStr(document.getElementById('cv2_ano').value),
-                        placa: cleanStr(document.getElementById('cv2_placa').value).toUpperCase() || null,
-                        cor: cleanStr(document.getElementById('cv2_cor').value),
-                        chassi: cleanStr(document.getElementById('cv2_chassi').value),
-                        renavam: cleanDigits(document.getElementById('cv2_renavam').value),
-                    });
-                    await dbInsert('contrato_ativos', {
-                        contrato_id: contratoRow.id,
-                        ativo_id: ativo2Id,
-                        papel: 'entrada',
-                        valor: valorEntradaVeiculo,
-                    });
-                }
-
-                closeCVModal();
-                await loadContratos();
-                alert('✅ Contrato registrado com sucesso!');
-            } catch (error) {
-                console.error('❌ Erro ao salvar compra e venda:', error);
-                alert('Erro: ' + error.message);
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        }
-        window.saveCV = saveCV;
+        // ---- Helpers dos formularios "Novo Termo" e "Novo Compra e Venda"
+        // (onTermo*/onCV*, openCVModal/closeCVModal/saveCV, etc.) removidos junto
+        // com o Historico de Contratos e Documentos (2026-08-30). CIDADES_BAIRROS
+        // e bairroSelectOptions acima foram mantidos de proposito (dado de
+        // endereco reutilizavel; ficam sem uso ate um proximo formulario).
 
         // ===== Painel de Serviços Blackout (menu inicial) =====
         // Ícones de marca (SVG linha única, verde/preto) que substituem os emoji nos
@@ -4464,11 +3934,11 @@
             if (!viewsInitialized[view]) {
                 viewsInitialized[view] = true;
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
-                else if (view === 'termos') { loadContratos(); loadDeclaracoesPendentes(); }
-                else if (view === 'declProc') { selecionarCategoriaDeclProc('declaracoes'); }
+                else if (view === 'termos') { loadDeclaracoesPendentes(); loadHistoricoContratos(); }
+                else if (view === 'declProc') { selecionarCategoriaDeclProc('declaracoes'); histDeclProc.load(); }
                 else if (view === 'curriculo') loadCurriculos();
                 else if (view === 'recibo') loadRecibos();
-                else if (view === 'prestador') loadPrestadorPendentes();
+                else if (view === 'prestador') { loadPrestadorPendentes(); histPrestador.load(); }
             }
             // Financeiro / Movimentação Financeira (etapa 1) não carregam dados —
             // só voltam pra tela inicial do módulo toda vez que abrem pelo menu.
@@ -7342,163 +6812,9 @@
         }
         window.aberturaCaixaConferir = aberturaCaixaConferir;
 
-        async function upsertPessoa(pessoaData) {
-            if (!pessoaData.nome) return null;
-            let existing = null;
-            if (pessoaData.cpf) {
-                const { data } = await supabase.from('pessoas').select('id').eq('cpf', pessoaData.cpf).limit(1);
-                if (data && data.length) existing = data[0];
-            }
-            if (!existing) {
-                const { data } = await supabase.from('pessoas').select('id').ilike('nome', pessoaData.nome).limit(1);
-                if (data && data.length) existing = data[0];
-            }
-            if (existing) {
-                await dbUpdate('pessoas', pessoaData, { id: existing.id });
-                return existing.id;
-            }
-            const [data] = await dbInsert('pessoas', pessoaData);
-            return data.id;
-        }
-
-        async function upsertAtivo(ativoData) {
-            let existing = null;
-            if (ativoData.placa) {
-                const { data } = await supabase.from('ativos').select('id').eq('placa', ativoData.placa).limit(1);
-                if (data && data.length) existing = data[0];
-            }
-            if (!existing && ativoData.renavam) {
-                const { data } = await supabase.from('ativos').select('id').eq('renavam', ativoData.renavam).limit(1);
-                if (data && data.length) existing = data[0];
-            }
-            if (existing) {
-                await dbUpdate('ativos', ativoData, { id: existing.id });
-                return existing.id;
-            }
-            const [data] = await dbInsert('ativos', ativoData);
-            return data.id;
-        }
-
-        function toggleResponsavelFields() {
-            const same = document.getElementById('t_mesmo_responsavel').checked;
-            document.getElementById('t_responsavel_fields').style.display = same ? 'none' : '';
-        }
-        window.toggleResponsavelFields = toggleResponsavelFields;
-
-        function openTermoModal() {
-            document.getElementById('termoModal').classList.add('active');
-        }
-        function closeTermoModal() {
-            document.getElementById('termoModal').classList.remove('active');
-            document.querySelectorAll('#termoModal form')[0].reset();
-            document.getElementById('t_responsavel_fields').style.display = 'none';
-            onTermoCidadeChange('prop');
-            onTermoCidadeChange('resp');
-            onTermoForoCidadeChange();
-        }
-        window.openTermoModal = openTermoModal;
-        window.closeTermoModal = closeTermoModal;
-
-        async function saveTermo(e) {
-            e.preventDefault();
-            const btn = document.querySelector('#termoModal .btn-save');
-            const originalText = btn.textContent;
-            btn.textContent = '⏳ Salvando...';
-            btn.disabled = true;
-
-            try {
-                const proprietarioData = {
-                    nome: cleanStr(document.getElementById('t_prop_nome').value),
-                    cpf: cleanDigits(document.getElementById('t_prop_cpf').value),
-                    rg: cleanStr(document.getElementById('t_prop_rg').value),
-                    genero: cleanStr(document.getElementById('t_prop_genero').value),
-                    estado_civil: cleanStr(document.getElementById('t_prop_estado_civil').value),
-                    nacionalidade: cleanStr(document.getElementById('t_prop_nacionalidade').value),
-                    profissao: cleanStr(document.getElementById('t_prop_profissao').value),
-                    endereco: cleanStr(document.getElementById('t_prop_endereco').value),
-                    bairro: termoBairroFinal('prop'),
-                    cidade: termoCidadeFinal('prop'),
-                    estado: document.getElementById('t_prop_estado').value || null,
-                };
-                if (!proprietarioData.nome) throw new Error('Nome do proprietário é obrigatório');
-                const proprietarioId = await upsertPessoa(proprietarioData);
-
-                let responsavelId = proprietarioId;
-                if (!document.getElementById('t_mesmo_responsavel').checked) {
-                    const respNome = cleanStr(document.getElementById('t_resp_nome').value);
-                    if (!respNome) throw new Error('Nome do responsável é obrigatório');
-                    responsavelId = await upsertPessoa({
-                        nome: respNome,
-                        cpf: cleanDigits(document.getElementById('t_resp_cpf').value),
-                        rg: cleanStr(document.getElementById('t_resp_rg').value),
-                        genero: cleanStr(document.getElementById('t_resp_genero').value),
-                        estado_civil: cleanStr(document.getElementById('t_resp_estado_civil').value),
-                        nacionalidade: cleanStr(document.getElementById('t_resp_nacionalidade').value),
-                        profissao: cleanStr(document.getElementById('t_resp_profissao').value),
-                        endereco: cleanStr(document.getElementById('t_resp_endereco').value),
-                        bairro: termoBairroFinal('resp'),
-                        cidade: termoCidadeFinal('resp'),
-                        estado: document.getElementById('t_resp_estado').value || null,
-                    });
-                }
-
-                const placa = cleanStr(document.getElementById('t_placa').value);
-                if (!placa) throw new Error('Placa é obrigatória');
-                const ativoId = await upsertAtivo({
-                    tipo: 'VEICULO',
-                    proprietario_id: proprietarioId,
-                    fabricante: cleanStr(document.getElementById('t_fabricante').value),
-                    modelo: cleanStr(document.getElementById('t_modelo').value),
-                    ano_fabricacao_modelo: cleanStr(document.getElementById('t_ano').value),
-                    placa: placa.toUpperCase(),
-                    cor: cleanStr(document.getElementById('t_cor').value),
-                    chassi: cleanStr(document.getElementById('t_chassi').value),
-                    renavam: cleanDigits(document.getElementById('t_renavam').value),
-                });
-
-                const dados = {};
-                const tipoVeiculo = cleanStr(document.getElementById('t_tipo_veiculo').value);
-                if (tipoVeiculo) dados.tipo_veiculo = tipoVeiculo;
-                const foroManual = termoForoManualFinal();
-                if (foroManual) { dados.foro_cidade = foroManual.cidade; dados.foro_estado = foroManual.estado; }
-                const test1Nome = cleanStr(document.getElementById('t_test1_nome').value);
-                if (test1Nome) { dados.testemunha_1_nome = test1Nome; dados.testemunha_1_cpf = cleanDigits(document.getElementById('t_test1_cpf').value) || null; }
-                const test2Nome = cleanStr(document.getElementById('t_test2_nome').value);
-                if (test2Nome) { dados.testemunha_2_nome = test2Nome; dados.testemunha_2_cpf = cleanDigits(document.getElementById('t_test2_cpf').value) || null; }
-
-                await dbInsert('contratos', {
-                    tipo_contrato: 'TERMO_DE_RESPONSABILIDADE',
-                    proprietario_id: proprietarioId,
-                    responsavel_id: responsavelId,
-                    ativo_id: ativoId,
-                    data_registro: new Date().toISOString(),
-                    dados: Object.keys(dados).length ? dados : null,
-                });
-
-                closeTermoModal();
-                await loadContratos();
-                alert('✅ Termo registrado com sucesso!');
-            } catch (error) {
-                console.error('❌ Erro ao salvar termo:', error);
-                alert('Erro: ' + error.message);
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        }
-        window.saveTermo = saveTermo;
-
-        async function deleteContrato(id) {
-            if (!confirm('Excluir este termo? Essa ação não pode ser desfeita.')) return;
-            try {
-                await dbDelete('contratos', { id });
-                await loadContratos();
-            } catch (error) {
-                console.error('❌ Erro ao excluir termo:', error);
-                alert('Erro ao excluir: ' + error.message);
-            }
-        }
-        window.deleteContrato = deleteContrato;
+        // upsertPessoa / upsertAtivo / toggleResponsavelFields / openTermoModal /
+        // closeTermoModal / saveTermo / deleteContrato removidos com o Historico de
+        // Contratos e Documentos (2026-08-30). Nenhuma outra tela usava.
 
         const TIPO_CONTRATO_LABELS = {
             TERMO_DE_RESPONSABILIDADE: '🚗 Termo de Responsabilidade',
@@ -7522,7 +6838,6 @@
             // TIPOS.PRESTACAO_SERVICO/viewPrestador/loadPrestadorPendentes abaixo.
             PRESTACAO_SERVICO: '🧾 Prestação de Serviço',
         };
-        let contratosCache = [];
 
         // Tipos vindos de um formulário público (contrato-form.html ou
         // declaracao-*-form.html) sabem reabrir/editar a si mesmos — os outros
@@ -7544,79 +6859,9 @@
         };
         let declFormatadoAtual = null; // { id, tabela: 'declaracoes_pendentes', tipo } do contrato/declaração aberto no modal de formatação
 
-        function openContratoFicha(id) {
-            const c = contratosCache.find(x => x.id === id);
-            if (!c) return;
-            document.getElementById('fichaTitulo').textContent = TIPO_CONTRATO_LABELS[c.tipo_contrato] || c.tipo_contrato;
-            const linhas = [];
-            linhas.push(`<p><b>👤 Pessoa A</b><br>${escapeHtml(c.proprietario?.nome) || '-'}${c.proprietario?.cpf ? ' · CPF ' + escapeHtml(c.proprietario.cpf) : ''}</p>`);
-            if (c.responsavel && c.responsavel.nome !== c.proprietario?.nome) {
-                linhas.push(`<p><b>👤 Pessoa B</b><br>${escapeHtml(c.responsavel.nome) || '-'}${c.responsavel?.cpf ? ' · CPF ' + escapeHtml(c.responsavel.cpf) : ''}</p>`);
-            }
-            if (c.ativo) {
-                linhas.push(`<p><b>🚗 Veículo</b><br>${escapeHtml(c.ativo.placa) || '-'} · ${escapeHtml(c.ativo.fabricante) || ''} ${escapeHtml(c.ativo.modelo) || ''}</p>`);
-            }
-            const dados = c.dados || {};
-            for (const [k, val] of Object.entries(dados)) {
-                if (val === null || val === '') continue;
-                linhas.push(`<p><b>${escapeHtml(k)}</b><br>${escapeHtml(String(val))}</p>`);
-            }
-            document.getElementById('fichaConteudo').innerHTML = linhas.join('') || '<p>Sem detalhes adicionais.</p>';
-            document.getElementById('fichaCurriculoModal').classList.add('active');
-        }
-        window.openContratoFicha = openContratoFicha;
-
-        async function loadContratos() {
-            const container = document.getElementById('termoRows');
-            try {
-                const { data: contratos, error } = await supabase
-                    .from('contratos')
-                    .select(`
-                        id, data_registro, tipo_contrato, dados,
-                        proprietario:pessoas!contratos_proprietario_id_fkey(nome, cpf, rg, genero, nacionalidade, estado_civil, profissao, endereco, bairro, cidade, estado),
-                        responsavel:pessoas!contratos_responsavel_id_fkey(nome, cpf, rg, genero, nacionalidade, estado_civil, profissao, endereco, bairro, cidade, estado),
-                        ativo:ativos!contratos_ativo_id_fkey(placa, modelo, fabricante, cor, ano_fabricacao_modelo, chassi, renavam),
-                        contrato_ativos(papel, valor, ativo:ativos(placa, modelo, fabricante, cor, ano_fabricacao_modelo, chassi, renavam))
-                    `)
-                    .order('data_registro', { ascending: false });
-
-                if (error) throw new Error(error.message);
-                contratosCache = contratos || [];
-
-                document.getElementById('termoCount').textContent = contratosCache.length + ' registro' + (contratosCache.length !== 1 ? 's' : '');
-                selContratos.definirListaAtual(contratosCache.map(c => c.id));
-
-                if (contratosCache.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum contrato registrado ainda</div></div>';
-                    return;
-                }
-
-                container.innerHTML = contratosCache.map(c => {
-                    const dataFmt = c.data_registro ? new Date(c.data_registro).toLocaleDateString('pt-BR') : '-';
-                    const tipoLabel = TIPO_CONTRATO_LABELS[c.tipo_contrato] || c.tipo_contrato;
-                    const pessoaB = (c.responsavel && c.responsavel.nome !== c.proprietario?.nome) ? ` · ${escapeHtml(c.responsavel.nome)}` : '';
-                    const veiculoTag = c.ativo?.placa ? ` · 🚗 ${escapeHtml(c.ativo.placa)}` : '';
-                    // As Declarações também têm corpo() no TIPOS, mas pra outro
-                    // formato de dados (dados.pessoa_a/pessoa_b, das pendentes) —
-                    // só mostra "Formatar" aqui pros tipos marcados origem:'contratos'.
-                    const temFormatacao = !!(TIPOS[c.tipo_contrato] && TIPOS[c.tipo_contrato].corpo && TIPOS[c.tipo_contrato].origem === 'contratos');
-                    return `<div class="contrato-card">
-                        ${selContratos.checkboxHtml(c.id)}
-                        <div class="contrato-info" style="cursor:pointer;" onclick="openContratoFicha('${c.id}')">
-                            <b>${tipoLabel}</b>
-                            <span class="subtext">👤 ${escapeHtml(c.proprietario?.nome) || '-'}${pessoaB}${veiculoTag}</span>
-                            <span class="subtext">📅 ${dataFmt}</span>
-                        </div>
-                        ${temFormatacao ? `<button class="btn-secondary" style="padding:6px 10px;" onclick="abrirContratoFormatado('${c.id}')" title="Formatar">📄</button>` : ''}
-                        <button class="btn-delete" onclick="deleteContrato('${c.id}')" title="Excluir">🗑️</button>
-                    </div>`;
-                }).join('');
-            } catch (error) {
-                console.error('❌ Erro ao carregar contratos:', error);
-                container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}</div>`;
-            }
-        }
-        window.loadContratos = loadContratos;
+        // openContratoFicha() e loadContratos() removidos com o Historico de
+        // Contratos e Documentos (2026-08-30). Eram a unica leitura da tabela
+        // `contratos` pelo painel.
 
         // ===== Declarações pendentes (enviadas pelos formulários públicos do cliente) =====
         let declaracoesPendentesCache = [];
@@ -7715,6 +6960,10 @@
                     const dataFmt = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : '-';
                     const tipoLabel = TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato;
                     const nomeA = d.dados?.pessoa_a?.nome || '-';
+                    // "Arquivar" só pros contratos de verdade (whitelist explícita) —
+                    // se um dia aparecer um tipo_contrato novo nesta lista, ele NÃO
+                    // ganha o botão e não pode ir pro Histórico de Contratos.
+                    const podeArquivar = HIST_CONTRATO_TIPOS.includes(d.tipo_contrato);
                     return `<div class="contrato-card">
                         ${selDeclPend.checkboxHtml(d.id)}
                         <div class="contrato-info" style="cursor:pointer;" onclick="openDeclaracaoFicha('${d.id}')">
@@ -7724,6 +6973,7 @@
                         </div>
                         <button class="btn-secondary" style="padding:6px 10px;" onclick="abrirDeclFormatado('${d.id}')" title="Formatar declaração">📄</button>
                         <button class="btn-secondary" style="padding:6px 10px;" onclick="marcarDeclaracaoProcessada('${d.id}')" title="Marcar como processada">✅</button>
+                        ${podeArquivar ? `<button class="btn-secondary" style="padding:6px 10px;" onclick="arquivarContrato('${d.id}')" title="Arquivar contrato (vai para o Histórico de Contratos)">📥</button>` : ''}
                         <button class="btn-delete" onclick="deleteDeclaracaoPendente('${d.id}')" title="Excluir">🗑️</button>
                     </div>`;
                 }).join('');
@@ -7733,6 +6983,359 @@
             }
         }
         window.loadDeclaracoesPendentes = loadDeclaracoesPendentes;
+
+        // ===== Histórico de Contratos (2026-08-30) =====
+        // Recorte da MESMA tabela `declaracoes_pendentes`: status = 'ARQUIVADO' e
+        // tipo_contrato na whitelist abaixo (só os 3 contratos de verdade).
+        // "Arquivar"/"Desarquivar" só trocam o `status` do próprio registro via
+        // dbUpdate — nenhuma cópia, nenhuma linha nova, nada apagado, `dados`
+        // intacto, `id`/`data_pedido` preservados. O carimbo de arquivamento usa
+        // a coluna já existente `processado_em` (nenhuma coluna nova). NÃO entra
+        // declaração/procuração/prestação — nem hoje nem se surgir um tipo novo.
+        const HIST_CONTRATO_TIPOS = ['CONTRATO_CV_VEICULO', 'CONTRATO_CV_IMOVEL', 'CONTRATO_LOCACAO_IMOVEL'];
+        let historicoContratosCache = [];
+        let histBusca = { texto: '', tipo: '' };
+        const selHistContratos = criarSelecaoMultipla({ nome: 'selHistContratos' });
+        window.selHistContratos = selHistContratos;
+
+        function histNormalizaCpf(v) { return String(v || '').replace(/\D/g, ''); }
+
+        async function loadHistoricoContratos() {
+            const container = document.getElementById('histContratosRows');
+            if (!container) return; // view nunca aberta nesta sessão
+            try {
+                const { data, error } = await supabase
+                    .from('declaracoes_pendentes')
+                    .select('id, tipo_contrato, dados, status, data_pedido, processado_em')
+                    .eq('status', 'ARQUIVADO')
+                    .in('tipo_contrato', HIST_CONTRATO_TIPOS)
+                    .order('processado_em', { ascending: false, nullsFirst: false });
+                if (error) throw new Error(error.message);
+                // Guarda extra: mesmo que o banco devolva algo fora da whitelist,
+                // o Histórico nunca mostra nada que não seja um dos 3 contratos.
+                historicoContratosCache = (data || []).filter(d => HIST_CONTRATO_TIPOS.includes(d.tipo_contrato));
+                renderHistoricoContratos();
+            } catch (error) {
+                console.error('❌ Erro ao carregar histórico de contratos:', error);
+                container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${escapeHtml(error.message)}</div>`;
+            }
+        }
+        window.loadHistoricoContratos = loadHistoricoContratos;
+
+        function histFiltrarLista() {
+            const txt = histBusca.texto.trim().toLowerCase();
+            const cpfBusca = histNormalizaCpf(histBusca.texto);
+            const buscaEhCpf = cpfBusca.length >= 3; // só casa CPF quando digitou nº suficiente
+            return historicoContratosCache.filter(d => {
+                if (histBusca.tipo && d.tipo_contrato !== histBusca.tipo) return false;
+                if (!txt) return true;
+                const pa = d.dados?.pessoa_a || {};
+                const pb = d.dados?.pessoa_b || {};
+                const nomes = `${pa.nome || ''} ${pb.nome || ''}`.toLowerCase();
+                if (nomes.includes(txt)) return true;
+                if (buscaEhCpf) {
+                    const cpfs = histNormalizaCpf(pa.cpf) + ' ' + histNormalizaCpf(pb.cpf);
+                    if (cpfs.includes(cpfBusca)) return true;
+                }
+                return false;
+            });
+        }
+
+        function renderHistoricoContratos() {
+            const container = document.getElementById('histContratosRows');
+            const countEl = document.getElementById('histContratosCount');
+            if (!container) return;
+            const totais = historicoContratosCache.length;
+            const lista = histFiltrarLista();
+            if (countEl) {
+                countEl.textContent = (histBusca.texto || histBusca.tipo)
+                    ? `${lista.length} de ${totais}`
+                    : `${totais} registro${totais !== 1 ? 's' : ''}`;
+            }
+            selHistContratos.definirListaAtual(lista.map(d => d.id));
+            if (totais === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum contrato arquivado ainda</div></div>';
+                return;
+            }
+            if (lista.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div>Nenhum contrato encontrado para a busca</div></div>';
+                return;
+            }
+            container.innerHTML = lista.map(d => {
+                const tipoLabel = TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato;
+                const pa = d.dados?.pessoa_a || {};
+                const pb = d.dados?.pessoa_b || {};
+                const nomeA = pa.nome || '-';
+                const nomeB = pb.nome || '';
+                const dataPedidoFmt = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : '-';
+                const arqFmt = d.processado_em ? new Date(d.processado_em).toLocaleDateString('pt-BR') : '-';
+                return `<div class="contrato-card">
+                    ${selHistContratos.checkboxHtml(d.id)}
+                    <div class="contrato-info" style="cursor:pointer;" onclick="histVerFicha('${d.id}')">
+                        <b>${escapeHtml(tipoLabel)}</b>
+                        <span class="subtext">👤 ${escapeHtml(nomeA)}${nomeB ? ' &nbsp;·&nbsp; ' + escapeHtml(nomeB) : ''}</span>
+                        <span class="subtext">📅 Pedido ${dataPedidoFmt} &nbsp;·&nbsp; 📥 Arquivado ${arqFmt}</span>
+                    </div>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="histVerFicha('${d.id}')" title="Ver ficha">👁️</button>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="histFormatar('${d.id}')" title="Formatar / visualizar">📄</button>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="desarquivarContrato('${d.id}')" title="Desarquivar (volta para Contratos pendentes)">↩️</button>
+                </div>`;
+            }).join('');
+        }
+        window.renderHistoricoContratos = renderHistoricoContratos;
+
+        function histOnBusca(v) { histBusca.texto = v || ''; renderHistoricoContratos(); }
+        function histOnTipo(v) { histBusca.tipo = v || ''; renderHistoricoContratos(); }
+        window.histOnBusca = histOnBusca;
+        window.histOnTipo = histOnTipo;
+
+        // Ficha e Formatar reaproveitam o fluxo compartilhado
+        // (openDeclaracaoFicha / abrirDeclFormatado / montarContrato) sem alterá-lo.
+        // Esses lêem de `declaracoesPendentesCache`; como o registro arquivado não
+        // está mais lá (loadDeclaracoesPendentes só carrega os PENDENTE), a gente
+        // injeta a linha do `historicoContratosCache` no cache compartilhado na
+        // hora do clique (dedupe por id) — síncrono, sem janela pra corrida.
+        function histInjetarNoCacheCompartilhado(id) {
+            const d = historicoContratosCache.find(x => x.id === id);
+            if (!d) return false;
+            if (!declaracoesPendentesCache.some(x => x.id === id)) {
+                declaracoesPendentesCache = [...declaracoesPendentesCache, d];
+            }
+            return true;
+        }
+        function histVerFicha(id) {
+            if (!histInjetarNoCacheCompartilhado(id)) return;
+            openDeclaracaoFicha(id);
+            // openDeclaracaoFicha rotula todo mundo como "(pendente)"; aqui o
+            // registro está arquivado — ajusta só o título exibido (não mexe na
+            // função compartilhada).
+            const t = document.getElementById('fichaTitulo');
+            if (t) t.textContent = t.textContent.replace(/\s*\(pendente\)\s*$/, ' (arquivado)');
+        }
+        function histFormatar(id) { if (histInjetarNoCacheCompartilhado(id)) abrirDeclFormatado(id); }
+        window.histVerFicha = histVerFicha;
+        window.histFormatar = histFormatar;
+
+        async function arquivarContrato(id) {
+            const d = (declaracoesPendentesCache.find(x => x.id === id)) || {};
+            if (!HIST_CONTRATO_TIPOS.includes(d.tipo_contrato)) {
+                alert('Só contratos (Compra e Venda / Locação) podem ser arquivados.');
+                return;
+            }
+            if (!confirm('Arquivar este contrato? Ele sai de "Contratos pendentes" e vai para o "Histórico de Contratos". Nada é apagado — dá para desarquivar depois.')) return;
+            try {
+                // Só troca o status do próprio registro + carimba a data/hora.
+                // Não cria cópia, não cria linha nova, não apaga, não toca em `dados`.
+                await dbUpdate('declaracoes_pendentes', { status: 'ARQUIVADO', processado_em: new Date().toISOString() }, { id });
+                await loadDeclaracoesPendentes();
+                loadPendingCounts();
+                await loadHistoricoContratos();
+            } catch (error) {
+                alert('Erro ao arquivar: ' + error.message);
+            }
+        }
+        window.arquivarContrato = arquivarContrato;
+
+        async function desarquivarContrato(id) {
+            if (!confirm('Desarquivar este contrato? Ele volta para "Contratos pendentes".')) return;
+            try {
+                await dbUpdate('declaracoes_pendentes', { status: 'PENDENTE', processado_em: null }, { id });
+                await loadHistoricoContratos();
+                await loadDeclaracoesPendentes();
+                loadPendingCounts();
+            } catch (error) {
+                alert('Erro ao desarquivar: ' + error.message);
+            }
+        }
+        window.desarquivarContrato = desarquivarContrato;
+
+        // ===== Fábrica de "Histórico de arquivados" para módulos da tabela
+        //       `declaracoes_pendentes` (Declarações e Procurações, Prestação de
+        //       Serviço) — 2026-08-30 =====
+        // Mesmo mecanismo já validado no Histórico de Contratos: recorte
+        // status = 'ARQUIVADO' + whitelist de tipo_contrato; Arquivar/Desarquivar
+        // só trocam o `status` do próprio registro via dbUpdate (sem cópia, sem
+        // linha nova, sem apagar, `dados`/`id`/`data_pedido` intactos; carimbo em
+        // `processado_em`). Ficha/Formatar reaproveitam openDeclaracaoFicha/
+        // abrirDeclFormatado/montarContrato SEM alterá-las (injeta a linha no
+        // cache compartilhado no clique). Cada instância tem cache, DOM e
+        // seleção múltipla próprios; nada de um módulo entra no Histórico do outro.
+        function criarHistoricoDeclPend(cfg) {
+            // cfg: { prefix, tipos, rotuloLista, textoItem, tipoOptions, camposBusca(d)->{texto,docs}, card(d)->{titulo,sub1} }
+            const st = { cache: [], texto: '', tipo: '' };
+            const $rows = () => document.getElementById(cfg.prefix + 'Rows');
+            const $count = () => document.getElementById(cfg.prefix + 'Count');
+            const sel = criarSelecaoMultipla({ nome: cfg.prefix + 'Sel' });
+
+            async function load() {
+                const c = $rows();
+                if (!c) return; // view nunca aberta nesta sessão
+                try {
+                    const { data, error } = await supabase
+                        .from('declaracoes_pendentes')
+                        .select('id, tipo_contrato, dados, status, data_pedido, processado_em')
+                        .eq('status', 'ARQUIVADO')
+                        .in('tipo_contrato', cfg.tipos)
+                        .order('processado_em', { ascending: false, nullsFirst: false });
+                    if (error) throw new Error(error.message);
+                    st.cache = (data || [])
+                        .filter(d => cfg.tipos.includes(d.tipo_contrato)) // guarda extra: só a whitelist
+                        .map(d => {
+                            const b = cfg.camposBusca ? cfg.camposBusca(d) : { texto: '', docs: '' };
+                            d._htxt = String(b.texto || '').toLowerCase();
+                            d._hdocs = String(b.docs || '').replace(/\D/g, '');
+                            return d;
+                        });
+                    render();
+                } catch (error) {
+                    console.error(`❌ Erro ao carregar histórico (${cfg.prefix}):`, error);
+                    c.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${escapeHtml(error.message)}</div>`;
+                }
+            }
+
+            function filtrar() {
+                const txt = st.texto.trim().toLowerCase();
+                const doc = String(st.texto).replace(/\D/g, '');
+                const ehDoc = doc.length >= 3; // só casa CPF/CNPJ com nº suficiente
+                return st.cache.filter(d => {
+                    if (st.tipo && d.tipo_contrato !== st.tipo) return false;
+                    if (!txt) return true;
+                    if (d._htxt.includes(txt)) return true;
+                    if (ehDoc && d._hdocs.includes(doc)) return true;
+                    return false;
+                });
+            }
+
+            function render() {
+                const c = $rows();
+                if (!c) return;
+                const totais = st.cache.length;
+                const lista = filtrar();
+                const countEl = $count();
+                if (countEl) countEl.textContent = (st.texto || st.tipo) ? `${lista.length} de ${totais}` : `${totais} registro${totais !== 1 ? 's' : ''}`;
+                sel.definirListaAtual(lista.map(d => d.id));
+                if (totais === 0) {
+                    c.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum ${cfg.textoItem} arquivado ainda</div></div>`;
+                    return;
+                }
+                if (lista.length === 0) {
+                    c.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div>Nenhum ${cfg.textoItem} encontrado para a busca</div></div>`;
+                    return;
+                }
+                c.innerHTML = lista.map(d => {
+                    const info = cfg.card(d);
+                    const dataPedidoFmt = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : '-';
+                    const arqFmt = d.processado_em ? new Date(d.processado_em).toLocaleDateString('pt-BR') : '-';
+                    return `<div class="contrato-card">
+                        ${sel.checkboxHtml(d.id)}
+                        <div class="contrato-info" style="cursor:pointer;" onclick="${cfg.prefix}VerFicha('${d.id}')">
+                            <b>${escapeHtml(info.titulo)}</b>
+                            <span class="subtext">${info.sub1}</span>
+                            <span class="subtext">📅 Pedido ${dataPedidoFmt} &nbsp;·&nbsp; 📥 Arquivado ${arqFmt}</span>
+                        </div>
+                        <button class="btn-secondary" style="padding:6px 10px;" onclick="${cfg.prefix}VerFicha('${d.id}')" title="Ver ficha">👁️</button>
+                        <button class="btn-secondary" style="padding:6px 10px;" onclick="${cfg.prefix}Formatar('${d.id}')" title="Formatar / visualizar">📄</button>
+                        <button class="btn-secondary" style="padding:6px 10px;" onclick="${cfg.prefix}Desarquivar('${d.id}')" title="Desarquivar (volta para pendentes)">↩️</button>
+                    </div>`;
+                }).join('');
+            }
+
+            function injetar(id) {
+                const d = st.cache.find(x => x.id === id);
+                if (!d) return false;
+                if (!declaracoesPendentesCache.some(x => x.id === id)) declaracoesPendentesCache = [...declaracoesPendentesCache, d];
+                return true;
+            }
+            function verFicha(id) {
+                if (!injetar(id)) return;
+                openDeclaracaoFicha(id);
+                const t = document.getElementById('fichaTitulo');
+                if (t) t.textContent = t.textContent.replace(/\s*\(pendente\)\s*$/, ' (arquivado)');
+            }
+            function formatar(id) { if (injetar(id)) abrirDeclFormatado(id); }
+
+            async function arquivar(id) {
+                const d = (declaracoesPendentesCache.find(x => x.id === id)) || {};
+                if (!cfg.tipos.includes(d.tipo_contrato)) { alert('Este registro não pode ser arquivado aqui.'); return; }
+                if (!confirm(`Arquivar este ${cfg.textoItem}? Sai de "${cfg.rotuloLista}" e vai para o Histórico. Nada é apagado — dá para desarquivar depois.`)) return;
+                try {
+                    await dbUpdate('declaracoes_pendentes', { status: 'ARQUIVADO', processado_em: new Date().toISOString() }, { id });
+                    await cfg.reloadPendentes();
+                    loadPendingCounts();
+                    await load();
+                } catch (error) { alert('Erro ao arquivar: ' + error.message); }
+            }
+            async function desarquivar(id) {
+                if (!confirm(`Desarquivar este ${cfg.textoItem}? Volta para "${cfg.rotuloLista}".`)) return;
+                try {
+                    await dbUpdate('declaracoes_pendentes', { status: 'PENDENTE', processado_em: null }, { id });
+                    await load();
+                    await cfg.reloadPendentes();
+                    loadPendingCounts();
+                } catch (error) { alert('Erro ao desarquivar: ' + error.message); }
+            }
+            function onBusca(v) { st.texto = v || ''; render(); }
+            function onTipo(v) { st.tipo = v || ''; render(); }
+
+            window[cfg.prefix + 'Load'] = load;
+            window[cfg.prefix + 'VerFicha'] = verFicha;
+            window[cfg.prefix + 'Formatar'] = formatar;
+            window[cfg.prefix + 'Arquivar'] = arquivar;
+            window[cfg.prefix + 'Desarquivar'] = desarquivar;
+            window[cfg.prefix + 'OnBusca'] = onBusca;
+            window[cfg.prefix + 'OnTipo'] = onTipo;
+            window[cfg.prefix + 'Sel'] = sel;
+            return { load, render, arquivar, desarquivar, sel, get tipos() { return cfg.tipos; } };
+        }
+
+        // Instância: Histórico de Declarações e Procurações (7 tipos — whitelist
+        // explícita, mesma lista de DECL_PROC_CATEGORIAS; literal aqui porque
+        // esta instância é criada antes daquele const).
+        const histDeclProc = criarHistoricoDeclPend({
+            prefix: 'histDeclProc',
+            tipos: ['DECLARACAO_RESIDENCIA', 'DECLARACAO_AUTONOMO', 'DECLARACAO_TRABALHO', 'DECLARACAO_UNIAO_ESTAVEL', 'PROCURACAO_SIMPLES', 'PROCURACAO_DETRAN', 'TERMO_RESPONSABILIDADE_VEICULO'],
+            rotuloLista: 'Declarações e Procurações',
+            textoItem: 'documento',
+            reloadPendentes: () => loadDeclProcPendentes(),
+            camposBusca: (d) => {
+                const pa = d.dados?.pessoa_a || {}, pb = d.dados?.pessoa_b || {};
+                return {
+                    texto: [pa.nome, pb.nome, TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato].filter(Boolean).join(' '),
+                    docs: [pa.cpf, pb.cpf].filter(Boolean).join(' '),
+                };
+            },
+            card: (d) => {
+                const pa = d.dados?.pessoa_a || {}, pb = d.dados?.pessoa_b || {};
+                const nomeB = (pb.nome && pb.nome !== pa.nome) ? pb.nome : '';
+                return {
+                    titulo: TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato,
+                    sub1: `👤 ${escapeHtml(pa.nome || '-')}${nomeB ? ' &nbsp;·&nbsp; ' + escapeHtml(nomeB) : ''}`,
+                };
+            },
+        });
+
+        // Instância: Histórico de Prestação de Serviço (1 tipo).
+        const histPrestador = criarHistoricoDeclPend({
+            prefix: 'histPrestador',
+            tipos: ['PRESTACAO_SERVICO'],
+            rotuloLista: 'Prestação de Serviço',
+            textoItem: 'orçamento',
+            reloadPendentes: () => loadPrestadorPendentes(),
+            camposBusca: (d) => {
+                const pa = d.dados?.pessoa_a || {}, pb = d.dados?.pessoa_b || {}, e = d.dados?.especifico || {};
+                return {
+                    texto: [pa.nome, pb.nome, pb.empresa_nome, e.empresa_nome].filter(Boolean).join(' '),
+                    docs: [pa.cpf, pb.cpf, pb.cnpj, e.empresa_cnpj].filter(Boolean).join(' '),
+                };
+            },
+            card: (d) => {
+                const pa = d.dados?.pessoa_a || {}, pb = d.dados?.pessoa_b || {};
+                return {
+                    titulo: `🧾 ${pa.nome || '-'}`,
+                    sub1: `👤 Cliente: ${escapeHtml(pb.nome || '-')}`,
+                };
+            },
+        });
 
         // ===== Módulo "Declarações e Procurações" =====
         // View independente de viewTermos (Contratos) — não toca em nenhuma
@@ -7972,8 +7575,9 @@
                     return `
                     <div class="link-row" style="cursor:default; flex-direction:column; align-items:stretch; gap:10px;">
                         <span>${item.label}</span>
-                        <div style="display:flex; gap:8px;">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="window.open('${item.url}', '_blank', 'noopener')">🖥️ Preencher pelo Sistema</button>
+                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="copiarLinkFormulario('${item.url}', this)">📋 Copiar link</button>
                         </div>
                         <div style="display:flex; gap:8px;">
                             ${item.modelosEmBranco.map(m => `<button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirOuImprimirModeloEmBranco('${m.tipo}')">${m.label}</button>`).join('')}
@@ -7984,18 +7588,17 @@
                     return `
                     <div class="link-row" style="cursor:default; flex-direction:column; align-items:stretch; gap:10px;">
                         <span>${item.label}</span>
-                        <div style="display:flex; gap:8px;">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="window.open('${item.url}', '_blank', 'noopener')">🖥️ Preencher pelo Sistema</button>
                             <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirOuImprimirModeloEmBranco('${item.tipoModelo}')">📄 Modelo em Branco</button>
+                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="copiarLinkFormulario('${item.url}', this)">📋 Copiar link</button>
                         </div>
                     </div>`;
                 }
                 return `
                 <div class="link-row">
-                    <span style="cursor:pointer;" onclick="window.open('${item.url}', '_blank', 'noopener')">${item.label}</span>
-                    <span class="link-row-actions">
-                        <span class="arrow" style="cursor:pointer;" onclick="window.open('${item.url}', '_blank', 'noopener')">↗</span>
-                    </span>
+                    <span>${item.label}</span>
+                    ${linkFormAcoesHtml(item.url)}
                 </div>`;
             }).join('');
             renderDeclProcRows();
@@ -8027,6 +7630,7 @@
                     </div>
                     <button class="btn-secondary" style="padding:6px 10px;" onclick="abrirDeclFormatado('${d.id}')" title="Formatar">📄</button>
                     <button class="btn-secondary" style="padding:6px 10px;" onclick="declProcMarcarProcessada('${d.id}')" title="Marcar como processada">✅</button>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="histDeclProcArquivar('${d.id}')" title="Arquivar (vai para o Histórico de Declarações e Procurações)">📥</button>
                     <button class="btn-delete" onclick="declProcExcluir('${d.id}')" title="Excluir">🗑️</button>
                 </div>`;
             }).join('');
@@ -8118,6 +7722,7 @@
                     <button class="btn-secondary" style="padding:6px 10px;" onclick="abrirDeclFormatado('${d.id}')" title="Formatar">📄</button>
                     <button class="btn-secondary" style="padding:6px 10px;" onclick="compartilharPrestador('${d.id}')" title="Compartilhar">📤</button>
                     <button class="btn-secondary" style="padding:6px 10px;" onclick="duplicarPrestador('${d.id}')" title="Duplicar">📑</button>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="histPrestadorArquivar('${d.id}')" title="Arquivar (vai para o Histórico de Prestação de Serviço)">📥</button>
                     <button class="btn-delete" onclick="deleteDeclaracaoPendente('${d.id}')" title="Excluir">🗑️</button>
                 </div>`;
             }).join('');
@@ -9764,21 +9369,10 @@
         }
         window.abrirDeclFormatado = abrirDeclFormatado;
 
-        // Mesmo modal/mecanismo de impressão do abrirDeclFormatado acima, só que
-        // lendo de contratosCache (histórico já salvo) em vez de declaracoesPendentesCache.
-        // Esses tipos (Termo, CV_* manuais) não têm formulário público equivalente
-        // pra reabrir, então o botão Editar nunca aparece aqui.
-        async function abrirContratoFormatado(id) {
-            const c = contratosCache.find(x => x.id === id);
-            if (!c) return;
-            document.getElementById('declFormatadoTitulo').textContent = '📄 ' + (TIPO_CONTRATO_LABELS[c.tipo_contrato] || c.tipo_contrato) + ' — formatada';
-            document.getElementById('declFormatadoConteudo').innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Carregando…</p>';
-            document.getElementById('declFormatadoModal').classList.add('active');
-            declFormatadoAtual = { id: c.id, tabela: 'contratos', tipo: c.tipo_contrato };
-            document.getElementById('declFormatadoBtnEditar').style.display = 'none';
-            document.getElementById('declFormatadoConteudo').innerHTML = await montarContrato(c);
-        }
-        window.abrirContratoFormatado = abrirContratoFormatado;
+        // abrirContratoFormatado() (formatação de um registro do Histórico, lido de
+        // contratosCache) removido com o Histórico de Contratos e Documentos
+        // (2026-08-30). A formatação das Declarações/Procurações/Prestação segue em
+        // abrirDeclFormatado() acima, via montarContrato().
 
         function closeDeclFormatadoModal() {
             document.getElementById('declFormatadoModal').classList.remove('active');
@@ -9822,12 +9416,6 @@
             } else if (ev.data.type === 'form-salvar-pedido') {
                 try {
                     const registro = { ...ev.data.registro };
-                    // Currículo: se os dados de base mudaram, o texto gerado por IA
-                    // (se já tinha algum) fica desatualizado — limpa pra próxima
-                    // "Gerar de novo" refletir a edição, em vez de imprimir algo velho.
-                    if (ev.data.table === 'curriculos') {
-                        registro.ia_texto = null; registro.ia_header = null; registro.ia_gerado_em = null;
-                    }
                     await dbUpdate(ev.data.table, registro, { id: ev.data.id });
                     fecharEdicaoFormulario();
                     if (ev.data.table === 'declaracoes_pendentes') {
@@ -9835,7 +9423,7 @@
                         if (declFormatadoAtual && declFormatadoAtual.id === ev.data.id) abrirDeclFormatado(ev.data.id);
                     } else if (ev.data.table === 'curriculos') {
                         await loadCurriculos();
-                        if (formatadoAtualId === ev.data.id) abrirFormatado(ev.data.id, false);
+                        if (formatadoAtualId === ev.data.id) abrirFormatado(ev.data.id);
                     }
                 } catch (err) {
                     const frame = document.getElementById('editarFormularioFrame');
@@ -10744,17 +10332,28 @@
                 // excluir/editar não deve fazer a pessoa perder o filtro que já
                 // tinha digitado.
                 filtrarCurriculos();
+                renderHistoricoCurriculos(); // Histórico (ARQUIVADO) sai do mesmo cache
             } catch (error) {
                 container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${error.message}</div>`;
             }
         }
         window.loadCurriculos = loadCurriculos;
+        // Alias no padrão dos outros históricos (usado por openView/realtime/interval).
+        function loadHistoricoCurriculos() { renderHistoricoCurriculos(); }
+        window.loadHistoricoCurriculos = loadHistoricoCurriculos;
+
+        // Currículos "ativos" = tudo que NÃO está arquivado (PENDENTE + FEITO).
+        // FEITO continua na lista de trabalho; só ARQUIVADO sai daqui (vai pro
+        // Histórico de Currículos). Uma carga só de `curriculos` alimenta as duas.
+        function curriculosAtivos() { return curriculosCache.filter(c => c.status !== 'ARQUIVADO'); }
+        function curriculosArquivados() { return curriculosCache.filter(c => c.status === 'ARQUIVADO'); }
 
         function renderCurriculoRows(lista, filtrando) {
             const container = document.getElementById('curriculoRows');
+            const baseTotal = curriculosAtivos().length;
             document.getElementById('curriculoCount').textContent = filtrando
-                ? `${lista.length} de ${curriculosCache.length} registro${curriculosCache.length !== 1 ? 's' : ''}`
-                : `${curriculosCache.length} registro${curriculosCache.length !== 1 ? 's' : ''}`;
+                ? `${lista.length} de ${baseTotal} registro${baseTotal !== 1 ? 's' : ''}`
+                : `${baseTotal} registro${baseTotal !== 1 ? 's' : ''}`;
 
             selCurriculos.definirListaAtual(lista.map(c => c.id));
 
@@ -10777,10 +10376,10 @@
                             <span class="subtext">${feito ? '✅ Feito' : '⏳ Pendente'}</span>
                         </div>
                         <div class="curriculo-acoes">
-                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir (usa a versão com IA se já tiver, senão o formatado)">🖨️</button>
-                            <button class="btn-delete" onclick="abrirFormatado('${c.id}', false)" title="Formatado">📄</button>
-                            <button class="btn-delete" onclick="abrirFormatado('${c.id}', true)" title="Formatado com IA">🤖</button>
+                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir">🖨️</button>
+                            <button class="btn-delete" onclick="abrirFormatado('${c.id}')" title="Formatado">📄</button>
                             <button class="btn-delete" onclick="toggleCurriculoStatus('${c.id}', '${feito ? 'PENDENTE' : 'FEITO'}')" title="${feito ? 'Marcar como pendente' : 'Marcar como feito'}">${feito ? '↩️' : '✅'}</button>
+                            <button class="btn-delete" onclick="arquivarCurriculo('${c.id}')" title="Arquivar (vai para o Histórico de Currículos)">📥</button>
                             <button class="btn-delete" onclick="deleteCurriculo('${c.id}')" title="Excluir">🗑️</button>
                         </div>
                     </div>
@@ -10796,7 +10395,8 @@
             const btnLimpar = document.getElementById('curriculoBuscaLimpar');
             if (btnLimpar) btnLimpar.style.display = termoRaw ? '' : 'none';
             const termo = normalizarBusca(termoRaw);
-            const lista = termo ? curriculosCache.filter(c => c._busca.includes(termo)) : curriculosCache;
+            const base = curriculosAtivos(); // Histórico (ARQUIVADO) tem lista/busca próprias
+            const lista = termo ? base.filter(c => c._busca.includes(termo)) : base;
             renderCurriculoRows(lista, !!termo);
         }
         window.filtrarCurriculos = filtrarCurriculos;
@@ -10809,34 +10409,99 @@
         }
         window.limparBuscaCurriculo = limparBuscaCurriculo;
 
-        // Imprime sempre a melhor versão disponível: se já gerou com IA antes
-        // (salvo em ia_texto), usa ela; senão usa o Formatado por template —
-        // nunca a lista crua de pergunta:resposta.
+        // ===== Histórico de Currículos (2026-08-30) =====
+        // Mesma tabela `curriculos`, recorte status='ARQUIVADO'. Sai do MESMO
+        // `curriculosCache` que a lista de trabalho (uma carga só). Arquivar/
+        // Desarquivar só trocam o `status` do próprio registro via dbUpdate
+        // ('curriculos' já tem 'update' no db-write) — sem cópia, sem apagar,
+        // `dados`/foto/textos de IA intactos. Ficha/foto/formatado/IA/impressão
+        // funcionam de graça (leem de `curriculosCache` por id, que já traz os
+        // arquivados). FEITO NUNCA vem parar aqui.
+        const selHistCurriculos = criarSelecaoMultipla({ nome: 'selHistCurriculos' });
+        window.selHistCurriculos = selHistCurriculos;
+        let histCurriculoTexto = '';
+
+        function renderHistoricoCurriculos() {
+            const container = document.getElementById('histCurriculoRows');
+            const countEl = document.getElementById('histCurriculoCount');
+            if (!container) return;
+            const base = curriculosArquivados();
+            const termo = normalizarBusca(histCurriculoTexto);
+            const lista = termo ? base.filter(c => c._busca.includes(termo)) : base;
+            if (countEl) countEl.textContent = termo ? `${lista.length} de ${base.length}` : `${base.length} registro${base.length !== 1 ? 's' : ''}`;
+            selHistCurriculos.definirListaAtual(lista.map(c => c.id));
+            if (base.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum currículo arquivado ainda</div></div>';
+                return;
+            }
+            if (lista.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div>Nenhum currículo encontrado para a busca</div></div>';
+                return;
+            }
+            container.innerHTML = lista.map(c => {
+                const dataFmt = c.data_pedido ? new Date(c.data_pedido).toLocaleDateString('pt-BR') : '-';
+                return `<div class="curriculo-card">
+                    ${selHistCurriculos.checkboxHtml(c.id)}
+                    <div class="curriculo-card-body">
+                        <div class="curriculo-info" style="cursor:pointer;" onclick="openFichaModal('${c.id}')">
+                            <b>${escapeHtml(c.nome)} ${escapeHtml(c.sobrenome) || ''}</b>
+                            <span class="subtext">📱 ${escapeHtml(c.telefone) || '-'} · 📍 ${escapeHtml(c.cidade) || '-'} · 📅 ${dataFmt}</span>
+                            <span class="subtext">📥 Arquivado</span>
+                        </div>
+                        <div class="curriculo-acoes">
+                            <button class="btn-delete" onclick="printCurriculo('${c.id}')" title="Imprimir">🖨️</button>
+                            <button class="btn-delete" onclick="abrirFormatado('${c.id}')" title="Formatado">📄</button>
+                            <button class="btn-delete" onclick="desarquivarCurriculo('${c.id}')" title="Desarquivar (volta para Pendentes)">↩️</button>
+                            <button class="btn-delete" onclick="deleteCurriculo('${c.id}')" title="Excluir">🗑️</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        window.renderHistoricoCurriculos = renderHistoricoCurriculos;
+
+        function histCurriculoOnBusca(v) { histCurriculoTexto = v || ''; renderHistoricoCurriculos(); }
+        window.histCurriculoOnBusca = histCurriculoOnBusca;
+
+        async function arquivarCurriculo(id) {
+            if (!confirm('Arquivar este currículo? Ele sai da lista de trabalho e vai para o "Histórico de Currículos". Nada é apagado — dá para desarquivar depois.')) return;
+            try {
+                await dbUpdate('curriculos', { status: 'ARQUIVADO' }, { id });
+                await loadCurriculos();
+                loadPendingCounts();
+            } catch (error) { alert('Erro ao arquivar: ' + error.message); }
+        }
+        window.arquivarCurriculo = arquivarCurriculo;
+
+        async function desarquivarCurriculo(id) {
+            if (!confirm('Desarquivar este currículo? Ele volta para "Pendentes".')) return;
+            try {
+                await dbUpdate('curriculos', { status: 'PENDENTE' }, { id });
+                await loadCurriculos();
+                loadPendingCounts();
+            } catch (error) { alert('Erro ao desarquivar: ' + error.message); }
+        }
+        window.desarquivarCurriculo = desarquivarCurriculo;
+
+        // Imprime o currículo Formatado por template (nunca a lista crua de
+        // pergunta:resposta). Embrulho .cv2-print-page só na impressão (o modal/
+        // prévia em tela usa formatarCurriculoLayoutAjustado(c) puro, sem esse
+        // wrapper — ver abrirFormatado) — é o que aciona o @page/margin negativa
+        // de escala cheia em A4 (ver CSS .cv2-print-page acima).
+        // formatarCurriculoLayoutAjustado garante que o que sai na impressão é a
+        // mesma versão de 1 página já ajustada que a pessoa viu no modal.
+        // dadosRevisados (revisão ortográfica automática — ver
+        // revisarOrtografiaCurriculo) e nomesReferencia (primeiro nome da
+        // Referência Pessoal — ver identificarPrimeiroNomeReferencia) rodam de
+        // novo aqui, mas ficam em cache no próprio `c` — imprimir logo depois de
+        // abrir a prévia não gasta token duas vezes.
         async function printCurriculo(id) {
             const c = curriculosCache.find(x => x.id === id);
             if (!c) return;
-            if (c.ia_texto) {
-                const header = cvHeaderHtml(c.ia_header ? { ...c, ...c.ia_header } : c);
-                document.getElementById('printArea').innerHTML = header + markdownSimplesParaHtml(c.ia_texto);
-            } else {
-                // Embrulho .cv2-print-page só na impressão (o modal/prévia em
-                // tela usa formatarCurriculoLayoutAjustado(c) puro, sem esse
-                // wrapper — ver abrirFormatado) — é o que aciona o
-                // @page/margin negativa de escala cheia em A4 (ver CSS
-                // .cv2-print-page acima). formatarCurriculoLayoutAjustado (não
-                // o formatarCurriculoLayout cru) garante que o que sai na
-                // impressão é a mesma versão de 1 página já ajustada que a
-                // pessoa viu no modal. dadosRevisados (2026-08-23, revisão
-                // ortográfica automática — ver revisarOrtografiaCurriculo) e
-                // nomesReferencia (2026-08-24, primeiro nome da Referência
-                // Pessoal — ver identificarPrimeiroNomeReferencia) rodam de
-                // novo aqui, mas ficam em cache no próprio `c` — imprimir
-                // logo depois de abrir a prévia não gasta token duas vezes.
-                const dadosRevisados = await revisarOrtografiaCurriculo(c);
-                const nomesReferencia = await identificarPrimeiroNomeReferencia(c);
-                const dadosFinais = aplicarRevisaoCv2(dadosRevisados, nomesReferencia);
-                document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayoutAjustado({ ...c, dados: dadosFinais })}</div>`;
-            }
+            const dadosRevisados = await revisarOrtografiaCurriculo(c);
+            const nomesReferencia = await identificarPrimeiroNomeReferencia(c);
+            const dadosFinais = aplicarRevisaoCv2(dadosRevisados, nomesReferencia);
+            document.getElementById('printArea').innerHTML = `<div class="cv2-print-page">${formatarCurriculoLayoutAjustado({ ...c, dados: dadosFinais })}</div>`;
             setTimeout(() => window.print(), 100);
         }
         window.printCurriculo = printCurriculo;
@@ -10849,9 +10514,9 @@
 
         // Capitaliza pra exibição nos formatados/impressão (nome próprio, cada
         // palavra maiúscula, preposições minúsculas) — corrige o caso de
-        // "coloquei em minúsculo" sem precisar chamar IA. Não corrige erros de
-        // digitação de verdade (letra faltando etc.) — isso só a IA arruma,
-        // via `header` corrigido devolvido pela Edge Function `curriculo-ia`.
+        // "coloquei em minúsculo". Não corrige erros de digitação de verdade
+        // (letra faltando etc.); isso fica com a revisão ortográfica automática
+        // (Edge Function `curriculo-revisao`, ver revisarOrtografiaCurriculo).
         const TITLECASE_MINUSCULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
         function titleCase(str) {
             if (!str) return str;
@@ -10861,29 +10526,9 @@
             }).join(' ');
         }
 
-        function cvHeaderHtml(c) {
-            const nascimento = c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : null;
-            const sub = [nascimento ? `Nascimento: ${nascimento}` : null, c.nacionalidade, c.estado_civil].filter(Boolean).join(' · ');
-            const contato = [
-                c.telefone ? `📞 ${c.telefone}` : null,
-                c.whatsapp && c.whatsapp !== c.telefone ? `💬 ${c.whatsapp}` : null,
-                c.email ? `✉️ ${c.email}` : null,
-            ].filter(Boolean).join('   ');
-            const nome = titleCase(c.nome);
-            const sobrenome = titleCase(c.sobrenome);
-            const endereco = [titleCase(c.endereco), titleCase(c.bairro), titleCase(c.cidade), c.estado].filter(Boolean).join(', ');
-            const foto = c.foto_url ? `<img class="cv-photo" src="${escapeHtml(c.foto_url)}" alt="Foto">` : '';
-            return `
-                <div class="cv-header">
-                    ${foto}
-                    <div class="cv-id">
-                        <h1>${escapeHtml(nome)} ${escapeHtml(sobrenome) || ''}</h1>
-                        ${sub ? `<p class="cv-sub">${escapeHtml(sub)}</p>` : ''}
-                        ${contato ? `<p class="cv-contact">${contato}</p>` : ''}
-                        ${endereco ? `<p class="cv-sub">${escapeHtml(endereco)}</p>` : ''}
-                    </div>
-                </div>`;
-        }
+        // cvHeaderHtml() removido com o "Formatado com IA" (2026-08-30) — só o
+        // caminho da IA usava esse cabeçalho de texto corrido. O Formatado por
+        // template usa formatarCurriculoLayout/formatarCurriculoLayoutAjustado.
 
         // Formata telefone salvo cru (DDD + número, sem máscara nenhuma no
         // banco) só pra exibição no layout novo — não altera o valor salvo,
@@ -11408,10 +11053,8 @@
 
         // Monta o documento completo do currículo (barra lateral + coluna de
         // conteúdo), layout A4 de duas colunas fiel ao modelo visual da
-        // gráfica (2026-08-21) — substitui cvHeaderHtml()+formatarCurriculoTemplate()
-        // no caminho "Formatado" (sem IA). O caminho com IA (texto livre da
-        // Edge Function) continua usando cvHeaderHtml() + markdown, sem
-        // mudança — não dá pra encaixar texto corrido nas barras fixas.
+        // gráfica (2026-08-21). É o único caminho de "Formatado" desde que o
+        // "Formatado com IA" foi removido (2026-08-30).
         function formatarCurriculoLayout(c, opts) {
             const { ocultarObjetivo, ocultarCargo } = opts || {};
             const dados = c.dados || {};
@@ -11702,117 +11345,38 @@
             return formatarCurriculoLayout(c, { ocultarObjetivo: true, ocultarCargo: true });
         }
 
-        // Converte o markdown simples que a IA devolve (## títulos, listas com "-",
-        // texto corrido) em HTML — junta bullets consecutivos num <ul> só, e ignora
-        // um eventual "# Título" solto no topo (o cabeçalho já vem do cvHeaderHtml).
-        function markdownSimplesParaHtml(texto) {
-            const linhas = texto.split('\n');
-            let html = '', dentroLista = false, primeiraLinhaVista = false;
-            for (const linhaCrua of linhas) {
-                const l = linhaCrua.trim();
-                if (!l) continue;
-                const ehBullet = l.startsWith('- ') || l.startsWith('* ');
-                if (ehBullet && !dentroLista) { html += '<ul>'; dentroLista = true; }
-                if (!ehBullet && dentroLista) { html += '</ul>'; dentroLista = false; }
-
-                if (ehBullet) { html += `<li>${escapeHtml(l.slice(2))}</li>`; continue; }
-                if (l.startsWith('## ')) { html += `<h2>${escapeHtml(l.slice(3))}</h2>`; continue; }
-                if (l.startsWith('# ')) { if (!primeiraLinhaVista) { primeiraLinhaVista = true; continue; } html += `<h2>${escapeHtml(l.slice(2))}</h2>`; continue; }
-                html += `<p>${escapeHtml(l)}</p>`;
-            }
-            if (dentroLista) html += '</ul>';
-            return html;
-        }
-
         let formatadoAtualId = null;
 
-        async function abrirFormatado(id, useIA) {
+        // "Formatado com IA" removido a pedido do usuário (2026-08-30) — não será
+        // mais usado na produção de currículos. Restou só o Formatado por
+        // template. A revisão ortográfica automática e a identificação do
+        // primeiro nome da Referência Pessoal (Edge Functions `curriculo-revisao`
+        // e `curriculo-referencia-nome`) continuam rodando aqui, como sempre,
+        // antes de montar o layout — não têm nada a ver com o "gerar com IA".
+        async function abrirFormatado(id) {
             const c = curriculosCache.find(x => x.id === id);
             if (!c) return;
             formatadoAtualId = id;
             const modal = document.getElementById('formatadoModal');
             const conteudo = document.getElementById('formatadoConteudo');
-            const titulo = document.getElementById('formatadoTitulo');
             const btnImprimir = document.getElementById('formatadoBtnImprimir');
-            const btnRegerar = document.getElementById('formatadoBtnRegerar');
-            titulo.textContent = useIA ? `🤖 ${c.nome} ${c.sobrenome || ''} — gerado com IA` : `📄 ${c.nome} ${c.sobrenome || ''} — formatado`;
+            document.getElementById('formatadoTitulo').textContent = `📄 ${c.nome} ${c.sobrenome || ''} — formatado`;
             modal.classList.add('active');
             modal.dataset.nome = `${c.nome} ${c.sobrenome || ''}`;
-            modal.dataset.useIA = useIA ? '1' : '';
 
-            if (!useIA) {
-                btnRegerar.style.display = 'none';
-                btnImprimir.style.display = 'none';
-                conteudo.innerHTML = '<p>⏳ Preparando currículo...</p>';
-                // Revisão ortográfica automática (2026-08-23) e primeiro nome
-                // da Referência Pessoal (2026-08-24) — rodam sozinhas aqui,
-                // imediatamente antes de montar o layout final; discretas
-                // (sem botão, sem indicação visual do que mudou) e nunca
-                // bloqueiam a renderização (ver revisarOrtografiaCurriculo/
-                // identificarPrimeiroNomeReferencia).
-                const dadosRevisados = await revisarOrtografiaCurriculo(c);
-                const nomesReferencia = await identificarPrimeiroNomeReferencia(c);
-                const dadosFinais = aplicarRevisaoCv2(dadosRevisados, nomesReferencia);
-                conteudo.innerHTML = formatarCurriculoLayoutAjustado({ ...c, dados: dadosFinais });
-                btnImprimir.style.display = '';
-                return;
-            }
-
-            // Já foi gerado antes pra esse currículo? Reaproveita — evita gastar
-            // token de novo toda vez que só quer imprimir depois. Usa o cabeçalho
-            // já corrigido pela IA (ia_header) se tiver sido salvo junto.
-            if (c.ia_texto) {
-                const headerCorrigido = cvHeaderHtml(c.ia_header ? { ...c, ...c.ia_header } : c);
-                conteudo.innerHTML = headerCorrigido + markdownSimplesParaHtml(c.ia_texto);
-                btnImprimir.style.display = '';
-                btnRegerar.style.display = '';
-                return;
-            }
-
-            await gerarComIA(c, cvHeaderHtml(c));
+            btnImprimir.style.display = 'none';
+            conteudo.innerHTML = '<p>⏳ Preparando currículo...</p>';
+            // Revisão ortográfica automática e primeiro nome da Referência
+            // Pessoal — rodam sozinhas aqui, imediatamente antes de montar o
+            // layout final; discretas e nunca bloqueiam a renderização (ver
+            // revisarOrtografiaCurriculo / identificarPrimeiroNomeReferencia).
+            const dadosRevisados = await revisarOrtografiaCurriculo(c);
+            const nomesReferencia = await identificarPrimeiroNomeReferencia(c);
+            const dadosFinais = aplicarRevisaoCv2(dadosRevisados, nomesReferencia);
+            conteudo.innerHTML = formatarCurriculoLayoutAjustado({ ...c, dados: dadosFinais });
+            btnImprimir.style.display = '';
         }
         window.abrirFormatado = abrirFormatado;
-
-        async function gerarComIA(c, header) {
-            const conteudo = document.getElementById('formatadoConteudo');
-            const btnImprimir = document.getElementById('formatadoBtnImprimir');
-            const btnRegerar = document.getElementById('formatadoBtnRegerar');
-            btnImprimir.style.display = 'none';
-            btnRegerar.style.display = 'none';
-            conteudo.innerHTML = header + '<p>⏳ Gerando com IA, alguns segundos...</p>';
-            try {
-                const { data, error } = await supabase.functions.invoke('curriculo-ia', {
-                    body: {
-                        nome: c.nome, sobrenome: c.sobrenome, telefone: c.telefone, whatsapp: c.whatsapp,
-                        email: c.email, endereco: c.endereco, bairro: c.bairro, cidade: c.cidade,
-                        estado: c.estado, dados: c.dados,
-                    },
-                });
-                if (error) throw new Error(error.message || 'Falha ao gerar com IA');
-                if (!data || !data.texto) throw new Error(data && data.error ? data.error : 'IA não retornou conteúdo');
-
-                c.ia_texto = data.texto;
-                c.ia_header = data.header || null;
-                c.ia_gerado_em = new Date().toISOString();
-                dbUpdate('curriculos', { ia_texto: c.ia_texto, ia_header: c.ia_header, ia_gerado_em: c.ia_gerado_em }, { id: c.id })
-                    .catch((saveError) => console.warn('Não salvou o texto da IA:', saveError.message));
-
-                const headerCorrigido = c.ia_header ? cvHeaderHtml({ ...c, ...c.ia_header }) : header;
-                conteudo.innerHTML = headerCorrigido + markdownSimplesParaHtml(data.texto);
-                btnImprimir.style.display = '';
-                btnRegerar.style.display = '';
-            } catch (err) {
-                conteudo.innerHTML = header + `<p style="color:var(--danger);">⚠️ ${escapeHtml(err.message)}</p><p>Confere se a chave OPENAI_API_KEY foi configurada nos Secrets da Edge Function no Supabase.</p>`;
-            }
-        }
-
-        async function regerarComIA() {
-            const c = curriculosCache.find(x => x.id === formatadoAtualId);
-            if (!c) return;
-            if (!confirm('Gerar de novo consome tokens da IA outra vez. Continuar?')) return;
-            await gerarComIA(c, cvHeaderHtml(c));
-        }
-        window.regerarComIA = regerarComIA;
 
         function closeFormatadoModal() {
             document.getElementById('formatadoModal').classList.remove('active');
@@ -12502,15 +12066,12 @@
 
         // Fecha modal com ESC
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { closeModal(); closeTermoModal(); closePixModal(); closeSaidaModal(); closeDespesaFixaModal(); closeFichaModal(); closeFormatadoModal(); closeDeclFormatadoModal(); closeReciboModal(); }
+            if (e.key === 'Escape') { closeModal(); closePixModal(); closeSaidaModal(); closeDespesaFixaModal(); closeFichaModal(); closeFormatadoModal(); closeDeclFormatadoModal(); closeReciboModal(); }
         });
 
         // Fecha modal clicando fora
         document.getElementById('modal').addEventListener('click', (e) => {
             if (e.target.id === 'modal') closeModal();
-        });
-        document.getElementById('termoModal').addEventListener('click', (e) => {
-            if (e.target.id === 'termoModal') closeTermoModal();
         });
         document.getElementById('pixModal').addEventListener('click', (e) => {
             if (e.target.id === 'pixModal') closePixModal();
@@ -12657,7 +12218,10 @@
         setInterval(() => {
             if (document.getElementById('appContainer').style.display === 'none') return;
             if (document.getElementById('viewCaixa').classList.contains('active')) { loadData(); loadPix(); loadSaidas(); loadResumo(); }
-            else if (document.getElementById('viewTermos').classList.contains('active')) { loadContratos(); loadDeclaracoesPendentes(); }
+            else if (document.getElementById('viewTermos').classList.contains('active')) { loadDeclaracoesPendentes(); loadHistoricoContratos(); }
+            else if (document.getElementById('viewDeclProc').classList.contains('active')) { loadDeclProcPendentes(); histDeclProc.load(); }
+            else if (document.getElementById('viewPrestador').classList.contains('active')) { loadPrestadorPendentes(); histPrestador.load(); }
+            else if (document.getElementById('viewCurriculo').classList.contains('active')) { loadCurriculos(); }
             else if (document.getElementById('viewPlanejamento').classList.contains('active')) loadPlanejamento();
             loadPendingCounts();
             // Re-avalia o lembrete de caixa: some sozinho quando passa do horário.
