@@ -2147,3 +2147,15 @@ A tela de edição de um fechamento já realizado (`histEditar` ramo `isFech`) f
 - Reconcilia as 2 pernas pro cofre via `histReconciliarPernaCofre` (inalterado).
 
 Testado por SQL ROLLBACK (8/8): fechamento fechado (exemplo aprovado + Sicredi apurado +50) → edição Fundo 160 / Notas 550 / Sicredi saldo +20 → `FECHAMENTO` 340→390, pernas do cofre 340→390, `RECEITA_SERVICOS` Sicredi 50→70. Resultado: `caixa_loja` +160 (fundo retido), `cofre_notas` +390, `cofre_moedas` 0, `sicredi` +70 (Δ +20 vs. pós-fechamento), `fundo_caixa` 0, consistência `620 − 160 − 0 = 460` (= 390 dinheiro + 70 eletrônico). Limpeza → contas idênticas ao baseline.
+
+## Histórico de retiradas (Movimentação Financeira › Retirada) — dados reais + filtro funcional (2026-08-29)
+
+A tabela "Histórico de retiradas" era **100% fictícia** (6 `<tr>` fixos no HTML, filtros sem `onclick`, total "sem cálculo"). Agora lê **só `lancamentos` reais** (`tipo='RETIRADA'`), sem tocar no fechamento nem em outras telas.
+
+- **Piso fixo `MF_RET_HIST_DESDE = '2026-08-29'`** — a query usa `.gte('data', …)`; retirada anterior a essa data nunca aparece, mesmo se o período pedir antes (o `ini` efetivo é `max(dataInicial, '2026-08-29')`). Zero risco de misturar dado antigo/planilha.
+- `mfCarregarRetHist()` → `supabase.from('lancamentos').select('id,conta_id,valor,data,descricao,meta,created_at').eq('tipo','RETIRADA').gte('data', MF_RET_HIST_DESDE)`; cache `mfRetHistCache`.
+- `mfRetiradaHistFiltros()` lê os controles: **Período** (Hoje → `ini=fim=todayISO()`; Especificar → campos `#mfRetHistDataIni`/`#mfRetHistDataFim`), **Origem do recurso** (`#mfRetHistOrigem`, agora com `value` = chave real da conta: sicredi/pagseguro/caixa_loja/cofre_notas/cofre_moedas/fundo_caixa — antes tinha "Fundo de Caixa 1/2" fictícios), **Tipo** (`meta.finalidade` empresa/pessoal), **Categoria** (`meta.categoria`, populada por `mfRetiradaFiltroTipo`).
+- `mfRetiradaHistRender()` (onclick do **Filtrar**): filtra o cache, ordena por data desc, monta as linhas — Data BR · `mfBRL(|valor|)` · `FIN_CONTA_LABEL[chave]` · Empresa/Pessoal · `categoria` (+ ` · <beneficiário>` p/ Folha) · Observação (`meta.descricao`; o fallback `"empresa · Categoria"` de `mfRegistrarRetirada` é filtrado p/ mostrar "—") — e escreve o **Total** (`#mfRetHistTotal`). Vazio → "Nenhuma retirada real neste filtro."
+- `mfRetiradaHistLimpar()` (onclick do **Limpar**): **só reseta os filtros** pro padrão (Hoje, selects em "Todas", datas limpas, categoria desabilitada) e re-renderiza os lançamentos reais. Não traz nada antigo.
+- Re-render automático: ao abrir a tela (`movFinTela('retirada')`), após `mfRegistrarRetirada`, e no realtime de `lancamentos` quando a tela está ativa (`mfRetiradaHistRecarregar()` limpa o cache antes).
+- Verificado por SQL: hoje (29/08) existem exatamente 3 RETIRADA reais — −140 (cofre_notas · Manutenção · "cesar impressora"), −10 (cofre_notas · Consumíveis · "pilha cortador"), −79,11 (sicredi · Gráfica). Filtro "Hoje" → as 3, Total R$ 229,11; "Cofre de Notas" → só as 2 primeiras; "Manutenção" → só a de 140.

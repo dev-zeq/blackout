@@ -1586,20 +1586,20 @@
                             <label class="fin-radio"><input type="radio" name="mfRetFiltroPeriodo" value="periodo" onchange="mfRetiradaFiltroPeriodo()"> Especificar período</label>
                         </div>
                         <div class="fin-field-row" id="mfRetFiltroPeriodoCampos" style="display:none; margin-top:10px;">
-                            <div class="fin-field"><label>Data inicial</label><input type="date"></div>
-                            <div class="fin-field"><label>Data final</label><input type="date"></div>
+                            <div class="fin-field"><label>Data inicial</label><input type="date" id="mfRetHistDataIni"></div>
+                            <div class="fin-field"><label>Data final</label><input type="date" id="mfRetHistDataFim"></div>
                         </div>
                     </div>
                     <div class="fin-field">
                         <label>Origem do recurso</label>
-                        <select>
+                        <select id="mfRetHistOrigem">
                             <option value="">Todas</option>
-                            <option>Sicredi</option>
-                            <option>PagSeguro</option>
-                            <option>Caixa Notas</option>
-                            <option>Caixa Moedas</option>
-                            <option>Fundo de Caixa 1</option>
-                            <option>Fundo de Caixa 2</option>
+                            <option value="sicredi">Sicredi</option>
+                            <option value="pagseguro">PagSeguro</option>
+                            <option value="caixa_loja">Caixa da Loja</option>
+                            <option value="cofre_notas">Cofre de Notas</option>
+                            <option value="cofre_moedas">Cofre de Moedas</option>
+                            <option value="fundo_caixa">Fundo de Caixa</option>
                         </select>
                     </div>
                     <div class="fin-field">
@@ -1617,8 +1617,8 @@
                         </select>
                     </div>
                     <div class="fin-actions-row">
-                        <button type="button" class="fin-submit" style="flex:2;">Filtrar</button>
-                        <button type="button" class="fin-btn-ghost" style="flex:1;">Limpar</button>
+                        <button type="button" class="fin-submit" style="flex:2;" onclick="mfRetiradaHistRender()">Filtrar</button>
+                        <button type="button" class="fin-btn-ghost" style="flex:1;" onclick="mfRetiradaHistLimpar()">Limpar</button>
                     </div>
                 </div>
                 <div class="fin-table-wrap">
@@ -1634,67 +1634,20 @@
                                     <th>Observação</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>27/08/2026</td>
-                                    <td class="fin-table-amount">R$ 180,00</td>
-                                    <td>Caixa Notas</td>
-                                    <td>Empresa</td>
-                                    <td>Consumíveis</td>
-                                    <td>Papel A4 e toner</td>
-                                </tr>
-                                <tr>
-                                    <td>26/08/2026</td>
-                                    <td class="fin-table-amount">R$ 120,00</td>
-                                    <td>Sicredi</td>
-                                    <td>Pessoal</td>
-                                    <td>Gasolina</td>
-                                    <td>—</td>
-                                </tr>
-                                <tr>
-                                    <td>24/08/2026</td>
-                                    <td class="fin-table-amount">R$ 90,00</td>
-                                    <td>Caixa Moedas</td>
-                                    <td>Pessoal</td>
-                                    <td>Almoço</td>
-                                    <td>Equipe</td>
-                                </tr>
-                                <tr>
-                                    <td>22/08/2026</td>
-                                    <td class="fin-table-amount">R$ 1.500,00</td>
-                                    <td>PagSeguro</td>
-                                    <td>Empresa</td>
-                                    <td>Despesa Fixa</td>
-                                    <td>—</td>
-                                </tr>
-                                <tr>
-                                    <td>20/08/2026</td>
-                                    <td class="fin-table-amount">R$ 260,00</td>
-                                    <td>Sicredi</td>
-                                    <td>Pessoal</td>
-                                    <td>Gasolina</td>
-                                    <td>Viagem fornecedor</td>
-                                </tr>
-                                <tr>
-                                    <td>18/08/2026</td>
-                                    <td class="fin-table-amount">R$ 340,00</td>
-                                    <td>Fundo de Caixa 1</td>
-                                    <td>Empresa</td>
-                                    <td>Manutenção</td>
-                                    <td>Conserto impressora</td>
-                                </tr>
+                            <tbody id="mfRetHistBody">
+                                <tr><td colspan="6" style="text-align:center; color:var(--text-dim);">Carregando…</td></tr>
                             </tbody>
                             <tfoot>
                                 <tr>
                                     <td>Total</td>
-                                    <td class="fin-table-amount">R$ 0,00</td>
+                                    <td class="fin-table-amount" id="mfRetHistTotal">R$ 0,00</td>
                                     <td colspan="4"></td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 </div>
-                <div class="fin-note">Etapa 1 — filtros combináveis e total ainda sem cálculo. Dados fictícios.</div>
+                <div class="fin-note">Somente lançamentos reais de retirada feitos neste painel (a partir de 29/08/2026). Nenhum dado de planilha antiga ou fictício.</div>
             </div>
 
             <!-- TELA: Troca por Pix -------------------------------- -->
@@ -3452,6 +3405,10 @@
                 if (fin && fin.classList.contains('active') && document.getElementById('finScreen-inicio').classList.contains('active')) {
                     finCarregarMovimentosDia().then(finCaixaStatusRender);
                 }
+                const mov = document.getElementById('viewMovFin');
+                if (mov && mov.classList.contains('active') && document.getElementById('mfScreen-retirada') && document.getElementById('mfScreen-retirada').classList.contains('active')) {
+                    mfRetiradaHistRecarregar();
+                }
             });
         }
 
@@ -4585,6 +4542,7 @@
             }
             if (nome === 'reembolso') { mfReembolsoValidar(); mfReembolsoHistApurar(); }
             if (nome === 'transferencia') mfTransferenciaClassificar();
+            if (nome === 'retirada') mfRetiradaHistRecarregar();
             const cont = document.querySelector('.container');
             if (cont) cont.scrollIntoView({ behavior: 'auto', block: 'start' });
         }
@@ -4703,6 +4661,100 @@
         window.mfRetiradaDespesaFixaEmpresaTotal = mfRetiradaDespesaFixaEmpresaTotal;
         window.mfRetiradaFiltroTipo = mfRetiradaFiltroTipo;
         window.mfRetiradaFiltroPeriodo = mfRetiradaFiltroPeriodo;
+
+        // ---------- Histórico de retiradas — só lançamentos REAIS do painel ----------
+        // Nada de dados fictícios nem de planilha antiga: lê direto de `lancamentos`
+        // (tipo RETIRADA). Piso fixo em 29/08/2026 — retiradas anteriores a essa data
+        // (se houver alguma de teste) nunca aparecem, mesmo que o período peça antes.
+        const MF_RET_HIST_DESDE = '2026-08-29';
+        let mfRetHistCache = null;
+        async function mfCarregarRetHist() {
+            try {
+                await finCarregarContas();
+                const { data, error } = await supabase.from('lancamentos')
+                    .select('id,conta_id,valor,data,descricao,meta,created_at')
+                    .eq('tipo', 'RETIRADA').gte('data', MF_RET_HIST_DESDE);
+                if (error) throw new Error(error.message);
+                mfRetHistCache = data || [];
+            } catch (_) { mfRetHistCache = []; }
+        }
+        function mfRetiradaHistFiltros() {
+            const esp = (document.querySelector('input[name="mfRetFiltroPeriodo"][value="periodo"]') || {}).checked;
+            let ini = MF_RET_HIST_DESDE, fim = null;
+            if (esp) {
+                const di = (document.getElementById('mfRetHistDataIni') || {}).value || '';
+                const df = (document.getElementById('mfRetHistDataFim') || {}).value || '';
+                if (di && di > ini) ini = di;
+                if (df) fim = df;
+            } else {
+                ini = fim = todayISO();
+                if (ini < MF_RET_HIST_DESDE) ini = MF_RET_HIST_DESDE;
+            }
+            return {
+                ini, fim,
+                origem: (document.getElementById('mfRetHistOrigem') || {}).value || '',
+                tipo: (document.getElementById('mfRetFiltroTipo') || {}).value || '',
+                categoria: (document.getElementById('mfRetFiltroCategoria') || {}).value || '',
+            };
+        }
+        async function mfRetiradaHistRender() {
+            const body = document.getElementById('mfRetHistBody');
+            const totEl = document.getElementById('mfRetHistTotal');
+            if (!body) return;
+            if (mfRetHistCache === null) {
+                body.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">Carregando…</td></tr>';
+                await mfCarregarRetHist();
+            }
+            const f = mfRetiradaHistFiltros();
+            const rows = (mfRetHistCache || []).filter(r => {
+                if (f.ini && r.data < f.ini) return false;
+                if (f.fim && r.data > f.fim) return false;
+                const m = r.meta || {};
+                if (f.origem && finContaChavePorId(r.conta_id) !== f.origem) return false;
+                if (f.tipo && (m.finalidade || 'pessoal') !== f.tipo) return false;
+                if (f.categoria && (m.categoria || '') !== f.categoria) return false;
+                return true;
+            }).sort((a, b) => String(b.data).localeCompare(String(a.data))
+                || String(b.created_at || '').localeCompare(String(a.created_at || '')));
+            let total = 0;
+            const linhas = rows.map(r => {
+                const m = r.meta || {};
+                const v = Math.abs(Number(r.valor) || 0);
+                total += v;
+                const chave = finContaChavePorId(r.conta_id);
+                const origemTxt = FIN_CONTA_LABEL[chave] || chave || '—';
+                const tipoTxt = (m.finalidade === 'empresa') ? 'Empresa' : 'Pessoal';
+                const catTxt = (m.categoria || '—') + (m.folha_beneficiario ? ' · ' + m.folha_beneficiario : '');
+                const obs = m.descricao || (r.descricao && !/^(empresa|pessoal) · /i.test(r.descricao) ? r.descricao : '') || '—';
+                return `<tr>
+                    <td>${histDataBR ? histDataBR(r.data) : r.data}</td>
+                    <td class="fin-table-amount">${mfBRL(v)}</td>
+                    <td>${escapeHtml(origemTxt)}</td>
+                    <td>${tipoTxt}</td>
+                    <td>${escapeHtml(catTxt)}</td>
+                    <td>${escapeHtml(obs)}</td>
+                </tr>`;
+            }).join('');
+            body.innerHTML = linhas || '<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">Nenhuma retirada real neste filtro.</td></tr>';
+            if (totEl) totEl.textContent = mfBRL(total);
+        }
+        // Limpar = só reseta os filtros pro padrão (Hoje, tudo "Todas") e re-renderiza
+        // os lançamentos reais. NÃO traz dados antigos.
+        function mfRetiradaHistLimpar() {
+            const hoje = document.querySelector('input[name="mfRetFiltroPeriodo"][value="hoje"]');
+            if (hoje) hoje.checked = true;
+            ['mfRetHistDataIni', 'mfRetHistDataFim'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+            const campos = document.getElementById('mfRetFiltroPeriodoCampos'); if (campos) campos.style.display = 'none';
+            const org = document.getElementById('mfRetHistOrigem'); if (org) org.value = '';
+            const tp = document.getElementById('mfRetFiltroTipo'); if (tp) tp.value = '';
+            const cat = document.getElementById('mfRetFiltroCategoria');
+            if (cat) { cat.innerHTML = '<option value="">Todas</option>'; cat.disabled = true; }
+            mfRetiradaHistRender();
+        }
+        async function mfRetiradaHistRecarregar() { mfRetHistCache = null; await mfRetiradaHistRender(); }
+        window.mfRetiradaHistRender = mfRetiradaHistRender;
+        window.mfRetiradaHistLimpar = mfRetiradaHistLimpar;
+        window.mfRetiradaHistRecarregar = mfRetiradaHistRecarregar;
 
         // ---------- Troca por Pix — cálculo idêntico à planilha PAINEL DE CONTROLE ----------
         // Fórmulas lidas da aba "PAINEL DE CONTROLE":
@@ -4966,6 +5018,7 @@
                 ['mfRetDfAluguel', 'mfRetDfEnergia', 'mfRetDfAgua', 'mfRetDfInternet', 'mfRetDfeAluguel', 'mfRetDfeEnergia', 'mfRetDfeInternet'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
                 mfRetiradaDespesaFixaTotal(); mfRetiradaDespesaFixaEmpresaTotal();
                 await finPosGravacao();
+                mfRetiradaHistRecarregar();
             } catch (e) {
                 finMsg('mfRetMsg', 'err', 'Erro ao registrar: ' + e.message);
             } finally { btn.disabled = false; }
