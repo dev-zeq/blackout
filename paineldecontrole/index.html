@@ -1150,7 +1150,95 @@
                         <span class="fin-nav-btn-sub">Corrigir ou excluir lançamentos</span>
                     </button>
                 </div>
+
+                <div class="fin-section-title">Configuração</div>
+                <div class="fin-nav-grid">
+                    <button type="button" class="fin-nav-btn" onclick="financeiroTela('saldo-inicial')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/><circle cx="12" cy="12" r="3.2"/></svg></span>
+                        <span class="fin-nav-btn-label">Saldo Inicial</span>
+                        <span class="fin-nav-btn-sub">Ponto de partida de cada conta</span>
+                    </button>
+                    <button type="button" class="fin-nav-btn" onclick="financeiroTela('fechamento-mensal')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4M8 15l3 3 5-6"/></svg></span>
+                        <span class="fin-nav-btn-label">Fechamento Mensal</span>
+                        <span class="fin-nav-btn-sub">Relatório final do mês + virada</span>
+                    </button>
+                </div>
                 <div class="fin-note">Etapa 1 — apenas layout e navegação. Registro de Pix, retiradas, sangria, transferências etc. ficam no módulo "Movimentação Financeira".</div>
+            </div>
+
+            <!-- TELA: Saldo Inicial ----------------------------------- -->
+            <div class="fin-screen" id="finScreen-saldo-inicial">
+                <button type="button" class="fin-back" onclick="financeiroTela('inicio')">← Financeiro</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/><circle cx="12" cy="12" r="3.2"/></svg></span>
+                    <h2>Saldo Inicial</h2>
+                </div>
+                <div class="fin-note">O saldo inicial é só o ponto de partida de cada conta. <b>Não</b> é receita, despesa, retirada nem transferência, e não entra no Resultado Financeiro. Ao salvar, o saldo atual da conta é ajustado pelo mesmo valor da mudança — <b>sem criar nenhum lançamento</b>. Contas devedoras aceitam valor negativo (ex.: <code>-994,00</code>).</div>
+                <div id="finSiLista"><div class="fin-note">Carregando…</div></div>
+                <button type="button" class="fin-submit" id="finSiSalvarBtn" onclick="finSiSalvar()">Salvar saldos iniciais</button>
+                <div class="fin-msg" id="finSiMsg"></div>
+            </div>
+
+            <!-- TELA: Fechamento Mensal ------------------------------- -->
+            <div class="fin-screen" id="finScreen-fechamento-mensal">
+                <button type="button" class="fin-back" onclick="financeiroTela('inicio')">← Financeiro</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4M8 15l3 3 5-6"/></svg></span>
+                    <h2>Fechamento Mensal</h2>
+                </div>
+                <div class="fin-note">Gera o relatório final de um mês encerrado (somente dados registrados no painel), grava uma <b>fotografia imutável</b> e conduz a virada para o mês seguinte. <b>Não apaga lançamentos</b>; o mês fechado fica sempre consultável. Nada é aplicado sem a sua confirmação final.</div>
+                <div class="fin-msg" id="fmMsg"></div>
+
+                <!-- PASSO 1 — gerar e confirmar o relatório -->
+                <div id="fmStep1">
+                    <div class="fin-card">
+                        <div class="fin-field">
+                            <label>Mês a fechar</label>
+                            <select id="fmMesSel"></select>
+                        </div>
+                        <button type="button" class="fin-submit" onclick="fmGerarRelatorio()">Gerar relatório do mês</button>
+                    </div>
+                    <div id="fmRelBox"></div>
+                    <button type="button" class="fin-submit" id="fmBtnConfirmarRel" style="display:none;" onclick="fmStepGo(2)">Confirmar relatório e conferir a virada →</button>
+                </div>
+
+                <!-- PASSO 2 — saldos iniciais do próximo mês -->
+                <div id="fmStep2" style="display:none;">
+                    <div class="fin-section-title">Saldos iniciais do próximo mês</div>
+                    <div class="fin-note">Abaixo estão os <b>saldos finais apurados</b> do mês fechado. Confirme ou ajuste o que será o <b>saldo inicial</b> de cada conta no próximo período. Nada é aplicado agora — só na etapa final.</div>
+                    <div id="fmSaldosBox"></div>
+                    <div class="fin-actions-row">
+                        <button type="button" class="fin-btn-ghost" onclick="fmStepGo(1)">← Voltar</button>
+                        <button type="button" class="fin-submit" style="flex:2;" onclick="fmStepGo(3)">Avançar para a configuração →</button>
+                    </div>
+                </div>
+
+                <!-- PASSO 3 — configuração do próximo mês -->
+                <div id="fmStep3" style="display:none;">
+                    <div class="fin-section-title">Configuração do próximo mês</div>
+                    <div class="fin-note">Valores <b>atuais</b>. Confirme ou altere o que passa a valer <b>a partir do próximo mês</b>. O relatório do mês fechado guarda a configuração vigente hoje — isso aqui não altera o passado.</div>
+                    <div id="fmConfigBox"></div>
+                    <div class="fin-actions-row">
+                        <button type="button" class="fin-btn-ghost" onclick="fmStepGo(2)">← Voltar</button>
+                        <button type="button" class="fin-submit" style="flex:2;" onclick="fmStepGo(4)">Revisar e finalizar →</button>
+                    </div>
+                </div>
+
+                <!-- PASSO 4 — revisão final + finalizar -->
+                <div id="fmStep4" style="display:none;">
+                    <div class="fin-section-title">Finalizar o fechamento de <span id="fmMesLbl4">—</span></div>
+                    <div id="fmResumoBox"></div>
+                    <div class="fin-actions-row">
+                        <button type="button" class="fin-btn-ghost" onclick="fmStepGo(3)">← Voltar</button>
+                        <button type="button" class="fin-submit" style="flex:2;" id="fmBtnFinalizar" onclick="fmFinalizar()">Finalizar fechamento mensal</button>
+                    </div>
+                </div>
+
+                <!-- MESES JÁ FECHADOS (consulta / auditoria) -->
+                <div class="fin-section-title">Meses já fechados</div>
+                <div id="fmFechadosBox"><div class="fin-note">—</div></div>
+                <div id="fmSnapshotBox"></div>
             </div>
 
             <!-- TELA: Fechamento de Caixa ------------------------------- -->
@@ -4522,10 +4610,447 @@
             if (nome === 'fechamento') { Promise.all([finCarregarMovimentosDia(), finCarregarResultado()]).then(mfFechamentoConferir); }
             if (nome === 'relatorios') { relInit(); }
             if (nome === 'historico') { histInit(); }
+            if (nome === 'saldo-inicial') { finSiRender(); }
+            if (nome === 'fechamento-mensal') { fmInit(); }
             const cont = document.querySelector('.container');
             if (cont) cont.scrollIntoView({ behavior: 'auto', block: 'start' });
         }
         window.financeiroTela = financeiroTela;
+
+        // ---------- Saldo Inicial — ponto de partida manual de cada conta ----------
+        // NÃO cria lançamento. `contas.saldo` é mantido pelo trigger em cima de
+        // `lancamentos` e vale sempre `saldo_inicial + Σ(lançamentos)`. Ao mudar o
+        // `saldo_inicial`, deslocamos `saldo` pelo MESMO delta, então a identidade
+        // continua exata (hoje, com 0 lançamentos, `saldo` só acompanha o inicial).
+        // Sem RECEITA_SERVICOS / RETIRADA / TRANSFERENCIA, sem mexer em histórico,
+        // fechamento, receitas, despesas ou pró-labore.
+        async function finSiRender() {
+            const wrap = document.getElementById('finSiLista');
+            if (!wrap) return;
+            wrap.innerHTML = '<div class="fin-note">Carregando…</div>';
+            finMsgClear('finSiMsg');
+            const { data, error } = await supabase.from('contas')
+                .select('chave,nome,tipo,saldo_inicial,saldo,ordem').eq('ativa', true).order('ordem');
+            if (error) { wrap.innerHTML = '<div class="fin-note" style="color:var(--danger);">Erro ao carregar contas: ' + escapeHtml(error.message) + '</div>'; return; }
+            wrap.innerHTML = (data || []).map(c => {
+                const ui = FIN_CONTA_UI[c.chave] || FIN_CONTA_UI_DEFAULT;
+                const ini = Number(c.saldo_inicial) || 0;
+                const val = ini.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return `<div class="fin-card">
+                    <div class="fin-card-title"><span class="fin-account-icon" style="color:${ui.cor};background:${ui.bg};">${ui.icon}</span> ${escapeHtml(c.nome)}</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo inicial atual</span><span class="fin-kv-value">${finFmtSaldo(c.saldo_inicial)}</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo atual da conta</span><span class="fin-kv-value">${finFmtSaldo(c.saldo)}</span></div>
+                    <div class="fin-field" style="margin-top:10px;">
+                        <label>Novo saldo inicial</label>
+                        <input type="text" inputmode="decimal" id="finSiInput-${c.chave}" value="${val}"
+                            data-atual="${ini}" data-saldo="${Number(c.saldo) || 0}" data-nome="${escapeHtml(c.nome)}"
+                            oninput="finSiHint('${c.chave}')" placeholder="Ex: 1.234,56 ou -994,00">
+                        <div class="extenso-valor" id="finSiHint-${c.chave}"></div>
+                    </div>
+                </div>`;
+            }).join('') || '<div class="fin-note">Nenhuma conta ativa.</div>';
+        }
+        function finSiHint(chave) {
+            const el = document.getElementById('finSiInput-' + chave);
+            const h = document.getElementById('finSiHint-' + chave);
+            if (!el || !h) return;
+            const atual = Number(el.getAttribute('data-atual')) || 0;
+            const novo = parseBRLDecimal(el.value);
+            const d = Number((novo - atual).toFixed(2));
+            if (!el.value.trim() || Math.abs(d) < 0.005) { h.textContent = ''; return; }
+            h.textContent = 'Vai ficar: ' + finFmtSaldo(novo) + ' · saldo atual ajustado em ' + (d > 0 ? '+ ' : '− ') + mfBRL(Math.abs(d));
+        }
+        async function finSiSalvar() {
+            const inputs = document.querySelectorAll('#finSiLista input[id^="finSiInput-"]');
+            const mudancas = [];
+            inputs.forEach(el => {
+                if (!el.value.trim()) return;
+                const chave = el.id.replace('finSiInput-', '');
+                const atual = Number(el.getAttribute('data-atual')) || 0;
+                const saldo = Number(el.getAttribute('data-saldo')) || 0;
+                const nome = el.getAttribute('data-nome') || chave;
+                const novo = Number(parseBRLDecimal(el.value).toFixed(2));
+                if (Math.abs(novo - atual) < 0.005) return;
+                mudancas.push({ chave, nome, atual, novo, saldoNovo: Number((saldo + (novo - atual)).toFixed(2)) });
+            });
+            if (!mudancas.length) { finMsg('finSiMsg', 'err', 'Nenhum saldo inicial foi alterado.'); return; }
+            const linhas = mudancas.map(m => '• ' + m.nome + ': ' + finFmtSaldo(m.atual) + '  →  ' + finFmtSaldo(m.novo)).join('\n');
+            if (!window.confirm('Confirmar a alteração do saldo inicial?\n\n' + linhas
+                + '\n\nIsso NÃO cria nenhum lançamento. O saldo atual de cada conta é ajustado pelo mesmo valor da mudança.')) return;
+            const btn = document.getElementById('finSiSalvarBtn');
+            if (btn) btn.disabled = true;
+            finMsg('finSiMsg', 'busy', 'Salvando…');
+            try {
+                for (const m of mudancas) {
+                    await dbUpdate('contas', { saldo_inicial: m.novo, saldo: m.saldoNovo }, { chave: m.chave });
+                }
+                finMsg('finSiMsg', 'ok', mudancas.length + (mudancas.length > 1 ? ' saldos iniciais atualizados' : ' saldo inicial atualizado')
+                    + ' — nenhum lançamento foi criado.');
+                await loadFinanceiroSaldos();
+                await finSiRender();
+            } catch (e) {
+                finMsg('finSiMsg', 'err', 'Erro ao salvar: ' + (e && e.message ? e.message : e));
+            } finally { if (btn) btn.disabled = false; }
+        }
+        window.finSiRender = finSiRender;
+        window.finSiHint = finSiHint;
+        window.finSiSalvar = finSiSalvar;
+
+        // ================= FECHAMENTO MENSAL (2026-08-29) =================
+        // Wizard: gera o Relatório Mensal Final de um mês encerrado (só dados de
+        // `lancamentos`, via relAgregar — mesma regra do Relatórios: só dias
+        // fechados), grava UMA linha imutável em `fechamentos_mensais`, e conduz
+        // a virada: (a) confirmar os saldos iniciais do próximo mês (mesma
+        // mecânica do Saldo Inicial — ajusta contas.saldo pelo delta, SEM
+        // lançamento), (b) revisar a config (pró-labore / limites) e congelar o
+        // pró-labore do próximo mês. NÃO apaga nem altera lançamentos. Nada é
+        // aplicado sem a confirmação final.
+        let fmStep = 1;
+        let fmS = null;                 // estado do fechamento em andamento
+        let fmContasIni = {};           // chave -> { saldo_inicial, saldo } (atuais)
+        let fmFechados = [];            // linhas já salvas em fechamentos_mensais
+        const FM_CHAVES = ['sicredi', 'pagseguro', 'cofre_notas', 'cofre_moedas', 'fundo_caixa', 'caixa_loja'];
+        const FM_CFG_CAMPOS = [
+            ['Pró-labore Márcio', 'Pró-labore Márcio'],
+            ['Pró-labore Renata', 'Pró-labore Renata'],
+            ['Teto Mensal', 'Teto Mensal de Despesas (Pessoal/Família)'],
+            ['Mercado', 'Mercado'],
+            ['Gasolina', 'Gasolina'],
+            ['Almoço', 'Almoço'],
+            ['DF Aluguel', 'Despesa Fixa — Aluguel'],
+            ['DF Água', 'Despesa Fixa — Água'],
+            ['DF Energia', 'Despesa Fixa — Energia'],
+            ['DF Internet', 'Despesa Fixa — Internet'],
+            ['Demais Despesas', 'Demais Despesas'],
+        ];
+        const fmR2 = n => Number((Number(n) || 0).toFixed(2));
+        const fmMsg = (k, t) => finMsg('fmMsg', k, t);
+        const fmMsgClear = () => finMsgClear('fmMsg');
+
+        async function fmInit() {
+            fmMsgClear();
+            fmS = null;
+            const snap = document.getElementById('fmSnapshotBox'); if (snap) snap.innerHTML = '';
+            const relBox = document.getElementById('fmRelBox'); if (relBox) relBox.innerHTML = '';
+            const btnC = document.getElementById('fmBtnConfirmarRel'); if (btnC) btnC.style.display = 'none';
+            fmStep = 1;
+            [1, 2, 3, 4].forEach(i => { const e = document.getElementById('fmStep' + i); if (e) e.style.display = (i === 1) ? '' : 'none'; });
+            try {
+                await relCarregarTudo();
+                const { data: cData, error: cErr } = await supabase.from('contas').select('chave,saldo_inicial,saldo');
+                if (cErr) throw new Error(cErr.message);
+                fmContasIni = {};
+                (cData || []).forEach(c => { fmContasIni[c.chave] = { saldo_inicial: Number(c.saldo_inicial) || 0, saldo: Number(c.saldo) || 0 }; });
+                const { data: fData, error: fErr } = await supabase.from('fechamentos_mensais').select('*').order('mes_ref', { ascending: false });
+                if (fErr) throw new Error(fErr.message);
+                fmFechados = fData || [];
+            } catch (e) { fmMsg('err', 'Erro ao carregar dados: ' + (e && e.message ? e.message : e)); fmFechados = []; }
+            const mesCorrente = todayISO().slice(0, 7);
+            const jaFechados = new Set((fmFechados || []).map(r => String(r.mes_ref).slice(0, 7)));
+            const meses = Array.from(new Set(relCache.map(r => String(r.data || '').slice(0, 7)).filter(Boolean)))
+                .filter(m => !jaFechados.has(m)).sort();
+            const sel = document.getElementById('fmMesSel');
+            if (sel) {
+                if (!meses.length) { sel.innerHTML = '<option value="">Nenhum mês pendente de fechamento</option>'; }
+                else {
+                    sel.innerHTML = meses.map(m => `<option value="${m}">${escapeHtml(relMesRotulo(m))}${m === mesCorrente ? ' (mês corrente)' : ''}</option>`).join('');
+                    sel.value = meses[meses.length - 1];
+                }
+            }
+            fmRenderFechados();
+        }
+        window.fmInit = fmInit;
+
+        function fmGerarRelatorio() {
+            const ym = (document.getElementById('fmMesSel') || {}).value || '';
+            if (!ym) { fmMsg('err', 'Escolha um mês para fechar.'); return; }
+            const doMes = relCache.filter(r => String(r.data || '').slice(0, 7) === ym);
+            const diasFechados = new Set(doMes.filter(r => r.tipo === 'FECHAMENTO').map(r => r.data));
+            const diasComMov = new Set(doMes.filter(r => r.tipo !== 'FECHAMENTO').map(r => r.data));
+            const diasAbertos = Array.from(diasComMov).filter(d => !diasFechados.has(d)).sort();
+            const considerados = doMes.filter(r => diasFechados.has(r.data));
+            const A = relAgregar(considerados);
+            const [y, m] = ym.split('-').map(Number);
+            const lastISO = y + '-' + String(m).padStart(2, '0') + '-' + String(new Date(y, m, 0).getDate()).padStart(2, '0');
+            const saldosFim = {}, saldosAtuais = {};
+            let temPosterior = false;
+            FM_CHAVES.forEach(ch => {
+                const atual = (fmContasIni[ch] || {}).saldo || 0;
+                const depois = relCache
+                    .filter(r => finContaChavePorId(r.conta_id) === ch && String(r.data) > lastISO)
+                    .reduce((s, r) => s + (Number(r.valor) || 0), 0);
+                if (Math.abs(depois) > 0.005) temPosterior = true;
+                saldosFim[ch] = fmR2(atual - depois);
+                saldosAtuais[ch] = fmR2(atual);
+            });
+            fmS = {
+                ym, mesRef: ym + '-01', A, diasFechados, diasAbertos, saldosFim, saldosAtuais, temPosterior,
+                saldosInicioProx: Object.assign({}, saldosFim), configProx: null,
+            };
+            fmRenderRelatorio();
+            const btnC = document.getElementById('fmBtnConfirmarRel');
+            if (btnC) btnC.style.display = diasFechados.size ? '' : 'none';
+        }
+        window.fmGerarRelatorio = fmGerarRelatorio;
+
+        function fmKv(label, valor, forte) {
+            return '<div class="fin-kv"><span class="fin-kv-label">' + label + '</span><span class="fin-kv-value"'
+                + (forte ? ' style="font-size:16px;color:var(--accent-bright);"' : '') + '>' + valor + '</span></div>';
+        }
+        function fmRenderRelatorio() {
+            const box = document.getElementById('fmRelBox');
+            if (!box || !fmS) return;
+            const A = fmS.A, ym = fmS.ym;
+            const nFech = fmS.diasFechados.size;
+            let avisos = '';
+            if (!nFech) avisos += '<div class="fin-aviso" style="display:block;">Nenhum dia fechado neste mês — o relatório fica zerado. Feche ao menos um dia antes.</div>';
+            if (fmS.diasAbertos.length) avisos += '<div class="fin-aviso" style="display:block;">Há ' + fmS.diasAbertos.length + ' dia(s) com movimento ainda <b>não fechado(s)</b> neste mês — eles não entram no relatório. Feche-os antes se quiser um fechamento completo.</div>';
+            if (fmS.temPosterior) avisos += '<div class="fin-aviso" style="display:block;">Já existem lançamentos com data <b>posterior</b> a este mês. Os saldos finais abaixo são calculados de trás pra frente (saldo atual − lançamentos posteriores).</div>';
+            if (Math.abs(A.consistDelta) >= 0.02) avisos += '<div class="fin-aviso" style="display:block;">Verificação: divergência de ' + mfBRL(Math.abs(A.consistDelta)) + ' no período.</div>';
+            const eletDet = Object.keys(A.R.eletronico).filter(k => Math.abs(A.R.eletronico[k]) > 0.005)
+                .map(k => '<div class="fin-kv" style="padding-left:14px;"><span class="fin-kv-label" style="color:var(--text-faint);">' + (FIN_CONTA_LABEL[k] || k) + '</span><span class="fin-kv-value">' + mfBRL(A.R.eletronico[k]) + '</span></div>').join('');
+            box.innerHTML = avisos
+                + '<div class="fin-card">'
+                + '<div class="fin-card-title">Relatório Mensal Final — ' + escapeHtml(relMesRotulo(ym)) + '</div>'
+                + fmKv('<b>Resultado Financeiro</b>', mfBRL(A.resultadoFinanceiro), true)
+                + fmKv('Resultado Operacional', mfBRL(A.resultadoOperacional))
+                + '<div class="fin-section-title" style="margin-top:12px;">Receitas</div>'
+                + fmKv('Receita total', mfBRL(A.totalReceitas))
+                + fmKv('— em dinheiro', mfBRL(A.R.dinheiro))
+                + fmKv('— PIX / eletrônico', mfBRL(A.eletronicoTotal))
+                + eletDet
+                + fmKv('— taxa de Troca por Pix', mfBRL(A.R.taxa_troca_pix))
+                + '<div class="fin-section-title" style="margin-top:12px;">Despesas</div>'
+                + fmKv('Despesas da empresa', mfBRL(A.D.empresa))
+                + fmKv('Gráfica', mfBRL(A.D.grafica))
+                + fmKv('Reembolsos', mfBRL(A.D.reembolso))
+                + fmKv('Despesa total', mfBRL(A.totalDespesas))
+                + fmKv('Retiradas de sócios', mfBRL(A.retiradaSocio))
+                + '<div class="fin-section-title" style="margin-top:12px;">Movimentações neutras</div>'
+                + fmKv('Transferências internas', String(A.N.transfQtd) + (A.N.transfQtd === 1 ? ' movimentação' : ' movimentações'))
+                + fmKv('Sangrias', mfBRL(A.N.sangrias))
+                + fmKv('Troca por Pix (principal)', mfBRL(A.N.trocaPixPrincipal))
+                + fmKv('Dias fechados no mês', String(nFech))
+                + '</div>'
+                + '<div class="fin-card">'
+                + '<div class="fin-card-title">Saldos finais das contas — ' + escapeHtml(relMesRotulo(ym)) + '</div>'
+                + FM_CHAVES.map(ch => fmKv(FIN_CONTA_LABEL[ch] || ch, finFmtSaldo(fmS.saldosFim[ch]))).join('')
+                + '</div>';
+        }
+
+        function fmLerSaldosCampos() {
+            if (!fmS) return;
+            FM_CHAVES.forEach(ch => {
+                const el = document.getElementById('fmSiInput-' + ch);
+                if (el && String(el.value).trim() !== '') fmS.saldosInicioProx[ch] = fmR2(parseBRLDecimal(el.value));
+            });
+        }
+        function fmLerConfigCampos() {
+            if (!fmS) return;
+            if (!fmS.configProx) fmS.configProx = { limites: {} };
+            const box = document.getElementById('fmConfigBox');
+            if (!box) return;
+            box.querySelectorAll('input[data-fmcfg]').forEach(inp => {
+                const k = inp.getAttribute('data-fmcfg');
+                fmS.configProx.limites[k] = Number(String(inp.value || '').replace(/\D/g, '')) || 0;
+            });
+        }
+
+        function fmStepGo(n, silent) {
+            if (fmStep === 2) fmLerSaldosCampos();
+            if (fmStep === 3) fmLerConfigCampos();
+            if (!silent && n >= 2 && !fmS) { fmMsg('err', 'Gere o relatório do mês primeiro.'); return; }
+            fmStep = n;
+            [1, 2, 3, 4].forEach(i => { const e = document.getElementById('fmStep' + i); if (e) e.style.display = (i === n) ? '' : 'none'; });
+            if (n === 2) fmRenderSaldos();
+            if (n === 3) fmRenderConfig();
+            if (n === 4) fmRenderResumo();
+            const cont = document.querySelector('.container'); if (cont) cont.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
+        window.fmStepGo = fmStepGo;
+
+        function fmRenderSaldos() {
+            const box = document.getElementById('fmSaldosBox');
+            if (!box || !fmS) return;
+            box.innerHTML = '<div class="fin-note">Deixe o valor como está se o apurado <b>confere</b> com a contagem física — nada muda na conta. Só altere se a contagem der diferente: aí o sistema registra a <b>correção</b> (ajusta o saldo pela diferença, sem lançamento).</div>'
+                + FM_CHAVES.map(ch => {
+                const fim = fmS.saldosFim[ch];
+                const prox = fmS.saldosInicioProx[ch];
+                const val = Number(prox || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return '<div class="fin-card">'
+                    + '<div class="fin-card-title">' + escapeHtml(FIN_CONTA_LABEL[ch] || ch) + '</div>'
+                    + fmKv('Saldo final apurado no mês', finFmtSaldo(fim))
+                    + '<div class="fin-field" style="margin-top:10px;">'
+                    + '<label>Saldo confirmado para o próximo mês</label>'
+                    + '<input type="text" inputmode="decimal" id="fmSiInput-' + ch + '" value="' + val + '" placeholder="Ex: 0,00 ou -994,00">'
+                    + '</div></div>';
+            }).join('');
+        }
+
+        function fmRenderConfig() {
+            const box = document.getElementById('fmConfigBox');
+            if (!box || !fmS) return;
+            const base = (fmS.configProx && fmS.configProx.limites) || rfLimites();
+            box.innerHTML = '<div class="fin-card">' + FM_CFG_CAMPOS.map(([k, label]) => {
+                const v = base[k] != null ? base[k] : '';
+                return '<div class="fin-field"><label>' + escapeHtml(label) + '</label>'
+                    + '<input type="text" inputmode="numeric" data-fmcfg="' + escapeHtml(k) + '" value="' + escapeHtml(String(v)) + '" placeholder="Ex: 1500"></div>';
+            }).join('') + '</div>'
+            + '<div class="fin-note">Estes valores passam a valer no próximo mês. Para a distribuição detalhada do Teto (que precisa fechar a soma), use a ⚙ do Resumo Financeiro depois.</div>';
+        }
+
+        function fmRenderResumo() {
+            const box = document.getElementById('fmResumoBox');
+            const lbl = document.getElementById('fmMesLbl4');
+            if (!box || !fmS) return;
+            if (lbl) lbl.textContent = relMesRotulo(fmS.ym);
+            const A = fmS.A;
+            const nextYM = rfYmAdd(fmS.ym, 1);
+            const limites = (fmS.configProx && fmS.configProx.limites) || rfLimites();
+            const mudancas = FM_CHAVES.map(ch => {
+                const apurado = fmR2(fmS.saldosFim[ch]);
+                const confirmado = fmR2(fmS.saldosInicioProx[ch]);
+                return Math.abs(confirmado - apurado) >= 0.005 ? { ch, apurado, confirmado } : null;
+            }).filter(Boolean);
+            box.innerHTML = '<div class="fin-card">'
+                + '<div class="fin-card-title">O que vai ser gravado</div>'
+                + fmKv('Fotografia imutável de', '<b>' + escapeHtml(relMesRotulo(fmS.ym)) + '</b>')
+                + fmKv('Resultado Financeiro', mfBRL(A.resultadoFinanceiro))
+                + fmKv('Resultado Operacional', mfBRL(A.resultadoOperacional))
+                + fmKv('Receitas / Despesas', mfBRL(A.totalReceitas) + ' / ' + mfBRL(A.totalDespesas))
+                + FM_CHAVES.map(ch => fmKv('Saldo final ' + (FIN_CONTA_LABEL[ch] || ch), finFmtSaldo(fmS.saldosFim[ch]))).join('')
+                + '</div>'
+                + '<div class="fin-card">'
+                + '<div class="fin-card-title">Virada para ' + escapeHtml(relMesRotulo(nextYM)) + '</div>'
+                + (mudancas.length
+                    ? mudancas.map(m => fmKv('Correção ' + (FIN_CONTA_LABEL[m.ch] || m.ch), finFmtSaldo(m.apurado) + ' (apurado)  →  ' + finFmtSaldo(m.confirmado) + ' (você)')).join('')
+                    : fmKv('Saldos das contas', 'confirmados = apurados · nenhuma correção'))
+                + fmKv('Pró-labore ' + escapeHtml(relMesRotulo(nextYM)), 'Márcio ' + mfBRL(limites['Pró-labore Márcio'] || 0) + ' · Renata ' + mfBRL(limites['Pró-labore Renata'] || 0))
+                + '</div>'
+                + '<div class="fin-note">A fotografia do mês é <b>imutável</b> depois de gravada. Os lançamentos <b>não</b> são apagados. Os saldos iniciais só mudam pelo que você confirmou acima — sem criar lançamento.</div>';
+        }
+
+        async function fmFinalizar() {
+            if (!fmS) { fmMsg('err', 'Gere o relatório primeiro.'); return; }
+            fmLerConfigCampos(); fmLerSaldosCampos();
+            const btn = document.getElementById('fmBtnFinalizar');
+            const A = fmS.A;
+            const S = fmS.saldosInicioProx;
+            const nextYM = rfYmAdd(fmS.ym, 1);
+            const limitesAtuais = rfLimites();
+            const limitesNovos = Object.assign({}, limitesAtuais, (fmS.configProx && fmS.configProx.limites) || {});
+            // O saldo corrente já é `saldo_inicial + Σ(todos os lançamentos)` = o
+            // saldo real. O apurado do mês É esse saldo (menos lançamentos
+            // posteriores). Só mexemos na conta se você DIGITAR um valor diferente
+            // do apurado — aí é uma CORREÇÃO de discrepância: desloca saldo_inicial
+            // e saldo pelo mesmo delta (confirmado − apurado). Se deixar igual ao
+            // apurado, nada muda na conta (sem lançamento, sem duplicar histórico).
+            const mudancasContas = [];
+            FM_CHAVES.forEach(ch => {
+                const apurado = fmR2(fmS.saldosFim[ch]);
+                const confirmado = fmR2(S[ch]);
+                const delta = fmR2(confirmado - apurado);
+                if (Math.abs(delta) >= 0.005) {
+                    const iniAtual = (fmContasIni[ch] || {}).saldo_inicial || 0;
+                    const saldoAtual = (fmContasIni[ch] || {}).saldo || 0;
+                    mudancasContas.push({ ch, apurado, confirmado, delta, novoIni: fmR2(iniAtual + delta), novoSaldo: fmR2(saldoAtual + delta) });
+                }
+            });
+            const msg = 'Finalizar o fechamento de ' + relMesRotulo(fmS.ym) + '?\n\n'
+                + '• Grava a fotografia imutável do mês (não dá pra desfazer pelo painel).\n'
+                + (mudancasContas.length
+                    ? ('• CORRIGE o saldo de ' + mudancasContas.length + ' conta(s) — você digitou valor diferente do apurado:\n'
+                        + mudancasContas.map(m => '   ' + (FIN_CONTA_LABEL[m.ch] || m.ch) + ': ' + mfBRL(m.apurado) + ' → ' + mfBRL(m.confirmado)).join('\n') + '\n')
+                    : '• Nenhuma conta muda (saldos confirmados = apurados).\n')
+                + '• Congela o pró-labore de ' + relMesRotulo(nextYM) + ' (Márcio ' + mfBRL(limitesNovos['Pró-labore Márcio'] || 0) + ' · Renata ' + mfBRL(limitesNovos['Pró-labore Renata'] || 0) + ').\n'
+                + '• NÃO apaga nenhum lançamento.';
+            if (!window.confirm(msg)) return;
+            if (btn) btn.disabled = true;
+            fmMsg('busy', 'Finalizando…');
+            try {
+                const payload = {
+                    mes_ref: fmS.mesRef,
+                    resultado_financeiro: fmR2(A.resultadoFinanceiro), resultado_operacional: fmR2(A.resultadoOperacional),
+                    receitas_total: fmR2(A.totalReceitas), receitas_dinheiro: fmR2(A.R.dinheiro),
+                    receitas_eletronico: fmR2(A.eletronicoTotal), receitas_taxa_troca_pix: fmR2(A.R.taxa_troca_pix),
+                    despesas_total: fmR2(A.totalDespesas), despesas_empresa: fmR2(A.D.empresa),
+                    despesas_grafica: fmR2(A.D.grafica), despesas_reembolso: fmR2(A.D.reembolso),
+                    retiradas_socio: fmR2(A.retiradaSocio), transferencias_internas_qtd: Number(A.N.transfQtd) || 0,
+                    sangrias_total: fmR2(A.N.sangrias), dias_fechados: fmS.diasFechados.size || 0,
+                    consist_delta: fmR2(A.consistDelta),
+                    saldo_fim_sicredi: fmR2(fmS.saldosFim.sicredi), saldo_fim_pagseguro: fmR2(fmS.saldosFim.pagseguro),
+                    saldo_fim_cofre_notas: fmR2(fmS.saldosFim.cofre_notas), saldo_fim_cofre_moedas: fmR2(fmS.saldosFim.cofre_moedas),
+                    saldo_fim_fundo_caixa: fmR2(fmS.saldosFim.fundo_caixa), saldo_fim_caixa_loja: fmR2(fmS.saldosFim.caixa_loja),
+                    resultado_snapshot: A,
+                    saldos_fim_snapshot: { fim: fmS.saldosFim, saldo_atual_no_calculo: fmS.saldosAtuais, tem_lancamento_posterior: fmS.temPosterior, dias_abertos: fmS.diasAbertos },
+                    config_snapshot: { limites: limitesAtuais, folha_prolabore: rfFolhaLedger() },
+                    saldos_inicio_proximo_snapshot: S,
+                    config_proximo_snapshot: { limites: limitesNovos },
+                    criado_por: 'painel',
+                };
+                await dbInsert('fechamentos_mensais', [payload]);
+                for (const m of mudancasContas) {
+                    await dbUpdate('contas', { saldo_inicial: m.novoIni, saldo: m.novoSaldo }, { chave: m.ch });
+                }
+                try { localStorage.setItem(RF_LIMITES_KEY, JSON.stringify(limitesNovos)); } catch (_) {}
+                const led = rfFolhaLedger();
+                ['Márcio', 'Renata'].forEach(s => { if (!led[s]) led[s] = {}; led[s][nextYM] = Number(limitesNovos['Pró-labore ' + s]) || 0; });
+                rfFolhaLedgerSalvar(led);
+                fmMsg('ok', 'Fechamento de ' + relMesRotulo(fmS.ym) + ' concluído. Fotografia gravada'
+                    + (mudancasContas.length ? (' · ' + mudancasContas.length + ' saldo(s) inicial(is) ajustado(s)') : '')
+                    + ' · pró-labore de ' + relMesRotulo(nextYM) + ' congelado. Nenhum lançamento foi apagado.');
+                fmS = null;
+                await loadFinanceiroSaldos();
+                await fmInit();
+            } catch (e) {
+                fmMsg('err', 'Erro ao finalizar: ' + (e && e.message ? e.message : e));
+            } finally { if (btn) btn.disabled = false; }
+        }
+        window.fmFinalizar = fmFinalizar;
+
+        function fmRenderFechados() {
+            const box = document.getElementById('fmFechadosBox');
+            if (!box) return;
+            if (!fmFechados.length) { box.innerHTML = '<div class="fin-note">Nenhum mês fechado ainda.</div>'; return; }
+            box.innerHTML = fmFechados.map((r, i) => {
+                const ym = String(r.mes_ref).slice(0, 7);
+                return '<button type="button" class="fin-nav-btn" style="width:100%;flex-direction:row;justify-content:space-between;align-items:center;" onclick="fmVerSnapshot(' + i + ')">'
+                    + '<span class="fin-nav-btn-label">' + escapeHtml(relMesRotulo(ym)) + '</span>'
+                    + '<span class="fin-nav-btn-sub">Resultado ' + mfBRL(r.resultado_financeiro) + ' · ver →</span>'
+                    + '</button>';
+            }).join('');
+        }
+        function fmVerSnapshot(i) {
+            const r = fmFechados[i];
+            const box = document.getElementById('fmSnapshotBox');
+            if (!r || !box) return;
+            const ym = String(r.mes_ref).slice(0, 7);
+            const cfg = (r.config_snapshot && r.config_snapshot.limites) || {};
+            const quando = String(r.fechado_em || r.created_at || '').replace('T', ' ').slice(0, 16);
+            box.innerHTML = '<div class="fin-card">'
+                + '<div class="fin-card-title">Fechamento de ' + escapeHtml(relMesRotulo(ym)) + '</div>'
+                + fmKv('Fechado em', escapeHtml(quando))
+                + fmKv('<b>Resultado Financeiro</b>', mfBRL(r.resultado_financeiro), true)
+                + fmKv('Resultado Operacional', mfBRL(r.resultado_operacional))
+                + fmKv('Receitas (total / dinheiro / eletrônico / taxa Pix)', mfBRL(r.receitas_total) + ' / ' + mfBRL(r.receitas_dinheiro) + ' / ' + mfBRL(r.receitas_eletronico) + ' / ' + mfBRL(r.receitas_taxa_troca_pix))
+                + fmKv('Despesas (empresa / gráfica / reembolso)', mfBRL(r.despesas_empresa) + ' / ' + mfBRL(r.despesas_grafica) + ' / ' + mfBRL(r.despesas_reembolso))
+                + fmKv('Retiradas de sócios', mfBRL(r.retiradas_socio))
+                + fmKv('Transferências internas / sangrias', String(r.transferencias_internas_qtd) + ' mov. / ' + mfBRL(r.sangrias_total))
+                + fmKv('Dias fechados', String(r.dias_fechados))
+                + '<div class="fin-section-title" style="margin-top:12px;">Saldos finais</div>'
+                + fmKv('Sicredi', finFmtSaldo(r.saldo_fim_sicredi))
+                + fmKv('PagSeguro', finFmtSaldo(r.saldo_fim_pagseguro))
+                + fmKv('Cofre de Notas', finFmtSaldo(r.saldo_fim_cofre_notas))
+                + fmKv('Cofre de Moedas', finFmtSaldo(r.saldo_fim_cofre_moedas))
+                + fmKv('Fundo de Caixa', finFmtSaldo(r.saldo_fim_fundo_caixa))
+                + fmKv('Caixa da Loja', finFmtSaldo(r.saldo_fim_caixa_loja))
+                + '<div class="fin-section-title" style="margin-top:12px;">Configuração vigente no mês</div>'
+                + fmKv('Pró-labore Márcio / Renata', mfBRL(cfg['Pró-labore Márcio'] || 0) + ' / ' + mfBRL(cfg['Pró-labore Renata'] || 0))
+                + fmKv('Teto Mensal', mfBRL(cfg['Teto Mensal'] || 0))
+                + '</div>';
+            box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.fmVerSnapshot = fmVerSnapshot;
 
         // Módulo "Movimentação Financeira" (2026-08-27) — ETAPA 1: só navegação
         // entre as telas internas (.fin-screen dentro de #viewMovFin, ids

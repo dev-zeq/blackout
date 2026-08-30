@@ -2159,3 +2159,55 @@ A tabela "Histórico de retiradas" era **100% fictícia** (6 `<tr>` fixos no HTM
 - `mfRetiradaHistLimpar()` (onclick do **Limpar**): **só reseta os filtros** pro padrão (Hoje, selects em "Todas", datas limpas, categoria desabilitada) e re-renderiza os lançamentos reais. Não traz nada antigo.
 - Re-render automático: ao abrir a tela (`movFinTela('retirada')`), após `mfRegistrarRetirada`, e no realtime de `lancamentos` quando a tela está ativa (`mfRetiradaHistRecarregar()` limpa o cache antes).
 - Verificado por SQL: hoje (29/08) existem exatamente 3 RETIRADA reais — −140 (cofre_notas · Manutenção · "cesar impressora"), −10 (cofre_notas · Consumíveis · "pilha cortador"), −79,11 (sicredi · Gráfica). Filtro "Hoje" → as 3, Total R$ 229,11; "Cofre de Notas" → só as 2 primeiras; "Manutenção" → só a de 140.
+
+## Reset dos dados financeiros de teste (2026-08-29) — operação de dados, autorizada
+
+Autorizado pelo usuário. `BEGIN; DELETE FROM lancamentos WHERE data='2026-08-29'; <guarda: aborta se count<>0>; COMMIT;` — os 13 (únicos) lançamentos de teste apagados numa transação; o trigger `trg_lancamentos_saldo` reverteu cada `contas.saldo` no delete. **Não** tocou em `contas` (estrutura, `saldo_inicial`, `ordem`, `ativa`), config, código nem Edge Functions. Validado: `lancamentos = 0`; Sicredi −994,00 · PagSeguro 0,00 · Cofre de Notas 707,00 · Cofre de Moedas 8,50 · Fundo de Caixa 160,00 · Caixa da Loja 0,00 (todas com `saldo == saldo_inicial`). Nada publicado.
+
+## Saldo Inicial manual — nova função no módulo Financeiro (2026-08-29) — NÃO publicado
+
+Tela nova `#finScreen-saldo-inicial` (tile "Saldo Inicial" na seção **Configuração** da tela início do Financeiro; `financeiroTela('saldo-inicial')` → `finSiRender()`). Permite o usuário definir o ponto de partida de cada conta **sem pedir alteração interna**.
+
+**Como funciona sem lançamento artificial:** `contas.saldo` é mantido pelo trigger em cima de `lancamentos` e vale sempre `saldo_inicial + Σ(lançamentos da conta)` (`contas` não tem trigger próprio, sem CHECK de sinal, RLS só `anon select`, escrita via `db-write` que já permite `contas:['insert','update']` e repassa o payload cru — **nenhuma mudança na Edge Function**). Ao alterar o `saldo_inicial`, `finSiSalvar()` faz **um `dbUpdate('contas', {saldo_inicial: novo, saldo: saldoAtual + (novo − atual)}, {chave})` por conta alterada** — desloca o `saldo` pelo mesmo delta, mantendo a identidade exata. Hoje (0 lançamentos) o `saldo` só acompanha o `saldo_inicial`. **Zero** escrita em `lancamentos`; sem `RECEITA_SERVICOS`/`RETIRADA`/`TRANSFERENCIA`; não mexe em histórico, fechamento, receitas, despesas nem pró-labore (nenhum deles lê `saldo_inicial`). É a mesma operação que já foi feita à mão via SQL nas correções do Cofre de Notas (713→577→707), agora um botão.
+
+- `finSiRender()`: lista as 6 contas ativas (`select chave,nome,tipo,saldo_inicial,saldo`), cada uma com "Saldo inicial atual", "Saldo atual da conta" e um `<input type="text">` (plain — **não** `data-role="valor-cents"`, que tira o `-`) pré-preenchido com o inicial formatado; aceita negativo (`-994,00`).
+- `finSiHint(chave)` (oninput): mostra "Vai ficar: <novo> · saldo atual ajustado em ± <delta>".
+- `finSiSalvar()`: junta só as contas com diferença ≥ 0,005; `window.confirm()` listando `conta: de → para`; grava conta a conta; `finMsg` de sucesso ("nenhum lançamento foi criado"); `loadFinanceiroSaldos()` + `finSiRender()`.
+- Consultar de novo = reabrir a tela.
+
+Testado por SQL ROLLBACK (9/9, produção intocada): alterar Sicredi −994→−1200 (negativa), Cofre de Notas 707→500, Caixa da Loja 0→50 → `saldo_inicial` e `saldo` corretos nas 3, contas não alteradas intactas, **0 lançamentos criados**, invariante `saldo = saldo_inicial + Σlanç` mantida em todas.
+
+## ETAPA 3 (Fechamento Mensal) — passo 1: tabela `fechamentos_mensais` + `db-write` v10 (2026-08-29) — backend só, NÃO publicado no main
+
+Aprovado pelo usuário. Só a infra de banco desta etapa; o fluxo/UI de Fechamento Mensal vem depois, com nova aprovação.
+
+**Migração `create_fechamentos_mensais` (aplicada em `kihnavaovspdjnegcraj`):** nova tabela `public.fechamentos_mensais` — fotografia **imutável** de um mês encerrado. 31 colunas: `id`, `mes_ref date UNIQUE` (CHECK `EXTRACT(day FROM mes_ref)=1`), `fechado_em`, os resultados do relatório (`resultado_financeiro`, `resultado_operacional`, `receitas_total`/`_dinheiro`/`_eletronico`/`_taxa_troca_pix`, `despesas_total`/`_empresa`/`_grafica`/`_reembolso`, `retiradas_socio`, `transferencias_internas_qtd`, `sangrias_total`, `dias_fechados`, `consist_delta`), os **saldos finais** das 6 contas (`saldo_fim_sicredi`/`_pagseguro`/`_cofre_notas`/`_cofre_moedas`/`_fundo_caixa`/`_caixa_loja`), e 5 snapshots jsonb (`resultado_snapshot`, `saldos_fim_snapshot`, `config_snapshot` = config vigente no mês fechado, `saldos_inicio_proximo_snapshot`, `config_proximo_snapshot`), `criado_por`, `created_at`. Índice `idx_fechamentos_mensais_mes_ref (mes_ref DESC)`.
+- **Imutabilidade:** trigger `trg_fechamento_mensal_imutavel` (`fn_fechamento_mensal_imutavel()`) → `BEFORE UPDATE OR DELETE` sempre `RAISE EXCEPTION` (vale inclusive pro service_role da Edge Function). Linha só nasce por INSERT.
+- **RLS:** `ENABLE ROW LEVEL SECURITY` + só `CREATE POLICY "allow anon select" ... FOR SELECT` (mesmo padrão de `contas`/`lancamentos`). Sem policy de INSERT/UPDATE/DELETE → `anon` não escreve; a escrita é só pela Edge Function (service_role, ignora RLS mas **não** o trigger).
+- `ALTER PUBLICATION supabase_realtime ADD TABLE public.fechamentos_mensais`.
+- **Não** cria trigger em `contas`/`lancamentos`, não toca dados existentes.
+
+**Edge Function `db-write` v10 (deploy):** adicionada UMA linha ao `ALLOWED` — `fechamentos_mensais: ['insert']` (sem update/delete). Aditivo; nenhuma entrada existente mudou. `verify_jwt` segue `true`.
+
+**Testado por SQL (ROLLBACK, produção intocada) — 8/8 + introspecção:**
+- estrutura: 31 colunas, CHECK dia-1, UNIQUE `mes_ref`, PK, trigger, RLS on, policy `allow anon select (r)`, 3 índices, em `supabase_realtime`.
+- INSERT válido → 1 linha; **UPDATE bloqueado** ("fechamentos_mensais e imutavel: UPDATE nao e permitido"); **DELETE bloqueado** (idem); CHECK rejeita `mes_ref` dia 15 (`check_violation`); UNIQUE rejeita 2º INSERT do mesmo mês (`unique_violation`); linha original intacta após as tentativas; `lancamentos` segue 0; `contas` intocada (sicredi −994, caixa_loja 0).
+- Estado final de produção: `fechamentos_mensais` = **0 linhas**, `lancamentos` = 0, `contas` inalterada.
+
+### ETAPA 3 — passo 2: wizard "Fechamento Mensal" no `index.html` (2026-08-29) — NÃO publicado
+
+Tela nova `#finScreen-fechamento-mensal` (tile na seção **Configuração** do início do Financeiro, ao lado de "Saldo Inicial"; `financeiroTela('fechamento-mensal')` → `fmInit()`). Wizard de 4 passos + lista de meses fechados (consulta/auditoria).
+
+- **Passo 1 — Relatório Mensal Final**: `<select>` de meses com lançamento e ainda não fechados (default = mais recente). `fmGerarRelatorio()` filtra `relCache` pelo mês **e por dias fechados** (mesma regra do Relatórios), roda `relAgregar` e monta: Resultado Financeiro, Operacional, receitas (total/dinheiro/eletrônico + por conta/taxa Troca-Pix), despesas (empresa/gráfica/reembolso/total), retiradas de sócio, transferências internas (qtd), sangrias, Troca-Pix principal, dias fechados, **+ saldo final das 6 contas**. Avisos: sem dia fechado / dias abertos no mês / lançamentos com data posterior (saldos calculados de trás pra frente) / divergência de consistência. Botão "Confirmar relatório →".
+- **Saldo final da conta no mês** = `contas.saldo − Σ(lançamentos da conta com data > último dia do mês)` (só dados; = `saldo` atual quando não há lançamento posterior).
+- **Passo 2 — saldos do próximo mês**: mostra o apurado por conta + um campo pré-preenchido com esse apurado. **Regra-chave (corrigida após teste que pegou duplicação):** só mexe na conta se você **digitar valor diferente do apurado** — aí é CORREÇÃO de discrepância: `saldo_inicial += (confirmado − apurado)` e `saldo += (mesmo delta)`. Se deixar igual ao apurado → **nada muda** (sem lançamento). O `saldo` corrente já é sempre `saldo_inicial + Σ(todos os lançamentos)` = o saldo real; o "próximo mês começa no confirmado" sai naturalmente disso.
+- **Passo 3 — config do próximo mês**: campos pré-preenchidos de `rf_limites_pessoal` (Pró-labore Márcio/Renata, Teto Mensal, Mercado, Gasolina, Almoço, DF Aluguel/Água/Energia/Internet, Demais Despesas). Editar aqui = passa a valer no próximo mês.
+- **Passo 4 — revisão + Finalizar**: `fmFinalizar()` faz, em ordem: (1) `dbInsert('fechamentos_mensais', [payload])` com todos os números + `resultado_snapshot`/`saldos_fim_snapshot`/`config_snapshot` (config vigente hoje)/`saldos_inicio_proximo_snapshot`/`config_proximo_snapshot`; (2) `dbUpdate('contas', {saldo_inicial, saldo}, {chave})` só nas contas com correção (delta `confirmado − apurado`); (3) `localStorage[rf_limites_pessoal]` = limites revisados + congela o pró-labore de `nextYM` em `rf_folha_prolabore` (`led[socio][nextYM] = valor`). `confirm()` detalhado antes. **Nunca** toca `lancamentos`.
+- **Consulta**: `fmVerSnapshot(i)` renderiza uma linha salva de `fechamentos_mensais` (só das colunas gravadas, sem recalcular) — mês fechado fica congelado com os números e a config daquele mês.
+
+**Testado por SQL ROLLBACK (produção intocada):**
+- Persistência do `fmFinalizar` (6/6): `confirmado == apurado` → conta 100% intacta; `confirmado ≠ apurado` (cofre_notas 707→700) → `saldo_inicial` e `saldo` ambos −7; outras 4 contas intactas; `lancamentos` 100% intactos (2 linhas, idênticas); invariante `saldo = saldo_inicial + Σlanç` em todas; fotografia = 1 linha imutável.
+- Estrutura da tabela + imutabilidade (UPDATE/DELETE bloqueados na linha recém-inserida) revalidados.
+- Frontend: módulo parseia, `fm*` todas definidas, tela + tiles presentes, bloco `fm*` balanceado (braces 76/76, parens 446/446, brackets 66/66). Não deu pra exercitar o wizard ao vivo (app travado por senha; `let fmS` do módulo não é acessível do console) — a parte de risco (gravação) foi coberta por SQL.
+
+**Estado de produção após a etapa 3 inteira:** `fechamentos_mensais` = 0 linhas, `lancamentos` = 0, `contas` inalterada. `index.html` com as etapas 2 e 3 **não publicadas** (aguardando aprovação).
