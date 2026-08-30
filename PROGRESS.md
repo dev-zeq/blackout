@@ -2211,3 +2211,9 @@ Tela nova `#finScreen-fechamento-mensal` (tile na seção **Configuração** do 
 - Frontend: módulo parseia, `fm*` todas definidas, tela + tiles presentes, bloco `fm*` balanceado (braces 76/76, parens 446/446, brackets 66/66). Não deu pra exercitar o wizard ao vivo (app travado por senha; `let fmS` do módulo não é acessível do console) — a parte de risco (gravação) foi coberta por SQL.
 
 **Estado de produção após a etapa 3 inteira:** `fechamentos_mensais` = 0 linhas, `lancamentos` = 0, `contas` inalterada. `index.html` com as etapas 2 e 3 **não publicadas** (aguardando aprovação).
+
+## Etapas 2 e 3 PUBLICADAS + bloco "Cofre" ligado aos saldos reais (2026-08-30)
+
+- Etapas 2 (Saldo Inicial) e 3 (Fechamento Mensal) publicadas na `main` (commit `e3030e7`).
+- **Bug de exibição corrigido** (commit `9177632`): o card "Cofre / Saldos atuais do cofre" na tela início do Financeiro tinha valores **fixos no HTML** (`R$ 236,00` / `R$ 0,00` / `R$ 160,00` / `R$ 396,00`), nunca ligados ao banco — por isso o reset dos `lancamentos` não mexia neles. Agora `loadFinanceiroSaldos()` preenche `#finCofreNotas/#finCofreMoedas/#finCofreFundo/#finCofreTotal` de `contas.saldo` (Notas + Moedas + Fundo), igual aos cartões "Saldos por conta".
+- **Nota de estado:** em `2026-08-30 00:55:50` as 5 contas (Sicredi, PagSeguro, Cofre de Notas, Cofre de Moedas, Caixa da Loja) foram zeradas em lote — `saldo` **e** `saldo_inicial` = 0 (Fundo de Caixa segue R$ 160,00). Assinatura da tela "Saldo Inicial" (5 `dbUpdate` em `contas` em sequência). Os valores "reais" de partida que o usuário tinha informado antes eram Sicredi −994, Cofre de Notas 707, Cofre de Moedas 8,50 — a confirmar com ele se o zeramento foi proposital.
