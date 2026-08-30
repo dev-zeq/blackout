@@ -1083,10 +1083,10 @@
                 <div class="fin-section-title">Cofre</div>
                 <div class="fin-card">
                     <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3"/></svg> Saldos atuais do cofre</div>
-                    <div class="fin-kv"><span class="fin-kv-label">Saldo do Cofre Notas</span><span class="fin-kv-value">R$ 236,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Saldo do Cofre Moedas</span><span class="fin-kv-value">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Fundo de Caixa (incluído no total)</span><span class="fin-kv-value">R$ 160,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Saldo Total do Cofre</span><span class="fin-kv-value" style="color:var(--accent-bright); font-size:16px;">R$ 396,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo do Cofre Notas</span><span class="fin-kv-value" id="finCofreNotas">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo do Cofre Moedas</span><span class="fin-kv-value" id="finCofreMoedas">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Fundo de Caixa (incluído no total)</span><span class="fin-kv-value" id="finCofreFundo">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saldo Total do Cofre</span><span class="fin-kv-value" id="finCofreTotal" style="color:var(--accent-bright); font-size:16px;">R$ 0,00</span></div>
                 </div>
 
                 <div class="fin-section-title">Controle de Caixa</div>
@@ -4595,6 +4595,15 @@
                     + `<div class="fin-account-value${neg ? ' neg' : ''}">${finFmtSaldo(c.saldo)}</div>`
                     + `</div>`;
             }).join('');
+            // Bloco "Cofre" (antes com valores fixos no HTML) — agora dos saldos reais.
+            const by = {};
+            data.forEach(c => { by[c.chave] = Number(c.saldo) || 0; });
+            const cn = by.cofre_notas || 0, cm = by.cofre_moedas || 0, fc = by.fundo_caixa || 0;
+            const put = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = finFmtSaldo(v); };
+            put('finCofreNotas', cn);
+            put('finCofreMoedas', cm);
+            put('finCofreFundo', fc);
+            put('finCofreTotal', cn + cm + fc);
         }
         window.loadFinanceiroSaldos = loadFinanceiroSaldos;
 
