@@ -99,6 +99,7 @@ const s = {
     rua: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado: '',
     declaracao_para: '',
     pd_nome: '', pd_cpf: '', pd_genero: '', pd_estado_civil: '', pd_nacionalidade: 'Brasileiro(a)',
+    onde_mora: '',
 };
 
 const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
@@ -201,12 +202,24 @@ function carregarCidadeBairro(cidadeSalva, bairroSalvo) {
 }
 
 let stepIndex = 0;
-let steps = [stepDados, stepEndereco, stepDeclaracaoPara, stepRevisao];
+// Etapas dinâmicas (2026-08-30): a 1ª etapa é sempre "para quem é a declaração";
+// o resto do fluxo é montado conforme a resposta. NÃO muda como os dados são
+// capturados — só a ordem e a promoção dos dados da 2ª pessoa a etapa própria.
+function buildSteps() {
+    if (s.declaracao_para === 'MIM')   return [stepDeclaracaoPara, stepDados, stepEndereco, stepRevisao];
+    if (s.declaracao_para === 'OUTRA') return [stepDeclaracaoPara, stepDados, stepLocatario, stepOndeMora, stepEndereco, stepRevisao];
+    return [stepDeclaracaoPara];                 // antes de escolher, só a 1ª etapa
+}
+let steps = buildSteps();
 
 function render() {
+    steps = buildSteps();
+    if (stepIndex > steps.length - 1) stepIndex = steps.length - 1;
+    if (stepIndex < 0) stepIndex = 0;
     const total = steps.length;
-    document.getElementById('progressFill').style.width = Math.round((stepIndex / (total - 1)) * 100) + '%';
-    document.getElementById('stepLabel').textContent = `Etapa ${stepIndex + 1} de ${total}`;
+    const denom = Math.max(1, total - 1);
+    document.getElementById('progressFill').style.width = Math.round((stepIndex / denom) * 100) + '%';
+    document.getElementById('stepLabel').textContent = total > 1 ? `Etapa ${stepIndex + 1} de ${total}` : 'Etapa 1';
     const card = document.getElementById('cardArea');
     card.innerHTML = steps[stepIndex]();
     bindStepEvents();
@@ -215,6 +228,7 @@ function goNext() {
     saveCurrentStep();
     const err = validateCurrentStep();
     if (err) { showError(err); return; }
+    steps = buildSteps();
     if (stepIndex < steps.length - 1) { stepIndex++; render(); window.scrollTo(0, 0); }
 }
 function goBack() { if (stepIndex > 0) { stepIndex--; render(); window.scrollTo(0, 0); } }
@@ -225,10 +239,10 @@ function showError(msg) {
 function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
 function checkedVal(name) { const e = document.querySelector(`input[name="${name}"]:checked`); return e ? e.value : ''; }
 
-// ---------- Etapa 1: Dados pessoais ----------
+// ---------- Etapa "Dados" (declarante/proprietário — ou locador, se for p/ terceiro) ----------
 function stepDados() {
     return `
-    <h2>Dados do declarante, proprietário, locador ou responsável pelo imóvel</h2>
+    <h2>${s.declaracao_para === 'OUTRA' ? 'Dados do locador' : 'Dados do declarante, proprietário, locador ou responsável pelo imóvel'}</h2>
     <div class="field"><label>Nome completo *</label><input type="text" id="f_nome" value="${esc(s.nome)}"></div>
     <div class="field"><label>CPF *</label><input type="text" id="f_cpf" value="${esc(s.cpf)}" placeholder="000.000.000-00"></div>
     <div class="field"><label>Gênero *</label>
@@ -239,13 +253,13 @@ function stepDados() {
     </div>
     <div class="field"><label>Nacionalidade *</label><input type="text" id="f_nacionalidade" value="${esc(s.nacionalidade)}"></div>
     <div id="errorMsg" class="error-msg"></div>
-    <div class="nav-row"><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 
-// ---------- Etapa 2: Endereço ----------
+// ---------- Etapa "Endereço" (residência do declarante — ou onde o locatário reside, se p/ terceiro) ----------
 function stepEndereco() {
     return `
-    <h2>Endereço da Residência</h2>
+    <h2>${s.declaracao_para === 'OUTRA' ? 'Endereço onde o locatário reside' : 'Endereço da Residência'}</h2>
     <div class="field"><label>Rua e número *</label><input type="text" id="f_rua" value="${esc(s.rua)}" placeholder="ex: Rua das Flores, 123 (ou só o nome da rua, se não houver número)"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
     <div class="field"><label>Cidade *</label><select id="f_cidade">${cidadeOptions(s.cidade)}</select></div>
@@ -255,40 +269,60 @@ function stepEndereco() {
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 
-// ---------- Etapa 3: Para quem é a declaração ----------
+// ---------- Etapa 1 (agora): Para quem é a declaração ----------
 function stepDeclaracaoPara() {
     return `
     <h2>Para quem será emitida esta declaração de residência?</h2>
     <div class="field">
         <div class="radio-group">${pill('f_declaracao_para', 'MIM', s.declaracao_para === 'MIM', 'A declaração é para mim')}${pill('f_declaracao_para', 'OUTRA', s.declaracao_para === 'OUTRA', 'A declaração é para outra pessoa')}</div>
     </div>
-    <div id="condDeclaracaoPara"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row">${stepIndex > 0 ? '<button class="btn btn-back" onclick="window.__goBack()">Voltar</button>' : ''}<button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa "Dados do locatário" (só no ramo p/ terceiro) — os campos da
+// 2ª pessoa, promovidos de sub-campos da etapa "Para quem" a etapa própria.
+// Mesmos ids (f_pd_*) => mesma captura em s.pd_* de sempre. ----------
+function stepLocatario() {
+    return `
+    <h2>Dados do locatário</h2>
+    <div class="field"><label>Nome completo *</label><input type="text" id="f_pd_nome" value="${esc(s.pd_nome)}"></div>
+    <div class="field"><label>CPF *</label><input type="text" id="f_pd_cpf" value="${esc(s.pd_cpf)}" placeholder="000.000.000-00"></div>
+    <div class="field"><label>Gênero *</label>
+        <div class="radio-group">${pill('f_pd_genero', 'Masculino', s.pd_genero === 'Masculino')}${pill('f_pd_genero', 'Feminino', s.pd_genero === 'Feminino')}</div>
+    </div>
+    <div class="field"><label>Estado civil *</label>
+        <select id="f_pd_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.pd_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Nacionalidade *</label><input type="text" id="f_pd_nacionalidade" value="${esc(s.pd_nacionalidade)}"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
-function renderCondDeclaracaoPara() {
-    const el = document.getElementById('condDeclaracaoPara');
-    if (!el) return;
-    if (s.declaracao_para !== 'OUTRA') { el.innerHTML = ''; return; }
-    el.innerHTML = `
-        <div class="field"><label>Nome completo *</label><input type="text" id="f_pd_nome" value="${esc(s.pd_nome)}"></div>
-        <div class="field"><label>CPF *</label><input type="text" id="f_pd_cpf" value="${esc(s.pd_cpf)}"></div>
-        <div class="field"><label>Gênero *</label>
-            <div class="radio-group">${pill('f_pd_genero', 'Masculino', s.pd_genero === 'Masculino')}${pill('f_pd_genero', 'Feminino', s.pd_genero === 'Feminino')}</div>
-        </div>
-        <div class="field"><label>Estado civil *</label>
-            <select id="f_pd_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.pd_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
-        </div>
-        <div class="field"><label>Nacionalidade *</label><input type="text" id="f_pd_nacionalidade" value="${esc(s.pd_nacionalidade)}"></div>`;
+
+// ---------- Etapa "Onde essa pessoa mora?" (só no ramo p/ terceiro) — pergunta
+// nova. Rótulos/valores provisórios; a resposta será usada depois pra adaptar o
+// texto da declaração (fora do escopo desta etapa). ----------
+function stepOndeMora() {
+    return `
+    <h2>Onde essa pessoa mora?</h2>
+    <div class="field">
+        <div class="radio-group">${pill('f_onde_mora', 'COMIGO', s.onde_mora === 'COMIGO', 'Mora comigo, na minha residência')}${pill('f_onde_mora', 'IMOVEL_MEU', s.onde_mora === 'IMOVEL_MEU', 'Mora em imóvel de minha responsabilidade')}</div>
+    </div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 
-// ---------- Etapa 4: Revisão ----------
+// ---------- Etapa final: Revisão ----------
 function stepRevisao() {
     const rows = [
         ['Nome', s.nome], ['CPF', s.cpf],
         ['Endereço', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoFinal()}`],
         ['Declaração para', s.declaracao_para === 'OUTRA' ? s.pd_nome : 'Para mim'],
     ];
+    if (s.declaracao_para === 'OUTRA') {
+        rows.push(['Onde mora', s.onde_mora === 'COMIGO' ? 'Comigo, na minha residência'
+            : (s.onde_mora === 'IMOVEL_MEU' ? 'Imóvel de minha responsabilidade' : '—')]);
+    }
     return `
     <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
     ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
@@ -297,42 +331,58 @@ function stepRevisao() {
     ${editMode ? `<p style="text-align:center; margin-top:14px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
 }
 
-// ---------- Validação e coleta ----------
+// ---------- Validação e coleta (por identidade da etapa, já que a ordem é dinâmica) ----------
 function validateCurrentStep() {
-    switch (stepIndex) {
-        case 0:
-            if (!s.nome || !s.cpf || !s.genero || !s.estado_civil || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
-            return null;
-        case 1:
-            if (!s.rua || !cidadeFinal() || !bairroFinal() || !estadoFinal()) return 'Preencha todos os campos obrigatórios (*).';
-            return null;
-        case 2:
-            if (!s.declaracao_para) return 'Selecione uma opção.';
-            if (s.declaracao_para === 'OUTRA' && (!s.pd_nome || !s.pd_cpf || !s.pd_genero || !s.pd_estado_civil || !s.pd_nacionalidade)) return 'Preencha todos os campos obrigatórios (*) da pessoa cuja residência será declarada.';
-            return null;
-        default: return null;
+    const fn = steps[stepIndex];
+    if (fn === stepDeclaracaoPara) {
+        if (!s.declaracao_para) return 'Selecione uma opção.';
+        return null;
     }
+    if (fn === stepDados) {
+        if (!s.nome || !s.cpf || !s.genero || !s.estado_civil || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
+        return null;
+    }
+    if (fn === stepLocatario) {
+        if (!s.pd_nome || !s.pd_cpf || !s.pd_genero || !s.pd_estado_civil || !s.pd_nacionalidade) return 'Preencha todos os campos obrigatórios (*) do locatário.';
+        return null;
+    }
+    if (fn === stepOndeMora) {
+        if (!s.onde_mora) return 'Selecione uma opção.';
+        return null;
+    }
+    if (fn === stepEndereco) {
+        if (!s.rua || !cidadeFinal() || !bairroFinal() || !estadoFinal()) return 'Preencha todos os campos obrigatórios (*).';
+        return null;
+    }
+    return null;
 }
 function saveCurrentStep() {
-    switch (stepIndex) {
-        case 0:
-            s.nome = val('f_nome'); s.cpf = val('f_cpf');
-            s.genero = checkedVal('f_genero'); s.estado_civil = val('f_estado_civil');
-            s.nacionalidade = val('f_nacionalidade');
-            break;
-        case 1:
-            s.rua = val('f_rua'); s.complemento = val('f_complemento');
-            s.cidade = val('f_cidade');
-            if (!estadoForcadoSC()) s.estado = val('f_estado');
-            break;
-        case 2:
-            s.declaracao_para = checkedVal('f_declaracao_para');
-            if (s.declaracao_para === 'OUTRA') {
-                s.pd_nome = val('f_pd_nome'); s.pd_cpf = val('f_pd_cpf');
-                s.pd_genero = checkedVal('f_pd_genero'); s.pd_estado_civil = val('f_pd_estado_civil');
-                s.pd_nacionalidade = val('f_pd_nacionalidade');
-            }
-            break;
+    const fn = steps[stepIndex];
+    if (fn === stepDeclaracaoPara) {
+        s.declaracao_para = checkedVal('f_declaracao_para');
+        return;
+    }
+    if (fn === stepDados) {
+        s.nome = val('f_nome'); s.cpf = val('f_cpf');
+        s.genero = checkedVal('f_genero'); s.estado_civil = val('f_estado_civil');
+        s.nacionalidade = val('f_nacionalidade');
+        return;
+    }
+    if (fn === stepLocatario) {
+        s.pd_nome = val('f_pd_nome'); s.pd_cpf = val('f_pd_cpf');
+        s.pd_genero = checkedVal('f_pd_genero'); s.pd_estado_civil = val('f_pd_estado_civil');
+        s.pd_nacionalidade = val('f_pd_nacionalidade');
+        return;
+    }
+    if (fn === stepOndeMora) {
+        s.onde_mora = checkedVal('f_onde_mora');
+        return;
+    }
+    if (fn === stepEndereco) {
+        s.rua = val('f_rua'); s.complemento = val('f_complemento');
+        s.cidade = val('f_cidade');
+        if (!estadoForcadoSC()) s.estado = val('f_estado');
+        return;
     }
 }
 function bindStepEvents() {
@@ -340,8 +390,8 @@ function bindStepEvents() {
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstado(); });
     renderCondCidade();
     renderCondEstado();
-    document.querySelectorAll('input[name="f_declaracao_para"]').forEach(r => r.addEventListener('change', () => { s.declaracao_para = checkedVal('f_declaracao_para'); renderCondDeclaracaoPara(); }));
-    renderCondDeclaracaoPara();
+    // Mantém s.declaracao_para em dia enquanto a pessoa escolhe (buildSteps lê isso).
+    document.querySelectorAll('input[name="f_declaracao_para"]').forEach(r => r.addEventListener('change', () => { s.declaracao_para = checkedVal('f_declaracao_para'); }));
     const btnSubmit = document.getElementById('btnSubmit');
     if (btnSubmit) btnSubmit.addEventListener('click', submitForm);
 }
@@ -360,6 +410,10 @@ async function submitForm() {
         },
         especifico: { declaracao_para: s.declaracao_para },
     };
+    // Único dado novo (2026-08-30): onde o terceiro mora. Aditivo — só no ramo
+    // OUTRA, sem tocar em pessoa_a/pessoa_b nem em declaracao_para. O texto da
+    // declaração ainda NÃO usa esse campo (próxima etapa).
+    if (s.declaracao_para === 'OUTRA') dados.especifico.onde_mora = s.onde_mora || null;
     if (s.declaracao_para === 'OUTRA') {
         dados.pessoa_b = {
             nome: s.pd_nome, cpf: s.pd_cpf, genero: s.pd_genero || null,
@@ -459,6 +513,7 @@ function carregarParaEdicao(row) {
     carregarCidadeBairro(a.cidade, a.bairro);
     s.estado = a.estado || '';
     s.declaracao_para = especifico.declaracao_para || (dados.pessoa_b ? 'OUTRA' : 'MIM');
+    s.onde_mora = especifico.onde_mora || '';
     if (dados.pessoa_b) {
         const b = dados.pessoa_b;
         s.pd_nome = b.nome || ''; s.pd_cpf = b.cpf || '';

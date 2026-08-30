@@ -8529,16 +8529,35 @@
                     let miolo;
                     if (especifico.declaracao_para === 'OUTRA' && b && b.nome) {
                         // Redação em 3 parágrafos (pedido do usuário, 2026-08-25):
-                        // (1) identifica o declarante e sua qualidade de proprietário/
-                        // locador/responsável; (2) identifica a pessoa declarada e
-                        // afirma que ela reside no imóvel do declarante, com o
-                        // endereço completo; (3) frase de responsabilidade formal
-                        // pelas informações. Só este ramo — a versão "para mim"
-                        // (ramo "senão" abaixo) continua exatamente como estava.
-                        // "proprietário(a)/locador(a)" flexionados pelo gênero do
-                        // declarante (a) — "responsável" já é neutro, não flexiona.
-                        miolo = `<p style="${pStyle}">Eu, ${qualificarSemEndereco(a)}, na qualidade de proprietári${g(a.genero, 'o', 'a')}, locador${g(a.genero, '', 'a')} ou responsável pelo imóvel abaixo descrito, DECLARO, para os devidos fins de direito e a quem possa interessar, o que segue:</p>`;
-                        miolo += `<p style="${pStyle}">${qualificarSemEndereco(b)} reside e é domiciliad${g(b.genero, 'o', 'a')} no imóvel de minha responsabilidade, situado na ${escapeHtml(a.endereco || '')}, bairro ${escapeHtml(a.bairro || '')}, na cidade de ${escapeHtml(a.cidade || '')}/${escapeHtml(a.estado || '')}.</p>`;
+                        // (1) identifica o declarante e sua qualidade; (2) identifica
+                        // a pessoa declarada e afirma onde ela reside, com o endereço
+                        // completo; (3) frase de responsabilidade formal. Só este
+                        // ramo — a versão "para mim" (ramo "senão" abaixo) continua
+                        // exatamente como estava.
+                        // (2026-08-30) Os parágrafos (1) e (2) variam conforme
+                        // `especifico.onde_mora` (etapa "Onde essa pessoa mora?" do
+                        // formulário): COMIGO = coabitante na residência do declarante;
+                        // IMOVEL_MEU = locatári(o/a) em imóvel do declarante. Registro
+                        // salvo antes desta etapa não tem o campo → cai no texto
+                        // anterior ("no imóvel de minha responsabilidade"), pra não
+                        // mudar declaração já processada. Flexões por gênero: "a" do
+                        // declarante nos termos de (1); "b" do declarado em "locatári(o/a)".
+                        let p1Qualidade, p2Reside, p2Situad;
+                        if (especifico.onde_mora === 'COMIGO') {
+                            p1Qualidade = `na qualidade de proprietári${g(a.genero, 'o', 'a')} ou responsável pelo imóvel abaixo descrito`;
+                            p2Reside = `reside e é domiciliad${g(b.genero, 'o', 'a')} comigo, em minha residência`;
+                            p2Situad = 'a';
+                        } else if (especifico.onde_mora === 'IMOVEL_MEU') {
+                            p1Qualidade = `na qualidade de proprietári${g(a.genero, 'o', 'a')} e locador${g(a.genero, '', 'a')} do imóvel abaixo descrito`;
+                            p2Reside = `reside e é domiciliad${g(b.genero, 'o', 'a')} em imóvel de minha propriedade, na condição de locatári${g(b.genero, 'o', 'a')}`;
+                            p2Situad = 'o';
+                        } else {
+                            p1Qualidade = `na qualidade de proprietári${g(a.genero, 'o', 'a')}, locador${g(a.genero, '', 'a')} ou responsável pelo imóvel abaixo descrito`;
+                            p2Reside = `reside e é domiciliad${g(b.genero, 'o', 'a')} no imóvel de minha responsabilidade`;
+                            p2Situad = 'o';
+                        }
+                        miolo = `<p style="${pStyle}">Eu, ${qualificarSemEndereco(a)}, ${p1Qualidade}, DECLARO, para os devidos fins de direito e a quem possa interessar, o que segue:</p>`;
+                        miolo += `<p style="${pStyle}">${qualificarSemEndereco(b)} ${p2Reside}, situad${p2Situad} na ${escapeHtml(a.endereco || '')}, bairro ${escapeHtml(a.bairro || '')}, na cidade de ${escapeHtml(a.cidade || '')}/${escapeHtml(a.estado || '')}.</p>`;
                         miolo += `<p style="${pStyle}">Declaro, sob as penas da lei, que as informações acima são verdadeiras, assumindo integral responsabilidade civil e criminal por sua veracidade, e firmo a presente declaração para que produza os efeitos legais.</p>`;
                     } else {
                         miolo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que sou residente e domiciliad${g(a.genero, 'o', 'a')} no endereço acima qualificado.</p>`;

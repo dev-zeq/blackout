@@ -2300,3 +2300,44 @@ Reversão parcial da decisão anterior: agora o usuário **quer** ver os saldos 
 - `homeAberturaSaldosRender()` é chamado em `renderHomeCaixaLembrete()` (após o load de contas, quando mostra o banner) e em `toggleHomeAbertura()` na abertura do form (com `finCarregarContas().then(...)` para atualizar). É só `textContent` — nenhuma escrita, nenhum acesso a `saldo_inicial`.
 
 Verificado (static server; `contas` é anon-select, então os valores são os reais de produção = R$ 0,00 hoje): sem `SyntaxError`; `homeAberturaConferirSaldos` agora `undefined`; botão de Saldo Inicial removido; form abre com "Saldo atual Sicredi / PagSeguro" preenchidos de `contas.saldo`, fundo pré `160,00`, botão "3. Confirmar abertura do caixa" (screenshot). Falta teste ao vivo logado (ver os saldos reais no form, registrar uma movimentação de correção, voltar e abrir) + publicar.
+
+## Declaração de Residência (form) — reorganização das etapas + ramo p/ terceiro (2026-08-30) — NÃO publicado
+
+Pedido: reordenar o wizard de `declaracao-residencia-form.html` sem mudar como os dados são capturados. Só esse arquivo; `index.html` (texto/layout do documento), schema, `pessoa_a`/`pessoa_b`/`especifico.declaracao_para` **intocados**. O texto final da declaração conforme `onde_mora` fica pra próxima etapa.
+
+Fluxos novos:
+- **MIM:** Para quem → Dados → Endereço → Revisão (4 etapas — só a pergunta "para quem" saiu da etapa 3 pra etapa 1).
+- **OUTRA (terceiro):** Para quem → Dados do locador → **Dados do locatário** (etapa nova) → **Onde essa pessoa mora?** (pergunta nova) → Endereço (agora rotulado "onde o locatário reside") → Revisão (6 etapas).
+
+Implementação (`paineldecontrole/declaracao-residencia-form.html`):
+- `steps` deixou de ser array fixo → `buildSteps()` monta conforme `s.declaracao_para` (`[stepDeclaracaoPara]` antes de escolher; 4 no MIM; 6 no OUTRA). `render()` recomputa e clampa `stepIndex`; progresso com `denom = max(1, total-1)`; label "Etapa X de N" (ou só "Etapa 1" quando N=1). `goNext()` rebuilda `steps` após `saveCurrentStep()`.
+- `validateCurrentStep()`/`saveCurrentStep()` passaram de `switch (stepIndex)` (casos 0/1/2 fixos) para comparação por identidade da função (`steps[stepIndex] === stepX`).
+- `stepDeclaracaoPara`: só a pergunta MIM/OUTRA (sem os sub-campos da 2ª pessoa); sem "Voltar" (é a 1ª). `renderCondDeclaracaoPara` e o `#condDeclaracaoPara` removidos.
+- `stepLocatario()` nova = o markup que `renderCondDeclaracaoPara` gerava, com os **mesmos ids** `f_pd_*` → mesma captura em `s.pd_*`. Heading "Dados do locatário".
+- `stepOndeMora()` nova: radio `f_onde_mora` com 2 opções provisórias — `COMIGO` ("Mora comigo, na minha residência") / `IMOVEL_MEU` ("Mora em imóvel de minha responsabilidade") → `s.onde_mora`.
+- `stepDados`/`stepEndereco`: só o `<h2>` virou condicional (OUTRA → "Dados do locador" / "Endereço onde o locatário reside"); campos, ids e validações idênticos. `stepDados` ganhou botão "Voltar" (não é mais a 1ª etapa).
+- `s.onde_mora: ''` novo. `submitForm()`: `dados.especifico.onde_mora = s.onde_mora || null` **só quando OUTRA** — aditivo, nada mais no payload mudou. `carregarParaEdicao()`: `s.onde_mora = especifico.onde_mora || ''` (edição reabre a resposta). `stepRevisao`: linha "Onde mora" só no ramo OUTRA.
+
+Testado no static server (sem envio real): MIM percorre 4 etapas na ordem certa, revisão sem "Onde mora". OUTRA percorre as 6, revisão com "Onde mora" = "Imóvel de minha responsabilidade". Validações disparam (para-quem vazio, locatário incompleto, onde_mora vazio). Voltar até a etapa 1 e trocar MIM↔OUTRA reorganiza o wizard sem perder nem misturar dados (nome do locador/endereço preservados; ramo curto não mostra locatário/onde-mora). Cidade/bairro condicional intacto. Sem `SyntaxError` (só o 404 de recurso estático pré-existente). Screenshot da etapa "Onde essa pessoa mora?". Falta teste ao vivo logado (emitir uma de cada ramo pelo painel, conferir `declaracoes_pendentes` + `onde_mora`, editar uma salva) + publicar.
+
+## Declaração de Residência — texto do documento adaptado por `onde_mora` (2026-08-30) — NÃO publicado
+
+Próxima etapa (aprovada) da anterior. Editado só `TIPOS.DECLARACAO_RESIDENCIA.corpo()` em `paineldecontrole/index.html`, ramo "para terceiro" (`especifico.declaracao_para === 'OUTRA'`). Parágrafos (1) e (2) do miolo passam a variar conforme `especifico.onde_mora`:
+
+- **COMIGO** ("Mora comigo, na minha residência"): (1) "…na qualidade de proprietári(o/a) **ou responsável** pelo imóvel abaixo descrito…"; (2) "…**reside e é domiciliad(o/a) comigo, em minha residência**, situad**a** na [endereço]…".
+- **IMOVEL_MEU** ("Mora em imóvel de minha responsabilidade"): (1) "…na qualidade de proprietári(o/a) **e locador(/a)** do imóvel abaixo descrito…"; (2) "…**reside e é domiciliad(o/a) em imóvel de minha propriedade, na condição de locatári(o/a)**, situad**o** na [endereço]…".
+- **Fallback** (registro salvo antes desta etapa, sem `onde_mora`): texto **idêntico** ao anterior — "…proprietári(o/a), locador(/a) ou responsável…" / "…no imóvel de minha responsabilidade, situado na…". Nada de declaração já processada muda.
+
+Flexões: "a" (declarante) nos termos de (1); "b" (declarado) em "domiciliad(o/a)"/"locatári(o/a)". Parágrafo (3), fecho, assinaturas, ramo "para mim" — intocados.
+
+Verificado no static server: `index.html` parseia sem `SyntaxError` (funções pós-linha 8488 seguem definidas). Bloco novo rodado isolado no console com stubs dos helpers (`g`, `qualificarSemEndereco`, `escapeHtml`) para declarante masculino + declarada feminino → os 3 casos (COMIGO / IMOVEL_MEU / fallback) geram o texto esperado, com concordância de gênero correta. Falta: teste ao vivo logado (emitir uma declaração real de cada opção pelo painel e conferir o documento formatado) + publicar. Redação ainda ajustável se o usuário quiser outra formulação.
+
+### Teste ao vivo + prévia dos 2 documentos (2026-08-30)
+
+- **Formulário ao vivo (anon, contra `kihnavaovspdjnegcraj`):** preenchido e enviado 2x pelo `declaracao-residencia-form.html` real, ramo "para terceiro" — variante COMIGO e variante IMOVEL_MEU (nomes "TESTE PREVIA ..."). Ambos "Dados recebidos!". Lidos de volta via SQL: `dados.especifico` = `{"declaracao_para":"OUTRA","onde_mora":"COMIGO"}` e `{"...","onde_mora":"IMOVEL_MEU"}`; `pessoa_a` e `pessoa_b` presentes e íntegras. **Os 2 registros de teste foram apagados** (`DELETE ... RETURNING`), contagem de `declaracoes_pendentes` de volta ao original (total 3 / residência 1 / 0 de teste). Produção intocada.
+- **Prévia dos documentos:** gerada com a função `TIPOS.DECLARACAO_RESIDENCIA.corpo()` **real** (helpers `escapeHtml/titleCase/g/flexGenero/qualificar/assinatura/dataExtenso` copiados verbatim num HTML de prévia descartável, já removido). Confirmado o texto de cada opção:
+  - **COMIGO:** P1 "…na qualidade de proprietário ou responsável pelo imóvel abaixo descrito…"; P2 "…reside e é domiciliada comigo, em minha residência, situada na Rua …".
+  - **IMOVEL_MEU:** P1 "…na qualidade de proprietário e locador do imóvel abaixo descrito…"; P2 "…reside e é domiciliada em imóvel de minha propriedade, na condição de locatária, situado na Rua …".
+  Concordância de gênero certa (declarante masc. → "proprietário/locador"; declarada fem. → "domiciliada/locatária"). Só o declarante assina. Prévia entregue ao usuário.
+
+Pendente: aprovação do usuário e publicação (`main`) dos 2 arquivos (`declaracao-residencia-form.html` + `index.html`).
