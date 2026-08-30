@@ -2221,3 +2221,82 @@ Tela nova `#finScreen-fechamento-mensal` (tile na seção **Configuração** do 
 ## Reset total dos dados financeiros de teste (2026-08-30) — operação de dados, autorizada
 
 O usuário fez um teste completo pelo painel (saldos iniciais + abrir caixa + lançamentos do dia + fechamento) e pediu para zerar tudo. `BEGIN; DELETE FROM lancamentos WHERE data='2026-08-30'; UPDATE contas SET saldo_inicial=0, saldo=0; <guarda: aborta se sobrar lançamento ou conta não-zerada>; COMMIT;`. Removidos **18 lançamentos** de 30/08 (ABERTURA + 10 RETIRADA — Folha de Pagamento Márcio/Renata, Gráfica, marmita/padaria/lanche/pilha/impressora/mercado — + FECHAMENTO + 2 pares TRANSFERENCIA pro cofre + RECEITA_SERVICOS Sicredi/PagSeguro apuradas). **`saldo` e `saldo_inicial` das 6 contas = 0** (Fundo de Caixa também, desta vez). `fechamentos_mensais` seguia com 0 linhas. Não tocou estrutura, config, código nem Edge Functions. Verificado: `lancamentos`=0, `fechamentos_mensais`=0, todas as contas 0/0.
+
+## Conferência física do Cofre saiu do fechamento diário (2026-08-30) — NÃO publicado
+
+Análise prévia confirmou que Caixa da Loja / Sicredi / PagSeguro separam receita bruta × despesa pela mesma lógica correta (a saída conhecida já está na linha de base — `esperado` do caixa / saldo do sistema dos bancos — então `contado|informado − base` recupera a entrada cheia; a despesa é lançamento próprio). Cofres neutros (`TRANSFERENCIA` → `valorEconomico: 0`). Nada alterado nessa parte.
+
+Mudança pedida: **tirar a contagem física dos cofres do fechamento diário.** No fechamento o usuário só informa o Caixa da Loja (fundo 160 + notas/moedas contadas); o sistema retira os 160 e transfere só o excedente pro Cofre de Notas / Cofre de Moedas. O saldo dos cofres continua mantido pelas transferências; conferência física do cofre não faz mais parte do fechamento diário.
+
+Editado só `paineldecontrole/index.html`:
+- **HTML:** removido o card "Contagem física do Cofre" da tela de fechamento (campos `#mfFechCofreNotas`/`#mfFechCofreMoedas` + KVs `mfFechCofreTotal`/`mfFechCofreSistema`/`mfFechCofreDif`/`mfFechCofreDifRow`).
+- **`finApurarReceitas()`:** as leituras de DOM da contagem do cofre (`cofreNotas`/`cofreMoedas`/`temCofre`/`cofreSistema`) viraram um stub zerado `cofre = { notas:0, moedas:0, total:0, sistema:0, diferenca:0, informado:false }` — mantém `ap.cofre` para o `meta.cofre` gravado no FECHAMENTO e para a leitura defensiva do Histórico não quebrarem.
+- **`mfFechamentoConferir()`:** removido o bloco que preenchia os KVs da contagem do cofre.
+- **Intocado:** `paraCofreNotas = notasCaixa − fundoRetido` / `paraCofreMoedas = moedasCaixa` e as pernas `TRANSFERENCIA` do excedente em `finFecharCaixa` (linhas ~6908–6922); as linhas "→ vai para o Cofre de Notas/Moedas" (`mfFechCofreDestN/M`) continuam no Painel A; o card "Cofre / Saldos atuais do cofre" da tela início; a edição do fechamento no Histórico (já era 5 campos, sem cofre).
+
+Verificado no navegador (static server, sem login): a página parseia e roda (login + connect + UI montada, sem `SyntaxError`); IDs removidos ausentes, IDs mantidos presentes, texto "Contagem física do Cofre" sumiu; `window.mfFechamentoConferir()` roda sem lançar. Falta o teste ao vivo logado + publicar.
+
+## Fechamento de Caixa enxuto + nova tela "Resumo do dia" (2026-08-30) — NÃO publicado
+
+Pedido do usuário: o painel de fechamento estava carregado demais. Fluxo novo — no fechamento conta só o que está fisicamente no caixa; depois de "Fechar Caixa" abre um resumo limpo do dia.
+
+Escopo decidido com o usuário (AskUserQuestion): tela de fechamento enxuta com **Total de notas, Total de moedas, Fundo de Caixa 1 e 2, Saldo Sicredi, Saldo PagSeguro** como inputs + um resumo curto (total contado, retirado em notas/moedas p/ Cofre, fundo que vai ficar). Depois de fechar → **nova tela "Resumo do dia"** (não Relatórios): receita bruta total, despesas totais, resultado do dia + seção curta "Movimentações" (entradas/saídas/transferências, só totais). Sem lista de despesas — detalhe fica em Movimentação Financeira.
+
+Editado só `paineldecontrole/index.html`:
+- **HTML tela `#finScreen-fechamento`:** removidos o card "Painel A — Caixa físico" inteiro (`mfFechFundoAbertura`/`mfFechEntradas`/`mfFechSaidas`/`mfFechSangrias`/`mfFechMovConhecido`/`mfFechNotasContado`/`mfFechMoedasContado`/`mfFechExcedente(Row)`/`mfFechDiferenca(Row)`) e o card "Painel B — Resultado do dia" inteiro (`#finPainelB` + todos os `pb*`). Ficou: card "Contagem do fechamento" (Notas/Moedas/FC1/FC2/Sicredi/PagSeguro — labels de Sicredi/PagSeguro mostram "atual: R$ x" via `#mfFechSicrediAtual`/`#mfFechPagseguroAtual`) + card "Resumo do fechamento" (`mfFechContado`, `mfFechCofreDestN/M` + rows, `mfFechFundoRetido`, `mfFechApuraAviso`) + botão Fechar.
+- **Nova tela `#finScreen-resumo-dia`:** cards "Resultado" (`finResumoReceita`/`finResumoDespesa`/`finResumoResultado`) e "Movimentações" (`finResumoEntradas`/`finResumoSaidas`/`finResumoTransf`) + `finResumoDiaData` (rótulo do dia). Botão de navegação novo em "Fechamento e relatórios" na tela início.
+- **`finResumoDiaRender(dia)`** (nova, exportada em `window`): `relCarregarTudo()` → `relAgregar` sobre os lançamentos da data. Receita = `A.totalReceitas` (bruta); Despesa = `A.totalDespesas`; Resultado = `A.resultadoFinanceiro`. Movimentações: Entradas = `totalReceitas`, Saídas = `totalDespesas + retiradaSocio + N.sangrias`, Transferências = `N.trocaPixPrincipal` + pernas `TRANSFERENCIA` positivas do dia. Mesma fonte/classificador do resto.
+- **`financeiroTela()`:** novo caso `'resumo-dia'` → `finResumoDiaRender()`.
+- **`finFecharCaixa()`:** ao fim, em vez de `mfFechamentoConferir()` (re-render do painel gigante), faz `finResumoDiaRender(hoje)` + `financeiroTela('resumo-dia')`. Os reloads de dados e o `finMsg('mfFechMsg','ok',…)` seguem iguais.
+- **Intocado:** `finApurarReceitas`, `finFechCalcular`, `finClassificarLancamento`, apuração eletrônica dos bancos, pernas de transferência pro cofre, `finResultadoProjetado` (ainda grava `resultado_operacional/financeiro` no `meta` do FECHAMENTO), `mfFechamentoConferir` (só ganhou 2 linhas p/ os hints "atual"; os `set()`/`getElementById` dos IDs removidos são guardados por `if(el)` e `finRenderResultado()` já dá `return` sem `#finPainelB`). Regras financeiras: zero mudança.
+
+Verificado no navegador (static server): sem `SyntaxError`; `financeiroTela`/`finResumoDiaRender`/`mfFechamentoConferir`/`finFecharCaixa`/`finRenderResultado` definidas; telas `#finScreen-fechamento` (enxuta) e `#finScreen-resumo-dia` renderizam certo (screenshots); `mfFechamentoConferir()`, `finResumoDiaRender('2026-08-30')` e `financeiroTela('resumo-dia'|'fechamento')` rodam sem lançar. Falta teste ao vivo logado (fechar um caixa de verdade e ver a virada pro Resumo do dia) + publicar.
+
+## Lembrete visual de abertura de caixa na tela inicial (2026-08-30) — NÃO publicado
+
+Pedido do usuário, escopo **deliberadamente mínimo** (plano aprovado): só um **aviso visual** no `#viewHome`, dentro de uma **janela de horário configurável** (padrão 08:00–12:00), quando o caixa está `fechado`. Botão "ABRIR CAIXA" abre o formulário de fundo **na própria tela inicial** e chama o **mesmo** fluxo de abertura já existente. **Sem** bloqueio de movimentações, **sem** modo administrativo, **zero** mudança em regra financeira. O lembrete não impede o uso de nenhuma outra função do painel.
+
+Regras: caixa fechado + dentro do horário → mostra; caixa aberto → esconde; caixa encerrado → esconde; fora do horário → esconde; janela inválida (início ≥ fim) → esconde.
+
+Editado só `paineldecontrole/index.html`:
+- **Config (`carregarConfigNotificacoes`)**: `blackoutNotifConfig` ganhou `lembreteCaixaAtivo` (default `true`), `lembreteCaixaInicio` (`'08:00'`), `lembreteCaixaFim` (`'12:00'`). `salvarConfigNotificacoes` grava o objeto inteiro — inalterado.
+- **Modal `#notifConfigModal`**: 2 linhas novas — switch `#notifLembreteCaixaAtivo` (`alternarLembreteCaixa()`) + dois `<input type="time">` `#notifLembreteCaixaInicio`/`#notifLembreteCaixaFim` (`salvarLembreteCaixaHorario()`). `abrirNotificacoesConfig()` preenche os 3 a partir do `cfg`. Handlers novos gravam a config e chamam `renderHomeCaixaLembrete()`.
+- **`#viewHome`**: bloco novo `#homeCaixaLembrete` (`display:none`) entre o título e a grade — aviso "🔒 Caixa fechado" + botão `#homeAbBtn` "ABRIR CAIXA" (`toggleHomeAbertura()`) + form inline `#homeAberturaForm` (campos `#homeAbFundo`/`#homeAbFundo2` `data-role="valor-cents"`, botão `#homeAbConfirmBtn` → `finAbrirCaixaHome()`, `#homeCaixaMsg`). CSS `.home-caixa-lembrete` (curto, realce âmbar) perto do CSS de notificações.
+- **JS novo** (perto de `finCaixaAcao`): `lembreteCaixaJanelaAtiva(cfg)` (compara `HH:MM` atual com início/fim; `início ≥ fim` → false); `renderHomeCaixaLembrete()` (async; se fora da janela esconde e colapsa o form; senão `await finCarregarMovimentosDia()` e mostra só se `finCaixaEstado() === 'fechado'`); `toggleHomeAbertura()` (abre o form + pré-preenche `160,00`); `finAbrirCaixaHome()` (chama `finAbrirCaixa({...})`). Todos em `window`.
+- **`finAbrirCaixa(opts = {})`** — refactor mínimo, **mesma lógica de escrita**: `opts.fc1/fc2` (senão lê `finAbFC1/finAbFC2`), `opts.msgEl` (senão `'finAbMsg'`), `opts.btnId` (senão `'finCaixaBtn'`, agora null-safe), `opts.onDone` no `finally`. Checagem "já aberto hoje", `soConferencia`, `finLancar` do `ABERTURA`, reloads — idênticos. `finCaixaAcao()` → `finAbrirCaixa()` sem args = comportamento atual.
+- **Disparo de `renderHomeCaixaLembrete()`**: em `unlockApp()`, `goHome()`, no realtime de `lancamentos` (quando `#viewHome` ativo) e no `setInterval` de 30s (idem — some sozinho quando passa do horário, sem reload).
+- **Intocado**: qualquer regra financeira, telas de Movimentação Financeira, fechamento, `finCaixaEstado`/`finCaixaStatusRender` (só passaram a ser reusados).
+
+Verificado no navegador (static server, sem login): sem `SyntaxError`; `renderHomeCaixaLembrete`/`finAbrirCaixaHome`/`toggleHomeAbertura`/`alternarLembreteCaixa`/`salvarLembreteCaixaHorario` em `window`; simulação dos 5 casos (janela ativa+caixa fechado → mostra; fora da janela → esconde; desligado → esconde; janela inválida → esconde; volta a mostrar) OK; toggle do form + pré-preenchimento `160,00` OK; modal reflete e persiste os 3 campos no `localStorage` sem clobber de `ativo`/`som` (screenshots do banner e do modal). **Falta**: teste ao vivo logado (ver o aviso no horário, clicar ABRIR CAIXA → form inline → Confirmar → aviso some e `ABERTURA` é criado; conferir também os casos `aberto`/`encerrado` que precisam de lançamento real) + publicar.
+
+### Ajuste do fluxo de abertura pela tela inicial (2026-08-30, mesmo dia) — NÃO publicado
+
+Pedido: o botão "ABRIR CAIXA" da tela inicial abre um **fluxo guiado em ordem** — (1) registrar movimentações se precisar, (2) conferir/corrigir Sicredi e PagSeguro, (3) informar o fundo, (4) confirmar. **Não** bloquear o painel, **não** criar modo admin, **não** expor saldos na tela inicial, **não** alterar lógica financeira.
+
+- `#homeAberturaForm` reescrito como checklist de 4 passos: passo 1 = botão `homeAberturaRegistrarMov()` → `openView('movfin')`; passo 2 = botão `homeAberturaConferirSaldos()` → `openView('financeiro'); financeiroTela('saldo-inicial')` (a conferência/correção acontece **na tela própria**, nunca no `#viewHome`); passo 3 = campos de fundo `#homeAbFundo`/`#homeAbFundo2` (já existiam); passo 4 = `finAbrirCaixaHome()` (inalterado). Nota no topo dizendo que nenhuma etapa é obrigatória e que os saldos não são exibidos ali.
+- CSS `.hcl-passo`/`.hcl-passo-txt`/`.hcl-step-btn`/`.hcl-passos-nota` no bloco `.home-caixa-lembrete`.
+- Os passos 1/2 só navegam para telas existentes; ao voltar (`goHome`) o form continua aberto (o `display` inline persiste), então dá pra seguir do passo 3.
+- `homeAberturaRegistrarMov`/`homeAberturaConferirSaldos` exportadas em `window` (necessário: `openView` não é global). Nenhum saldo é lido/exibido na tela inicial. `finAbrirCaixa`/`finAbrirCaixaHome` inalterados.
+
+Verificado (static server): sem `SyntaxError`; 2 botões de passo presentes; passo 1 → `#viewMovFin` ativo; `goHome` → banner de volta e **form ainda aberto**; passo 2 → `#viewFinanceiro` + `#finScreen-saldo-inicial` ativos; fundo pré-preenchido `160,00` (screenshot do checklist). Falta o teste ao vivo logado + publicar.
+
+### Texto do checklist ajustado — despesa financeira antes da abertura (2026-08-30, mesmo dia) — NÃO publicado
+
+Cenário levantado pelo usuário: se antes de abrir cair, ex., R$ 20 de juros do cheque especial na madrugada, lançar como **despesa financeira da conta** primeiro, depois conferir saldos, depois abrir. Não é venda e não abate a receita do dia anterior.
+
+**Confirmado que o mecanismo já faz isso, sem mudança de código:** Movimentação Financeira › Retirada, finalidade Empresa, categoria **"Juros diversos"** (já existe em `mfRetCatEmpresaSel` / na lista `empresa` do `mfRetiradaCategoria`), origem Sicredi → `finClassificarLancamento` devolve `grupo:'despesa'` / `subgrupo:'despesa_empresa'` / `valorEconomico:-abs(v)` → em `relAgregar` cai em `D.empresa`. Nunca toca `receita`/`totalReceitas`; agregação é por `data`, então não mexe no dia anterior; `afetaGaveta=false` para banco (não toca conferência do caixa); no próximo fechamento o `esperado` do Sicredi já é o saldo do sistema (inclui os −20), então também não vira receita lá.
+
+**Só mudou texto** em `#homeAberturaForm` (`paineldecontrole/index.html`): `.hcl-passos-nota` reescrita ("Confira os saldos antes de confirmar a abertura — dá pra corrigir qualquer movimentação que caiu entre o fechamento anterior e agora (ex.: juros do cheque especial na madrugada). Nada de abertura falsa: lance a despesa primeiro, informe os saldos reais e só então confirme…") e o passo 1 ganhou o parêntese "(inclusive despesa financeira da conta — juros, tarifa: não é venda nem abate a receita de ontem)". Zero mudança de lógica. Verificado no static server (renderiza, sem erro; screenshot).
+
+### Conferência de saldos inline no form de abertura da tela inicial (2026-08-30, mesmo dia) — NÃO publicado
+
+Reversão parcial da decisão anterior: agora o usuário **quer** ver os saldos atuais de Sicredi e PagSeguro **direto no form** da tela inicial (só leitura), preencher o fundo e confirmar. Sem acessar/alterar Saldo Inicial. Se a diferença com o app do banco existir, **o sistema não corrige** — o usuário registra a movimentação e volta.
+
+`#homeAberturaForm` reestruturado (só HTML + JS de leitura, nenhuma regra financeira):
+- **Passo 1 — Conferência dos saldos atuais (só leitura)**: linhas `#homeAbSaldoSicredi` / `#homeAbSaldoPagseguro` preenchidas por `homeAberturaSaldosRender()` a partir de `FIN_CONTAS_BY_CHAVE[chave].saldo` (o mesmo `contas.saldo` que o Financeiro usa; `finFmtSaldo` para formatar). Nota deixando claro: se não bater, registrar a movimentação (sistema não corrige sozinho) e não mexe no Saldo Inicial. Botão "Registrar movimentação" → `homeAberturaRegistrarMov()` → `openView('movfin')`.
+- **Passo 2 — Fundo de caixa (troco inicial)**: `#homeAbFundo`/`#homeAbFundo2` (inalterados).
+- **Passo 3 — Confirmar abertura**: `finAbrirCaixaHome()` (inalterado).
+- **Removido**: passo/botão "Abrir conferência de saldos" e a função `homeAberturaConferirSaldos` (ia para `financeiroTela('saldo-inicial')`) — o usuário não quer acessar Saldo Inicial.
+- `homeAberturaSaldosRender()` é chamado em `renderHomeCaixaLembrete()` (após o load de contas, quando mostra o banner) e em `toggleHomeAbertura()` na abertura do form (com `finCarregarContas().then(...)` para atualizar). É só `textContent` — nenhuma escrita, nenhum acesso a `saldo_inicial`.
+
+Verificado (static server; `contas` é anon-select, então os valores são os reais de produção = R$ 0,00 hoje): sem `SyntaxError`; `homeAberturaConferirSaldos` agora `undefined`; botão de Saldo Inicial removido; form abre com "Saldo atual Sicredi / PagSeguro" preenchidos de `contas.saldo`, fundo pré `160,00`, botão "3. Confirmar abertura do caixa" (screenshot). Falta teste ao vivo logado (ver os saldos reais no form, registrar uma movimentação de correção, voltar e abrir) + publicar.

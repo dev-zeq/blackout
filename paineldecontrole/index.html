@@ -211,6 +211,20 @@
         .notif-switch-track::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 2px; background: var(--text-dim); border-radius: 50%; transition: transform .15s ease, background .15s ease; }
         .notif-switch input:checked + .notif-switch-track { background: var(--accent-dim); border-color: var(--accent); }
         .notif-switch input:checked + .notif-switch-track::before { transform: translateX(20px); background: var(--accent-bright); }
+        /* Lembrete de abertura de caixa (2026-08-30) — aviso central na tela
+           inicial. Só visual: não bloqueia nada. */
+        .home-caixa-lembrete { max-width: 460px; margin: 0 auto 22px; background: linear-gradient(180deg, rgba(251,191,36,.10), rgba(251,191,36,.03)); border: 1px solid rgba(251,191,36,.40); border-radius: 16px; padding: 18px 20px; text-align: center; }
+        .home-caixa-lembrete .hcl-titulo { font-size: 15px; font-weight: 800; color: #fbbf24; }
+        .home-caixa-lembrete .hcl-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 4px; }
+        .home-caixa-lembrete .fin-btn-caixa { margin-top: 14px; }
+        .home-caixa-lembrete .fin-field { text-align: left; margin-top: 8px; }
+        .home-caixa-lembrete .home-ab-grid { display: flex; gap: 10px; }
+        .home-caixa-lembrete .home-ab-grid .fin-field { flex: 1; }
+        .home-caixa-lembrete .hcl-passos-nota { font-size: 11.5px; color: var(--text-dim); text-align: left; margin: 14px 0 4px; line-height: 1.5; }
+        .home-caixa-lembrete .hcl-passo { text-align: left; padding: 10px 0; border-top: 1px solid rgba(251,191,36,.18); }
+        .home-caixa-lembrete .hcl-passo-txt { font-size: 13px; color: var(--text); }
+        .home-caixa-lembrete .hcl-step-btn { margin-top: 8px; padding: 8px 14px; background: transparent; border: 1px solid rgba(251,191,36,.45); color: #fbbf24; border-radius: 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .home-caixa-lembrete .hcl-step-btn:hover { background: rgba(251,191,36,.10); }
         .toast-container { position: fixed; top: 16px; right: 16px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; max-width: min(340px, calc(100vw - 32px)); pointer-events: none; }
         .toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: linear-gradient(180deg, #0d0d0f, #000); border: 1px solid var(--border-strong); border-left: 3px solid var(--accent); border-radius: 14px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 13.5px; color: var(--text); opacity: 0; transform: translateX(24px); transition: opacity .25s ease, transform .25s ease; }
         .toast.mostrar { opacity: 1; transform: translateX(0); }
@@ -890,6 +904,41 @@
 
         <div class="view active" id="viewHome">
             <div class="menu-title">🖤 Painel de Serviços Blackout</div>
+            <!-- Lembrete de abertura de caixa (2026-08-30) — só aviso visual,
+                 aparece dentro da janela de horário quando o caixa está fechado.
+                 NÃO impede o uso das demais funções do painel. Ver
+                 renderHomeCaixaLembrete() / lembreteCaixaJanelaAtiva(). -->
+            <div class="home-caixa-lembrete" id="homeCaixaLembrete" style="display:none;">
+                <div class="hcl-titulo">🔒 Caixa fechado</div>
+                <div class="hcl-sub">Abra o caixa para começar o dia.</div>
+                <button type="button" class="fin-btn-caixa abrir" id="homeAbBtn" onclick="toggleHomeAbertura()">ABRIR CAIXA</button>
+                <div id="homeAberturaForm" style="display:none;">
+                    <div class="hcl-passo">
+                        <div class="hcl-passo-txt"><b>1.</b> Conferência dos saldos atuais <span style="color:var(--text-faint);">(os mesmos que o Financeiro usa — só leitura)</span></div>
+                        <div class="fin-kv"><span class="fin-kv-label">Saldo atual Sicredi</span><span class="fin-kv-value" id="homeAbSaldoSicredi">—</span></div>
+                        <div class="fin-kv"><span class="fin-kv-label">Saldo atual PagSeguro</span><span class="fin-kv-value" id="homeAbSaldoPagseguro">—</span></div>
+                        <div class="hcl-passos-nota">Compare com o app do banco. Se <b>não bater</b>, não confirme a abertura ainda: registre você mesma a movimentação (o sistema não corrige sozinho) e volte para abrir com os valores certos. Isso <b>não</b> mexe no Saldo Inicial.</div>
+                        <button type="button" class="hcl-step-btn" onclick="homeAberturaRegistrarMov()">Registrar movimentação</button>
+                    </div>
+                    <div class="hcl-passo">
+                        <div class="hcl-passo-txt"><b>2.</b> Fundo de caixa <span style="color:var(--text-faint);">(troco inicial)</span></div>
+                        <div class="home-ab-grid">
+                            <div class="fin-field">
+                                <label>Fundo Caixa 1</label>
+                                <input type="text" inputmode="decimal" data-role="valor-cents" id="homeAbFundo" placeholder="Ex: 160,00">
+                                <div class="extenso-valor"></div>
+                            </div>
+                            <div class="fin-field">
+                                <label>Fundo Caixa 2 <span style="color:var(--text-faint);">(opcional)</span></label>
+                                <input type="text" inputmode="decimal" data-role="valor-cents" id="homeAbFundo2" placeholder="Ex: 0,00">
+                                <div class="extenso-valor"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="fin-submit" id="homeAbConfirmBtn" onclick="finAbrirCaixaHome()" style="margin-top:14px;"><b>3.</b> Confirmar abertura do caixa</button>
+                    <div class="fin-msg" id="homeCaixaMsg"></div>
+                </div>
+            </div>
             <div class="menu-grid" id="menuGrid"></div>
         </div>
 
@@ -1149,6 +1198,11 @@
                         <span class="fin-nav-btn-label">Histórico Financeiro</span>
                         <span class="fin-nav-btn-sub">Corrigir ou excluir lançamentos</span>
                     </button>
+                    <button type="button" class="fin-nav-btn" onclick="financeiroTela('resumo-dia')">
+                        <span class="fin-nav-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+                        <span class="fin-nav-btn-label">Resumo do dia</span>
+                        <span class="fin-nav-btn-sub">Receitas, despesas e resultado de hoje</span>
+                    </button>
                 </div>
 
                 <div class="fin-section-title">Configuração</div>
@@ -1252,118 +1306,79 @@
                     <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Contagem do fechamento</div>
                     <div class="fin-field-row">
                         <div class="fin-field">
-                            <label>Caixa da Loja — Notas</label>
-                            <input type="text" inputmode="decimal" id="mfFechNotas" oninput="mfFechamentoConferir()" placeholder="Ex: 900,00">
+                            <label>Total de notas no caixa</label>
+                            <input type="text" inputmode="decimal" id="mfFechNotas" oninput="mfFechamentoConferir()" placeholder="Ex: 360,00">
                         </div>
                         <div class="fin-field">
-                            <label>Caixa da Loja — Moedas</label>
-                            <input type="text" inputmode="decimal" id="mfFechMoedas" oninput="mfFechamentoConferir()" placeholder="Ex: 8,50">
-                        </div>
-                    </div>
-                    <div class="fin-field-row">
-                        <div class="fin-field">
-                            <label>Fundo de Caixa 1 <span style="color:var(--text-faint);">(reserva)</span></label>
-                            <input type="text" inputmode="decimal" id="mfFechFC1" oninput="mfFechamentoConferir()" placeholder="Ex: 300,00">
-                        </div>
-                        <div class="fin-field">
-                            <label>Fundo de Caixa 2 <span style="color:var(--text-faint);">(reserva)</span></label>
-                            <input type="text" inputmode="decimal" id="mfFechFC2" oninput="mfFechamentoConferir()" placeholder="Ex: 200,00">
+                            <label>Total de moedas no caixa</label>
+                            <input type="text" inputmode="decimal" id="mfFechMoedas" oninput="mfFechamentoConferir()" placeholder="Ex: 0,00">
                         </div>
                     </div>
                     <div class="fin-field-row">
                         <div class="fin-field">
-                            <label>Saldo final Sicredi <span style="color:var(--text-faint);">(opcional — apura Pix/cartão)</span></label>
+                            <label>Fundo de Caixa 1 <span style="color:var(--text-faint);">(p/ amanhã)</span></label>
+                            <input type="text" inputmode="decimal" id="mfFechFC1" oninput="mfFechamentoConferir()" placeholder="Ex: 100,00">
+                        </div>
+                        <div class="fin-field">
+                            <label>Fundo de Caixa 2 <span style="color:var(--text-faint);">(p/ amanhã)</span></label>
+                            <input type="text" inputmode="decimal" id="mfFechFC2" oninput="mfFechamentoConferir()" placeholder="Ex: 60,00">
+                        </div>
+                    </div>
+                    <div class="fin-field-row">
+                        <div class="fin-field">
+                            <label>Saldo Sicredi <span style="color:var(--text-faint);">(atual: <span id="mfFechSicrediAtual">R$ 0,00</span>)</span></label>
                             <input type="text" inputmode="decimal" id="mfFechSicredi" oninput="mfFechamentoConferir()" placeholder="Deixe vazio se não for apurar">
                         </div>
                         <div class="fin-field">
-                            <label>Saldo final PagSeguro <span style="color:var(--text-faint);">(opcional — apura Pix/cartão)</span></label>
+                            <label>Saldo PagSeguro <span style="color:var(--text-faint);">(atual: <span id="mfFechPagseguroAtual">R$ 0,00</span>)</span></label>
                             <input type="text" inputmode="decimal" id="mfFechPagseguro" oninput="mfFechamentoConferir()" placeholder="Deixe vazio se não for apurar">
                         </div>
                     </div>
-                    <div class="fin-note" style="text-align:left;">Fundo de Caixa 1 e 2 = contagem final das reservas, guardada como referência da <b>próxima abertura</b>. Saldo dos bancos só se você quiser apurar Pix/cartão do dia — vazio = não apura aquele canal.</div>
+                    <div class="fin-note" style="text-align:left;">Conte só o dinheiro que está fisicamente no caixa. O sistema separa os R$ 160 do fundo e transfere só o excedente para os Cofres — sem pedir a contagem dos cofres. Saldo de Sicredi/PagSeguro só se for apurar Pix/cartão do dia (vazio = não apura).</div>
                 </div>
 
-                <!-- Contagem física do Cofre (2026-08-29) — detalhamento da
-                     contagem, guardado dentro do próprio FECHAMENTO (meta.cofre).
-                     NÃO vira lançamento, receita nem ajuste. Editável depois no
-                     Histórico Financeiro. -->
+                <!-- Resumo enxuto do fechamento (2026-08-30): antes de fechar o
+                     usuário vê só o essencial. O Resultado do dia detalhado
+                     aparece na tela "Resumo do dia" DEPOIS de fechar. -->
                 <div class="fin-card">
-                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3"/></svg> Contagem física do Cofre</div>
-                    <div class="fin-field-row">
-                        <div class="fin-field">
-                            <label>Cofre — Notas</label>
-                            <input type="text" inputmode="decimal" id="mfFechCofreNotas" oninput="mfFechamentoConferir()" placeholder="Ex: 577,00">
-                        </div>
-                        <div class="fin-field">
-                            <label>Cofre — Moedas</label>
-                            <input type="text" inputmode="decimal" id="mfFechCofreMoedas" oninput="mfFechamentoConferir()" placeholder="Ex: 8,50">
-                        </div>
-                    </div>
-                    <div class="fin-kv"><span class="fin-kv-label">= Total do Cofre <span style="color:var(--text-faint);">(Notas + Moedas)</span></span><span class="fin-kv-value" id="mfFechCofreTotal" style="font-size:16px;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Cofre no sistema</span><span class="fin-kv-value" id="mfFechCofreSistema">R$ 0,00</span></div>
-                    <div class="fin-kv" id="mfFechCofreDifRow" style="display:none;"><span class="fin-kv-label"><b>Diferença do cofre</b> <span style="color:var(--text-faint);">(contado − sistema)</span></span><span class="fin-kv-value" id="mfFechCofreDif">R$ 0,00</span></div>
-                    <div class="fin-note" style="text-align:left;">Só conferência da contagem física do cofre. Fica guardada dentro do fechamento (dá pra ver e editar depois no Histórico), mas <b>não</b> vira lançamento, receita nem ajuste.</div>
-                </div>
-
-                <!-- PAINEL A — CONFERÊNCIA do Caixa da Loja (2026-08-29): o sistema
-                     reconstrói o movimento CONHECIDO do Caixa (abertura + entradas
-                     − saídas − sangrias) e compara com o dinheiro contado. A
-                     diferença é SÓ conferência — não vira receita nem despesa e
-                     não é lançada. Ver finApurarReceitas() / mfFechamentoConferir(). -->
-                <div class="fin-section-title">Conferência do Caixa da Loja</div>
-                <div class="fin-card">
-                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/></svg> Painel A — Caixa físico</div>
-                    <div class="fin-kv"><span class="fin-kv-label">Fundo de abertura <span style="color:var(--text-faint);">(FC1 + FC2 de hoje)</span></span><span class="fin-kv-value" id="mfFechFundoAbertura">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">+ Entradas conhecidas <span style="color:var(--text-faint);">(Troca por Pix, transferências para o caixa)</span></span><span class="fin-kv-value" id="mfFechEntradas" style="color:var(--accent-bright);">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">− Saídas conhecidas <span style="color:var(--text-faint);">(retiradas, gráfica, reembolsos em dinheiro)</span></span><span class="fin-kv-value" id="mfFechSaidas" style="color:#fca5a5;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">− Sangrias do dia</span><span class="fin-kv-value" id="mfFechSangrias" style="color:#fca5a5;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">= Movimento conhecido do Caixa <span style="color:var(--text-faint);">(esperado)</span></span><span class="fin-kv-value" id="mfFechMovConhecido" style="font-size:16px;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Notas contadas</span><span class="fin-kv-value" id="mfFechNotasContado">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Moedas contadas</span><span class="fin-kv-value" id="mfFechMoedasContado">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">= Total contado <span style="color:var(--text-faint);">(Notas + Moedas)</span></span><span class="fin-kv-value" id="mfFechContado" style="font-size:16px;">R$ 0,00</span></div>
-                    <div class="fin-kv" id="mfFechExcedenteRow" style="display:none;"><span class="fin-kv-label"><b>= Receita em dinheiro do dia</b> <span style="color:var(--text-faint);">(excedente = contado − esperado)</span></span><span class="fin-kv-value" id="mfFechExcedente" style="font-size:17px; color:var(--accent-bright);">R$ 0,00</span></div>
-                    <div class="fin-kv" id="mfFechDiferencaRow" style="display:none;"><span class="fin-kv-label"><b>Diferença de conferência</b> <span style="color:var(--text-faint);">(contado − esperado)</span></span><span class="fin-kv-value" id="mfFechDiferenca" style="font-size:17px;">R$ 0,00</span></div>
-                    <div class="fin-kv" id="mfFechCofreDestNRow" style="display:none;"><span class="fin-kv-label">→ vai para o Cofre de Notas <span style="color:var(--text-faint);">(notas − fundo)</span></span><span class="fin-kv-value" id="mfFechCofreDestN" style="color:var(--text-dim);">R$ 0,00</span></div>
-                    <div class="fin-kv" id="mfFechCofreDestMRow" style="display:none;"><span class="fin-kv-label">→ vai para o Cofre de Moedas</span><span class="fin-kv-value" id="mfFechCofreDestM" style="color:var(--text-dim);">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Fundo retido no Caixa da Loja <span style="color:var(--text-faint);">(base da próxima abertura)</span></span><span class="fin-kv-value" id="mfFechFundoRetido" style="color:var(--text-dim);">R$ 0,00</span></div>
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/></svg> Resumo do fechamento</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Total em dinheiro contado <span style="color:var(--text-faint);">(notas + moedas)</span></span><span class="fin-kv-value" id="mfFechContado" style="font-size:16px;">R$ 0,00</span></div>
+                    <div class="fin-kv" id="mfFechCofreDestNRow" style="display:none;"><span class="fin-kv-label">Retirado em notas → Cofre de Notas <span style="color:var(--text-faint);">(notas − fundo)</span></span><span class="fin-kv-value" id="mfFechCofreDestN" style="color:var(--text-dim);">R$ 0,00</span></div>
+                    <div class="fin-kv" id="mfFechCofreDestMRow" style="display:none;"><span class="fin-kv-label">Retirado em moedas → Cofre de Moedas</span><span class="fin-kv-value" id="mfFechCofreDestM" style="color:var(--text-dim);">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Fundo de caixa que vai ficar <span style="color:var(--text-faint);">(base da próxima abertura)</span></span><span class="fin-kv-value" id="mfFechFundoRetido" style="color:var(--text-dim);">R$ 0,00</span></div>
                     <div class="fin-aviso" id="mfFechApuraAviso" style="display:none;"></div>
-                    <div class="fin-note" style="text-align:left; margin-top:8px;">Você informa o <b>total contado</b> na gaveta (com os R$ 160 do fundo). O sistema separa o fundo do excedente sozinho: o <b>excedente</b> (contado − esperado, quando positivo) é a <b>receita em dinheiro do dia</b> e entra no resultado; o dinheiro acima do fundo vai para os Cofres; os R$ 160 ficam retidos no Caixa. Falta (diferença negativa) não vira despesa. Não gera RECEITA_SERVICOS nem AJUSTE_CAIXA.</div>
-                </div>
-
-                <!-- PAINEL B — "Qual foi o resultado financeiro do período?"
-                     Receitas vêm da apuração (dinheiro + eletrônico por conta) +
-                     taxas de Troca por Pix. Transferência/sangria/abertura/
-                     fechamento/ajuste = NEUTROS. Ver finResultadoProjetado(). -->
-                <div class="fin-section-title">Resultado Financeiro do Período</div>
-                <div class="fin-card" id="finPainelB">
-                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Painel B — Resultado do dia</div>
-                    <div class="fin-kv" id="pbRowReceitaCaixa" style="display:none;"><span class="fin-kv-label">Receita em dinheiro do dia <span style="color:var(--text-faint);">(excedente sobre o fundo de caixa)</span></span><span class="fin-kv-value" id="pbReceitaCaixa">R$ 0,00</span></div>
-                    <div class="fin-kv" id="pbRowSicredi" style="display:none;"><span class="fin-kv-label">Receita eletrônica — Sicredi</span><span class="fin-kv-value" id="pbReceitaSicredi">R$ 0,00</span></div>
-                    <div class="fin-kv" id="pbRowPagseguro" style="display:none;"><span class="fin-kv-label">Receita eletrônica — PagSeguro</span><span class="fin-kv-value" id="pbReceitaPagseguro">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Taxas de Troca por Pix</span><span class="fin-kv-value" id="pbTaxaPix">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label"><b>Total de receitas</b></span><span class="fin-kv-value" id="pbTotalReceitas" style="color:var(--accent-bright);">R$ 0,00</span></div>
-                    <div class="fin-kv" style="margin-top:6px;"><span class="fin-kv-label">Despesas da empresa</span><span class="fin-kv-value" id="pbDespEmpresa" style="color:#fca5a5;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Gráfica</span><span class="fin-kv-value" id="pbGrafica" style="color:#fca5a5;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">Reembolsos</span><span class="fin-kv-value" id="pbReembolsos" style="color:#fca5a5;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label"><b>Total de despesas</b></span><span class="fin-kv-value" id="pbTotalDespesas" style="color:#fca5a5;">R$ 0,00</span></div>
-                    <div class="fin-kv" style="margin-top:6px;"><span class="fin-kv-label"><b>= Resultado Operacional</b> <span style="color:var(--text-faint);">(receitas − despesas)</span></span><span class="fin-kv-value" id="pbResultadoOper" style="font-size:16px;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label">− Retiradas de sócio</span><span class="fin-kv-value" id="pbRetiradaSocio" style="color:#fca5a5;">R$ 0,00</span></div>
-                    <div class="fin-kv"><span class="fin-kv-label"><b>= Resultado Financeiro</b> <span style="color:var(--text-faint);">(após retiradas de sócio)</span></span><span class="fin-kv-value" id="pbResultadoFin" style="font-size:17px;">R$ 0,00</span></div>
-                    <details style="margin-top:10px;">
-                        <summary style="cursor:pointer; font-size:12px; color:var(--text-faint);">Movimentações neutras (não entram no resultado)</summary>
-                        <div class="fin-kv"><span class="fin-kv-label">Troca por Pix — principal <span style="color:var(--text-faint);">(transferência Sicredi → Caixa da Loja)</span></span><span class="fin-kv-value" id="pbNeutroTrocaPix" style="color:var(--text-dim);">R$ 0,00</span></div>
-                        <div class="fin-kv"><span class="fin-kv-label">Sangrias</span><span class="fin-kv-value" id="pbNeutroSangrias" style="color:var(--text-dim);">R$ 0,00</span></div>
-                        <div class="fin-kv"><span class="fin-kv-label">Transferências internas</span><span class="fin-kv-value" id="pbNeutroTransf" style="color:var(--text-dim);">0</span></div>
-                        <div class="fin-kv"><span class="fin-kv-label">Ajustes de conferência</span><span class="fin-kv-value" id="pbNeutroAjuste" style="color:var(--text-dim);">R$ 0,00</span></div>
-                        <div class="fin-kv"><span class="fin-kv-label">Variação do fundo <span style="color:var(--text-faint);">(FC do fechamento − FC da abertura)</span></span><span class="fin-kv-value" id="pbNeutroFundo" style="color:var(--text-dim);">R$ 0,00</span></div>
-                    </details>
-                    <div class="fin-ok" id="pbConsistOk" style="display:none;">Verificação: OK — a soma dos lançamentos fecha com o resultado.</div>
-                    <div class="fin-aviso" id="pbConsistAviso" style="display:none;"></div>
-                    <div class="fin-note" style="text-align:left; margin-top:8px;">Transferências, sangrias e o principal da Troca por Pix não são lucro; só a taxa efetiva é receita. O Caixa da Loja é <b>só conferência</b> — a diferença entre contado e esperado não entra no resultado. Receita eletrônica (Sicredi/PagSeguro) é apurada pela variação do saldo informado no fechamento.</div>
                 </div>
 
                 <button type="button" class="fin-submit" id="mfFecharBtn" onclick="finFecharCaixa()">Fechar Caixa</button>
                 <div class="fin-msg" id="mfFechMsg"></div>
+            </div>
+
+            <!-- TELA: Resumo do dia ------------------------------------------
+                 Aberta automaticamente depois de "Fechar Caixa". Só o essencial
+                 do dia recém-fechado: receita bruta, despesa, resultado + uma
+                 seção curta de movimentações (totais). O detalhe fica em
+                 Movimentação Financeira. Mesma fonte/classificador do resto
+                 (relAgregar sobre os lançamentos do dia). -->
+            <div class="fin-screen" id="finScreen-resumo-dia">
+                <button type="button" class="fin-back" onclick="financeiroTela('inicio')">← Financeiro</button>
+                <div class="fin-subhead">
+                    <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+                    <h2>Resumo do dia</h2>
+                </div>
+                <div class="fin-note" id="finResumoDiaData" style="text-align:left;">—</div>
+                <div class="fin-card">
+                    <div class="fin-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Resultado</div>
+                    <div class="fin-kv"><span class="fin-kv-label">Receita bruta total</span><span class="fin-kv-value" id="finResumoReceita" style="color:var(--accent-bright);">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Despesas totais</span><span class="fin-kv-value" id="finResumoDespesa" style="color:#fca5a5;">R$ 0,00</span></div>
+                    <div class="fin-kv" style="margin-top:6px;"><span class="fin-kv-label"><b>Resultado do dia</b></span><span class="fin-kv-value" id="finResumoResultado" style="font-size:18px;">R$ 0,00</span></div>
+                </div>
+                <div class="fin-section-title">Movimentações</div>
+                <div class="fin-card">
+                    <div class="fin-kv"><span class="fin-kv-label">Entradas <span style="color:var(--text-faint);">(receita bruta do dia)</span></span><span class="fin-kv-value" id="finResumoEntradas">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Saídas <span style="color:var(--text-faint);">(despesas + retiradas + sangrias)</span></span><span class="fin-kv-value" id="finResumoSaidas">R$ 0,00</span></div>
+                    <div class="fin-kv"><span class="fin-kv-label">Transferências <span style="color:var(--text-faint);">(cofres + principal da Troca por Pix)</span></span><span class="fin-kv-value" id="finResumoTransf">R$ 0,00</span></div>
+                    <div class="fin-note" style="text-align:left;">Precisa do detalhe lançamento a lançamento? Abra <b>Movimentação Financeira</b>.</div>
+                </div>
             </div>
 
             <!-- TELA: Relatórios Financeiros --------------------------------
@@ -2447,6 +2462,29 @@
                     <span class="notif-switch-track"></span>
                 </label>
             </div>
+            <!-- Lembrete de abertura de caixa (2026-08-30) — só aviso visual na
+                 tela inicial, dentro da janela. Não bloqueia nenhuma função. -->
+            <div class="notif-config-row">
+                <div>
+                    <b>Lembrete de abertura de caixa</b>
+                    <div class="notif-config-desc">Mostra um aviso na tela inicial, no horário definido, enquanto o caixa não foi aberto.</div>
+                </div>
+                <label class="notif-switch">
+                    <input type="checkbox" id="notifLembreteCaixaAtivo" onchange="alternarLembreteCaixa()">
+                    <span class="notif-switch-track"></span>
+                </label>
+            </div>
+            <div class="notif-config-row">
+                <div>
+                    <b>Horário do lembrete</b>
+                    <div class="notif-config-desc">Início e fim da janela em que o aviso pode aparecer.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <input type="time" id="notifLembreteCaixaInicio" onchange="salvarLembreteCaixaHorario()" style="background:var(--bg-elev); border:1px solid var(--border); border-radius:9px; color:var(--text); font-family:inherit; font-size:13px; padding:6px 8px;">
+                    <span style="color:var(--text-faint);">até</span>
+                    <input type="time" id="notifLembreteCaixaFim" onchange="salvarLembreteCaixaHorario()" style="background:var(--bg-elev); border:1px solid var(--border); border-radius:9px; color:var(--text); font-family:inherit; font-size:13px; padding:6px 8px;">
+                </div>
+            </div>
             <div class="modal-buttons">
                 <button type="button" class="btn-cancel" onclick="fecharNotificacoesConfig()">Fechar</button>
             </div>
@@ -3375,9 +3413,17 @@
         function carregarConfigNotificacoes() {
             try {
                 const salvo = JSON.parse(localStorage.getItem(NOTIF_CONFIG_KEY) || 'null');
-                return { ativo: salvo?.ativo !== false, som: salvo?.som !== false };
+                return {
+                    ativo: salvo?.ativo !== false,
+                    som: salvo?.som !== false,
+                    // Lembrete visual de abertura de caixa (2026-08-30) — só aviso na
+                    // tela inicial, dentro da janela de horário. Não bloqueia nada.
+                    lembreteCaixaAtivo: salvo?.lembreteCaixaAtivo !== false,
+                    lembreteCaixaInicio: salvo?.lembreteCaixaInicio || '08:00',
+                    lembreteCaixaFim: salvo?.lembreteCaixaFim || '12:00',
+                };
             } catch {
-                return { ativo: true, som: true };
+                return { ativo: true, som: true, lembreteCaixaAtivo: true, lembreteCaixaInicio: '08:00', lembreteCaixaFim: '12:00' };
             }
         }
         function salvarConfigNotificacoes(cfg) { localStorage.setItem(NOTIF_CONFIG_KEY, JSON.stringify(cfg)); }
@@ -3385,6 +3431,12 @@
             const cfg = carregarConfigNotificacoes();
             document.getElementById('notifConfigAtivo').checked = cfg.ativo;
             document.getElementById('notifConfigSom').checked = cfg.som;
+            const lcAtivo = document.getElementById('notifLembreteCaixaAtivo');
+            const lcIni = document.getElementById('notifLembreteCaixaInicio');
+            const lcFim = document.getElementById('notifLembreteCaixaFim');
+            if (lcAtivo) lcAtivo.checked = cfg.lembreteCaixaAtivo;
+            if (lcIni) lcIni.value = cfg.lembreteCaixaInicio;
+            if (lcFim) lcFim.value = cfg.lembreteCaixaFim;
             document.getElementById('notifConfigModal').classList.add('active');
         }
         window.abrirNotificacoesConfig = abrirNotificacoesConfig;
@@ -3402,6 +3454,23 @@
             salvarConfigNotificacoes(cfg);
         }
         window.alternarNotificacoesSom = alternarNotificacoesSom;
+        // Lembrete de abertura de caixa — só grava a config e re-avalia o aviso
+        // da tela inicial. Não mexe em nenhuma regra financeira.
+        function alternarLembreteCaixa() {
+            const cfg = carregarConfigNotificacoes();
+            cfg.lembreteCaixaAtivo = document.getElementById('notifLembreteCaixaAtivo').checked;
+            salvarConfigNotificacoes(cfg);
+            renderHomeCaixaLembrete();
+        }
+        window.alternarLembreteCaixa = alternarLembreteCaixa;
+        function salvarLembreteCaixaHorario() {
+            const cfg = carregarConfigNotificacoes();
+            cfg.lembreteCaixaInicio = (document.getElementById('notifLembreteCaixaInicio').value || '08:00');
+            cfg.lembreteCaixaFim = (document.getElementById('notifLembreteCaixaFim').value || '12:00');
+            salvarConfigNotificacoes(cfg);
+            renderHomeCaixaLembrete();
+        }
+        window.salvarLembreteCaixaHorario = salvarLembreteCaixaHorario;
 
         // Sino curto sintetizado via Web Audio API — dois tons rápidos com
         // decaimento, sem depender de nenhum arquivo de áudio externo.
@@ -3493,6 +3562,9 @@
                 if (fin && fin.classList.contains('active') && document.getElementById('finScreen-inicio').classList.contains('active')) {
                     finCarregarMovimentosDia().then(finCaixaStatusRender);
                 }
+                if (document.getElementById('viewHome').classList.contains('active')) {
+                    renderHomeCaixaLembrete();
+                }
                 const mov = document.getElementById('viewMovFin');
                 if (mov && mov.classList.contains('active') && document.getElementById('mfScreen-retirada') && document.getElementById('mfScreen-retirada').classList.contains('active')) {
                     mfRetiradaHistRecarregar();
@@ -3534,6 +3606,7 @@
             renderMenu();
             loadPendingCounts();
             iniciarAtualizacaoAutomaticaListas();
+            renderHomeCaixaLembrete();
         }
 
         async function registerBiometric() {
@@ -4517,6 +4590,7 @@
             document.getElementById('viewMovFin').classList.remove('active');
             document.getElementById('viewHome').classList.add('active');
             loadPendingCounts();
+            renderHomeCaixaLembrete();
         }
         window.goHome = goHome;
 
@@ -4617,6 +4691,7 @@
             });
             if (nome === 'inicio') { loadFinanceiroSaldos(); finCarregarRefFechamento().then(aberturaCaixaConferir); finCarregarMovimentosDia().then(finCaixaStatusRender); }
             if (nome === 'fechamento') { Promise.all([finCarregarMovimentosDia(), finCarregarResultado()]).then(mfFechamentoConferir); }
+            if (nome === 'resumo-dia') { finResumoDiaRender(); }
             if (nome === 'relatorios') { relInit(); }
             if (nome === 'historico') { histInit(); }
             if (nome === 'saldo-inicial') { finSiRender(); }
@@ -5738,18 +5813,23 @@
         window.finCaixaAcao = finCaixaAcao;
 
         // ---------- ABERTURA DE CAIXA ----------
-        async function finAbrirCaixa() {
-            const btn = document.getElementById('finCaixaBtn');
-            const fc1 = finValorNum('finAbFC1');
-            const fc2 = finValorNum('finAbFC2');
+        // opts (2026-08-30) só permitem disparar o MESMO fluxo a partir do
+        // lembrete da tela inicial — sem alterar nenhuma regra: fc1/fc2 explícitos
+        // (senão lê os campos do Financeiro), msgEl/btnId alternativos e onDone.
+        async function finAbrirCaixa(opts = {}) {
+            const msgId = opts.msgEl || 'finAbMsg';
+            const btn = document.getElementById(opts.btnId || 'finCaixaBtn');
+            const fc1 = opts.fc1 != null ? opts.fc1 : finValorNum('finAbFC1');
+            const fc2 = opts.fc2 != null ? opts.fc2 : finValorNum('finAbFC2');
             const total = fc1 + fc2;
-            if (!(total > 0)) return finMsg('finAbMsg', 'err', 'Informe o Fundo de Caixa 1 e/ou 2.');
-            btn.disabled = true; finMsg('finAbMsg', 'busy', 'Abrindo o caixa…');
+            if (!(total > 0)) return finMsg(msgId, 'err', 'Informe o Fundo de Caixa 1 e/ou 2.');
+            if (btn) btn.disabled = true;
+            finMsg(msgId, 'busy', 'Abrindo o caixa…');
             try {
                 const hoje = todayISO();
                 const { data: existe, error: errCheck } = await supabase.from('lancamentos').select('id').eq('tipo', 'ABERTURA').eq('data', hoje).limit(1);
                 if (errCheck) throw new Error(errCheck.message);
-                if (existe && existe.length) { finMsg('finAbMsg', 'err', 'O caixa já foi aberto hoje.'); btn.disabled = false; return; }
+                if (existe && existe.length) { finMsg(msgId, 'err', 'O caixa já foi aberto hoje.'); if (btn) btn.disabled = false; return; }
                 await finCarregarContas();
                 const idCaixa = await finContaId('caixa_loja');
                 // Se o Caixa da Loja já tem saldo (o fundo que ficou retido do
@@ -5763,16 +5843,91 @@
                     origem: 'abertura',
                     meta: { fc1, fc2, total, so_conferencia: soConferencia, saldo_caixa_antes: Number(saldoCaixa.toFixed(2)) },
                 });
-                finMsg('finAbMsg', 'ok', soConferencia
+                finMsg(msgId, 'ok', soConferencia
                     ? `Caixa aberto — fundo de ${mfBRL(total)} conferido (já estava no caixa; nada foi injetado).`
                     : `Caixa aberto — fundo de ${mfBRL(total)} registrado (FC1 ${mfBRL(fc1)} + FC2 ${mfBRL(fc2)}).`);
                 await loadFinanceiroSaldos();
                 await finCarregarMovimentosDia();
             } catch (e) {
-                finMsg('finAbMsg', 'err', 'Erro ao abrir o caixa: ' + e.message);
-            } finally { btn.disabled = false; finCaixaStatusRender(); }
+                finMsg(msgId, 'err', 'Erro ao abrir o caixa: ' + e.message);
+            } finally {
+                if (btn) btn.disabled = false;
+                finCaixaStatusRender();
+                if (typeof opts.onDone === 'function') opts.onDone();
+            }
         }
         window.finAbrirCaixa = finAbrirCaixa;
+
+        // ---------- LEMBRETE DE ABERTURA DE CAIXA — só aviso visual na tela
+        // inicial (2026-08-30). Dentro da janela de horário configurada, se o
+        // caixa está `fechado`, mostra o bloco #homeCaixaLembrete. NÃO bloqueia
+        // nenhuma função do painel; não cria abertura fictícia; não toca em
+        // regra financeira. Fonte do estado: finCaixaEstado() (lançamentos do dia).
+        function lembreteCaixaJanelaAtiva(cfg) {
+            cfg = cfg || carregarConfigNotificacoes();
+            if (!cfg.lembreteCaixaAtivo) return false;
+            const ini = cfg.lembreteCaixaInicio || '08:00';
+            const fim = cfg.lembreteCaixaFim || '12:00';
+            if (!(ini < fim)) return false;                 // janela inválida → não mostra
+            const d = new Date();
+            const agora = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            return agora >= ini && agora <= fim;
+        }
+        async function renderHomeCaixaLembrete() {
+            const el = document.getElementById('homeCaixaLembrete');
+            if (!el) return;
+            const esconder = () => {
+                el.style.display = 'none';
+                const f = document.getElementById('homeAberturaForm');
+                if (f) f.style.display = 'none';
+            };
+            if (!lembreteCaixaJanelaAtiva()) return esconder();
+            try { await finCarregarMovimentosDia(); } catch (_) {}   // já recarrega contas
+            if (finCaixaEstado() === 'fechado') { el.style.display = ''; homeAberturaSaldosRender(); }
+            else esconder();
+        }
+        window.renderHomeCaixaLembrete = renderHomeCaixaLembrete;
+        // Conferência SÓ LEITURA dos saldos atuais de Sicredi e PagSeguro — os
+        // mesmos `contas.saldo` que o Financeiro usa (FIN_CONTAS_BY_CHAVE). Não
+        // edita nada, não toca no Saldo Inicial, não corrige diferença.
+        function homeAberturaSaldosRender() {
+            const put = (id, chave) => {
+                const e = document.getElementById(id);
+                if (!e) return;
+                const c = FIN_CONTAS_BY_CHAVE[chave];
+                e.textContent = c ? finFmtSaldo(c.saldo) : '—';
+            };
+            put('homeAbSaldoSicredi', 'sicredi');
+            put('homeAbSaldoPagseguro', 'pagseguro');
+        }
+        function toggleHomeAbertura() {
+            const f = document.getElementById('homeAberturaForm');
+            if (!f) return;
+            const abrindo = f.style.display === 'none';
+            f.style.display = abrindo ? '' : 'none';
+            if (abrindo) {
+                const c1 = document.getElementById('homeAbFundo');
+                if (c1 && !c1.value.trim()) c1.value = '160,00';
+                homeAberturaSaldosRender();
+                finCarregarContas().then(homeAberturaSaldosRender).catch(() => {});
+            }
+        }
+        window.toggleHomeAbertura = toggleHomeAbertura;
+        // Registrar movimentação: só NAVEGA para a tela que já existe (Movimentação
+        // Financeira). A correção de qualquer diferença de saldo é feita lá, pela
+        // usuária; o sistema não corrige sozinho e não mexe no Saldo Inicial.
+        function homeAberturaRegistrarMov() { openView('movfin'); }
+        window.homeAberturaRegistrarMov = homeAberturaRegistrarMov;
+        function finAbrirCaixaHome() {
+            finAbrirCaixa({
+                fc1: finValorNum('homeAbFundo'),
+                fc2: finValorNum('homeAbFundo2'),
+                msgEl: 'homeCaixaMsg',
+                btnId: 'homeAbConfirmBtn',
+                onDone: renderHomeCaixaLembrete,
+            });
+        }
+        window.finAbrirCaixaHome = finAbrirCaixaHome;
 
         // ---------- FECHAMENTO DE CAIXA ----------
         let finMovDiaCache = [];
@@ -5920,18 +6075,11 @@
                 const esperado = Number((FIN_CONTAS_BY_CHAVE[chave] || {}).saldo) || 0;
                 bancos.push({ chave, informado, esperado, receita: informado - esperado });
             });
-            // Contagem física do Cofre — só detalhe/conferência, NÃO vira lançamento.
-            const cofreNotas = finValorNum('mfFechCofreNotas');
-            const cofreMoedas = finValorNum('mfFechCofreMoedas');
-            const temCofre = finCampoPreenchido('mfFechCofreNotas') || finCampoPreenchido('mfFechCofreMoedas');
-            const cofreSistema = Number(((FIN_CONTAS_BY_CHAVE.cofre_notas || {}).saldo) || 0) + Number(((FIN_CONTAS_BY_CHAVE.cofre_moedas || {}).saldo) || 0);
-            const cofreTotal = Number((cofreNotas + cofreMoedas).toFixed(2));
-            const cofre = {
-                notas: cofreNotas, moedas: cofreMoedas, total: cofreTotal,
-                sistema: Number(cofreSistema.toFixed(2)),
-                diferenca: temCofre ? Number((cofreTotal - cofreSistema).toFixed(2)) : 0,
-                informado: temCofre,
-            };
+            // Conferência física do Cofre saiu do fechamento diário (2026-08-30):
+            // o saldo dos cofres é mantido só pelas transferências do excedente
+            // (paraCofreNotas / paraCofreMoedas). Stub zerado p/ compatibilidade com
+            // o meta.cofre gravado e com a leitura defensiva do Histórico.
+            const cofre = { notas: 0, moedas: 0, total: 0, sistema: 0, diferenca: 0, informado: false };
             return {
                 fundoAbertura: c.fundoAbertura, entradas: c.entradas, saidas: c.saidas, sangrias: c.sangrias,
                 esperadoCaixa: c.esperado, notasCaixa, moedasCaixa, contadoCaixa, temContado, diferencaCaixa,
@@ -5952,6 +6100,8 @@
             set('mfFechMoedasContado', mfBRL(ap.moedasCaixa));
             set('mfFechContado', mfBRL(ap.contadoCaixa));
             set('mfFechFundoRetido', mfBRL(ap.fundoRetido));
+            set('mfFechSicrediAtual', mfBRL(Number(((FIN_CONTAS_BY_CHAVE.sicredi || {}).saldo)) || 0));
+            set('mfFechPagseguroAtual', mfBRL(Number(((FIN_CONTAS_BY_CHAVE.pagseguro || {}).saldo)) || 0));
             // Excedente = receita em dinheiro do dia
             const excRow = document.getElementById('mfFechExcedenteRow');
             if (excRow) excRow.style.display = (ap.temContado && ap.receitaDinheiro > 0.005) ? '' : 'none';
@@ -5963,17 +6113,6 @@
             const dMRow = document.getElementById('mfFechCofreDestMRow');
             if (dMRow) dMRow.style.display = (ap.temContado && ap.paraCofreMoedas > 0.005) ? '' : 'none';
             set('mfFechCofreDestM', mfBRL(ap.paraCofreMoedas));
-            // Contagem física do Cofre (só detalhe/conferência)
-            set('mfFechCofreTotal', mfBRL(ap.cofre.total));
-            set('mfFechCofreSistema', mfBRL(ap.cofre.sistema));
-            const cofreDif = ap.cofre.informado && Math.abs(ap.cofre.diferenca) >= 0.005;
-            const cdRow = document.getElementById('mfFechCofreDifRow');
-            if (cdRow) cdRow.style.display = cofreDif ? '' : 'none';
-            const cdEl = document.getElementById('mfFechCofreDif');
-            if (cdEl) {
-                cdEl.textContent = (ap.cofre.diferenca < 0 ? '− ' : '+ ') + mfBRL(Math.abs(ap.cofre.diferenca));
-                cdEl.style.color = ap.cofre.diferenca < 0 ? '#fca5a5' : 'var(--accent-bright)';
-            }
             // "Diferença de conferência" só mostra quando é FALTA (negativa). O
             // excedente positivo já aparece como "Receita em dinheiro do dia".
             const temFalta = ap.temContado && ap.diferencaCaixa < -0.005;
@@ -6326,6 +6465,38 @@
             }
         }
         window.relRender = relRender;
+
+        // ============================================================
+        // RESUMO DO DIA (2026-08-30) — tela aberta logo após "Fechar Caixa".
+        // Só o essencial do dia: receita bruta, despesa, resultado + uma seção
+        // curta de movimentações (totais). Mesma fonte e mesmo classificador do
+        // resto (relAgregar sobre os lançamentos daquela data). Sem lista de
+        // despesas — o detalhe fica em Movimentação Financeira.
+        // ============================================================
+        async function finResumoDiaRender(dia) {
+            dia = dia || todayISO();
+            const set = (id, s) => { const e = document.getElementById(id); if (e) e.textContent = s; };
+            await relCarregarTudo();
+            const rows = relCache.filter(r => String(r.data || '').slice(0, 10) === dia);
+            const A = relAgregar(rows);
+            const fechado = rows.some(r => r.tipo === 'FECHAMENTO');
+            set('finResumoDiaData', (fechado ? 'Caixa de ' : 'Dia ') + dia.split('-').reverse().join('/')
+                + (fechado ? ' — fechado.' : ' — ainda aberto (parcial).'));
+            set('finResumoReceita', mfBRL(A.totalReceitas));
+            set('finResumoDespesa', mfBRL(A.totalDespesas));
+            const resDia = A.resultadoFinanceiro;
+            const rEl = document.getElementById('finResumoResultado');
+            if (rEl) { rEl.textContent = mfBRL(resDia); rEl.style.color = resDia < 0 ? '#fca5a5' : 'var(--accent-bright)'; }
+            // Movimentações — só totais.
+            const entradas = A.totalReceitas;
+            const saidas = A.totalDespesas + A.retiradaSocio + A.N.sangrias;
+            let transf = A.N.trocaPixPrincipal;
+            rows.forEach(r => { if (r.tipo === 'TRANSFERENCIA' && (Number(r.valor) || 0) > 0) transf += Number(r.valor) || 0; });
+            set('finResumoEntradas', mfBRL(entradas));
+            set('finResumoSaidas', mfBRL(saidas));
+            set('finResumoTransf', mfBRL(transf));
+        }
+        window.finResumoDiaRender = finResumoDiaRender;
 
         // ============================================================
         // HISTÓRICO FINANCEIRO (2026-08-29) — lista os lançamentos reais mês a
@@ -6948,10 +7119,12 @@
                 await finCarregarMovimentosDia();
                 await finCarregarResultado();
                 await finCarregarContas();
-                mfFechamentoConferir();
                 await loadFinanceiroSaldos();
                 await finCarregarRefFechamento();
                 finCaixaStatusRender();
+                // Fechou → vai direto pro resumo limpo do dia (sem o painel gigante).
+                await finResumoDiaRender(hoje);
+                financeiroTela('resumo-dia');
             } catch (e) {
                 finMsg('mfFechMsg', 'err', 'Erro ao fechar o caixa: ' + e.message);
             } finally { btn.disabled = false; }
@@ -12328,6 +12501,8 @@
             else if (document.getElementById('viewTermos').classList.contains('active')) { loadContratos(); loadDeclaracoesPendentes(); }
             else if (document.getElementById('viewPlanejamento').classList.contains('active')) loadPlanejamento();
             loadPendingCounts();
+            // Re-avalia o lembrete de caixa: some sozinho quando passa do horário.
+            if (document.getElementById('viewHome').classList.contains('active')) renderHomeCaixaLembrete();
         }, 30000);
     </script>
 </body>
