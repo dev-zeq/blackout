@@ -2127,3 +2127,23 @@ CSS `.hist-op-acts` → `justify-content: flex-end`; `.hist-op-acts button` → 
 - Limpeza → todas as contas idênticas ao `_base`.
 
 **Fora de escopo (anotado):** dupla representação Fundo de Caixa (conta `fundo_caixa` = 160) × R$ 160 retidos no `caixa_loja` — a seção "Cofre" da tela início pode parecer somar o fundo 2×.
+
+### Simplificação da edição do fechamento no Histórico (2026-08-29, mesmo dia — pedido de acompanhamento)
+
+A tela de edição de um fechamento já realizado (`histEditar` ramo `isFech`) ficou **só com 5 campos + "Salvar alterações"** (sem Cofre, sem descrição, sem cálculo manual, sem preview ao vivo):
+1. **Fundo de Caixa da abertura (referência)** — `histEditFundo-${key}`, prefill `d.fundoRet||160`.
+2. **Notas** — `histEditN-${key}`.
+3. **Moedas** — `histEditM-${key}`.
+4. **Saldo Sicredi** — `histEditBk-${key}-sicredi` — prefill do `meta.receitas_banco[].informado` ou, na falta, do saldo atual da conta.
+5. **Saldo PagSeguro** — `histEditBk-${key}-pagseguro` — idem.
+
+`histEditFechCalc` + os `oninput` + o div `histEditFechInfo` foram **removidos**.
+
+`histSalvar` ramo `fechamento` (reescrito):
+- `movLiq = (meta.esperado_caixa − meta.fundo_abertura)` (movimento líquido conhecido, preservado); `esperado = fundo + movLiq`; `contado = notas + moedas`; `dif = contado − esperado`; `paraCofreNotas = notas − fundo`; `paraCofreMoedas = moedas`.
+- Guarda: `fundo > 0` e `notas ≥ fundo` (senão `throw`).
+- **Banco por saldo informado**: acha o `RECEITA_SERVICOS` (`origem='fechamento'`, `meta.conta_chave`); `novaReceita = receitaAtual + (informado − saldoAtualDaConta)`; `|novaReceita|<0.005` → `dbDelete`; existe e mudou → `dbUpdate valor`; não existe e `>0.005` → `dbInsert` novo `RECEITA_SERVICOS` (`meta.forma:'eletronico', conta_chave, apurado:true`). Campo em branco = banco ignorado. **Caixa da Loja continua sem `RECEITA_SERVICOS`/`AJUSTE_CAIXA`.**
+- `dbUpdate` da linha `FECHAMENTO`: `valor = dif`, `meta` merge com `fundo_abertura=fundo, fundo_retido=fundo, esperado_caixa, contado_caixa, notas_caixa, moedas_caixa, diferenca_caixa, receita_dinheiro=max(0,dif), para_cofre_notas, para_cofre_moedas, receitas_banco`.
+- Reconcilia as 2 pernas pro cofre via `histReconciliarPernaCofre` (inalterado).
+
+Testado por SQL ROLLBACK (8/8): fechamento fechado (exemplo aprovado + Sicredi apurado +50) → edição Fundo 160 / Notas 550 / Sicredi saldo +20 → `FECHAMENTO` 340→390, pernas do cofre 340→390, `RECEITA_SERVICOS` Sicredi 50→70. Resultado: `caixa_loja` +160 (fundo retido), `cofre_notas` +390, `cofre_moedas` 0, `sicredi` +70 (Δ +20 vs. pós-fechamento), `fundo_caixa` 0, consistência `620 − 160 − 0 = 460` (= 390 dinheiro + 70 eletrônico). Limpeza → contas idênticas ao baseline.

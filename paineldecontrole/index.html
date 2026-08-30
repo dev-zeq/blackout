@@ -5999,35 +5999,36 @@
                     <button type="button" onclick="histEditar('${key}')">Cancelar</button>
                 </div>`;
             if (isFech) {
-                // Form detalhado do fechamento: Notas, Moedas, PIX por banco, contagem do cofre, descrição.
-                const bancosHtml = (d.receitasBanco || []).map((b, i) =>
-                    `<label>PIX / eletrônico — ${escapeHtml(FIN_CONTA_LABEL[b.conta] || b.conta)}</label>
-                     <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditPix-${key}-${i}" data-pixconta="${escapeHtml(b.conta)}" oninput="histEditFechCalc('${key}')" placeholder="Ex: 0,00"><div class="extenso-valor"></div>`
-                ).join('');
+                // Tela limpa: só 5 campos + "Salvar alterações". O sistema recalcula
+                // esperado, excedente/falta, destinos do cofre e receita eletrônica
+                // sozinho — sem campos de Cofre, descrição ou cálculo manual.
+                const bkVal = chave => {
+                    const rb = (d.receitasBanco || []).find(b => b.conta === chave);
+                    if (rb && rb.informado != null) return Number(rb.informado) || 0;
+                    return Number((FIN_CONTAS_BY_CHAVE[chave] || {}).saldo) || 0;
+                };
                 box.innerHTML = `
-                    <label>Notas contadas</label>
-                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditN-${key}" oninput="histEditFechCalc('${key}')" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
-                    <label>Moedas contadas</label>
-                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditM-${key}" oninput="histEditFechCalc('${key}')" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
-                    ${bancosHtml}
-                    <label>Cofre — Notas (contagem física)</label>
-                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditCN-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
-                    <label>Cofre — Moedas (contagem física)</label>
-                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditCM-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
-                    <label>Descrição</label>
-                    <input type="text" id="histEditT-${key}" maxlength="200">
-                    <div class="hist-edit-locked" id="histEditFechInfo-${key}">—</div>
-                    <div class="hist-edit-locked">Data <b>${histDataBR(op.data)}</b> bloqueada. Ao salvar: os saldos de Caixa da Loja e Cofres são recalculados, sem criar RECEITA_SERVICOS nem AJUSTE_CAIXA.${d.legado ? ' <span style="color:#fca5a5;">Fechamento anterior ao modelo atual; a reconciliação automática não roda neste dia.</span>' : ''}</div>
-                    ${acts}`;
+                    <label>Fundo de Caixa da abertura (referência)</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditFundo-${key}" placeholder="Ex: 160,00"><div class="extenso-valor"></div>
+                    <label>Notas</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditN-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                    <label>Moedas</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditM-${key}" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                    <label>Saldo Sicredi</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditBk-${key}-sicredi" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                    <label>Saldo PagSeguro</label>
+                    <input type="text" inputmode="decimal" data-role="valor-cents" id="histEditBk-${key}-pagseguro" placeholder="Ex: 0,00"><div class="extenso-valor"></div>
+                    <div class="hist-op-acts">
+                        <button type="button" onclick="histSalvar('${key}')">Salvar alterações</button>
+                        <button type="button" onclick="histEditar('${key}')">Cancelar</button>
+                    </div>`;
                 box.style.display = '';
                 const setF = (id, val) => { const e = document.getElementById(id); if (e) { e.value = histFmtInput(val); histLegenda(e); } };
+                setF('histEditFundo-' + key, d.fundoRet || 160);
                 setF('histEditN-' + key, d.editNotas || 0);
                 setF('histEditM-' + key, d.editMoedas || 0);
-                (d.receitasBanco || []).forEach((b, i) => setF('histEditPix-' + key + '-' + i, Number(b.valor) || 0));
-                setF('histEditCN-' + key, d.editCofreNotas || 0);
-                setF('histEditCM-' + key, d.editCofreMoedas || 0);
-                const t = document.getElementById('histEditT-' + key); if (t) t.value = d.desc || '';
-                histEditFechCalc(key);
+                setF('histEditBk-' + key + '-sicredi', bkVal('sicredi'));
+                setF('histEditBk-' + key + '-pagseguro', bkVal('pagseguro'));
                 return;
             }
             const contasTxt = (d.editKind === 'transfer' || d.editKind === 'trocapix')
@@ -6054,31 +6055,6 @@
             const t = document.getElementById('histEditT-' + key); if (t) t.value = d.desc || '';
         }
         window.histEditar = histEditar;
-
-        // Recálculo ao vivo do form de edição do FECHAMENTO (Notas/Moedas → total,
-        // excedente, diferença e destinos do cofre).
-        function histEditFechCalc(key) {
-            const op = histOpsIndex[key]; if (!op) return;
-            const d = histOpDescribe(op);
-            const esperado = Number(d.esperado) || 0;
-            const fundoRet = Number(d.fundoRet) || 160;
-            const n = parseBRLDecimal((document.getElementById('histEditN-' + key) || {}).value);
-            const m = parseBRLDecimal((document.getElementById('histEditM-' + key) || {}).value);
-            const total = histRound2(n + m);
-            const dif = histRound2(total - esperado);
-            const exc = Math.max(0, dif);
-            const paraCofreN = histRound2(n - fundoRet);
-            const el = document.getElementById('histEditFechInfo-' + key);
-            if (!el) return;
-            if (n + 0.005 < fundoRet) {
-                el.innerHTML = '<span style="color:#fca5a5;">Notas contadas (' + mfBRL(n) + ') menores que o Fundo de Caixa de ' + mfBRL(fundoRet) + ' — não dá pra salvar.</span>';
-                return;
-            }
-            el.innerHTML = 'Total contado <b>' + mfBRL(total) + '</b> · esperado ' + mfBRL(esperado)
-                + (exc > 0.005 ? ' · <b>receita em dinheiro ' + mfBRL(exc) + '</b>' : (dif < -0.005 ? ' · falta − ' + mfBRL(Math.abs(dif)) : ' · confere'))
-                + '<br>→ Cofre de Notas ' + mfBRL(Math.max(0, paraCofreN)) + ' · → Cofre de Moedas ' + mfBRL(m) + ' · fundo retido ' + mfBRL(fundoRet);
-        }
-        window.histEditFechCalc = histEditFechCalc;
 
         // Reconcilia UMA perna (notas OU moedas) do fechamento pro cofre: ajusta o
         // par existente, cria se não existe, ou apaga se o alvo virou 0.
@@ -6146,37 +6122,51 @@
                     await dbUpdate('lancamentos', { valor: -D, descricao: desc || pix.descricao, meta: { ...(pix.meta || {}), valor_desejado: D } }, { id: pix.id });
                     await dbUpdate('lancamentos', { valor: recebido, descricao: desc || cx.descricao, meta: { ...(cx.meta || {}), valor_desejado: D, taxa, desconto, receita } }, { id: cx.id });
                 } else if (d.editKind === 'fechamento') {
+                    // Tela simplificada: 5 campos (Fundo, Notas, Moedas, Saldo Sicredi,
+                    // Saldo PagSeguro). O sistema recalcula sozinho: esperado = Fundo +
+                    // movimento líquido conhecido; excedente (contado − esperado) positivo
+                    // vira receita em dinheiro, negativo é só diferença de conferência.
+                    // Caixa da Loja NUNCA gera RECEITA_SERVICOS nem AJUSTE_CAIXA.
+                    await finCarregarContas();
                     const baseMeta = first.meta || {};
-                    const esperado = Number(baseMeta.esperado_caixa) || 0;
-                    const fundoRet = Number(baseMeta.fundo_retido) || Number(baseMeta.fundo_abertura) || 160;
+                    const fundoAnt = Number(baseMeta.fundo_abertura) || Number(baseMeta.fundo_retido) || 160;
+                    const movLiq = histRound2((Number(baseMeta.esperado_caixa) || 0) - fundoAnt);   // entradas − saídas − sangrias
+                    const fundo = histRound2(parseBRLDecimal((document.getElementById('histEditFundo-' + key) || {}).value));
                     const notas = histRound2(parseBRLDecimal((document.getElementById('histEditN-' + key) || {}).value));
                     const moedas = histRound2(parseBRLDecimal((document.getElementById('histEditM-' + key) || {}).value));
-                    if (notas + 0.005 < fundoRet) throw new Error('As notas contadas (' + mfBRL(notas) + ') são menores que o Fundo de Caixa de ' + mfBRL(fundoRet) + ' — confira a contagem.');
+                    if (!(fundo > 0)) throw new Error('Informe o Fundo de Caixa da abertura.');
+                    if (notas + 0.005 < fundo) throw new Error('As notas (' + mfBRL(notas) + ') são menores que o Fundo de Caixa de ' + mfBRL(fundo) + ' — confira a contagem.');
+                    const esperado = histRound2(fundo + movLiq);
                     const contado = histRound2(notas + moedas);
                     const dif = histRound2(contado - esperado);
-                    const paraCofreNotas = histRound2(notas - fundoRet);
+                    const paraCofreNotas = histRound2(notas - fundo);
                     const paraCofreMoedas = histRound2(moedas);
-                    // contagem física do cofre — só detalhe/conferência dentro do fechamento
-                    const cn = histRound2(parseBRLDecimal((document.getElementById('histEditCN-' + key) || {}).value));
-                    const cm = histRound2(parseBRLDecimal((document.getElementById('histEditCM-' + key) || {}).value));
-                    const ctot = histRound2(cn + cm);
-                    const csist = Number((baseMeta.cofre || {}).saldo_sistema);
-                    const sistema = Number.isFinite(csist) ? csist
-                        : (Number(((FIN_CONTAS_BY_CHAVE.cofre_notas || {}).saldo)) || 0) + (Number(((FIN_CONTAS_BY_CHAVE.cofre_moedas || {}).saldo)) || 0);
-                    // 1) linha FECHAMENTO — valor = excedente (contado − esperado); nunca cria RECEITA_SERVICOS/AJUSTE_CAIXA
-                    await dbUpdate('lancamentos', { valor: dif, descricao: desc || first.descricao, meta: { ...baseMeta,
-                        notas_caixa: notas, moedas_caixa: moedas, contado_caixa: contado,
-                        diferenca_caixa: dif, receita_dinheiro: histRound2(Math.max(0, dif)),
-                        fundo_retido: fundoRet, para_cofre_notas: paraCofreNotas, para_cofre_moedas: paraCofreMoedas,
-                        cofre: { notas: cn, moedas: cm, total: ctot, saldo_sistema: histRound2(sistema), diferenca: histRound2(ctot - sistema), informado: (cn > 0 || cm > 0) } } }, { id: first.id });
-                    // 2) PIX / eletrônico por banco → atualiza cada RECEITA_SERVICOS de banco do fechamento
-                    const pixInputs = document.querySelectorAll('#histEdit-' + key + ' input[data-pixconta]');
-                    for (const inp of pixInputs) {
-                        const contaChave = inp.getAttribute('data-pixconta');
-                        const novoPix = histRound2(parseBRLDecimal(inp.value));
-                        const linha = histCache.find(r => r.data === op.data && r.tipo === 'RECEITA_SERVICOS' && r.origem === 'fechamento' && ((r.meta || {}).conta_chave === contaChave));
-                        if (linha && histRound2(Number(linha.valor)) !== novoPix) await dbUpdate('lancamentos', { valor: novoPix }, { id: linha.id });
+                    // 1) saldo informado de cada banco → ajusta / cria / remove o RECEITA_SERVICOS apurado
+                    const recBanco = [];
+                    for (const chave of ['sicredi', 'pagseguro']) {
+                        const el = document.getElementById('histEditBk-' + key + '-' + chave);
+                        if (!el || !el.value.trim()) continue;
+                        const informado = histRound2(parseBRLDecimal(el.value));
+                        const linha = histCache.find(r => r.data === op.data && r.tipo === 'RECEITA_SERVICOS' && r.origem === 'fechamento' && ((r.meta || {}).conta_chave === chave));
+                        const saldoAtual = histRound2(Number((FIN_CONTAS_BY_CHAVE[chave] || {}).saldo) || 0);
+                        const receitaAtual = linha ? histRound2(Number(linha.valor)) : 0;
+                        const novaReceita = histRound2(receitaAtual + (informado - saldoAtual));
+                        if (linha) {
+                            if (Math.abs(novaReceita) < 0.005) await dbDelete('lancamentos', { id: linha.id });
+                            else if (novaReceita !== receitaAtual) await dbUpdate('lancamentos', { valor: novaReceita }, { id: linha.id });
+                        } else if (novaReceita > 0.005) {
+                            const idB = await finContaId(chave);
+                            await dbInsert('lancamentos', [{ conta_id: idB, data: op.data, valor: novaReceita, tipo: 'RECEITA_SERVICOS',
+                                descricao: 'Receita de serviços apurada no fechamento (' + (FIN_CONTA_LABEL[chave] || chave) + ')',
+                                origem: 'fechamento', meta: { forma: 'eletronico', conta_chave: chave, apurado: true } }]);
+                        }
+                        if (novaReceita > 0.005) recBanco.push({ conta: chave, informado: informado, valor: novaReceita });
                     }
+                    // 2) linha FECHAMENTO — valor = excedente (contado − esperado)
+                    await dbUpdate('lancamentos', { valor: dif, meta: { ...baseMeta,
+                        fundo_abertura: fundo, fundo_retido: fundo, esperado_caixa: esperado, contado_caixa: contado,
+                        notas_caixa: notas, moedas_caixa: moedas, diferenca_caixa: dif, receita_dinheiro: histRound2(Math.max(0, dif)),
+                        para_cofre_notas: paraCofreNotas, para_cofre_moedas: paraCofreMoedas, receitas_banco: recBanco } }, { id: first.id });
                     // 3) reconcilia as pernas pro cofre (por destino: notas / moedas)
                     const cofreLegs = op.cofreLegs || histCache.filter(r => r.data === op.data && r.origem === 'fechamento' && r.tipo === 'TRANSFERENCIA');
                     await histReconciliarPernaCofre(op.data, 'notas', 'cofre_notas', paraCofreNotas, cofreLegs);
