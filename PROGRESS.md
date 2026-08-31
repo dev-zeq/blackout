@@ -2675,3 +2675,37 @@ Correção aplicada via SQL direto (service-role), 3 `UPDATE`s numa transação:
 **Conferido depois:** `contas.saldo == saldo_inicial + Σ(lançamentos)` em todas as contas (Sicredi −713,19 · PagSeguro 63,93 · Cofre Notas 110 · Fundo 160 · Caixa da Loja 160). `finResumoDiaRender('2026-08-31')` (caminho real do `relAgregar`, no static server) → Receita bruta **R$ 124,00** (só o excedente em dinheiro), Despesas R$ 0,00, **Resultado do dia R$ 90,00** (124 − 34 de retiradas pessoais). Identidade de consistência do mês fecha (`consistDelta = 0`). Os dois ajustes de banco não entram no resultado.
 
 **Falta:** validar visualmente no painel logado (Histórico do dia 31/08 mostrando o fechamento com "ajuste de saldo: Sicredi − R$ 713,19 / PagSeguro …" anexado) e testar um fechamento novo com banco negativo ponta a ponta.
+
+## Marca visual de valor negativo nos campos do sistema de caixa (2026-08-31) — **PUBLICADO** (`main` → lanblackout.com)
+
+Pedido: todo campo de valor do sistema de caixa que **aceite negativo** deve, quando o usuário digitar um valor começando com `-`, mudar a borda para vermelho (mesmo destaque do resto do painel). Só indicação visual, sem tocar em cálculo. Vale pra todo o caixa, não só o fechamento.
+
+**`paineldecontrole/index.html` — só CSS + JS visual, nenhuma regra de negócio:**
+- CSS `input.valor-negativo` — `border-color: rgba(239,68,68,.55)` + `background: rgba(239,68,68,.10)` + `color:#fca5a5` (paleta `--danger`/`#fca5a5` já usada em "erro"/"negativo" no painel); `:focus` → `border-color: var(--danger)`.
+- `finMarcarValorNegativo(el)` — `toggle('valor-negativo', el.value.trim().startsWith('-'))`. Exposto em `window`.
+- Listener delegado `input` (registrado **depois** do listener de limpeza `valor-cents`, mesma fase): pega qualquer `<input inputmode="decimal">` dentro de `#viewFinanceiro` ou `#viewMovFin` e chama `finMarcarValorNegativo`. Como roda depois da limpeza, nos campos que **não** aceitam negativo o `-` já foi removido por `limparValorCentsDigitado` → a marca nunca acende neles. A regra acompanha sozinha "quem permite negativo" (hoje: `mfFechSicredi`/`mfFechPagseguro` e os demais campos soltos do fechamento, `finSiInput-*` do Saldo Inicial, `fmSiInput-*` da virada mensal, e os campos `data-negativo="1"` do editor de fechamento no Histórico).
+- Pré-preenchidos com valor negativo também acendem na renderização (sem precisar tocar): chamadas a `finMarcarValorNegativo` em `finSiRender`/`finSiHint`, `fmRenderSaldos` e no `setF` do editor do Histórico.
+- `#viewCaixa` (view legada da era planilha, `type="number" min="0"`) fora de escopo — o navegador já barra negativo lá.
+
+**Testado (static server):** sem `SyntaxError`. `mfFechSicredi` com `-713,19` → classe `valor-negativo`, borda computada `rgb(239,68,68)`; com `713,19` → classe sai, borda volta ao normal. Campo Notas com `-50` → vermelho (é campo de valor do caixa). "Retirada › Valor" (`valor-cents` sem `data-negativo`): digitar `-100` → vira `100`, **sem** marca. Campo `data-negativo="1"`: `-713,19` mantém e marca. Saldo Inicial: PagSeguro pré-preenchido `-995,99` já vem marcado na renderização; contas positivas não. **Publicado** a pedido do usuário.
+
+## Nova logo Blackout no painel — cabeçalho + tela de senha (2026-08-31) — **PUBLICADO** (`main` → lanblackout.com)
+
+Troca da logo antiga animada pela nova identidade. Só `paineldecontrole/index.html` (CSS + markup + a const JS `LOGO_SVG`); documentos impressos (Recibo/Orçamento/Simulador via `RECIBO_LOGO_SVG`) **mantidos** com o traço monocromático — decisão do usuário (logo escura com brilho fica ruim em papel branco). Ícones PWA (`icon-192/512`, maskable, apple-touch) **não** trocados ainda — esperando o usuário mandar os PNGs quadrados 192/512.
+
+**Componente `.bo-logo`** (reconstruído em SVG+CSS, não é a foto/PNG — mais leve e reposicionável):
+- Badge circular: anel + arco + seta em **verde-limão** (`--bo-lime: #a3e635`, isolado — não mexe no `--accent` emerald do resto do painel), letra **"B" branca parada**. Só a seta orbita a letra (`.bo-logo__orbit` → `@keyframes boLogoOrbit` 3.6s linear infinito), exatamente o que o usuário pediu ("B parada, seta girando em volta").
+- Wordmark: `BLACK` branco + `OUT` limão (`.bo-logo__name`), tagline "Impressões & Gráfica Rápida" (`.bo-logo__tag`). Sem animação, só a tipografia/cores da marca nova.
+- Entrada única ao aparecer: `boLogoIn` (fade + leve zoom/rotação, .55s). `@media (prefers-reduced-motion: reduce)` zera as duas animações.
+- **Posicionamento flexível** por modificador + custom props: `.bo-logo--row` (badge + texto ao lado) / `.bo-logo--stack` (texto embaixo, centralizado); tamanhos por `--bo-badge` / `--bo-name` / `--bo-tag`.
+
+**Onde entrou:**
+- **Cabeçalho** (`.header .brand`): badge animado 36px + `<h1>Painel de Controle</h1>` mantido + o "BlackOut" do `.sub` virou o mini-wordmark `BLACK`+`OUT`.
+- **Tela de senha / Face ID** (`LOGO_SVG`, usada em `renderLoginScreen`/`renderOfferBiometricScreen`): `.bo-logo--stack` centralizado — badge 76px + wordmark + tagline, acima do "Painel de Controle".
+- Removido: CSS morto `.brand-badge` / `.logo-spin` / `@keyframes logoSpin` / `.lock-badge`.
+
+**Testado (static server):** sem `SyntaxError`, sem erro no console. Tela de senha: badge + `BLACK`(branco)/`OUT`(`rgb(163,230,53)`) + tagline, `boLogoOrbit 3.6s` girando, entrada `boLogoIn`. Cabeçalho: badge 36px + "Painel de Controle" + "BLACKOUT", cabe em mobile 375px sem estourar. Regra `prefers-reduced-motion` presente zerando as animações. Screenshots (senha + cabeçalho desktop/mobile) entregues.
+
+Usuário escolheu manter o SVG animado (opção A) em vez de embutir o PNG chapado.
+
+**Falta:** PNGs quadrados 192/512 (+512 maskable com margem) do usuário pra trocar os ícones do PWA (`icon-192/512`, maskable, apple-touch) — o atalho do app na tela inicial ainda usa o ícone antigo.

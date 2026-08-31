@@ -45,11 +45,44 @@
         .container { max-width: 800px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
         .brand { display: flex; align-items: center; gap: 10px; }
-        .brand-badge { width: 34px; height: 34px; filter: drop-shadow(0 0 10px rgba(34,197,94,0.5)); }
-        @keyframes logoSpin { to { transform: rotate(360deg); } }
-        .logo-spin { transform-origin: 50px 50px; animation: logoSpin 3.5s linear infinite; }
         .header h1 { font-size: 19px; font-weight: 700; letter-spacing: 0.2px; }
         .header .sub { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; }
+
+        /* ============================================================
+           Logo Blackout (2026-08-31) — nova identidade, reconstruída em
+           SVG+CSS pra ser leve e reposicionável. A letra "B" e o texto
+           ficam PARADOS; só a seta orbita a letra (mesma ideia da logo
+           antiga, mas sem girar o "B"). Posicionamento flexível via
+           modificadores: .bo-logo--row (badge + texto ao lado) ou
+           .bo-logo--stack (texto embaixo, centralizado). Tamanhos por
+           custom props: --bo-badge / --bo-name / --bo-tag.
+           Cores da marca nova (verde-limão) isoladas aqui — não mexem no
+           --accent do resto do painel. ============================ */
+        :root { --bo-lime: #a3e635; --bo-lime-bright: #bef264; }
+        .bo-logo { display: inline-flex; align-items: center; gap: 12px; }
+        .bo-logo--stack { flex-direction: column; gap: 10px; text-align: center; }
+        .bo-logo__badge {
+            width: var(--bo-badge, 38px); height: var(--bo-badge, 38px); flex-shrink: 0;
+            filter: drop-shadow(0 0 7px rgba(163,230,53,0.45));
+            animation: boLogoIn .55s cubic-bezier(.2,.7,.2,1) both;
+        }
+        .bo-logo__orbit { transform-origin: 50px 50px; animation: boLogoOrbit 3.6s linear infinite; }
+        @keyframes boLogoOrbit { to { transform: rotate(360deg); } }
+        @keyframes boLogoIn { from { opacity: 0; transform: scale(.82) rotate(-12deg); } to { opacity: 1; transform: none; } }
+        .bo-logo__word { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
+        .bo-logo--stack .bo-logo__word { align-items: center; }
+        .bo-logo__name {
+            font-weight: 900; letter-spacing: .5px; font-size: var(--bo-name, 16px); color: #fff;
+            font-family: 'Arial Black', 'Segoe UI', system-ui, sans-serif; white-space: nowrap;
+        }
+        .bo-logo__name span { color: var(--bo-lime); }
+        .bo-logo__tag {
+            font-size: var(--bo-tag, 8px); text-transform: uppercase; letter-spacing: 1.4px;
+            color: var(--text-faint); font-weight: 700; margin-top: 3px; white-space: nowrap;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .bo-logo__orbit, .bo-logo__badge { animation: none; }
+        }
         .status { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; color: var(--text-dim); }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 2s infinite; }
         .status.offline .status-dot { background: var(--danger); box-shadow: 0 0 8px var(--danger); animation: none; }
@@ -158,7 +191,7 @@
                 radial-gradient(ellipse 700px 500px at 100% 100%, rgba(34,197,94,0.06), transparent),
                 var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .lock-box { width: 100%; max-width: 360px; text-align: center; }
-        .lock-badge { width: 64px; height: 64px; margin: 0 auto 18px; filter: drop-shadow(0 0 16px rgba(34,197,94,0.5)); }
+        .lock-box .bo-logo { margin-bottom: 22px; }
         .lock-icon { font-size: 40px; margin-bottom: 16px; }
         .lock-box h2 { font-size: 20px; margin-bottom: 6px; font-weight: 700; }
         .lock-sub { font-size: 13px; color: var(--text-faint); margin-bottom: 24px; }
@@ -918,6 +951,12 @@
         .fin-radio:has(input:checked) { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
         .fin-field input:disabled { opacity: .5; cursor: not-allowed; }
         .fin-field input[readonly] { background: rgba(255,255,255,0.04); color: var(--text-dim); cursor: default; }
+        /* Indicação visual (só visual) de valor negativo nos campos do caixa:
+           usuário digitou algo começando com "-" → borda vermelha + leve fundo,
+           mesma paleta de "erro"/"negativo" do resto do painel (var(--danger),
+           #fca5a5). Não altera nenhum cálculo. */
+        input.valor-negativo { border-color: rgba(239,68,68,0.55); background: rgba(239,68,68,0.10); color: #fca5a5; }
+        input.valor-negativo:focus { outline: none; border-color: var(--danger); }
         .fin-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-dim); cursor: pointer; user-select: none; margin-top: 2px; }
         .fin-check input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
         .fin-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -989,17 +1028,17 @@
     <div class="container" id="appContainer" style="display:none;">
         <div class="header">
             <div class="brand">
-                <svg class="brand-badge" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="48" fill="#111" stroke="#22C55E" stroke-width="3"/>
-                    <g class="logo-spin">
-                        <path d="M50 18 A32 32 0 1 1 18 50" stroke="#22C55E" stroke-width="5" stroke-linecap="round" fill="none"/>
-                        <polygon points="50,8 42,22 58,22" fill="#22C55E"/>
+                <svg class="bo-logo__badge" style="--bo-badge:36px;" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blackout">
+                    <circle cx="50" cy="50" r="46" fill="#0a0a0a" stroke="var(--bo-lime)" stroke-width="2.5"/>
+                    <g class="bo-logo__orbit">
+                        <path d="M50 16 A34 34 0 1 1 16 50" stroke="var(--bo-lime)" stroke-width="6" stroke-linecap="round" fill="none"/>
+                        <polygon points="50,3 39,20 61,20" fill="var(--bo-lime)"/>
                     </g>
-                    <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
+                    <text x="50" y="69" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="50" fill="#fff">B</text>
                 </svg>
                 <div>
                     <h1>Painel de Controle</h1>
-                    <div class="sub">BlackOut</div>
+                    <div class="sub"><span class="bo-logo__name" style="--bo-name:11px;"><b>BLACK</b><span>OUT</span></span></div>
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -3082,6 +3121,26 @@
             }
         });
 
+        // ---------- Marca visual de valor negativo — sistema de caixa ----------
+        // Regra SÓ VISUAL (nenhum cálculo muda): qualquer campo de valor dentro do
+        // Financeiro / Movimentação Financeira que fique com um "-" na frente ganha
+        // a classe .valor-negativo (borda vermelha). Nos campos que não aceitam
+        // negativo o "-" já foi removido antes por limparValorCentsDigitado, então
+        // a marca nunca aparece neles — a regra acompanha sozinha "quem permite
+        // negativo". Roda depois do listener de limpeza acima (mesma fase 'input').
+        function finMarcarValorNegativo(el) {
+            if (el && el.tagName === 'INPUT') {
+                el.classList.toggle('valor-negativo', String(el.value || '').trim().startsWith('-'));
+            }
+        }
+        window.finMarcarValorNegativo = finMarcarValorNegativo;
+        document.addEventListener('input', (e) => {
+            const el = e.target;
+            if (!el || el.tagName !== 'INPUT' || el.getAttribute('inputmode') !== 'decimal') return;
+            if (!el.closest('#viewFinanceiro, #viewMovFin')) return;
+            finMarcarValorNegativo(el);
+        });
+
         const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -3478,14 +3537,20 @@
 
         const bioSupported = !!(window.PublicKeyCredential && window.isSecureContext);
 
-        const LOGO_SVG = `<svg class="lock-badge" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="48" fill="#111" stroke="#22C55E" stroke-width="3"/>
-            <g class="logo-spin">
-                <path d="M50 18 A32 32 0 1 1 18 50" stroke="#22C55E" stroke-width="5" stroke-linecap="round" fill="none"/>
-                <polygon points="50,8 42,22 58,22" fill="#22C55E"/>
-            </g>
-            <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
-        </svg>`;
+        const LOGO_SVG = `<span class="bo-logo bo-logo--stack" style="--bo-badge:76px; --bo-name:22px; --bo-tag:9px; margin-bottom:22px;">
+            <svg class="bo-logo__badge" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blackout">
+                <circle cx="50" cy="50" r="46" fill="#0a0a0a" stroke="var(--bo-lime)" stroke-width="2.5"/>
+                <g class="bo-logo__orbit">
+                    <path d="M50 16 A34 34 0 1 1 16 50" stroke="var(--bo-lime)" stroke-width="6" stroke-linecap="round" fill="none"/>
+                    <polygon points="50,3 39,20 61,20" fill="var(--bo-lime)"/>
+                </g>
+                <text x="50" y="69" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="50" fill="#fff">B</text>
+            </svg>
+            <span class="bo-logo__word">
+                <span class="bo-logo__name"><b>BLACK</b><span>OUT</span></span>
+                <span class="bo-logo__tag">Impressões &amp; Gráfica Rápida</span>
+            </span>
+        </span>`;
 
         function unlockApp() {
             document.getElementById('lockScreen').style.display = 'none';
@@ -4477,11 +4542,13 @@
                     </div>
                 </div>`;
             }).join('') || '<div class="fin-note">Nenhuma conta ativa.</div>';
+            wrap.querySelectorAll('input[id^="finSiInput-"]').forEach(finMarcarValorNegativo);
         }
         function finSiHint(chave) {
             const el = document.getElementById('finSiInput-' + chave);
             const h = document.getElementById('finSiHint-' + chave);
             if (!el || !h) return;
+            finMarcarValorNegativo(el);
             const atual = Number(el.getAttribute('data-atual')) || 0;
             const novo = parseBRLDecimal(el.value);
             const d = Number((novo - atual).toFixed(2));
@@ -4713,6 +4780,7 @@
                     + '<input type="text" inputmode="decimal" id="fmSiInput-' + ch + '" value="' + val + '" placeholder="Ex: 0,00 ou -994,00">'
                     + '</div></div>';
             }).join('');
+            box.querySelectorAll('input[id^="fmSiInput-"]').forEach(finMarcarValorNegativo);
         }
 
         function fmRenderConfig() {
@@ -6545,7 +6613,7 @@
                         <button type="button" onclick="histEditar('${key}')">Cancelar</button>
                     </div>`;
                 box.style.display = '';
-                const setF = (id, val) => { const e = document.getElementById(id); if (e) { e.value = histFmtInput(val); histLegenda(e); } };
+                const setF = (id, val) => { const e = document.getElementById(id); if (e) { e.value = histFmtInput(val); histLegenda(e); finMarcarValorNegativo(e); } };
                 setF('histEditFundo-' + key, d.fundoRet || 160);
                 setF('histEditN-' + key, d.editNotas || 0);
                 setF('histEditM-' + key, d.editMoedas || 0);
