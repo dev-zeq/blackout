@@ -2607,7 +2607,7 @@ A antiga opção "VINCULO" (o próprio funcionário declara o vínculo) **sai do
 
 **Falta:** revisão dos textos (EMPREGADOR + CONTRATANTE) pelo usuário + aprovação para publicar.
 
-## Novo serviço "Simulador de Valores" (2026-08-31) — NÃO publicado
+## Novo serviço "Simulador de Valores" (2026-08-31) — **PUBLICADO** (`main` → lanblackout.com)
 
 Serviço nativo novo no painel, sem backend, para simular o parcelamento de um valor solicitado de 1x a 12x. Só `paineldecontrole/index.html`, sem migração, sem tocar em nenhum módulo existente.
 
@@ -2637,4 +2637,4 @@ Fórmulas originais **reproduzidas 1:1 em JS, sem alterar nada na planilha nem n
 
 **Testado (static server, app forçado visível — sem senha da equipe):** sem `SyntaxError` (só o 404 estático pré-existente). Card do menu na posição certa. Digitar "1500,00" → 12 linhas 1x–12x com parcela e total corretos (conferidos contra a planilha), botão habilita; limpar → estado inicial + botão desabilita. Prévia em tela (mobile 375px): as 3 colunas cabem sem corte inclusive com R$ 87.654,32. Exportar → **PNG exatamente 1080×1920 (ratio 0,5625 = 9:16)** com o card branco centralizado, margens seguras, as 12 linhas inteiras e legíveis, cabeçalho/valor/rodapé; testado com valores de R$ 300 a R$ 87.654,32 — sempre cabe sem corte; nome `simulacao-blackout-<valor>.png`; botão restaura. **Amostragem de pixels do PNG confirmou:** linhas ímpares `rgb(255,255,255)`, linhas pares `rgb(237,237,237)` = `#ededed`; nenhum resquício do cinza `#999` que o `box-shadow` causava. Screenshots (prévia + arte de story) entregues.
 
-**Falta:** teste ao vivo logado no painel real + aprovação para publicar.
+**Publicado** a pedido do usuário (commit único em `main`, mudança 100% aditiva: +295 linhas, 0 remoções). Teste ao vivo logado no painel real ainda não feito (só static server + amostragem de pixels do PNG).
