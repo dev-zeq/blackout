@@ -6848,7 +6848,10 @@
             CONTRATO_CV_VEICULO: 'contrato-form.html',
             CONTRATO_CV_IMOVEL: 'contrato-form.html',
             CONTRATO_LOCACAO_IMOVEL: 'contrato-form.html',
-            DECLARACAO_AUTONOMO: 'declaracao-autonomo-form.html',
+            // Declaração de Trabalho unificada (2026-08-30) — os dois tipos abrem
+            // o mesmo formulário; ele infere o cenário do registro (AUTONOMO /
+            // VINCULO / EMPREGADOR) na hora de carregar pra edição.
+            DECLARACAO_AUTONOMO: 'declaracao-trabalho-form.html',
             DECLARACAO_TRABALHO: 'declaracao-trabalho-form.html',
             DECLARACAO_RESIDENCIA: 'declaracao-residencia-form.html',
             DECLARACAO_UNIAO_ESTAVEL: 'declaracao-uniao-estavel-form.html',
@@ -7057,6 +7060,11 @@
                 container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum contrato arquivado ainda</div></div>';
                 return;
             }
+            // O Histórico inicia vazio: só lista resultados quando há busca por texto.
+            if (!histBusca.texto.trim()) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div>Digite algo na busca para ver ${totais !== 1 ? 'os' : 'o'} ${totais} contrato${totais !== 1 ? 's' : ''} arquivado${totais !== 1 ? 's' : ''}</div></div>`;
+                return;
+            }
             if (lista.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div>Nenhum contrato encontrado para a busca</div></div>';
                 return;
@@ -7218,6 +7226,11 @@
                     c.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum ${cfg.textoItem} arquivado ainda</div></div>`;
                     return;
                 }
+                // O Histórico inicia vazio: só lista resultados quando há busca por texto.
+                if (!st.texto.trim()) {
+                    c.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div>Digite algo na busca para ver ${totais !== 1 ? 'os' : 'o'} ${totais} ${cfg.textoItem}${totais !== 1 ? 's' : ''} arquivado${totais !== 1 ? 's' : ''}</div></div>`;
+                    return;
+                }
                 if (lista.length === 0) {
                     c.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div>Nenhum ${cfg.textoItem} encontrado para a busca</div></div>`;
                     return;
@@ -7352,14 +7365,22 @@
                     // (pedido do usuário, 2026-08-25) — a redação muda conforme
                     // é o próprio declarante ou um terceiro quem vai residir no
                     // imóvel, então não dá pra ter um modelo genérico só. Os
-                    // outros 3 tipos abaixo continuam com `tipoModelo` (um único
+                    // outros tipos abaixo continuam com `tipoModelo` (um único
                     // modelo cada), sem nenhuma mudança de comportamento.
                     { label: '🏠 Declaração de Residência', url: 'declaracao-residencia-form.html', modelosEmBranco: [
                         { tipo: 'DECLARACAO_RESIDENCIA_PROPRIO', label: '📄 Modelo — Para mim' },
                         { tipo: 'DECLARACAO_RESIDENCIA_TERCEIROS', label: '📄 Modelo — Para terceiros' },
                     ] },
-                    { label: '📝 Declaração de Trabalho Autônomo', url: 'declaracao-autonomo-form.html', tipoModelo: 'DECLARACAO_AUTONOMO' },
-                    { label: '📝 Declaração de Trabalho para Empresa', url: 'declaracao-trabalho-form.html', tipoModelo: 'DECLARACAO_TRABALHO' },
+                    // Declaração de Trabalho unificada (2026-08-30) — um link só;
+                    // o cenário (Autônomo / Vínculo com empresa / Empregador) é
+                    // escolhido dentro do formulário (declaracao-trabalho-form.html).
+                    // 2 modelos em branco: o de Autônomo (chave DECLARACAO_AUTONOMO)
+                    // e o de Empregador (chave DECLARACAO_TRABALHO), os dois já
+                    // existentes em MODELOS_EM_BRANCO.
+                    { label: '📝 Declaração de Trabalho', url: 'declaracao-trabalho-form.html', modelosEmBranco: [
+                        { tipo: 'DECLARACAO_AUTONOMO', label: '📄 Modelo — Autônomo' },
+                        { tipo: 'DECLARACAO_TRABALHO', label: '📄 Modelo — Empregador' },
+                    ] },
                     { label: '💍 Declaração de União Estável', url: 'declaracao-uniao-estavel-form.html', tipoModelo: 'DECLARACAO_UNIAO_ESTAVEL' },
                 ],
             },
@@ -8196,6 +8217,17 @@
         }
 
         const TIPOS = {
+            // ===== Declaração de Trabalho unificada (2026-08-30) =====
+            // Um formulário só (declaracao-trabalho-form.html) com 3 cenários:
+            //   AUTONOMO   -> tipo_contrato DECLARACAO_AUTONOMO
+            //   VINCULO / EMPREGADOR -> tipo_contrato DECLARACAO_TRABALHO
+            // Discriminador: especifico.cenario. Campos padronizados (funcao/dias/
+            // hora_inicio/hora_fim/empresa_*) com FALLBACK pros nomes antigos, pra
+            // registro salvo antes da unificação continuar formatando igual.
+            //   funcao      <- e.funcao || e.profissao || a.profissao
+            //   dias        <- e.dias || e.periodo || e.dias_semana
+            //   hora_inicio <- e.hora_inicio || e.horario_inicio || e.horario_entrada
+            //   hora_fim    <- e.hora_fim || e.horario_fim || e.horario_saida
             DECLARACAO_AUTONOMO: {
                 titulo: 'DECLARAÇÃO',
                 papeis: ['declarante'],
@@ -8203,7 +8235,11 @@
                     const dados = d.dados || {};
                     const a = dados.pessoa_a || {};
                     const e = dados.especifico || {};
-                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(e.funcao || '')}</b>, de forma autônoma, ${escapeHtml(e.periodo || '')}, no horário das ${escapeHtml(e.horario_inicio || '')} às ${escapeHtml(e.horario_fim || '')} horas.</p>`;
+                    const funcao = e.funcao || e.profissao || a.profissao || '';
+                    const dias = e.dias || e.periodo || e.dias_semana || '';
+                    const hIni = e.hora_inicio || e.horario_inicio || e.horario_entrada || '';
+                    const hFim = e.hora_fim || e.horario_fim || e.horario_saida || '';
+                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(funcao)}</b>, de forma autônoma, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                     if (e.informar_renda === 'SIM' && e.renda_mensal) {
                         corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                     }
@@ -8220,7 +8256,55 @@
                     const dados = d.dados || {};
                     const a = dados.pessoa_a || {};
                     const e = dados.especifico || {};
-                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(a.profissao || '')}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(e.dias_semana || '')}, no horário das ${escapeHtml(e.horario_entrada || '')} às ${escapeHtml(e.horario_saida || '')} horas.</p>`;
+                    const funcao = e.funcao || e.profissao || a.profissao || '';
+                    const dias = e.dias || e.periodo || e.dias_semana || '';
+                    const hIni = e.hora_inicio || e.horario_inicio || e.horario_entrada || '';
+                    const hFim = e.hora_fim || e.horario_fim || e.horario_saida || '';
+
+                    // Cenário EMPREGADOR: o declarante é o dono da empresa e declara
+                    // o vínculo de um funcionário (dados.pessoa_b). Redação em 1ª
+                    // pessoa do empregador, baseada no modelo em branco já existente
+                    // (MODELOS_EM_BRANCO.DECLARACAO_TRABALHO). `pessoa_a` não tem
+                    // endereço nesse cenário, então qualificar() já não anexa a
+                    // cláusula de residência — a empresa é descrita à parte.
+                    if (e.cenario === 'EMPREGADOR') {
+                        const f = dados.pessoa_b || {};
+                        const empNome = escapeHtml(e.empresa_nome || '');
+                        const empEnd = e.empresa_endereco
+                            ? `situada na ${escapeHtml(e.empresa_endereco)}, bairro ${escapeHtml(e.empresa_bairro || '')}, na cidade de ${escapeHtml(e.empresa_cidade || '')}/${escapeHtml(e.empresa_estado || '')}, `
+                            : '';
+                        let corpo = `<p>Eu, ${qualificar(a)}, proprietári${g(a.genero, 'o', 'a')} da empresa <b>${empNome}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${empEnd}DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha em minha empresa exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                        if (e.informar_renda === 'SIM' && e.renda_mensal) {
+                            corpo += `<p>Declaro, ainda, que o(a) referido(a) funcionário(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                        }
+                        corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                        corpo += `<p>${dataExtenso()}.</p>`;
+                        corpo += assinatura(a);
+                        return corpo;
+                    }
+
+                    // Cenário CONTRATANTE ("Não tenho empresa"): o declarante é
+                    // pessoa física, sem empresa/CNPJ, e declara que contratou
+                    // alguém (dados.pessoa_b) para trabalhar para si. `pessoa_a`
+                    // TEM endereço aqui (o residencial do contratante), então
+                    // qualificar() já anexa a cláusula de residência dele — não há
+                    // endereço de local de trabalho.
+                    if (e.cenario === 'CONTRATANTE') {
+                        const f = dados.pessoa_b || {};
+                        let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha para mim, exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                        if (e.informar_renda === 'SIM' && e.renda_mensal) {
+                            corpo += `<p>Declaro, ainda, que o(a) referido(a) trabalhador(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                        }
+                        corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                        corpo += `<p>${dataExtenso()}.</p>`;
+                        corpo += assinatura(a);
+                        return corpo;
+                    }
+
+                    // Cenário VINCULO (e registros antigos sem `cenario`): o próprio
+                    // trabalhador declara o vínculo — redação em 1ª pessoa dele,
+                    // idêntica à de antes da unificação.
+                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(funcao)}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                     if (e.informar_renda === 'SIM' && e.renda_mensal) {
                         corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                     }
@@ -10432,6 +10516,11 @@
             selHistCurriculos.definirListaAtual(lista.map(c => c.id));
             if (base.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum currículo arquivado ainda</div></div>';
+                return;
+            }
+            // O Histórico inicia vazio: só lista resultados quando há busca por texto.
+            if (!histCurriculoTexto.trim()) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div>Digite algo na busca para ver ${base.length !== 1 ? 'os' : 'o'} ${base.length} currículo${base.length !== 1 ? 's' : ''} arquivado${base.length !== 1 ? 's' : ''}</div></div>`;
                 return;
             }
             if (lista.length === 0) {

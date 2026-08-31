@@ -2525,3 +2525,84 @@ Pedido: o formato de currículo gerado por IA não será mais usado na produçã
 **Testes (static server):** sem `SyntaxError`; `regerarComIA`/`gerarComIA`/`cvHeaderHtml`/`markdownSimplesParaHtml` = `undefined`/removidas; `abrirFormatado` agora com aridade 1; `#formatadoBtnRegerar` fora do DOM; nenhuma referência viva (fora de comentário) a símbolo de IA. Cards de currículo (lista e Histórico) sem 🤖 — só 🖨️/📄/(✅ ou ↩️)/📥/🗑️. 📄 "Formatado" abre, mostra "⏳ Preparando currículo…", roda a revisão e renderiza o template (`.cv2-*`, ~2.4k chars); botão Imprimir aparece; `printCurriculo()` popula `#printArea` com `.cv2-print-page` e chama `window.print`. Ficha + foto ok. Declarações "Formatar" ok (regressão). Screenshot entregue.
 
 **Falta:** aprovação do usuário para publicar (empilhado com os passos anteriores).
+
+## Históricos padronizados: iniciam vazios, só listam com busca por texto (2026-08-30) — NÃO publicado
+
+Pedido: os 4 históricos padronizados (Contratos, Declarações/Procurações, Prestação de Serviço, Currículos) devem **iniciar vazios** e só mostrar resultados quando o usuário digitar algo na **busca por texto**. Não alterar pendentes, arquivar, excluir, desarquivar nem formulários. Manter a normalização de CPF/CNPJ na busca.
+
+Só `paineldecontrole/index.html`, sem migração. Em cada uma das 3 funções de render (`renderHistoricoContratos`, o `render()` da fábrica `criarHistoricoDeclPend` — que serve histDeclProc e histPrestador — e `renderHistoricoCurriculos`), **depois** do check "0 arquivados no total" e **antes** de montar a lista, entra um guard novo: se o texto da busca (`.trim()`) estiver vazio → mostra `empty-state` "🔍 Digite algo na busca para ver o(s) N … arquivado(s)" e `return`. O contador do cabeçalho continua mostrando o total de arquivados (pra pessoa saber que há registros). Digitar → renderiza normalmente (mesmo filtro de antes, incl. CPF/CNPJ por dígitos via `histNormalizaCpf`/`_hdocs`); apagar / só espaços → volta ao estado vazio.
+
+Comportamento definido: o `<select>` de tipo (Contratos e Decl/Proc) **sozinho não revela a lista** — precisa de texto na busca. (Se quiser que o filtro de tipo também dispare, é um ajuste de 1 condição.)
+
+**Testado (static server + 3 linhas ARQUIVADO de teste em `declaracoes_pendentes`, apagadas no fim; 12 currículos ARQUIVADO reais de produção usados só pra leitura):**
+- Os 4 históricos abrem com 0 cards + "Digite algo na busca…" e o contador com o total real (1 / 1 / 1 / 12).
+- Digitar texto → lista os correspondentes (contrato 1, decl 1, prestação 1, currículos 12 com "silva" → 2).
+- Busca por CPF com máscara ("111.222.333-44") e por dígitos ("999888777", "12312312312") → casa (normalização intacta).
+- Só espaços / apagar a busca → volta pro estado vazio.
+- `<select>` de tipo sem texto → segue vazio.
+- Pendentes (Contratos 0, Decl/Proc 1), lista de trabalho de currículos, arquivar/desarquivar/excluir, formulários e links: sem alteração. Sem `SyntaxError`.
+- Concordância do texto ("ver **o** 1 …", "ver **os** 12 …").
+
+Produção intocada: `declaracoes_pendentes` = 1×PENDENTE; `curriculos` = 12×ARQUIVADO (estado real do usuário, não mexido).
+
+**Falta:** aprovação para publicar.
+
+## Formulário unificado de Declaração de Trabalho (Autônomo + Empresa) (2026-08-30) — NÃO publicado
+
+Funde os 2 formulários (`declaracao-autonomo-form.html` + `declaracao-trabalho-form.html`) num só, fluxo dinâmico no padrão da Declaração de Residência: 1ª etapa escolhe o cenário, `buildSteps()` monta o resto. **Sem migração** (0 registros de qualquer dos 2 tipos hoje). Sem novo `tipo_contrato`.
+
+**Arquivos alterados (4):**
+- `paineldecontrole/declaracao-trabalho-form.html` — **reescrito** como formulário unificado. `s` novo (campos padronizados). Etapas por cenário:
+  - AUTONOMO: escolha → Seus dados → Seu endereço → Sua atividade → Revisão (5) → `tipo_contrato DECLARACAO_AUTONOMO`, `especifico.cenario='AUTONOMO'`.
+  - VINCULO: escolha → Seus dados → Seu endereço → Empresa onde trabalha (nome/CNPJ) → Dados da atividade (função/dias/horários/renda) → Revisão (6) → `DECLARACAO_TRABALHO`, `cenario='VINCULO'`.
+  - EMPREGADOR: escolha → Seus dados (responsável) → Empresa (nome/CNPJ/endereço da empresa) → Dados do funcionário (nome/CPF/RG → `pessoa_b`) → Vínculo do funcionário (função/dias/horários, **sem renda**) → Revisão (6) → `DECLARACAO_TRABALHO`, `cenario='EMPREGADOR'`.
+  - `carregarParaEdicao` infere o cenário: `especifico.cenario` → senão `DECLARACAO_AUTONOMO`→AUTONOMO / `pessoa_b`→EMPREGADOR / senão VINCULO. Aceita os 2 `tipo_contrato`. Fallback de nome de campo em todos os pontos.
+  - `?cenario=AUTONOMO|VINCULO|EMPREGADOR` pré-seleciona a pílula (usado pelo redirect); `?editId=` = modo edição.
+- `paineldecontrole/declaracao-autonomo-form.html` — **virou redirect** (`location.replace`) para `declaracao-trabalho-form.html?cenario=AUTONOMO` (ou `?editId=` repassado). Não apagado.
+- `paineldecontrole/index.html`:
+  - `DECL_PROC_CATEGORIAS.declaracoes.links`: os 2 itens (Autônomo + Empresa) → **1** `{ label: '📝 Declaração de Trabalho', url: 'declaracao-trabalho-form.html', modelosEmBranco: [{tipo:'DECLARACAO_AUTONOMO',label:'📄 Modelo — Autônomo'}, {tipo:'DECLARACAO_TRABALHO',label:'📄 Modelo — Empregador'}] }`.
+  - `EDICAO_FORMULARIO.DECLARACAO_AUTONOMO`: `declaracao-autonomo-form.html` → `declaracao-trabalho-form.html`.
+  - `TIPOS.DECLARACAO_AUTONOMO.corpo()` — nomes padronizados + fallback (`e.funcao||e.profissao||a.profissao`, `e.dias||e.periodo||e.dias_semana`, `e.hora_inicio||e.horario_inicio||e.horario_entrada`, `e.hora_fim||e.horario_fim||e.horario_saida`). Redação inalterada.
+  - `TIPOS.DECLARACAO_TRABALHO.corpo()` — ramifica por `e.cenario`: **EMPREGADOR** = redação em 1ª pessoa do empregador, baseada no `MODELOS_EM_BRANCO.DECLARACAO_TRABALHO` já existente (proprietário da empresa X, CNPJ Y, situada em Z, declara que Sr(a). [pessoa_b] trabalha em minha empresa exercendo a função de …); **VINCULO / registro antigo** = redação em 1ª pessoa do trabalhador, idêntica à de antes, com nomes padronizados + fallback.
+  - `MODELOS_EM_BRANCO` — **não alterado** (os 2 blanks Autônomo/Empregador continuam iguais).
+
+**Campos novos criados:** `especifico.cenario` (AUTONOMO/VINCULO/EMPREGADOR); no cenário EMPREGADOR: `dados.pessoa_b` (nome/cpf/rg do funcionário) e `especifico.empresa_endereco`/`empresa_rua`/`empresa_complemento`/`empresa_bairro`/`empresa_cidade`/`empresa_estado`. Padronização: `especifico.funcao`, `especifico.dias`, `especifico.hora_inicio`, `especifico.hora_fim` (substituem `funcao`/`periodo`/`horario_inicio`/`horario_fim` do autônomo e o `pessoa_a.profissao` como função + `dias_semana`/`horario_entrada`/`horario_saida` do de empresa — todos lidos por fallback). `pessoa_a.profissao` continua sendo a qualificação civil, separado de `especifico.funcao`.
+
+**Compatibilidade / dados antigos:** nada apagado. `DECLARACAO_AUTONOMO` e `DECLARACAO_TRABALHO` continuam nas listas, labels, whitelist do Histórico de Decl/Proc (`<select>` com os 2), `EDICAO_FORMULARIO` e `TIPOS`. CHECK do `tipo_contrato` intocado. Registros antigos formatam e abrem pra edição via fallback (testado). 0 registros reais desses tipos hoje; os testes usaram linhas fictícias, todas apagadas ao fim.
+
+**Testes:** os 3 cenários preenchidos com dados fictícios (avançar/voltar, só os campos do cenário aparecendo, revisão, `montarRegistro` capturado, tela de sucesso). Texto gerado conferido nos 3 (ver relatório na conversa). Registros no formato ANTIGO (sem `cenario`, nomes antigos) formatam igual via fallback; edição de um `DECLARACAO_AUTONOMO` antigo abre o form unificado com cenário AUTONOMO; edição de um `DECLARACAO_TRABALHO` antigo abre com cenário VINCULO e todos os campos carregados por fallback. Link único no painel + os 2 modelos em branco abrindo. Sem `SyntaxError`. `declaracoes_pendentes` de volta a 1×PENDENTE.
+
+**Falta:** revisão do texto do cenário EMPREGADOR pelo usuário + aprovação para publicar.
+
+### Renda/salário nos 3 cenários da Declaração de Trabalho (2026-08-30) — NÃO publicado
+
+Ajuste pedido: VINCULO e EMPREGADOR também precisam da opção de renda/salário no formulário — "Mencionar" (informa o valor) x "Ocultar".
+
+`declaracao-trabalho-form.html`: helper `campoRendaHtml(pergunta)` (pílulas **Mencionar** / **Ocultar** + `#condRenda`) usado nas 3 etapas finais. `stepAtividade` (AUTONOMO/VINCULO) — pergunta "Quer mencionar sua renda/seu salário mensal…"; `stepVinculo` (EMPREGADOR) — ganhou o bloco "Quer mencionar o salário mensal do funcionário na declaração?". `renderCondRenda()` rotula o campo por cenário ("Renda mensal (R$)" / "Salário mensal (R$)" / "Salário mensal do funcionário (R$)"). `saveCurrentStep` do `stepVinculo` passou a salvar `informar_renda`/`renda_mensal`; `montarRegistro` grava `especifico.informar_renda`/`renda_mensal` sempre (os 3 cenários); `stepRevisao` do EMPREGADOR mostra "Salário do funcionário".
+
+`index.html` — `TIPOS.DECLARACAO_TRABALHO.corpo()`, ramo EMPREGADOR: quando `informar_renda === 'SIM'`, acrescenta "Declaro, ainda, que o(a) referido(a) funcionário(a) percebe salário mensal de R$ X." (VINCULO e AUTONOMO mantêm "aufiro renda mensal média de R$ X").
+
+Testado (static server + linhas fictícias apagadas): EMPREGADOR com "Mencionar" → campo "Salário mensal do funcionário (R$)" aparece, revisão mostra "Salário do funcionário R$ 1800", registro grava `informar_renda:'SIM'`/`renda_mensal:'1800'`, texto sai com a frase do salário. VINCULO com salário → texto com "aufiro renda mensal média de R$ 3200" (inalterado). Sem `SyntaxError`. `declaracoes_pendentes` de volta a 1×PENDENTE.
+
+### 3 opções da 1ª etapa da Declaração de Trabalho + cenário "NÃO TENHO EMPRESA" (2026-08-30) — NÃO publicado
+
+Ajuste só na lógica/apresentação inicial do formulário unificado. As 3 opções da 1ª pergunta passam a ser exatamente:
+1. **SOU AUTÔNOMO** — declarar a própria atividade (sem destaque).
+2. **TENHO EMPRESA** — declarar que alguém trabalha para mim; tenho empresa e CNPJ; informo os dados da empresa + os da pessoa (destaque visual).
+3. **NÃO TENHO EMPRESA** — declarar que alguém trabalha para mim; sem empresa nem CNPJ, mas contratei alguém (destaque visual).
+
+A antiga opção "VINCULO" (o próprio funcionário declara o vínculo) **sai do seletor**. O código de VINCULO fica só para compat de edição/formatação de eventuais registros antigos.
+
+**`declaracao-trabalho-form.html`:**
+- CSS `.opt/.opt-card/.opt-titulo/.opt-desc` + `.opt-destaque` (borda/realce em verde nas opções 2 e 3) e `.opt input:checked + .opt-card` (opção marcada).
+- `CENARIO_OPCOES` (array) substitui `CENARIOS`; `stepCenario()` renderiza cartões de rádio com título + descrição; `nomePessoaContratada()` → "trabalhador" no CONTRATANTE, senão "funcionário".
+- `buildSteps()`: **CONTRATANTE** = escolha → Seus dados (contratante) → Seu endereço (residencial do contratante, com aviso "não é o endereço do local de trabalho") → Dados do trabalhador (→ `pessoa_b`) → Vínculo do trabalhador (função/dias/horários/renda) → Revisão (6). **Sem etapa de empresa e sem endereço de local de trabalho.**
+- `stepDados` — cabeçalho "Seus dados (contratante)"; sem campo Profissão (igual EMPREGADOR). `renderCondRenda` — rótulo "Salário mensal do trabalhador (R$)". `stepVinculo`/`stepFuncionario` — rótulos com "trabalhador". `stepRevisao` — ramo CONTRATANTE ("Cenário: Contratante (sem empresa)", "Endereço do contratante", rótulos "Trabalhador").
+- `montarRegistro` — CONTRATANTE: `profissao` nulo; endereço residencial vai em `pessoa_a` (como AUTONOMO); `dados.pessoa_b` = nome/cpf/rg do trabalhador; **não grava** campos de empresa. `especifico.cenario='CONTRATANTE'`, `tipo_contrato='DECLARACAO_TRABALHO'`.
+- `carregarParaEdicao` — infere cenário: `especifico.cenario` → senão `DECLARACAO_AUTONOMO`→AUTONOMO / `pessoa_b` com `empresa_nome|empresa_endereco`→EMPREGADOR / `pessoa_b` sem empresa→CONTRATANTE / senão VINCULO. `?cenario=CONTRATANTE` também aceito.
+
+**`index.html`** — `TIPOS.DECLARACAO_TRABALHO.corpo()`: novo ramo `e.cenario === 'CONTRATANTE'` — redação em 1ª pessoa do contratante pessoa física: "Eu, [qualificação com endereço residencial], DECLARO … que o(a) Sr(a). [pessoa_b] {RG} {CPF}, trabalha para mim, exercendo a função de …, [dias], no horário das … às … horas." + se `informar_renda === 'SIM'`: "Declaro, ainda, que o(a) referido(a) trabalhador(a) percebe salário mensal de R$ X." + fecho padrão + data + assinatura. EMPREGADOR e VINCULO inalterados.
+
+**Testes (static server + linha fictícia apagada):** seletor mostra as 3 opções com destaque nas 2 últimas; fluxo CONTRATANTE completo — 6 etapas, sem etapa de empresa, aviso no endereço, rótulos "trabalhador", campo de salário, revisão coerente. Texto gerado via Formatar do painel conferido (ver conversa). AUTONOMO e EMPREGADOR continuam roteando certo (Seus dados / Seus dados (responsável pela empresa)). Sem `SyntaxError`. `declaracoes_pendentes` de volta a 1×PENDENTE.
+
+**Falta:** revisão dos textos (EMPREGADOR + CONTRATANTE) pelo usuário + aprovação para publicar.

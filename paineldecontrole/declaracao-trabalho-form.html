@@ -45,13 +45,31 @@
     textarea { resize: vertical; min-height: 70px; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
     .radio-group, .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-group.stack { flex-direction: column; }
     .radio-pill { flex: 1 1 auto; min-width: 90px; }
+    .radio-group.stack .radio-pill { flex: 1 1 100%; }
     .radio-pill input { position: absolute; opacity: 0; pointer-events: none; }
     .radio-pill .pill-label {
         display: block; text-align: center; padding: 11px 10px; border-radius: 12px; border: 1px solid var(--border);
         background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .12s;
     }
+    .radio-group.stack .pill-label { text-align: left; }
     .radio-pill input:checked + .pill-label { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+    /* Cartões da 1ª pergunta (escolha do cenário) — título + descrição, com
+       destaque visual em "TENHO EMPRESA" e "NÃO TENHO EMPRESA". */
+    .opt-group { display: flex; flex-direction: column; gap: 10px; }
+    .opt { position: relative; }
+    .opt input { position: absolute; opacity: 0; pointer-events: none; }
+    .opt .opt-card {
+        display: block; padding: 14px 14px; border-radius: 14px; border: 1px solid var(--border);
+        background: var(--surface-2); cursor: pointer; transition: all .12s;
+    }
+    .opt .opt-titulo { display: block; font-size: 13.5px; font-weight: 800; letter-spacing: .3px; color: var(--text); text-transform: uppercase; }
+    .opt .opt-desc { display: block; font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.45; }
+    .opt.opt-destaque .opt-card { border-color: var(--accent); background: rgba(34,197,94,0.06); }
+    .opt.opt-destaque .opt-titulo { color: var(--accent-bright); }
+    .opt input:checked + .opt-card { border-color: var(--accent-bright); background: var(--accent-dim); box-shadow: 0 0 0 1px var(--accent-bright) inset; }
+    .opt input:checked + .opt-card .opt-titulo { color: var(--accent-bright); }
     .nav-row { display: flex; gap: 10px; margin-top: 22px; }
     .btn { flex: 1; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; }
     .btn-next { background: linear-gradient(135deg, var(--accent-bright), var(--accent)); color: #05170c; box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
@@ -80,7 +98,7 @@
             <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
         </svg>
         <h1>Declaração de Trabalho</h1>
-        <p>Preencha seus dados e os da empresa pra gente montar sua declaração.</p>
+        <p>Escolha o que você precisa declarar e a gente monta o documento.</p>
     </div>
 
     <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
@@ -96,13 +114,41 @@ const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Formulário unificado de Declaração de Trabalho (2026-08-30) — funde os antigos
+// "Trabalho Autônomo" e "Trabalho para Empresa" num fluxo dinâmico só, no mesmo
+// padrão da Declaração de Residência: 1ª pergunta escolhe o cenário, o resto do
+// wizard é montado conforme a escolha (buildSteps()).
+//   AUTONOMO   -> autônomo declara a própria atividade  (tipo_contrato DECLARACAO_AUTONOMO)
+//   VINCULO    -> funcionário declara vínculo c/ empresa (tipo_contrato DECLARACAO_TRABALHO)
+//   EMPREGADOR -> empresa declara que fulano trabalha lá (tipo_contrato DECLARACAO_TRABALHO)
+// Discriminador fino: dados.especifico.cenario. Campos padronizados:
+// funcao / dias / hora_inicio / hora_fim / empresa_nome / empresa_cnpj.
+// pessoa_a.profissao continua separado de especifico.funcao.
 const s = {
+    cenario: '',
+    // pessoa_a — declarante (autônomo, funcionário ou responsável pela empresa)
     nome: '', cpf: '', rg: '', genero: '', estado_civil: '', nacionalidade: 'Brasileiro(a)', profissao: '',
+    // endereço: residencial do declarante (AUTONOMO/VINCULO) OU da empresa (EMPREGADOR)
     rua: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado: '',
-    tipo_declaracao: '', empresa_nome: '', empresa_cnpj: '',
-    dias_semana: '', horario_entrada: '', horario_saida: '',
+    // empresa (VINCULO/EMPREGADOR)
+    empresa_nome: '', empresa_cnpj: '',
+    // funcionário (EMPREGADOR) — vira dados.pessoa_b
+    func_nome: '', func_cpf: '', func_rg: '',
+    // vínculo/atividade (todos os cenários)
+    funcao: '', dias: '', hora_inicio: '', hora_fim: '',
+    // renda (AUTONOMO/VINCULO)
     informar_renda: '', renda_mensal: '',
 };
+
+// Opções da 1ª pergunta. VINCULO continua existindo no código (edição/formatação
+// de eventuais registros antigos), mas NÃO é mais oferecido aqui.
+const CENARIO_OPCOES = [
+    { codigo: 'AUTONOMO',    titulo: 'Sou autônomo',      desc: 'Quero declarar minha própria atividade.', destaque: false },
+    { codigo: 'EMPREGADOR',  titulo: 'Tenho empresa',     desc: 'Quero declarar que uma pessoa trabalha para mim. Tenho empresa e CNPJ — vou informar os dados da empresa e os dados da pessoa que trabalha para ela.', destaque: true },
+    { codigo: 'CONTRATANTE', titulo: 'Não tenho empresa', desc: 'Quero declarar que uma pessoa trabalha para mim. Não tenho empresa nem CNPJ, mas contratei alguém para trabalhar para mim.', destaque: true },
+];
+// Substantivo da pessoa contratada, conforme o cenário (só rótulos de tela e revisão).
+function nomePessoaContratada() { return s.cenario === 'CONTRATANTE' ? 'trabalhador' : 'funcionário'; }
 
 const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -145,9 +191,6 @@ const CIDADES_BAIRROS = {
     'Itajaí': ['Centro', 'Cabeçudas', 'Praia Brava', 'Fazenda', 'Cordeiros', 'São Vicente', 'Barra do Rio', 'Dom Bosco', 'São João', 'Espinheiros', 'Ressacada', 'Salseiros', 'Vila Operária', 'Murta', 'Rio Bonito'],
 };
 const CIDADES_OPTS = [...Object.keys(CIDADES_BAIRROS), 'Outra'];
-// Essas 4 cidades são sempre de SC — o formulário assume o estado sozinho e
-// nem pergunta, pra não travar quem não sabe a sigla. Outras cidades (inclusive
-// "Outra") continuam pedindo o Estado normalmente.
 const CIDADES_SC = ['Camboriú', 'Balneário Camboriú', 'Itapema', 'Itajaí'];
 function cidadeOptions(selected) {
     return '<option value="">Selecione</option>' + CIDADES_OPTS.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
@@ -185,18 +228,12 @@ function renderCondBairroOutro() {
 }
 function cidadeFinal() { return s.cidade === 'Outra' ? s.cidade_outra : s.cidade; }
 function bairroFinal() { return (s.cidade === 'Outra' || s.bairro === '__outro__') ? s.bairro_outro : s.bairro; }
-// Rua e número num campo só (a pessoa já escreve o número junto, ex: "Rua das
-// Flores, 123"; pode deixar só o nome da rua se não houver número) +
-// Complemento, ainda separado, compostos num endereço só na hora de
-// enviar/exibir.
 function enderecoFinal() {
     const rua = (s.rua || '').trim();
     const complemento = (s.complemento || '').trim();
     if (!rua) return '';
     return complemento ? `${rua}, ${complemento}` : rua;
 }
-// Camboriú, Balneário Camboriú, Itapema e Itajaí são sempre SC — nesses casos
-// nem mostra o campo de Estado, já assume a sigla sozinho.
 function estadoForcadoSC() { return CIDADES_SC.includes(s.cidade); }
 function estadoFinal() { return estadoForcadoSC() ? 'SC' : s.estado; }
 function estadoCampoHtml() {
@@ -223,21 +260,39 @@ function carregarCidadeBairro(cidadeSalva, bairroSalvo) {
     }
 }
 
+// ---------- Wizard dinâmico (padrão da Declaração de Residência) ----------
 let stepIndex = 0;
-let steps = [stepDados, stepEndereco, stepEmpresa, stepRevisao];
+
+function buildSteps() {
+    if (s.cenario === 'AUTONOMO')    return [stepCenario, stepDados, stepEnderecoResidencial, stepAtividade, stepRevisao];
+    if (s.cenario === 'EMPREGADOR')  return [stepCenario, stepDados, stepEmpresaCompleta, stepFuncionario, stepVinculo, stepRevisao];
+    // NÃO TENHO EMPRESA: contratante pessoa física. Sem empresa/CNPJ e SEM
+    // endereço do local de trabalho — só os dados pessoais e o endereço do
+    // próprio contratante (residencial).
+    if (s.cenario === 'CONTRATANTE') return [stepCenario, stepDados, stepEnderecoResidencial, stepFuncionario, stepVinculo, stepRevisao];
+    // VINCULO — não é mais oferecido no stepCenario; mantido só pra compat de
+    // registro antigo (edição/formatação).
+    if (s.cenario === 'VINCULO')     return [stepCenario, stepDados, stepEnderecoResidencial, stepEmpresaBasica, stepAtividade, stepRevisao];
+    return [stepCenario];
+}
+let steps = buildSteps();
 
 function render() {
+    steps = buildSteps();
+    if (stepIndex > steps.length - 1) stepIndex = steps.length - 1;
+    if (stepIndex < 0) stepIndex = 0;
     const total = steps.length;
-    document.getElementById('progressFill').style.width = Math.round((stepIndex / (total - 1)) * 100) + '%';
-    document.getElementById('stepLabel').textContent = `Etapa ${stepIndex + 1} de ${total}`;
-    const card = document.getElementById('cardArea');
-    card.innerHTML = steps[stepIndex]();
+    const denom = Math.max(1, total - 1);
+    document.getElementById('progressFill').style.width = Math.round((stepIndex / denom) * 100) + '%';
+    document.getElementById('stepLabel').textContent = total > 1 ? `Etapa ${stepIndex + 1} de ${total}` : 'Etapa 1';
+    document.getElementById('cardArea').innerHTML = steps[stepIndex]();
     bindStepEvents();
 }
 function goNext() {
     saveCurrentStep();
     const err = validateCurrentStep();
     if (err) { showError(err); return; }
+    steps = buildSteps();
     if (stepIndex < steps.length - 1) { stepIndex++; render(); window.scrollTo(0, 0); }
 }
 function goBack() { if (stepIndex > 0) { stepIndex--; render(); window.scrollTo(0, 0); } }
@@ -248,10 +303,30 @@ function showError(msg) {
 function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
 function checkedVal(name) { const e = document.querySelector(`input[name="${name}"]:checked`); return e ? e.value : ''; }
 
-// ---------- Etapa 1: Dados pessoais (funcionário) ----------
-function stepDados() {
+// ---------- Etapa 0: escolha do cenário ----------
+function stepCenario() {
+    const opcoes = CENARIO_OPCOES.map(o => `
+        <label class="opt${o.destaque ? ' opt-destaque' : ''}">
+            <input type="radio" name="f_cenario" value="${esc(o.codigo)}" ${s.cenario === o.codigo ? 'checked' : ''}>
+            <span class="opt-card">
+                <span class="opt-titulo">${esc(o.titulo)}</span>
+                <span class="opt-desc">${esc(o.desc)}</span>
+            </span>
+        </label>`).join('');
     return `
-    <h2>Seus dados</h2>
+    <h2>O que você precisa declarar?</h2>
+    <div class="field"><div class="opt-group">${opcoes}</div></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row">${stepIndex > 0 ? '<button class="btn btn-back" onclick="window.__goBack()">Voltar</button>' : ''}<button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: dados pessoais do declarante ----------
+function stepDados() {
+    const h = s.cenario === 'EMPREGADOR' ? 'Seus dados (responsável pela empresa)'
+        : (s.cenario === 'CONTRATANTE' ? 'Seus dados (contratante)' : 'Seus dados');
+    const semProfissao = s.cenario === 'EMPREGADOR' || s.cenario === 'CONTRATANTE';
+    return `
+    <h2>${h}</h2>
     <div class="field"><label>Nome completo *</label><input type="text" id="f_nome" value="${esc(s.nome)}"></div>
     <div class="field"><label>CPF *</label><input type="text" id="f_cpf" value="${esc(s.cpf)}" placeholder="000.000.000-00"></div>
     <div class="field"><label>RG</label><input type="text" id="f_rg" value="${esc(s.rg)}"></div>
@@ -262,14 +337,16 @@ function stepDados() {
         <select id="f_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
     <div class="field"><label>Nacionalidade *</label><input type="text" id="f_nacionalidade" value="${esc(s.nacionalidade)}"></div>
+    ${semProfissao ? '' : `<div class="field"><label>Profissão (não obrigatório)</label><input type="text" id="f_profissao" value="${esc(s.profissao)}"></div>`}
     <div id="errorMsg" class="error-msg"></div>
-    <div class="nav-row"><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 
-// ---------- Etapa 2: Endereço ----------
-function stepEndereco() {
+// ---------- Etapa: endereço residencial (AUTONOMO / VINCULO / CONTRATANTE) ----------
+function stepEnderecoResidencial() {
     return `
-    <h2>Endereço</h2>
+    <h2>Seu endereço</h2>
+    ${s.cenario === 'CONTRATANTE' ? '<p class="hint" style="margin:-8px 0 14px;">É o seu endereço (de quem está contratando). Não é o endereço do local de trabalho.</p>' : ''}
     <div class="field"><label>Rua e número *</label><input type="text" id="f_rua" value="${esc(s.rua)}" placeholder="ex: Rua das Flores, 123 (ou só o nome da rua, se não houver número)"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
     <div class="field"><label>Cidade *</label><select id="f_cidade">${cidadeOptions(s.cidade)}</select></div>
@@ -279,20 +356,70 @@ function stepEndereco() {
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 
-// ---------- Etapa 3: Empresa / trabalho ----------
-function stepEmpresa() {
+// ---------- Etapa: empresa onde trabalha (VINCULO — só nome + CNPJ) ----------
+function stepEmpresaBasica() {
     return `
-    <h2>Sobre seu trabalho</h2>
-    <div class="field"><label>Sua profissão/cargo *</label><input type="text" id="f_profissao" value="${esc(s.profissao)}"></div>
+    <h2>Empresa onde trabalha</h2>
     <div class="field"><label>Nome da empresa *</label><input type="text" id="f_empresa_nome" value="${esc(s.empresa_nome)}"></div>
-    <div class="field"><label>CNPJ da empresa</label><input type="text" id="f_empresa_cnpj" value="${esc(s.empresa_cnpj)}" placeholder="00.000.000/0000-00"></div>
-    <div class="field"><label>Quais dias você trabalha? *</label><input type="text" id="f_dias_semana" value="${esc(s.dias_semana)}" placeholder="ex: de segunda à sábado"></div>
-    <div class="field"><label>Horário de entrada *</label><input type="time" id="f_horario_entrada" value="${esc(s.horario_entrada)}"></div>
-    <div class="field"><label>Horário de saída *</label><input type="time" id="f_horario_saida" value="${esc(s.horario_saida)}"></div>
-    <div class="field"><label>Quer informar sua renda mensal na declaração?</label>
-        <div class="radio-group">${pill('f_informar_renda', 'SIM', s.informar_renda === 'SIM')}${pill('f_informar_renda', 'NAO', s.informar_renda === 'NAO', 'Não')}</div>
+    <div class="field"><label>CNPJ da empresa (não obrigatório)</label><input type="text" id="f_empresa_cnpj" value="${esc(s.empresa_cnpj)}" placeholder="00.000.000/0000-00"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: empresa (EMPREGADOR — nome + CNPJ + endereço da empresa) ----------
+function stepEmpresaCompleta() {
+    return `
+    <h2>Empresa</h2>
+    <div class="field"><label>Nome da empresa *</label><input type="text" id="f_empresa_nome" value="${esc(s.empresa_nome)}"></div>
+    <div class="field"><label>CNPJ da empresa *</label><input type="text" id="f_empresa_cnpj" value="${esc(s.empresa_cnpj)}" placeholder="00.000.000/0000-00"></div>
+    <div class="field"><label>Rua e número da empresa *</label><input type="text" id="f_rua" value="${esc(s.rua)}" placeholder="ex: Av. Central, 900"></div>
+    <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
+    <div class="field"><label>Cidade *</label><select id="f_cidade">${cidadeOptions(s.cidade)}</select></div>
+    <div id="condCidade"></div>
+    <div id="cond_estado">${estadoCampoHtml()}</div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: dados do funcionário (EMPREGADOR — vira pessoa_b) ----------
+function stepFuncionario() {
+    const p = nomePessoaContratada();
+    return `
+    <h2>Dados do ${p}</h2>
+    <div class="field"><label>Nome completo *</label><input type="text" id="f_func_nome" value="${esc(s.func_nome)}"></div>
+    <div class="field"><label>CPF *</label><input type="text" id="f_func_cpf" value="${esc(s.func_cpf)}" placeholder="000.000.000-00"></div>
+    <div class="field"><label>RG</label><input type="text" id="f_func_rg" value="${esc(s.func_rg)}"></div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// Bloco "renda/salário" — escolha "Mencionar" (informa o valor) x "Ocultar"
+// (não entra na declaração). Aparece nos 3 cenários: AUTONOMO (renda do
+// autônomo), VINCULO (salário do próprio funcionário) e EMPREGADOR (salário do
+// funcionário declarado). O valor fica em s.renda_mensal (só dígitos), como o
+// resto do fluxo já espera; renderCondRenda() mostra o campo quando "Mencionar".
+function campoRendaHtml(pergunta) {
+    return `
+    <div class="field"><label>${pergunta}</label>
+        <div class="radio-group">${pill('f_informar_renda', 'SIM', s.informar_renda === 'SIM', 'Mencionar')}${pill('f_informar_renda', 'NAO', s.informar_renda === 'NAO', 'Ocultar')}</div>
     </div>
-    <div id="condRenda"></div>
+    <div id="condRenda"></div>`;
+}
+
+// ---------- Etapa: atividade + renda (AUTONOMO / VINCULO) ----------
+function stepAtividade() {
+    const h = s.cenario === 'AUTONOMO' ? 'Sua atividade' : 'Dados da atividade';
+    const funcaoLabel = s.cenario === 'AUTONOMO' ? 'Qual função/atividade você exerce? *' : 'Qual a sua função na empresa? *';
+    const perguntaRenda = s.cenario === 'AUTONOMO'
+        ? 'Quer mencionar sua renda mensal na declaração?'
+        : 'Quer mencionar seu salário mensal na declaração?';
+    return `
+    <h2>${h}</h2>
+    <div class="field"><label>${funcaoLabel}</label><input type="text" id="f_funcao" value="${esc(s.funcao)}" placeholder="${s.cenario === 'AUTONOMO' ? 'ex: Diarista, Pedreiro, Cabeleireira...' : ''}"></div>
+    <div class="field"><label>Quais dias você trabalha? *</label><input type="text" id="f_dias" value="${esc(s.dias)}" placeholder="ex: de segunda a sábado"></div>
+    <div class="field"><label>Horário de ${s.cenario === 'AUTONOMO' ? 'início' : 'entrada'} *</label><input type="time" id="f_hora_inicio" value="${esc(s.hora_inicio)}"></div>
+    <div class="field"><label>Horário de ${s.cenario === 'AUTONOMO' ? 'término' : 'saída'} *</label><input type="time" id="f_hora_fim" value="${esc(s.hora_fim)}"></div>
+    ${campoRendaHtml(perguntaRenda)}
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -300,7 +427,10 @@ function renderCondRenda() {
     const el = document.getElementById('condRenda');
     if (!el) return;
     if (s.informar_renda !== 'SIM') { el.innerHTML = ''; return; }
-    el.innerHTML = `<div class="field"><label>Renda mensal (R$)</label>`
+    const label = s.cenario === 'EMPREGADOR' ? 'Salário mensal do funcionário (R$)'
+        : (s.cenario === 'CONTRATANTE' ? 'Salário mensal do trabalhador (R$)'
+        : (s.cenario === 'VINCULO' ? 'Salário mensal (R$)' : 'Renda mensal (R$)'));
+    el.innerHTML = `<div class="field"><label>${label}</label>`
         + `<input type="text" inputmode="numeric" id="f_renda_mensal" value="${esc(s.renda_mensal)}" placeholder="Ex: 2500">`
         + `<div class="extenso-valor" id="f_renda_mensal_ext">${legendaExtensoTexto(s.renda_mensal)}</div></div>`;
     ligarCampoValorExtenso(
@@ -310,15 +440,46 @@ function renderCondRenda() {
     );
 }
 
-// ---------- Etapa 4: Revisão ----------
+// ---------- Etapa: vínculo do funcionário/trabalhador (EMPREGADOR / CONTRATANTE) ----------
+function stepVinculo() {
+    const p = nomePessoaContratada();
+    return `
+    <h2>Vínculo do ${p}</h2>
+    <div class="field"><label>Função exercida pelo ${p} *</label><input type="text" id="f_funcao" value="${esc(s.funcao)}"></div>
+    <div class="field"><label>Quais dias o ${p} trabalha? *</label><input type="text" id="f_dias" value="${esc(s.dias)}" placeholder="ex: de segunda à sexta"></div>
+    <div class="field"><label>Horário de entrada *</label><input type="time" id="f_hora_inicio" value="${esc(s.hora_inicio)}"></div>
+    <div class="field"><label>Horário de saída *</label><input type="time" id="f_hora_fim" value="${esc(s.hora_fim)}"></div>
+    ${campoRendaHtml(`Quer mencionar o salário mensal do ${p} na declaração?`)}
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+}
+
+// ---------- Etapa: revisão ----------
 function stepRevisao() {
-    const rows = [
-        ['Nome', s.nome], ['CPF', s.cpf],
-        ['Endereço', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoFinal()}`],
-        ['Empresa', s.empresa_nome], ['CNPJ', s.empresa_cnpj || '—'],
-        ['Dias', s.dias_semana], ['Horário', `${s.horario_entrada} às ${s.horario_saida}`],
-        ['Renda mensal', s.informar_renda === 'SIM' ? ('R$ ' + s.renda_mensal) : 'não informada'],
-    ];
+    const rows = [];
+    if (s.cenario === 'EMPREGADOR') {
+        rows.push(['Cenário', 'Empregador declara funcionário']);
+        rows.push(['Empregador', s.nome], ['CPF', s.cpf]);
+        rows.push(['Empresa', s.empresa_nome], ['CNPJ', s.empresa_cnpj || '—']);
+        rows.push(['Endereço da empresa', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoFinal()}`]);
+        rows.push(['Funcionário', s.func_nome], ['CPF do funcionário', s.func_cpf], ['RG do funcionário', s.func_rg || '—']);
+        rows.push(['Função', s.funcao], ['Dias', s.dias], ['Horário', `${s.hora_inicio} às ${s.hora_fim}`]);
+        rows.push(['Salário do funcionário', s.informar_renda === 'SIM' ? ('R$ ' + s.renda_mensal) : 'não informado']);
+    } else if (s.cenario === 'CONTRATANTE') {
+        rows.push(['Cenário', 'Contratante (sem empresa)']);
+        rows.push(['Contratante', s.nome], ['CPF', s.cpf]);
+        rows.push(['Endereço do contratante', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoFinal()}`]);
+        rows.push(['Trabalhador', s.func_nome], ['CPF do trabalhador', s.func_cpf], ['RG do trabalhador', s.func_rg || '—']);
+        rows.push(['Função', s.funcao], ['Dias', s.dias], ['Horário', `${s.hora_inicio} às ${s.hora_fim}`]);
+        rows.push(['Salário do trabalhador', s.informar_renda === 'SIM' ? ('R$ ' + s.renda_mensal) : 'não informado']);
+    } else {
+        rows.push(['Cenário', s.cenario === 'AUTONOMO' ? 'Autônomo' : 'Funcionário de empresa']);
+        rows.push(['Nome', s.nome], ['CPF', s.cpf]);
+        rows.push(['Endereço', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoFinal()}`]);
+        if (s.cenario === 'VINCULO') rows.push(['Empresa', s.empresa_nome], ['CNPJ', s.empresa_cnpj || '—']);
+        rows.push(['Função', s.funcao], ['Dias', s.dias], ['Horário', `${s.hora_inicio} às ${s.hora_fim}`]);
+        rows.push(['Renda mensal', s.informar_renda === 'SIM' ? ('R$ ' + s.renda_mensal) : 'não informada']);
+    }
     return `
     <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
     ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
@@ -327,40 +488,61 @@ function stepRevisao() {
     ${editMode ? `<p style="text-align:center; margin-top:14px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
 }
 
-// ---------- Validação e coleta ----------
+// ---------- Validação e coleta (por identidade da função de etapa) ----------
 function validateCurrentStep() {
-    switch (stepIndex) {
-        case 0:
-            if (!s.nome || !s.cpf || !s.genero || !s.estado_civil || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
-            return null;
-        case 1:
-            if (!s.rua || !cidadeFinal() || !bairroFinal() || !estadoFinal()) return 'Preencha todos os campos obrigatórios (*).';
-            return null;
-        case 2:
-            if (!s.profissao || !s.empresa_nome || !s.dias_semana || !s.horario_entrada || !s.horario_saida) return 'Preencha todos os campos obrigatórios (*).';
-            return null;
-        default: return null;
+    const fn = steps[stepIndex];
+    if (fn === stepCenario) { return s.cenario ? null : 'Selecione uma opção.'; }
+    if (fn === stepDados) {
+        if (!s.nome || !s.cpf || !s.genero || !s.estado_civil || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
+        return null;
     }
+    if (fn === stepEnderecoResidencial) {
+        if (!s.rua || !cidadeFinal() || !bairroFinal() || !estadoFinal()) return 'Preencha todos os campos obrigatórios (*).';
+        return null;
+    }
+    if (fn === stepEmpresaBasica) { return s.empresa_nome ? null : 'Informe o nome da empresa.'; }
+    if (fn === stepEmpresaCompleta) {
+        if (!s.empresa_nome || !s.empresa_cnpj || !s.rua || !cidadeFinal() || !bairroFinal() || !estadoFinal()) return 'Preencha todos os campos obrigatórios (*).';
+        return null;
+    }
+    if (fn === stepFuncionario) { return (s.func_nome && s.func_cpf) ? null : `Preencha o nome e o CPF do ${nomePessoaContratada()}.`; }
+    if (fn === stepAtividade || fn === stepVinculo) {
+        if (!s.funcao || !s.dias || !s.hora_inicio || !s.hora_fim) return 'Preencha todos os campos obrigatórios (*).';
+        return null;
+    }
+    return null;
 }
 function saveCurrentStep() {
-    switch (stepIndex) {
-        case 0:
-            s.nome = val('f_nome'); s.cpf = val('f_cpf'); s.rg = val('f_rg');
-            s.genero = checkedVal('f_genero'); s.estado_civil = val('f_estado_civil'); s.nacionalidade = val('f_nacionalidade');
-            break;
-        case 1:
-            s.rua = val('f_rua'); s.complemento = val('f_complemento');
-            s.cidade = val('f_cidade');
-            if (!estadoForcadoSC()) s.estado = val('f_estado');
-            break;
-        case 2:
-            s.profissao = val('f_profissao'); s.empresa_nome = val('f_empresa_nome'); s.empresa_cnpj = val('f_empresa_cnpj');
-            s.dias_semana = val('f_dias_semana'); s.horario_entrada = val('f_horario_entrada'); s.horario_saida = val('f_horario_saida');
-            s.informar_renda = checkedVal('f_informar_renda'); s.renda_mensal = val('f_renda_mensal');
-            break;
+    const fn = steps[stepIndex];
+    if (fn === stepCenario) { s.cenario = checkedVal('f_cenario'); return; }
+    if (fn === stepDados) {
+        s.nome = val('f_nome'); s.cpf = val('f_cpf'); s.rg = val('f_rg');
+        s.genero = checkedVal('f_genero'); s.estado_civil = val('f_estado_civil'); s.nacionalidade = val('f_nacionalidade');
+        if (document.getElementById('f_profissao')) s.profissao = val('f_profissao');
+        return;
+    }
+    if (fn === stepEnderecoResidencial || fn === stepEmpresaCompleta) {
+        s.rua = val('f_rua'); s.complemento = val('f_complemento');
+        s.cidade = val('f_cidade');
+        if (!estadoForcadoSC()) s.estado = val('f_estado');
+        if (fn === stepEmpresaCompleta) { s.empresa_nome = val('f_empresa_nome'); s.empresa_cnpj = val('f_empresa_cnpj'); }
+        return;
+    }
+    if (fn === stepEmpresaBasica) { s.empresa_nome = val('f_empresa_nome'); s.empresa_cnpj = val('f_empresa_cnpj'); return; }
+    if (fn === stepFuncionario) { s.func_nome = val('f_func_nome'); s.func_cpf = val('f_func_cpf'); s.func_rg = val('f_func_rg'); return; }
+    if (fn === stepAtividade) {
+        s.funcao = val('f_funcao'); s.dias = val('f_dias'); s.hora_inicio = val('f_hora_inicio'); s.hora_fim = val('f_hora_fim');
+        s.informar_renda = checkedVal('f_informar_renda'); s.renda_mensal = val('f_renda_mensal');
+        return;
+    }
+    if (fn === stepVinculo) {
+        s.funcao = val('f_funcao'); s.dias = val('f_dias'); s.hora_inicio = val('f_hora_inicio'); s.hora_fim = val('f_hora_fim');
+        s.informar_renda = checkedVal('f_informar_renda'); s.renda_mensal = val('f_renda_mensal');
+        return;
     }
 }
 function bindStepEvents() {
+    document.querySelectorAll('input[name="f_cenario"]').forEach(r => r.addEventListener('change', () => { s.cenario = checkedVal('f_cenario'); }));
     const selCidade = document.getElementById('f_cidade');
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstado(); });
     renderCondCidade();
@@ -372,29 +554,59 @@ function bindStepEvents() {
 }
 
 // ---------- Envio ----------
+function montarRegistro() {
+    const cenario = s.cenario;
+    const pessoa_a = {
+        nome: s.nome, cpf: s.cpf, rg: s.rg || null, genero: s.genero,
+        estado_civil: s.estado_civil, nacionalidade: s.nacionalidade,
+        profissao: ((cenario === 'EMPREGADOR' || cenario === 'CONTRATANTE') ? null : (s.profissao || null)),
+    };
+    // Endereço: residencial do declarante nos cenários AUTONOMO/VINCULO/CONTRATANTE
+    // (no CONTRATANTE é o endereço de quem contrata, não do local de trabalho);
+    // no EMPREGADOR o endereço coletado é o da empresa (vai pro `especifico`).
+    if (cenario !== 'EMPREGADOR') {
+        Object.assign(pessoa_a, {
+            endereco: enderecoFinal(), rua: s.rua || null, complemento: s.complemento || null,
+            bairro: bairroFinal(), cidade: cidadeFinal(), estado: estadoFinal(),
+        });
+    }
+    const especifico = {
+        cenario,
+        funcao: s.funcao,
+        dias: s.dias,
+        hora_inicio: s.hora_inicio,
+        hora_fim: s.hora_fim,
+    };
+    // Renda/salário — os 3 cenários têm a opção "Mencionar" x "Ocultar".
+    especifico.informar_renda = s.informar_renda || 'NAO';
+    especifico.renda_mensal = s.informar_renda === 'SIM' ? s.renda_mensal : null;
+    if (cenario === 'VINCULO' || cenario === 'EMPREGADOR') {
+        especifico.empresa_nome = s.empresa_nome;
+        especifico.empresa_cnpj = s.empresa_cnpj || null;
+    }
+    if (cenario === 'EMPREGADOR') {
+        especifico.empresa_endereco = enderecoFinal();
+        especifico.empresa_rua = s.rua || null;
+        especifico.empresa_complemento = s.complemento || null;
+        especifico.empresa_bairro = bairroFinal();
+        especifico.empresa_cidade = cidadeFinal();
+        especifico.empresa_estado = estadoFinal();
+    }
+    const dados = { pessoa_a, especifico };
+    if (cenario === 'EMPREGADOR' || cenario === 'CONTRATANTE') {
+        dados.pessoa_b = { nome: s.func_nome, cpf: s.func_cpf, rg: s.func_rg || null };
+    }
+    return {
+        tipo_contrato: cenario === 'AUTONOMO' ? 'DECLARACAO_AUTONOMO' : 'DECLARACAO_TRABALHO',
+        dados,
+    };
+}
+
 async function submitForm() {
     const btn = document.getElementById('btnSubmit');
-    btn.disabled = true; btn.textContent = 'Enviando...';
+    btn.disabled = true; btn.textContent = editMode ? 'Salvando...' : 'Enviando...';
 
-    const registro = {
-        tipo_contrato: 'DECLARACAO_TRABALHO',
-        dados: {
-            pessoa_a: {
-                nome: s.nome, cpf: s.cpf, rg: s.rg || null, genero: s.genero,
-                estado_civil: s.estado_civil, nacionalidade: s.nacionalidade, profissao: s.profissao,
-                endereco: enderecoFinal(), rua: s.rua || null, complemento: s.complemento || null,
-                bairro: bairroFinal(), cidade: cidadeFinal(), estado: estadoFinal(),
-            },
-            especifico: {
-                tipo_declaracao: 'Funcionário trabalha em uma Empresa com CNPJ',
-                empresa_nome: s.empresa_nome, empresa_cnpj: s.empresa_cnpj || null,
-                dias_semana: s.dias_semana,
-                horario_entrada: s.horario_entrada, horario_saida: s.horario_saida,
-                informar_renda: s.informar_renda || 'NAO',
-                renda_mensal: s.informar_renda === 'SIM' ? s.renda_mensal : null,
-            },
-        },
-    };
+    const registro = montarRegistro();
 
     if (editMode) {
         // O formulário público não tem (e não deve ter) a senha de escrita da
@@ -455,13 +667,10 @@ function cancelarEdicao() {
 }
 window.__cancelarEdicao = cancelarEdicao;
 
-// Registro salvo antes do campo único "Rua e número" ainda tinha
-// Rua/Número separados — junta os dois de volta num "Rua e número" só (ex:
-// "Rua das Flores" + "123" -> "Rua das Flores, 123") sem perder o número.
-// Registro salvo antes até da separação Rua/Número/Complemento (versão mais
-// antiga ainda) só tinha o endereço já composto — não dá pra separar com
-// segurança, então joga tudo em "Rua" e deixa Complemento em branco pro
-// usuário ajustar.
+// Registro salvo antes do campo único "Rua e número" ainda tinha Rua/Número
+// separados — junta os dois de volta num "Rua e número" só. Registro ainda mais
+// antigo (antes da separação Rua/Número/Complemento) só tinha o endereço já
+// composto — joga tudo em "Rua" e deixa Complemento em branco pro usuário ajustar.
 function carregarEnderecoSolto(rua, numero, complemento, enderecoComposto) {
     if (rua || numero || complemento) {
         s.rua = numero ? `${rua || ''}${rua ? ', ' : ''}${numero}` : (rua || '');
@@ -473,16 +682,43 @@ function carregarEnderecoSolto(rua, numero, complemento, enderecoComposto) {
 function carregarParaEdicao(row) {
     const dados = row.dados || {};
     const a = dados.pessoa_a || {};
+    const b = dados.pessoa_b || {};
     const e = dados.especifico || {};
+
+    // Cenário: usa especifico.cenario quando existir; senão infere de forma
+    // compatível com registros antigos (DECLARACAO_AUTONOMO -> AUTONOMO;
+    // DECLARACAO_TRABALHO com pessoa_b -> EMPREGADOR; sem pessoa_b -> VINCULO).
+    s.cenario = e.cenario
+        || (row.tipo_contrato === 'DECLARACAO_AUTONOMO'
+            ? 'AUTONOMO'
+            : (dados.pessoa_b
+                ? ((e.empresa_nome || e.empresa_endereco) ? 'EMPREGADOR' : 'CONTRATANTE')
+                : 'VINCULO'));
+
     s.nome = a.nome || ''; s.cpf = a.cpf || ''; s.rg = a.rg || ''; s.genero = a.genero || '';
     s.estado_civil = a.estado_civil || ''; s.nacionalidade = a.nacionalidade || 'Brasileiro(a)';
     s.profissao = a.profissao || '';
-    carregarEnderecoSolto(a.rua, a.numero, a.complemento, a.endereco);
-    carregarCidadeBairro(a.cidade, a.bairro);
-    s.estado = a.estado || '';
-    s.empresa_nome = e.empresa_nome || ''; s.empresa_cnpj = e.empresa_cnpj || '';
-    s.dias_semana = e.dias_semana || '';
-    s.horario_entrada = e.horario_entrada || ''; s.horario_saida = e.horario_saida || '';
+
+    if (s.cenario === 'EMPREGADOR') {
+        carregarEnderecoSolto(e.empresa_rua, e.empresa_numero, e.empresa_complemento, e.empresa_endereco);
+        carregarCidadeBairro(e.empresa_cidade, e.empresa_bairro);
+        s.estado = e.empresa_estado || '';
+    } else {
+        carregarEnderecoSolto(a.rua, a.numero, a.complemento, a.endereco);
+        carregarCidadeBairro(a.cidade, a.bairro);
+        s.estado = a.estado || '';
+    }
+
+    s.empresa_nome = e.empresa_nome || '';
+    s.empresa_cnpj = e.empresa_cnpj || '';
+    s.func_nome = b.nome || ''; s.func_cpf = b.cpf || ''; s.func_rg = b.rg || '';
+
+    // Campos padronizados com fallback pros nomes antigos.
+    s.funcao = e.funcao || e.profissao || a.profissao || '';
+    s.dias = e.dias || e.periodo || e.dias_semana || '';
+    s.hora_inicio = e.hora_inicio || e.horario_inicio || e.horario_entrada || '';
+    s.hora_fim = e.hora_fim || e.horario_fim || e.horario_saida || '';
+
     s.informar_renda = e.informar_renda || 'NAO';
     s.renda_mensal = e.renda_mensal != null ? String(e.renda_mensal) : '';
 }
@@ -490,11 +726,21 @@ function carregarParaEdicao(row) {
 async function iniciar() {
     const params = new URLSearchParams(location.search);
     const id = params.get('editId');
-    if (!id) { render(); return; }
+
+    if (!id) {
+        // Pré-seleção opcional do cenário via ?cenario= (usado pelo redirect do
+        // link antigo declaracao-autonomo-form.html). A 1ª tela continua sendo a
+        // escolha — só entra com a opção já marcada.
+        const c = (params.get('cenario') || '').toUpperCase();
+        if (c === 'AUTONOMO' || c === 'VINCULO' || c === 'EMPREGADOR' || c === 'CONTRATANTE') s.cenario = c;
+        render();
+        return;
+    }
+
     editMode = true; editId = id;
     document.getElementById('cardArea').innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Carregando declaração…</p>';
     const { data, error } = await supabase.from('declaracoes_pendentes').select('*').eq('id', id).single();
-    if (error || !data || data.tipo_contrato !== 'DECLARACAO_TRABALHO') {
+    if (error || !data || (data.tipo_contrato !== 'DECLARACAO_AUTONOMO' && data.tipo_contrato !== 'DECLARACAO_TRABALHO')) {
         document.getElementById('cardArea').innerHTML = `
             <h2>Não foi possível abrir esta declaração</h2>
             <p style="color:var(--text-dim); font-size:13px;">O registro não foi encontrado ou não é desse tipo.</p>`;
