@@ -345,7 +345,7 @@ function stepDados() {
 // ---------- Etapa: endereço residencial (AUTONOMO / VINCULO / CONTRATANTE) ----------
 function stepEnderecoResidencial() {
     return `
-    <h2>Seu endereço</h2>
+    <h2>Qual é o seu endereço residencial?</h2>
     ${s.cenario === 'CONTRATANTE' ? '<p class="hint" style="margin:-8px 0 14px;">É o seu endereço (de quem está contratando). Não é o endereço do local de trabalho.</p>' : ''}
     <div class="field"><label>Rua e número *</label><input type="text" id="f_rua" value="${esc(s.rua)}" placeholder="ex: Rua das Flores, 123 (ou só o nome da rua, se não houver número)"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
@@ -369,7 +369,7 @@ function stepEmpresaBasica() {
 // ---------- Etapa: empresa (EMPREGADOR — nome + CNPJ + endereço da empresa) ----------
 function stepEmpresaCompleta() {
     return `
-    <h2>Empresa</h2>
+    <h2>Qual é o endereço da sua empresa?</h2>
     <div class="field"><label>Nome da empresa *</label><input type="text" id="f_empresa_nome" value="${esc(s.empresa_nome)}"></div>
     <div class="field"><label>CNPJ da empresa *</label><input type="text" id="f_empresa_cnpj" value="${esc(s.empresa_cnpj)}" placeholder="00.000.000/0000-00"></div>
     <div class="field"><label>Rua e número da empresa *</label><input type="text" id="f_rua" value="${esc(s.rua)}" placeholder="ex: Av. Central, 900"></div>
