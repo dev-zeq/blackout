@@ -2656,4 +2656,22 @@ Bug relatado: no **Fechamento de Caixa diário**, ao informar o saldo atual de S
 - `finClassificarLancamento({tipo:'AJUSTE_CAIXA', contaChave:'sicredi', valor:-1426.38})` → `grupo:'ajuste'`, `valorEconomico:0`, `afetaGaveta:false` (neutro). Idem valor positivo. `RECEITA_SERVICOS` inalterado.
 - Campo `valor-cents` **com** `data-negativo="1"`: `-abc713,199` → `-713,19`; `713,19` → `713,19`; `-` sozinho preservado. **Sem** o atributo: `-713,19` → `713,19` (sinal apagado, como antes). Campo comum `2500` → `2500`, legenda ok.
 - Tela Fechamento de Caixa: digitar `-713,19` em "Saldo Sicredi" → campo mantém o valor, `mfFechamentoConferir()` roda sem erro, aviso não-bloqueante aparece com o texto certo e a diferença `− R$ 1.426,38` (matemática com negativo correta).
-- **Falta:** teste ao vivo logado no painel real (fechar um caixa de verdade com banco negativo e conferir o lançamento `AJUSTE_CAIXA` + saldo da conta no banco) + aprovação para publicar.
+
+**PUBLICADO** (`main` `eb8da22` → lanblackout.com) a pedido do usuário, junto com o acerto dos dados de 31/08 (abaixo).
+
+### Acerto dos lançamentos de 31/08/2026 — operação de dados, autorizada pelo usuário
+
+O caixa de 31/08 tinha sido fechado com o **código antigo** e ficou errado:
+- No fechamento (20:44) o usuário informou o saldo do **Sicredi como −713,19**; o código antigo descartou (negativo) e não lançou nada. `meta.bancos_nao_apurados` guardou `{sicredi, informado:-713.19}`.
+- Às 20:50 o usuário editou o fechamento no Histórico e tentou digitar `−713,19` de novo — o campo `data-role="valor-cents"` **apagou o "−"** → virou `713,19` e o código gravou `RECEITA_SERVICOS +713,19` no Sicredi. Saldo do Sicredi ficou **+713,19** (deveria ser **−713,19**).
+- O PagSeguro tinha um `RECEITA_SERVICOS +1.079,92` que, confirmado pelo usuário, **não era venda** — era só acerto do saldo da conta (de −1.015,99 esperado para 63,93 informado).
+- Resultado do dia inflado: `resultado_operacional 1.203,92` / `resultado_financeiro 1.169,92`.
+
+Correção aplicada via SQL direto (service-role), 3 `UPDATE`s numa transação:
+- Sicredi `RECEITA_SERVICOS +713,19` (id `c62e9aac…`) → `AJUSTE_CAIXA −713,19`. Trigger `fn_lancamento_ajusta_saldo` deslocou o saldo em −1.426,38 → **Sicredi = −713,19**.
+- PagSeguro `RECEITA_SERVICOS +1.079,92` (id `8005f858…`) → `AJUSTE_CAIXA` (valor mantido, só reclassificado como neutro). Saldo do PagSeguro **inalterado (63,93)**.
+- Linha `FECHAMENTO` (id `754bca9a…`) — `meta` reescrita: `receitas_banco:[]`, `ajustes_banco:[sicredi −713,19 / pagseguro 1.079,92]`, `bancos_nao_apurados:[]`, `resultado_operacional −588,19`, `resultado_financeiro −622,19`, chave `correcao_manual`.
+
+**Conferido depois:** `contas.saldo == saldo_inicial + Σ(lançamentos)` em todas as contas (Sicredi −713,19 · PagSeguro 63,93 · Cofre Notas 110 · Fundo 160 · Caixa da Loja 160). `finResumoDiaRender('2026-08-31')` (caminho real do `relAgregar`, no static server) → Receita bruta **R$ 124,00** (só o excedente em dinheiro), Despesas R$ 0,00, **Resultado do dia R$ 90,00** (124 − 34 de retiradas pessoais). Identidade de consistência do mês fecha (`consistDelta = 0`). Os dois ajustes de banco não entram no resultado.
+
+**Falta:** validar visualmente no painel logado (Histórico do dia 31/08 mostrando o fechamento com "ajuste de saldo: Sicredi − R$ 713,19 / PagSeguro …" anexado) e testar um fechamento novo com banco negativo ponta a ponta.
