@@ -8230,6 +8230,11 @@
             //   hora_fim    <- e.hora_fim || e.horario_fim || e.horario_saida
             DECLARACAO_AUTONOMO: {
                 titulo: 'DECLARAÇÃO',
+                // Mesmo padrão visual da Declaração de Residência (título 30px +
+                // parágrafos 16.5px/entrelinha 2.05 justificados + fecho
+                // centralizado com respiro). Só apresentação — texto, ramos e
+                // regras inalterados. Ver DECLARACAO_RESIDENCIA abaixo.
+                tituloFontSize: 30,
                 papeis: ['declarante'],
                 corpo(d) {
                     const dados = d.dados || {};
@@ -8239,18 +8244,22 @@
                     const dias = e.dias || e.periodo || e.dias_semana || '';
                     const hIni = e.hora_inicio || e.horario_inicio || e.horario_entrada || '';
                     const hFim = e.hora_fim || e.horario_fim || e.horario_saida || '';
-                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(funcao)}</b>, de forma autônoma, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                    const pStyle = 'font-size:16.5px; line-height:2.05; margin:16px 0; text-align:justify;';
+                    let corpo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(funcao)}</b>, de forma autônoma, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                     if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                        corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                        corpo += `<p style="${pStyle}">Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                     }
-                    corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                    corpo += `<p>${dataExtenso()}.</p>`;
-                    corpo += assinatura(a);
+                    corpo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    corpo += `<div style="text-align:center; margin-top:72px;"><p style="font-size:16.5px; margin:0 0 8px;">${dataExtenso()}.</p>${assinatura(a)}</div>`;
                     return corpo;
                 }
             },
             DECLARACAO_TRABALHO: {
                 titulo: 'DECLARAÇÃO',
+                // Mesmo padrão visual da Declaração de Residência — só
+                // apresentação; textos, ramos (EMPREGADOR/CONTRATANTE/VINCULO) e
+                // regras inalterados. Ver DECLARACAO_RESIDENCIA abaixo.
+                tituloFontSize: 30,
                 papeis: ['declarante'],
                 corpo(d) {
                     const dados = d.dados || {};
@@ -8260,6 +8269,8 @@
                     const dias = e.dias || e.periodo || e.dias_semana || '';
                     const hIni = e.hora_inicio || e.horario_inicio || e.horario_entrada || '';
                     const hFim = e.hora_fim || e.horario_fim || e.horario_saida || '';
+                    const pStyle = 'font-size:16.5px; line-height:2.05; margin:16px 0; text-align:justify;';
+                    const fecho = () => `<div style="text-align:center; margin-top:72px;"><p style="font-size:16.5px; margin:0 0 8px;">${dataExtenso()}.</p>${assinatura(a)}</div>`;
 
                     // Cenário EMPREGADOR: o declarante é o dono da empresa e declara
                     // o vínculo de um funcionário (dados.pessoa_b). Redação em 1ª
@@ -8273,13 +8284,12 @@
                         const empEnd = e.empresa_endereco
                             ? `situada na ${escapeHtml(e.empresa_endereco)}, bairro ${escapeHtml(e.empresa_bairro || '')}, na cidade de ${escapeHtml(e.empresa_cidade || '')}/${escapeHtml(e.empresa_estado || '')}, `
                             : '';
-                        let corpo = `<p>Eu, ${qualificar(a)}, proprietári${g(a.genero, 'o', 'a')} da empresa <b>${empNome}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${empEnd}DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha em minha empresa exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                        let corpo = `<p style="${pStyle}">Eu, ${qualificar(a)}, proprietári${g(a.genero, 'o', 'a')} da empresa <b>${empNome}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${empEnd}DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha em minha empresa exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                         if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                            corpo += `<p>Declaro, ainda, que o(a) referido(a) funcionário(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                            corpo += `<p style="${pStyle}">Declaro, ainda, que o(a) referido(a) funcionário(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                         }
-                        corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                        corpo += `<p>${dataExtenso()}.</p>`;
-                        corpo += assinatura(a);
+                        corpo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                        corpo += fecho();
                         return corpo;
                     }
 
@@ -8291,26 +8301,24 @@
                     // endereço de local de trabalho.
                     if (e.cenario === 'CONTRATANTE') {
                         const f = dados.pessoa_b || {};
-                        let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha para mim, exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                        let corpo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha para mim, exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                         if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                            corpo += `<p>Declaro, ainda, que o(a) referido(a) trabalhador(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                            corpo += `<p style="${pStyle}">Declaro, ainda, que o(a) referido(a) trabalhador(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                         }
-                        corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                        corpo += `<p>${dataExtenso()}.</p>`;
-                        corpo += assinatura(a);
+                        corpo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                        corpo += fecho();
                         return corpo;
                     }
 
                     // Cenário VINCULO (e registros antigos sem `cenario`): o próprio
                     // trabalhador declara o vínculo — redação em 1ª pessoa dele,
                     // idêntica à de antes da unificação.
-                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(funcao)}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                    let corpo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(funcao)}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                     if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                        corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                        corpo += `<p style="${pStyle}">Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                     }
-                    corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                    corpo += `<p>${dataExtenso()}.</p>`;
-                    corpo += assinatura(a);
+                    corpo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    corpo += fecho();
                     return corpo;
                 }
             },
