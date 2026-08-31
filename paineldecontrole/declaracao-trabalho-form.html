@@ -346,7 +346,7 @@ function stepDados() {
 function stepEnderecoResidencial() {
     return `
     <h2>Qual é o seu endereço residencial?</h2>
-    ${s.cenario === 'CONTRATANTE' ? '<p class="hint" style="margin:-8px 0 14px;">É o seu endereço (de quem está contratando). Não é o endereço do local de trabalho.</p>' : ''}
+    ${s.cenario === 'CONTRATANTE' ? '<p class="hint" style="margin:-8px 0 14px;">Este não é o endereço do local de trabalho.</p>' : ''}
     <div class="field"><label>Rua e número *</label><input type="text" id="f_rua" value="${esc(s.rua)}" placeholder="ex: Rua das Flores, 123 (ou só o nome da rua, se não houver número)"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" id="f_complemento" value="${esc(s.complemento)}"></div>
     <div class="field"><label>Cidade *</label><select id="f_cidade">${cidadeOptions(s.cidade)}</select></div>
