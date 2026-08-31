@@ -367,6 +367,18 @@
                inline sempre vence regra de classe, por isso não é repetido aqui. */
             #printArea .doc-formatado-print h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.4px; margin: 22px 0 10px; }
             #printArea .doc-formatado-print p { font-size: 15px; line-height: 1.85; margin: 8px 0; }
+            /* Padrão visual único das Declarações na impressão (ver .decl-doc na
+               tela, mais abaixo). Mesma referência (Declaração de Residência):
+               título com presença, corpo maior e justificado, entrelinha ampla,
+               fecho/assinatura com respiro proporcional. Seletor mais específico
+               que a regra .doc-formatado-print p acima, então vence sem !important. */
+            #printArea .doc-formatado-print .decl-doc { max-width: none; margin: 0; }
+            #printArea .doc-formatado-print .decl-doc .decl-doc-titulo { font-size: 26px; font-weight: 700; letter-spacing: 1px; text-align: center; text-transform: uppercase; margin: 0 0 26px; color: #000; }
+            #printArea .doc-formatado-print .decl-doc p { font-size: 16px; line-height: 2; margin: 14px 0; text-align: justify; }
+            #printArea .doc-formatado-print .decl-doc h3 { font-size: 14px; margin: 22px 0 10px; }
+            #printArea .doc-formatado-print .decl-doc .decl-doc-fecho { margin-top: 60px; text-align: center; }
+            #printArea .doc-formatado-print .decl-doc .decl-doc-fecho p { text-align: center; }
+            #printArea .doc-formatado-print .decl-doc .decl-doc-data { font-size: 16px; }
             /* Layout exclusivo do Contrato de Locação de Imóvel (pedido do
                usuário, 2026-08-20) — margens maiores no topo/rodapé (as
                laterais continuam as mesmas do @page padrão acima), sem nada no
@@ -389,6 +401,21 @@
             .locacao-assinaturas-print { margin-top: 8px; text-align: center; }
             .locacao-assinaturas-print p { margin: 0; }
         }
+        /* ===== Padrão visual único das Declarações (tela) =====
+           Referência: Declaração de Residência. Título, corpo, entrelinha,
+           largura útil e fecho/assinatura ficam definidos SÓ aqui — todo
+           TIPOS.*.corpo() com docLayout:'declaracao' (ver montarContrato)
+           herda isto, então nenhuma declaração "volta" sozinha pro padrão
+           antigo com texto menor. Só apresentação: nenhum texto/dado/regra
+           depende destas regras. Versão de impressão em @media print acima. */
+        .decl-doc { max-width: 760px; margin: 0 auto; }
+        .decl-doc .decl-doc-titulo { text-align: center; text-transform: uppercase; font-weight: 700; font-size: 30px; letter-spacing: 1px; margin: 0 0 34px; color: var(--text); }
+        .decl-doc p { font-size: 16.5px; line-height: 2.05; margin: 18px 0; text-align: justify; }
+        .decl-doc h3 { text-transform: uppercase; letter-spacing: 0.4px; font-size: 16px; margin: 28px 0 12px; }
+        .decl-doc .decl-doc-fecho { margin-top: 72px; text-align: center; }
+        .decl-doc .decl-doc-fecho p { text-align: center; }
+        .decl-doc .decl-doc-data { font-size: 16.5px; }
+
         /* .cv-header* removido com o "Formatado com IA" (2026-08-30) — o Formatado
            por template usa .cv2-* logo abaixo. */
         #formatadoConteudo h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-bright); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin: 18px 0 8px; }
@@ -7891,6 +7918,15 @@
         function assinatura(p) {
             return `<p style="margin-top:36px;">_________________________________________<br>${escapeHtml(titleCase(p.nome))}<br>CPF: ${escapeHtml(p.cpf)}</p>`;
         }
+        // Fecho padrão das Declarações: data + assinatura(s), centralizado e com
+        // respiro proporcional (posição vertical vem de .decl-doc-fecho no CSS).
+        // Um só lugar pra todas as declarações fecharem igual — passe quantos
+        // signatários precisar (null/undefined são ignorados).
+        function fechoDeclaracao(...assinantes) {
+            return `<div class="decl-doc-fecho"><p class="decl-doc-data">${dataExtenso()}.</p>`
+                + assinantes.filter(Boolean).map(assinatura).join('')
+                + `</div>`;
+        }
 
         // ----- Blocos específicos do Termo de Responsabilidade -----
         // (ver TERMO-RESPONSABILIDADE-REF.md — estilo declaratório em 1ª pessoa,
@@ -8230,11 +8266,10 @@
             //   hora_fim    <- e.hora_fim || e.horario_fim || e.horario_saida
             DECLARACAO_AUTONOMO: {
                 titulo: 'DECLARAÇÃO',
-                // Mesmo padrão visual da Declaração de Residência (título 30px +
-                // parágrafos 16.5px/entrelinha 2.05 justificados + fecho
-                // centralizado com respiro). Só apresentação — texto, ramos e
-                // regras inalterados. Ver DECLARACAO_RESIDENCIA abaixo.
-                tituloFontSize: 30,
+                // Layout no padrão visual único das Declarações (.decl-doc, ver
+                // CSS) — via docLayout abaixo. corpo() devolve só <p> simples +
+                // fechoDeclaracao(); nada de estilo por tipo. Texto/regras iguais.
+                docLayout: 'declaracao',
                 papeis: ['declarante'],
                 corpo(d) {
                     const dados = d.dados || {};
@@ -8244,22 +8279,21 @@
                     const dias = e.dias || e.periodo || e.dias_semana || '';
                     const hIni = e.hora_inicio || e.horario_inicio || e.horario_entrada || '';
                     const hFim = e.hora_fim || e.horario_fim || e.horario_saida || '';
-                    const pStyle = 'font-size:16.5px; line-height:2.05; margin:16px 0; text-align:justify;';
-                    let corpo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(funcao)}</b>, de forma autônoma, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a atividade de <b>${escapeHtml(funcao)}</b>, de forma autônoma, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                     if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                        corpo += `<p style="${pStyle}">Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                        corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                     }
-                    corpo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
-                    corpo += `<div style="text-align:center; margin-top:72px;"><p style="font-size:16.5px; margin:0 0 8px;">${dataExtenso()}.</p>${assinatura(a)}</div>`;
+                    corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    corpo += fechoDeclaracao(a);
                     return corpo;
                 }
             },
             DECLARACAO_TRABALHO: {
                 titulo: 'DECLARAÇÃO',
-                // Mesmo padrão visual da Declaração de Residência — só
-                // apresentação; textos, ramos (EMPREGADOR/CONTRATANTE/VINCULO) e
-                // regras inalterados. Ver DECLARACAO_RESIDENCIA abaixo.
-                tituloFontSize: 30,
+                // Layout no padrão visual único das Declarações (.decl-doc, ver
+                // CSS) — via docLayout abaixo. Textos, ramos (EMPREGADOR/
+                // CONTRATANTE/VINCULO) e regras inalterados.
+                docLayout: 'declaracao',
                 papeis: ['declarante'],
                 corpo(d) {
                     const dados = d.dados || {};
@@ -8269,8 +8303,7 @@
                     const dias = e.dias || e.periodo || e.dias_semana || '';
                     const hIni = e.hora_inicio || e.horario_inicio || e.horario_entrada || '';
                     const hFim = e.hora_fim || e.horario_fim || e.horario_saida || '';
-                    const pStyle = 'font-size:16.5px; line-height:2.05; margin:16px 0; text-align:justify;';
-                    const fecho = () => `<div style="text-align:center; margin-top:72px;"><p style="font-size:16.5px; margin:0 0 8px;">${dataExtenso()}.</p>${assinatura(a)}</div>`;
+                    const fecho = () => fechoDeclaracao(a);
 
                     // Cenário EMPREGADOR: o declarante é o dono da empresa e declara
                     // o vínculo de um funcionário (dados.pessoa_b). Redação em 1ª
@@ -8284,11 +8317,11 @@
                         const empEnd = e.empresa_endereco
                             ? `situada na ${escapeHtml(e.empresa_endereco)}, bairro ${escapeHtml(e.empresa_bairro || '')}, na cidade de ${escapeHtml(e.empresa_cidade || '')}/${escapeHtml(e.empresa_estado || '')}, `
                             : '';
-                        let corpo = `<p style="${pStyle}">Eu, ${qualificar(a)}, proprietári${g(a.genero, 'o', 'a')} da empresa <b>${empNome}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${empEnd}DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha em minha empresa exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                        let corpo = `<p>Eu, ${qualificar(a)}, proprietári${g(a.genero, 'o', 'a')} da empresa <b>${empNome}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${empEnd}DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha em minha empresa exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                         if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                            corpo += `<p style="${pStyle}">Declaro, ainda, que o(a) referido(a) funcionário(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                            corpo += `<p>Declaro, ainda, que o(a) referido(a) funcionário(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                         }
-                        corpo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                        corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
                         corpo += fecho();
                         return corpo;
                     }
@@ -8301,11 +8334,11 @@
                     // endereço de local de trabalho.
                     if (e.cenario === 'CONTRATANTE') {
                         const f = dados.pessoa_b || {};
-                        let corpo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha para mim, exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                        let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha para mim, exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                         if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                            corpo += `<p style="${pStyle}">Declaro, ainda, que o(a) referido(a) trabalhador(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                            corpo += `<p>Declaro, ainda, que o(a) referido(a) trabalhador(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                         }
-                        corpo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                        corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
                         corpo += fecho();
                         return corpo;
                     }
@@ -8313,22 +8346,22 @@
                     // Cenário VINCULO (e registros antigos sem `cenario`): o próprio
                     // trabalhador declara o vínculo — redação em 1ª pessoa dele,
                     // idêntica à de antes da unificação.
-                    let corpo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(funcao)}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(funcao)}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                     if (e.informar_renda === 'SIM' && e.renda_mensal) {
-                        corpo += `<p style="${pStyle}">Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
+                        corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                     }
-                    corpo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                    corpo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
                     corpo += fecho();
                     return corpo;
                 }
             },
             DECLARACAO_RESIDENCIA: {
                 titulo: 'DECLARAÇÃO',
-                // Layout exclusivo deste tipo (pedido do usuário, 2026-08-25):
-                // título bem maior que o padrão (18px) pra ter mais destaque —
-                // só essa propriedade opcional, lida por montarContrato(), sem
-                // tocar no h1 compartilhado por todos os outros tipos.
-                tituloFontSize: 30,
+                // Referência do padrão visual das Declarações (título com
+                // destaque, corpo maior/justificado, entrelinha ampla, fecho com
+                // respiro). Agora centralizado no CSS .decl-doc via docLayout —
+                // os outros tipos de declaração herdam o MESMO layout.
+                docLayout: 'declaracao',
                 papeis: ['declarante', 'coabitante'],
                 // `especifico.declaracao_para` ('MIM'/'OUTRA') vem da etapa 3 do
                 // formulário (reestruturada em 2026-08-25). Registro salvo antes
@@ -8340,14 +8373,6 @@
                     const a = dados.pessoa_a || {};
                     const b = dados.pessoa_b || {};
                     const especifico = dados.especifico || {};
-                    // Fonte/espaçamento/justificação aplicados via `style` direto em
-                    // cada <p> (não numa div em volta) porque a regra de impressão
-                    // compartilhada `#printArea .doc-formatado-print p` já fixa
-                    // font-size/line-height em todo <p> — só um valor inline no
-                    // próprio elemento vence essa regra tanto na tela quanto no
-                    // papel. Escopado só a este tipo; os demais documentos
-                    // continuam exatamente com o tamanho/espaçamento de sempre.
-                    const pStyle = 'font-size:16.5px; line-height:2.05; margin:16px 0; text-align:justify;';
                     // Qualificação do declarante sem a cláusula de residência que
                     // qualificar() sempre anexa quando p.endereco existe — na
                     // declaração "para terceiros" o endereço é do imóvel dele, não
@@ -8393,32 +8418,29 @@
                             p2Reside = `reside e é domiciliad${g(b.genero, 'o', 'a')} no imóvel de minha responsabilidade`;
                             p2Situad = 'o';
                         }
-                        miolo = `<p style="${pStyle}">Eu, ${qualificarSemEndereco(a)}, ${p1Qualidade}, DECLARO, para os devidos fins de direito e a quem possa interessar, o que segue:</p>`;
-                        miolo += `<p style="${pStyle}">${qualificarSemEndereco(b)} ${p2Reside}, situad${p2Situad} na ${escapeHtml(a.endereco || '')}, bairro ${escapeHtml(a.bairro || '')}, na cidade de ${escapeHtml(a.cidade || '')}/${escapeHtml(a.estado || '')}.</p>`;
-                        miolo += `<p style="${pStyle}">Declaro, sob as penas da lei, que as informações acima são verdadeiras, assumindo integral responsabilidade civil e criminal por sua veracidade, e firmo a presente declaração para que produza os efeitos legais.</p>`;
+                        miolo = `<p>Eu, ${qualificarSemEndereco(a)}, ${p1Qualidade}, DECLARO, para os devidos fins de direito e a quem possa interessar, o que segue:</p>`;
+                        miolo += `<p>${qualificarSemEndereco(b)} ${p2Reside}, situad${p2Situad} na ${escapeHtml(a.endereco || '')}, bairro ${escapeHtml(a.bairro || '')}, na cidade de ${escapeHtml(a.cidade || '')}/${escapeHtml(a.estado || '')}.</p>`;
+                        miolo += `<p>Declaro, sob as penas da lei, que as informações acima são verdadeiras, assumindo integral responsabilidade civil e criminal por sua veracidade, e firmo a presente declaração para que produza os efeitos legais.</p>`;
                     } else {
-                        miolo = `<p style="${pStyle}">Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que sou residente e domiciliad${g(a.genero, 'o', 'a')} no endereço acima qualificado.</p>`;
+                        miolo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que sou residente e domiciliad${g(a.genero, 'o', 'a')} no endereço acima qualificado.</p>`;
                         if (b && b.nome) {
-                            miolo += `<p style="${pStyle}">Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(titleCase(b.nome))}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
+                            miolo += `<p>Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(titleCase(b.nome))}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
                         }
-                        miolo += `<p style="${pStyle}">Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
+                        miolo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
                     }
-                    // Fecho (cidade/data + assinaturas) centralizado e com respiro
-                    // maior antes dele, pra não ficar tudo empilhado no topo da
-                    // folha — mesma lógica de style inline pelo motivo acima.
-                    // Assinatura da pessoa declarada (b) só sai no ramo "para mim"
-                    // com coabitante (pedido do usuário, 2026-08-25) — na declaração
-                    // "para terceiros" só o declarante (proprietário/responsável)
-                    // assina; a pessoa declarada não assina em nenhuma hipótese,
-                    // nem na tela nem na impressão.
-                    let fecho = `<div style="text-align:center; margin-top:72px;"><p style="font-size:16.5px; margin:0 0 8px;">${dataExtenso()}.</p>${assinatura(a)}`;
-                    if (especifico.declaracao_para !== 'OUTRA' && b && b.nome) fecho += assinatura(b);
-                    fecho += `</div>`;
-                    return miolo + fecho;
+                    // Fecho padrão (data + assinaturas), centralizado e com respiro
+                    // — ver fechoDeclaracao()/.decl-doc-fecho. A assinatura da
+                    // pessoa declarada (b) só sai no ramo "para mim" com coabitante
+                    // (pedido do usuário, 2026-08-25); na "para terceiros" só o
+                    // declarante (proprietário/responsável) assina.
+                    const coassinaB = especifico.declaracao_para !== 'OUTRA' && b && b.nome ? b : null;
+                    return miolo + fechoDeclaracao(a, coassinaB);
                 }
             },
             DECLARACAO_UNIAO_ESTAVEL: {
                 titulo: 'DECLARAÇÃO',
+                // Mesmo padrão visual único das Declarações (.decl-doc via docLayout).
+                docLayout: 'declaracao',
                 papeis: ['declarante', 'conjuge'],
                 corpo(d) {
                     const dados = d.dados || {};
@@ -8429,9 +8451,7 @@
                     const filiacaoB = `filh${g(b.genero, 'o', 'a')} de ${escapeHtml(e.filiacao_pai_b || '—')} e ${escapeHtml(e.filiacao_mae_b || '—')}`;
                     let corpo = `<p>Nós, ${qualificar(a)}, ${filiacaoA}, e ${qualificar(b)}, ${filiacaoB}, DECLARAMOS, para os devidos fins e a quem possa interessar, que vivemos em união estável há ${escapeHtml(e.tempo_uniao || '')}, residindo no mesmo endereço acima qualificado.</p>`;
                     corpo += `<p>Por ser expressão da verdade, firmamos a presente declaração para que produza os efeitos legais.</p>`;
-                    corpo += `<p>${dataExtenso()}.</p>`;
-                    corpo += assinatura(a);
-                    corpo += assinatura(b);
+                    corpo += fechoDeclaracao(a, b);
                     return corpo;
                 }
             },
@@ -9447,6 +9467,13 @@
             // duplicado por cima. Nenhum outro tipo foi afetado (default falso,
             // comportamento de sempre).
             if (cfg && cfg.tituloProprio) return corpo;
+            // docLayout:'declaracao' (Declaração de Residência/Autônomo/Trabalho/
+            // União Estável) — padrão visual único definido só no CSS (.decl-doc):
+            // título, corpo, entrelinha, largura útil e fecho. corpo() devolve só
+            // <p> simples + fechoDeclaracao(); nada de estilo inline por tipo.
+            if (cfg && cfg.docLayout === 'declaracao') {
+                return `<div class="decl-doc"><h1 class="decl-doc-titulo">${titulo}</h1>${corpo}</div>`;
+            }
             return `<h1 style="text-align:center; font-size:${tituloFontSize}px; letter-spacing:1px; margin-bottom:22px;">${titulo}</h1>${corpo}`;
         }
         async function abrirDeclFormatado(id) {
