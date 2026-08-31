@@ -2606,3 +2606,35 @@ A antiga opção "VINCULO" (o próprio funcionário declara o vínculo) **sai do
 **Testes (static server + linha fictícia apagada):** seletor mostra as 3 opções com destaque nas 2 últimas; fluxo CONTRATANTE completo — 6 etapas, sem etapa de empresa, aviso no endereço, rótulos "trabalhador", campo de salário, revisão coerente. Texto gerado via Formatar do painel conferido (ver conversa). AUTONOMO e EMPREGADOR continuam roteando certo (Seus dados / Seus dados (responsável pela empresa)). Sem `SyntaxError`. `declaracoes_pendentes` de volta a 1×PENDENTE.
 
 **Falta:** revisão dos textos (EMPREGADOR + CONTRATANTE) pelo usuário + aprovação para publicar.
+
+## Novo serviço "Simulador de Valores" (2026-08-31) — NÃO publicado
+
+Serviço nativo novo no painel, sem backend, para simular o parcelamento de um valor solicitado de 1x a 12x. Só `paineldecontrole/index.html`, sem migração, sem tocar em nenhum módulo existente.
+
+**Fonte da lógica de preço:** aba **PAINEL DE CONTROLE** da planilha Google Sheets da loja (`16aoOGD9mqHdchgje02F1g1wuIAFLsT8XvQtt9nDAdeA`), lida via MCP Google Drive (export `.xlsx` → `System.IO.Compression` → `worksheets/sheet64.xml`). Células:
+- `AD5` — Valor Solicitado (célula de entrada).
+- `AD7:AD18` — nº de parcelas ("1 X" … "12 X").
+- `AE7:AE18` — valor de cada parcela.
+- `AF7:AF18` — valor total (`= AEn * n`).
+
+Fórmulas originais **reproduzidas 1:1 em JS, sem alterar nada na planilha nem nas taxas**:
+- `AE7` (1x) = `valor * (1 + 0,075)`.
+- `AE8:AE13` (2x–7x) = média, sobre k=1..n, de `valor*((n-k+1)/n)*0,049 + (valor*1,06)/n`.
+- `AE14:AE18` (8x–12x) = idêntica, com fator `1,055` no lugar de `1,06`.
+- Constantes nomeadas: `SIM_TAXA_1X=0.075`, `SIM_COEF=0.049`, `SIM_FATOR_2_7=1.06`, `SIM_FATOR_8_12=1.055`.
+
+**Verificação da fórmula:** script PowerShell avaliou a fórmula literal extraída do XML (com `AD5` substituído) contra a réplica JS para 5 valores (1234,56 / 1000 / 3500 / 250 / 87654,32) × 12 linhas cada = 60 casos — **bateu exato em todos** (parcela e total), incluindo a linha AF10/AE16 que a planilha escreve com um sub-termo em formato ligeiramente diferente (matematicamente idêntico).
+
+**Frontend (`paineldecontrole/index.html`):**
+- `ICONS.simulador` (calculadora); `MENU_ITEMS` ganhou 1 card `{ view: 'simulador' }` logo após "Orçamento de Impressões" (grade 18→19). `openView()`/`goHome()` ganharam o toggle de `#viewSimulador`.
+- `#viewSimulador` — campo único "Valor Solicitado" (`data-role="valor-cents"`, legenda por extenso automática), `#simuladorCard` e botão "📤 Exportar como imagem".
+- `atualizarSimulador()` (oninput) — lê o valor com `parseBRLDecimal`, monta a tabela (`montarSimuladorDocHtml`) com as **12 linhas abertas ao mesmo tempo** (Parcelas / Valor da parcela / Valor total), habilita o botão; valor 0/vazio volta ao estado inicial e desabilita.
+- `simGerarCanvas()` / `exportarSimulador()` — mesmo padrão do `orcGerarCanvas`/`exportarOrcamento`. **Exporta sempre em formato Stories (1080×1920, 9:16 vertical)**: monta `montarSimuladorStoryHtml()` num quadro `.sim-story-frame` (fundo gradiente verde escuro, card branco centralizado, margens seguras) fora da tela e fotografa com `html2canvas({ width:1080, height:1920, scale:1 })` → baixa `simulacao-blackout-<valor>.png`. Nunca horizontal.
+- Layout da arte: cabeçalho BLACKOUT (logo 120px + título), caixa "Valor solicitado" com o valor em 64px, lista das **12 linhas (1x a 12x) inteiras, sem corte** (cabeçalho 24px, linhas 34px, zebra branco / cinza claro `#ededed`), rodapé "Valores sujeitos a confirmação…". Fonte grande o suficiente pra ler no celular.
+- **A lista da arte é feita com `<div>` flex, não `<table>`** — o html2canvas renderia tabela `border-collapse` como blocos cinza. Cada `.sim-story-lrow` tem `background` explícito (branco ou `#ededed`) e `.sim-story-card` **não tem `box-shadow`** — sombra grande vira preenchimento cinza (`rgba(0,0,0,.4)` sobre branco = `#999`) no html2canvas, sujava as linhas sem fundo próprio.
+- Tom de cinza da zebra: `#ededed` (claro, escolhido pelo usuário).
+- O card **em tela** (`#simuladorCard`, classe `.sim-doc`) segue sendo a prévia compacta em `<table>` (`min-width:0` para anular o `table { min-width:500px }` global; `table-layout:fixed` + `<colgroup>`, 1ª coluna 20%); a arte de story é gerada só no clique de exportar.
+
+**Testado (static server, app forçado visível — sem senha da equipe):** sem `SyntaxError` (só o 404 estático pré-existente). Card do menu na posição certa. Digitar "1500,00" → 12 linhas 1x–12x com parcela e total corretos (conferidos contra a planilha), botão habilita; limpar → estado inicial + botão desabilita. Prévia em tela (mobile 375px): as 3 colunas cabem sem corte inclusive com R$ 87.654,32. Exportar → **PNG exatamente 1080×1920 (ratio 0,5625 = 9:16)** com o card branco centralizado, margens seguras, as 12 linhas inteiras e legíveis, cabeçalho/valor/rodapé; testado com valores de R$ 300 a R$ 87.654,32 — sempre cabe sem corte; nome `simulacao-blackout-<valor>.png`; botão restaura. **Amostragem de pixels do PNG confirmou:** linhas ímpares `rgb(255,255,255)`, linhas pares `rgb(237,237,237)` = `#ededed`; nenhum resquício do cinza `#999` que o `box-shadow` causava. Screenshots (prévia + arte de story) entregues.
+
+**Falta:** teste ao vivo logado no painel real + aprovação para publicar.
