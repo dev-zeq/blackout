@@ -2708,4 +2708,12 @@ Troca da logo antiga animada pela nova identidade. Só `paineldecontrole/index.h
 
 Usuário escolheu manter o SVG animado (opção A) em vez de embutir o PNG chapado.
 
-**Falta:** PNGs quadrados 192/512 (+512 maskable com margem) do usuário pra trocar os ícones do PWA (`icon-192/512`, maskable, apple-touch) — o atalho do app na tela inicial ainda usa o ícone antigo.
+### Ícones do PWA trocados pela nova logo (2026-08-31) — **PUBLICADO**
+
+Usuário mandou a arte (1024–1254px). Gerados com PowerShell/System.Drawing (bicúbica HQ, fundo preto opaco):
+- `assets/icon-192.png` (192, full-bleed) · `assets/icon-512.png` (512, full-bleed) · `assets/apple-touch-icon.png` (180, full-bleed) — fonte `assets/logo-blackout.png`.
+- `assets/icon-maskable-512.png` (512, logo a ~92% centralizada com margem preta) — fonte tinha a logo menor com margem, ideal p/ safe-zone; conferido que o círculo da logo fica dentro dos 80% centrais.
+- `assets/logo-blackout.png` (1024) commitado como master arquivado; não é referenciado pelo código (a logo no painel é o SVG). `manifest.json` já apontava pros nomes certos — nenhuma mudança de código.
+- 4 PNGs "ChatGPT Image …" (rascunhos de geração) ficaram na pasta sem commit — podem ser apagados.
+
+**Obs:** o ícone do atalho já instalado na tela inicial só atualiza reinstalando o PWA (comportamento normal). Instalações novas já pegam o ícone novo.
