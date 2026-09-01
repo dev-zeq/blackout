@@ -2717,3 +2717,13 @@ Usuário mandou a arte (1024–1254px). Gerados com PowerShell/System.Drawing (b
 - 4 PNGs "ChatGPT Image …" (rascunhos de geração) ficaram na pasta sem commit — podem ser apagados.
 
 **Obs:** o ícone do atalho já instalado na tela inicial só atualiza reinstalando o PWA (comportamento normal). Instalações novas já pegam o ícone novo.
+
+## Currículo — impressão pelo modal Formatado NÃO aproveita a folha inteira (2026-08-31) — investigado, correção RECUSADA pelo usuário
+
+Contexto: usuário achou que o trabalho nas Declarações de ontem (`.decl-doc`) tinha mexido no layout do currículo. **Não mexeu** — conferido no git: as regras CSS `.cv2-*` (documento, lateral 30%, cores, tipografia, seções, bloco de impressão) estão **byte a byte idênticas** desde 23/08 (`bf512b1` == `e14efce` == `f8beebe~1` == working tree). O commit `f8beebe` (remoção do "Formatado com IA") só tirou o botão e o CSS morto `.cv-header` (cabeçalho da versão IA, elemento diferente do template `.cv2-*`).
+
+Causa real (bug pré-existente, desde 12/08): `imprimirFormatado()` — botão 🖨️ **de dentro do modal Formatado** — faz `printArea.innerHTML = formatadoConteudo.innerHTML` **sem** o embrulho `.cv2-print-page`. Sem ele, a impressão pega a margem do `#printArea` (padding 24px) + os 12mm do `@page` padrão e o `min-height: calc(297mm - 16mm)` não casa → lateral cinza não estica, sobra faixa branca em cima/embaixo. O botão 🖨️ **da lista** (`printCurriculo()`) sempre embrulhou certo; virou visível quando o "Formatado com IA" saiu e o modal passou a ser o caminho principal.
+
+Correção proposta (1 função, só apresentação): `imprimirFormatado()` embrulhar em `.cv2-print-page` quando o conteúdo for `.cv2-doc` — mesmo efeito do `printCurriculo()`. Prévia A4 antes/depois foi gerada e entregue.
+
+**Decisão do usuário (2026-08-31): manter o currículo como está — NÃO aplicar.** `imprimirFormatado()` segue como sempre foi. Não reabrir sem pedido explícito.
