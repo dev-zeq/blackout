@@ -2727,3 +2727,16 @@ Causa real (bug pré-existente, desde 12/08): `imprimirFormatado()` — botão �
 Correção proposta (1 função, só apresentação): `imprimirFormatado()` embrulhar em `.cv2-print-page` quando o conteúdo for `.cv2-doc` — mesmo efeito do `printCurriculo()`. Prévia A4 antes/depois foi gerada e entregue.
 
 **Decisão do usuário (2026-08-31): manter o currículo como está — NÃO aplicar.** `imprimirFormatado()` segue como sempre foi. Não reabrir sem pedido explícito.
+
+## RESET financeiro para começar setembro/2026 (2026-08-31) — operação de dados, autorizada pelo usuário
+
+Pedido: zerar toda a movimentação financeira mantendo só os saldos atuais das contas como ponto de partida de setembro; manter as configurações de limites pessoal.
+
+Feito via SQL direto (service role), 1 transação com `SET LOCAL session_replication_role = replica` (desliga o trigger de imutabilidade do `fechamentos_mensais` e o de saldo do `lancamentos` durante a operação; volta ao normal no commit):
+- **Apagados:** `lancamentos` (8 linhas do dia 31/08), `fechamentos_mensais` (1 foto, mes_ref 2026-08-01), e as tabelas da era planilha `pix_recebidos` (9), `retiradas` (41), `sangria` (1), `grafica_despesas` (1).
+- **Contas congeladas:** `contas.saldo_inicial = contas.saldo = valor atual` de cada conta → Sicredi **−713,19** · PagSeguro **63,93** · Cofre de Notas **110,00** · Cofre de Moedas **0,00** · Fundo de Caixa **160,00** · Caixa da Loja **160,00**. Setembro começa com 0 lançamentos e esses saldos.
+- **Mantidos:** `planejamento_config` (salário base 1500, budgets mercado/almoço/gasolina, pool 5000) e `despesas_fixas` (5 cadastros) — intocados.
+
+Conferido pós-reset: todas as contagens acima = 0, `despesas_fixas`=5, `planejamento_config` intacto, identidade `saldo == saldo_inicial + Σ(lançamentos)` OK em todas as contas, `session_replication_role` de volta a `origin`.
+
+Backup completo (contas + os 8 lançamentos + a foto mensal + amostra das tabelas legadas) salvo em `scratchpad/backup-financeiro-antes-reset-setembro.json` desta sessão. Nota: limites detalhados por categoria e o ledger de pró-labore vivem em `localStorage` do navegador (`RF_LIMITES_KEY`, `RF_FOLHA_LEDGER`) — não são tocados por operação no banco; se o usuário quiser zerar isso também, é no aparelho.
