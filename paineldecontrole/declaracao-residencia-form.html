@@ -97,7 +97,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const s = {
     nome: '', cpf: '', genero: '', estado_civil: '', nacionalidade: 'Brasileiro(a)',
     rua: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado: '',
-    declaracao_para: '',
+    // A opção "Declaração para mim" foi retirada (2026-09-01, pedido do
+    // usuário) — o formulário só atende mais o caso "para terceiros"
+    // (proprietário/locador declarando por quem mora no imóvel dele), então
+    // este campo agora é sempre 'OUTRA'. Mantido (em vez de apagado) porque
+    // `especifico.declaracao_para` continua sendo gravado no registro e lido
+    // por TIPOS.DECLARACAO_RESIDENCIA.corpo() no painel (index.html) — não
+    // tocado nesta mudança, só formulários antigos importam esse valor.
+    declaracao_para: 'OUTRA',
     pd_nome: '', pd_cpf: '', pd_genero: '', pd_estado_civil: '', pd_nacionalidade: 'Brasileiro(a)',
     onde_mora: '',
 };
@@ -202,13 +209,12 @@ function carregarCidadeBairro(cidadeSalva, bairroSalvo) {
 }
 
 let stepIndex = 0;
-// Etapas dinâmicas (2026-08-30): a 1ª etapa é sempre "para quem é a declaração";
-// o resto do fluxo é montado conforme a resposta. NÃO muda como os dados são
-// capturados — só a ordem e a promoção dos dados da 2ª pessoa a etapa própria.
+// Etapas fixas (2026-09-01): a opção "Declaração para mim" foi retirada — o
+// formulário sempre segue direto pro fluxo "para terceiros" (proprietário/
+// locador declarando por quem mora no imóvel dele), começando pela coleta dos
+// dados do proprietário. Fluxo antigo (stepDeclaracaoPara + ramo "MIM") removido.
 function buildSteps() {
-    if (s.declaracao_para === 'MIM')   return [stepDeclaracaoPara, stepDados, stepEndereco, stepRevisao];
-    if (s.declaracao_para === 'OUTRA') return [stepDeclaracaoPara, stepDados, stepLocatario, stepOndeMora, stepEndereco, stepRevisao];
-    return [stepDeclaracaoPara];                 // antes de escolher, só a 1ª etapa
+    return [stepDados, stepLocatario, stepOndeMora, stepEndereco, stepRevisao];
 }
 let steps = buildSteps();
 
@@ -239,10 +245,11 @@ function showError(msg) {
 function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
 function checkedVal(name) { const e = document.querySelector(`input[name="${name}"]:checked`); return e ? e.value : ''; }
 
-// ---------- Etapa "Dados" (declarante/proprietário — ou locador, se for p/ terceiro) ----------
+// ---------- Etapa "Dados" (proprietário/locador/responsável pelo imóvel — 1ª
+// etapa do formulário desde a retirada da opção "para mim", 2026-09-01) ----------
 function stepDados() {
     return `
-    <h2>${s.declaracao_para === 'OUTRA' ? 'Dados do locador' : 'Dados do declarante, proprietário, locador ou responsável pelo imóvel'}</h2>
+    <h2>Dados do proprietário, locador ou responsável pelo imóvel</h2>
     <div class="field"><label>Nome completo *</label><input type="text" id="f_nome" value="${esc(s.nome)}"></div>
     <div class="field"><label>CPF *</label><input type="text" id="f_cpf" value="${esc(s.cpf)}" placeholder="000.000.000-00"></div>
     <div class="field"><label>Gênero *</label>
@@ -253,7 +260,7 @@ function stepDados() {
     </div>
     <div class="field"><label>Nacionalidade *</label><input type="text" id="f_nacionalidade" value="${esc(s.nacionalidade)}"></div>
     <div id="errorMsg" class="error-msg"></div>
-    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
+    <div class="nav-row">${stepIndex > 0 ? '<button class="btn btn-back" onclick="window.__goBack()">Voltar</button>' : ''}<button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 
 // ---------- Etapa "Endereço" (residência do declarante — ou onde o locatário reside, se p/ terceiro) ----------
@@ -267,17 +274,6 @@ function stepEndereco() {
     <div id="cond_estado">${estadoCampoHtml()}</div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
-}
-
-// ---------- Etapa 1 (agora): Para quem é a declaração ----------
-function stepDeclaracaoPara() {
-    return `
-    <h2>Para quem será emitida esta declaração de residência?</h2>
-    <div class="field">
-        <div class="radio-group">${pill('f_declaracao_para', 'MIM', s.declaracao_para === 'MIM', 'A declaração é para mim')}${pill('f_declaracao_para', 'OUTRA', s.declaracao_para === 'OUTRA', 'A declaração é para outra pessoa')}</div>
-    </div>
-    <div id="errorMsg" class="error-msg"></div>
-    <div class="nav-row">${stepIndex > 0 ? '<button class="btn btn-back" onclick="window.__goBack()">Voltar</button>' : ''}<button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 
 // ---------- Etapa "Dados do locatário" (só no ramo p/ terceiro) — os campos da
@@ -317,12 +313,10 @@ function stepRevisao() {
     const rows = [
         ['Nome', s.nome], ['CPF', s.cpf],
         ['Endereço', `${enderecoFinal()}, ${bairroFinal()}, ${cidadeFinal()}/${estadoFinal()}`],
-        ['Declaração para', s.declaracao_para === 'OUTRA' ? s.pd_nome : 'Para mim'],
+        ['Declaração para', s.pd_nome],
+        ['Onde mora', s.onde_mora === 'COMIGO' ? 'Comigo, na minha residência'
+            : (s.onde_mora === 'IMOVEL_MEU' ? 'Imóvel de minha responsabilidade' : '—')],
     ];
-    if (s.declaracao_para === 'OUTRA') {
-        rows.push(['Onde mora', s.onde_mora === 'COMIGO' ? 'Comigo, na minha residência'
-            : (s.onde_mora === 'IMOVEL_MEU' ? 'Imóvel de minha responsabilidade' : '—')]);
-    }
     return `
     <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
     ${rows.map(([k, v]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}
@@ -334,10 +328,6 @@ function stepRevisao() {
 // ---------- Validação e coleta (por identidade da etapa, já que a ordem é dinâmica) ----------
 function validateCurrentStep() {
     const fn = steps[stepIndex];
-    if (fn === stepDeclaracaoPara) {
-        if (!s.declaracao_para) return 'Selecione uma opção.';
-        return null;
-    }
     if (fn === stepDados) {
         if (!s.nome || !s.cpf || !s.genero || !s.estado_civil || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
         return null;
@@ -358,10 +348,6 @@ function validateCurrentStep() {
 }
 function saveCurrentStep() {
     const fn = steps[stepIndex];
-    if (fn === stepDeclaracaoPara) {
-        s.declaracao_para = checkedVal('f_declaracao_para');
-        return;
-    }
     if (fn === stepDados) {
         s.nome = val('f_nome'); s.cpf = val('f_cpf');
         s.genero = checkedVal('f_genero'); s.estado_civil = val('f_estado_civil');
@@ -390,8 +376,6 @@ function bindStepEvents() {
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstado(); });
     renderCondCidade();
     renderCondEstado();
-    // Mantém s.declaracao_para em dia enquanto a pessoa escolhe (buildSteps lê isso).
-    document.querySelectorAll('input[name="f_declaracao_para"]').forEach(r => r.addEventListener('change', () => { s.declaracao_para = checkedVal('f_declaracao_para'); }));
     const btnSubmit = document.getElementById('btnSubmit');
     if (btnSubmit) btnSubmit.addEventListener('click', submitForm);
 }
@@ -497,12 +481,14 @@ function carregarEnderecoSolto(rua, numero, complemento, enderecoComposto) {
         s.rua = enderecoComposto; s.complemento = '';
     }
 }
-// Registro salvo antes desta reestruturação não tem `especifico.declaracao_para`
-// — se já tinha uma segunda pessoa (antigo "mora comigo"/coabitante), reabre
-// como "OUTRA" reaproveitando nome/CPF/gênero/estado civil/nacionalidade
-// (RG e profissão daquele fluxo antigo são descartados, igual ao restante do
-// formulário); sem segunda pessoa, reabre como "MIM" (mesmo padrão de
-// fallback de compatibilidade já usado em outros campos do painel).
+// A opção "Declaração para mim" foi retirada do formulário (2026-09-01) — a
+// edição sempre reabre pelo fluxo único "para terceiros" agora, então
+// `declaracao_para` fica fixo em 'OUTRA' independente do que o registro
+// antigo tinha gravado (RG e profissão de um eventual fluxo "para mim" bem
+// antigo são descartados, igual ao restante do formulário). Se o registro
+// não tiver `pessoa_b` (era "para mim"), a etapa "Dados do locatário" reabre
+// em branco pro usuário preencher — mesmo comportamento de campo obrigatório
+// vazio de qualquer outra edição.
 function carregarParaEdicao(row) {
     const dados = row.dados || {};
     const a = dados.pessoa_a || {};
@@ -512,7 +498,7 @@ function carregarParaEdicao(row) {
     carregarEnderecoSolto(a.rua, a.numero, a.complemento, a.endereco);
     carregarCidadeBairro(a.cidade, a.bairro);
     s.estado = a.estado || '';
-    s.declaracao_para = especifico.declaracao_para || (dados.pessoa_b ? 'OUTRA' : 'MIM');
+    s.declaracao_para = 'OUTRA';
     s.onde_mora = especifico.onde_mora || '';
     if (dados.pessoa_b) {
         const b = dados.pessoa_b;

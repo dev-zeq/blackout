@@ -2740,3 +2740,48 @@ Feito via SQL direto (service role), 1 transação com `SET LOCAL session_replic
 Conferido pós-reset: todas as contagens acima = 0, `despesas_fixas`=5, `planejamento_config` intacto, identidade `saldo == saldo_inicial + Σ(lançamentos)` OK em todas as contas, `session_replication_role` de volta a `origin`.
 
 Backup completo (contas + os 8 lançamentos + a foto mensal + amostra das tabelas legadas) salvo em `scratchpad/backup-financeiro-antes-reset-setembro.json` desta sessão. Nota: limites detalhados por categoria e o ledger de pró-labore vivem em `localStorage` do navegador (`RF_LIMITES_KEY`, `RF_FOLHA_LEDGER`) — não são tocados por operação no banco; se o usuário quiser zerar isso também, é no aparelho.
+
+## Declaração de Residência — retirada da opção "Declaração para mim" (2026-09-01) — **PUBLICADO** (`main` → lanblackout.com)
+
+Pedido: eliminar de vez a etapa/opção "Declaração para mim" da Declaração de Residência (só esse serviço; nenhum outro formulário/declaração/contrato tocado). O formulário deve iniciar direto pelos dados do proprietário; o fluxo "para terceiros" (já existente) vira o único fluxo.
+
+**Levantamento antes de mexer:** confirmado por SQL que `declaracoes_pendentes` está com **0 registros** hoje (nenhuma Declaração de Residência pendente nem arquivada) — sem risco de quebrar edição de dado real ao remover o ramo "MIM" da UI.
+
+**`paineldecontrole/declaracao-residencia-form.html`:**
+- `buildSteps()` — antes escolhia entre o fluxo "MIM" (4 etapas) e "OUTRA" (6 etapas) a partir da 1ª etapa (`stepDeclaracaoPara`); agora é fixo: `[stepDados, stepLocatario, stepOndeMora, stepEndereco, stepRevisao]` (5 etapas, sem a etapa de escolha). Função `stepDeclaracaoPara()` removida.
+- `s.declaracao_para` inicializa direto em `'OUTRA'` (constante agora, não mais capturado de um rádio). Mantido no objeto porque `especifico.declaracao_para` continua sendo gravado no registro e lido por `TIPOS.DECLARACAO_RESIDENCIA.corpo()` no painel — não mexido nesta mudança.
+- `stepDados()` (1ª etapa agora) — título fixo "Dados do proprietário, locador ou responsável pelo imóvel" (era um ternário MIM/OUTRA); botão Voltar só aparece se `stepIndex > 0` (era sempre visível, agora oculto na 1ª etapa).
+- `validateCurrentStep`/`saveCurrentStep`/`bindStepEvents` — removidos os ramos de `stepDeclaracaoPara` (validação, captura do rádio, listener de `change`).
+- `stepRevisao()` — linha "Declaração para" mostra sempre `s.pd_nome` (era ternário); linha "Onde mora" sempre exibida (era condicional a `declaracao_para === 'OUTRA'`).
+- `carregarParaEdicao()` — `s.declaracao_para` forçado em `'OUTRA'` sempre (era um fallback `especifico.declaracao_para || (pessoa_b ? 'OUTRA' : 'MIM')`). Editar um eventual registro antigo "para mim" (sem `pessoa_b`) reabre a etapa "Dados do locatário" em branco pro usuário preencher — mesmo comportamento de campo obrigatório vazio de qualquer outra edição, não é erro.
+- **Não tocado:** `stepLocatario`, `stepOndeMora`, `stepEndereco` (conteúdo idêntico); `submitForm()` (os `if (s.declaracao_para === 'OUTRA')` viraram sempre-verdadeiros, mas o código em si não mudou — inofensivo deixar); toda a lógica de cidade/bairro/estado, validação de CPF, envio, modo de edição via `postMessage`.
+
+**`paineldecontrole/index.html`:**
+- `DECL_PROC_CATEGORIAS.declaracoes.links` — Declaração de Residência tinha 2 `modelosEmBranco` ("📄 Modelo — Para mim" / "📄 Modelo — Para terceiros"); agora só 1 ("📄 Modelo em Branco", mesma chave `DECLARACAO_RESIDENCIA_TERCEIROS`).
+- `MODELOS_EM_BRANCO_PDF.DECLARACAO_RESIDENCIA_PROPRIO` e a entrada correspondente em `MODELOS_EM_BRANCO` — **mantidos, não apagados** (mesmo padrão de "config inerte" já usado no arquivo para outras remoções), só ficaram sem nenhum botão que os referencie. PDF arquivado (`assets/modelos-em-branco/declaracao-residencia-proprio.pdf`) intocado.
+- `TIPOS.DECLARACAO_RESIDENCIA.corpo()` — **não alterado** (o ramo "senão"/coabitante continua existindo, só documentado como não mais alcançável por envio novo — fica por compatibilidade caso reapareça alguma declaração antiga com `declaracao_para` diferente de `'OUTRA'`). Só comentários ajustados, nenhuma linha de lógica tocada.
+- Nenhum outro tipo de Declaração/Procuração/Contrato tocado.
+
+**Testado (static server porta 8790, cópia temporária `index-test.html` só para pular a tela de senha — apagada ao final, não commitada; SQL direto contra produção, com limpeza):**
+- Preencher pelo Sistema: formulário abre direto em "Etapa 1 de 5 — Dados do proprietário, locador ou responsável pelo imóvel", sem botão Voltar. Preenchido ponta a ponta (proprietário → locatário → onde mora → endereço → revisão) — revisão mostra "Declaração para: Maria Souza" e "Onde mora: Imóvel de minha responsabilidade" corretamente. Envio real gravou `especifico.declaracao_para: "OUTRA"` (conferido por SQL).
+- Formatar (painel): texto gerado com a redação completa "para terceiros" (3 parágrafos: qualificação do proprietário, residência do locatário com endereço, cláusula de responsabilidade) — igual ao que já saía antes para esse ramo.
+- Editar: reabre o formulário (iframe com `?editId=`) direto na etapa "Dados do proprietário…", já com os dados carregados, sem etapa de escolha.
+- Modelo em Branco: só 1 botão "📄 Modelo em Branco" na Declaração de Residência (era 2); PDF resolvido (`declaracao-residencia-terceiros.pdf`, 200 OK).
+- Sem `SyntaxError`. Registro de teste apagado ao final (`declaracoes_pendentes` de volta a 0 registros, estado real do usuário).
+
+**Publicado** a pedido do usuário, junto com o ajuste de layout dos botões abaixo.
+
+### Botões das declarações numa linha só — Endereço e Trabalho no padrão da União Estável (2026-09-01) — **PUBLICADO** (`main` → lanblackout.com)
+
+Ajuste só de layout, pedido do usuário. Nas declarações de Residência ("Endereço") e Trabalho, o botão "Modelo em Branco" (ou os botões de modelo, no caso de Trabalho) saía numa 2ª linha, abaixo de "Preencher pelo Sistema" + "Copiar link" — diferente da Declaração de União Estável, que já mostrava os 3 numa linha só.
+
+**`paineldecontrole/index.html` — só `selecionarCategoriaDeclProc()`, ramo `if (item.modelosEmBranco)`:** o HTML passou a montar **1 única linha flex** (`display:flex; gap:8px; flex-wrap:wrap`) com "🖥️ Preencher pelo Sistema" → cada botão de `item.modelosEmBranco` (na ordem do array) → "📋 Copiar link", em vez da linha de Sistema/Copiar separada de uma 2ª linha só com os modelos. Mesmas classes/estilos inline (`btn-secondary`, `flex:1`, `padding:9px 8px`, `font-size:12.5px`, `min-width:0`) já usados no ramo `tipoModelo` (o layout de referência, usado pela União Estável) — não criado nada novo, só reaproveitado. Resultado: Residência (1 modelo hoje) fica com exatamente 3 botões numa linha, idêntico à União Estável; Trabalho (2 modelos — Autônomo/Empregador) fica com 4 botões na mesma linha.
+
+**Não tocado:** `onclick` dos 3 tipos de botão (mesmas funções: `window.open`, `abrirOuImprimirModeloEmBranco`, `copiarLinkFormulario`), URLs, `item.label` de cada modelo, o ramo `tipoModelo` (União Estável, inalterado — só serviu de referência), `MODELOS_EM_BRANCO`/`MODELOS_EM_BRANCO_PDF`, geração das declarações, formulários, qualquer outra categoria/serviço do painel.
+
+**Testado (static server, cópia temporária `index-test.html` só pra pular a senha — apagada ao final, não commitada):**
+- Desktop (1134px): Residência e União Estável — visualmente idênticas, 3 botões cabendo numa linha só. Trabalho — 4 botões (Sistema, Autônomo, Empregador, Copiar) também numa linha só, sem quebra.
+- Mobile (375px): os 3/4 botões continuam todos na mesma linha em todos os 3 cards — o texto quebra dentro do próprio botão (`min-width:0` + `flex:1`), sem empurrar nenhum botão pra uma linha nova.
+- Sem `SyntaxError`; sem erro novo no console (só o 404 estático pré-existente, já visto em sessões anteriores). Nenhuma outra categoria (Procurações) afetada — layout delas não usa esse ramo.
+
+**Publicado** (`main`) a pedido do usuário, junto com a remoção da opção "Declaração para mim" acima.

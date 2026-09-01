@@ -7618,15 +7618,18 @@
                 titulo: '📝 Declarações',
                 tipos: ['DECLARACAO_RESIDENCIA', 'DECLARACAO_AUTONOMO', 'DECLARACAO_TRABALHO', 'DECLARACAO_UNIAO_ESTAVEL'],
                 links: [
-                    // Declaração de Residência tem 2 modelos em branco distintos
-                    // (pedido do usuário, 2026-08-25) — a redação muda conforme
-                    // é o próprio declarante ou um terceiro quem vai residir no
-                    // imóvel, então não dá pra ter um modelo genérico só. Os
+                    // Declaração de Residência tinha 2 modelos em branco distintos
+                    // (pedido do usuário, 2026-08-25) — a opção "Declaração para
+                    // mim" foi retirada do formulário (2026-09-01, pedido do
+                    // usuário), então só resta o modelo "Para terceiros". A
+                    // chave/config DECLARACAO_RESIDENCIA_PROPRIO (MODELOS_EM_BRANCO
+                    // e MODELOS_EM_BRANCO_PDF, abaixo) foi mantida — inerte, sem
+                    // nenhum botão que a referencie — mesmo padrão de "não apagar
+                    // dado/config inerte" já usado em outros pontos do painel. Os
                     // outros tipos abaixo continuam com `tipoModelo` (um único
                     // modelo cada), sem nenhuma mudança de comportamento.
                     { label: '🏠 Declaração de Residência', url: 'declaracao-residencia-form.html', modelosEmBranco: [
-                        { tipo: 'DECLARACAO_RESIDENCIA_PROPRIO', label: '📄 Modelo — Para mim' },
-                        { tipo: 'DECLARACAO_RESIDENCIA_TERCEIROS', label: '📄 Modelo — Para terceiros' },
+                        { tipo: 'DECLARACAO_RESIDENCIA_TERCEIROS', label: '📄 Modelo em Branco' },
                     ] },
                     // Declaração de Trabalho unificada (2026-08-30) — um link só;
                     // o cenário (Autônomo / Vínculo com empresa / Empregador) é
@@ -7675,6 +7678,11 @@
         // precisar mexer em nenhum outro lugar do código quando um PDF novo
         // chegar — só acrescentar uma linha neste objeto.
         const MODELOS_EM_BRANCO_PDF = {
+            // DECLARACAO_RESIDENCIA_PROPRIO: inerte desde 2026-09-01 — a opção
+            // "Declaração para mim" saiu do formulário e do botão de modelo em
+            // branco (ver DECL_PROC_CATEGORIAS acima); nenhum botão chama mais
+            // esta chave. Mantida (não apagada) junto com o PDF arquivado e a
+            // entrada correspondente em MODELOS_EM_BRANCO abaixo.
             DECLARACAO_RESIDENCIA_PROPRIO: 'assets/modelos-em-branco/declaracao-residencia-proprio.pdf',
             DECLARACAO_RESIDENCIA_TERCEIROS: 'assets/modelos-em-branco/declaracao-residencia-terceiros.pdf',
         };
@@ -7845,20 +7853,22 @@
                 // extraído das abas "Em Branco" da planilha) ganham as ações
                 // extras — os demais (Procurações, que não têm aba "Em Branco" na
                 // planilha) continuam com a linha simples de sempre, sem mudança.
-                // `modelosEmBranco` (array) é pra quando um tipo tem mais de um
-                // modelo (hoje só Declaração de Residência: Para mim/Para
-                // terceiros) — segunda linha de botões, um por modelo. Um só
-                // `tipoModelo` continua no layout antigo de 3 botões numa linha.
+                // `modelosEmBranco` (array) é pra quando um tipo pode ter mais de
+                // um modelo em branco (hoje: Declaração de Residência com 1 desde
+                // a retirada da opção "Para mim", e Declaração de Trabalho com 2
+                // — Autônomo/Empregador). Layout padronizado com o `tipoModelo`
+                // abaixo (2026-09-01, pedido do usuário): Sistema + cada modelo +
+                // Copiar link **na mesma linha** (`flex-wrap:wrap`, mesmo
+                // `btn-secondary flex:1`), em vez da 2ª linha separada que
+                // empurrava o botão pra baixo sem necessidade.
                 if (item.modelosEmBranco) {
                     return `
                     <div class="link-row" style="cursor:default; flex-direction:column; align-items:stretch; gap:10px;">
                         <span>${item.label}</span>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="window.open('${item.url}', '_blank', 'noopener')">🖥️ Preencher pelo Sistema</button>
-                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="copiarLinkFormulario('${item.url}', this)">📋 Copiar link</button>
-                        </div>
-                        <div style="display:flex; gap:8px;">
                             ${item.modelosEmBranco.map(m => `<button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="abrirOuImprimirModeloEmBranco('${m.tipo}')">${m.label}</button>`).join('')}
+                            <button class="btn-secondary" style="flex:1; padding:9px 8px; font-size:12.5px; min-width:0;" onclick="copiarLinkFormulario('${item.url}', this)">📋 Copiar link</button>
                         </div>
                     </div>`;
                 }
@@ -8593,11 +8603,14 @@
                 // os outros tipos de declaração herdam o MESMO layout.
                 docLayout: 'declaracao',
                 papeis: ['declarante', 'coabitante'],
-                // `especifico.declaracao_para` ('MIM'/'OUTRA') vem da etapa 3 do
-                // formulário (reestruturada em 2026-08-25). Registro salvo antes
-                // dessa mudança não tem esse campo — sem ele, cai sempre no texto
-                // antigo de coabitante (ramo "senão" abaixo), pra nunca quebrar
-                // declaração já processada.
+                // `especifico.declaracao_para` ('MIM'/'OUTRA') vem do formulário
+                // (declaracao-residencia-form.html). Desde 2026-09-01 a opção
+                // "para mim" foi retirada de lá — todo envio novo grava sempre
+                // 'OUTRA'. O ramo "senão" abaixo (texto de coabitante) não é mais
+                // alcançável por envio novo; fica só por compatibilidade, pra
+                // continuar renderizando certo qualquer declaração antiga que
+                // ainda exista com 'MIM' ou sem este campo — não removido, pra
+                // nunca quebrar declaração já processada.
                 corpo(d) {
                     const dados = d.dados || {};
                     const a = dados.pessoa_a || {};
