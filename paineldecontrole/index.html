@@ -1014,6 +1014,117 @@
 
         .rf-config-btn { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); font-size: 18px; line-height: 1; cursor: pointer; }
         .rf-config-btn:hover { color: var(--text); border-color: var(--text-faint); }
+
+        /* ============================================================
+           Respostas Rápidas (2026-09-02) — central pessoal de respostas
+           (post-its digitais) na lateral direita, pra substituir os
+           post-its físicos da mesa. Recolhida por padrão numa aba fina
+           no canto direito; ao abrir vira uma gaveta SOBRE o painel
+           (com backdrop), nunca empurra nem redimensiona o conteúdo
+           central. Todo o CSS da função fica neste bloco '.rr-*';
+           remover a função = apagar este bloco + o markup #rrRoot +
+           o bloco JS "Respostas Rápidas". Não compartilha nenhuma
+           classe com o resto do painel. ============================ */
+        .rr-root { position: fixed; z-index: 900; }
+        .rr-tab {
+            position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+            z-index: 900; display: flex; flex-direction: column; align-items: center; gap: 5px;
+            padding: 11px 4px; border: 1px solid rgba(34,197,94,0.35); border-right: none;
+            border-radius: 11px 0 0 11px; background: var(--accent-dim); color: var(--accent-bright);
+            font-size: 10px; font-weight: 800; letter-spacing: 0.4px; cursor: pointer;
+            writing-mode: vertical-rl; text-orientation: mixed; box-shadow: -4px 0 16px rgba(0,0,0,0.35);
+            opacity: 0.85; transition: opacity 0.15s ease, background 0.15s ease;
+        }
+        .rr-tab:hover { opacity: 1; background: rgba(34,197,94,0.22); }
+        .rr-tab-icon { writing-mode: horizontal-tb; font-size: 13px; }
+        .rr-root[data-aberto="1"] .rr-tab { display: none; }
+
+        .rr-backdrop {
+            position: fixed; inset: 0; z-index: 980; background: rgba(0,0,0,0.45);
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+        }
+        .rr-root[data-aberto="1"] .rr-backdrop { opacity: 1; pointer-events: auto; }
+
+        .rr-drawer {
+            position: fixed; top: 0; right: 0; height: 100%; width: min(340px, 92vw);
+            z-index: 990; display: flex; flex-direction: column;
+            background: var(--bg-elev); border-left: 1px solid var(--border-strong);
+            box-shadow: -8px 0 30px rgba(0,0,0,0.45);
+            transform: translateX(100%); transition: transform 0.22s ease;
+        }
+        .rr-root[data-aberto="1"] .rr-drawer { transform: none; }
+
+        .rr-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .rr-head-title { font-size: 13px; font-weight: 800; letter-spacing: 0.4px; color: var(--text); }
+        .rr-head-actions { display: flex; gap: 6px; }
+        .rr-mini {
+            width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--border);
+            background: var(--surface); color: var(--text-dim); font-size: 15px; line-height: 1;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .rr-mini:hover { color: var(--text); border-color: var(--text-faint); }
+        .rr-mini.rr-novo { color: var(--accent-bright); border-color: rgba(34,197,94,0.35); background: var(--accent-dim); }
+
+        .rr-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .rr-list:empty::before {
+            content: 'Nenhuma resposta ainda. Toque em  +  para criar a primeira.';
+            display: block; padding: 26px 18px; text-align: center;
+            font-size: 12px; color: var(--text-faint); line-height: 1.7;
+        }
+
+        .rr-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 9px 10px; }
+        .rr-card-row { display: flex; align-items: center; gap: 6px; }
+        .rr-card-titulo {
+            flex: 1; min-width: 0; font-size: 12.5px; font-weight: 800; color: var(--accent-bright);
+            letter-spacing: 0.3px; line-height: 1.3; overflow: hidden; word-break: break-word;
+            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+        }
+        .rr-card-icons { display: flex; gap: 2px; flex-shrink: 0; }
+        .rr-ico {
+            width: 26px; height: 26px; border: none; background: transparent; border-radius: 7px;
+            font-size: 13px; line-height: 1; cursor: pointer; opacity: 0.85;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .rr-ico:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+        .rr-ico.is-on { opacity: 1; background: var(--accent-dim); }
+        .rr-ico.rr-ok { opacity: 1; width: auto; padding: 0 6px; font-size: 10px; font-weight: 800; color: var(--accent-bright); }
+        /* Ícone Visualizar (olho) — SVG claro de alto contraste no fundo escuro
+           (o emoji 👁️ ficava apagado). Só troca a arte; tamanho/posição/ação
+           do botão continuam iguais. */
+        .rr-ico[data-act="ver"] { opacity: 1; color: #e8e8ea; }
+        .rr-ico[data-act="ver"].is-on { color: var(--accent-bright); }
+        .rr-ico svg { width: 15px; height: 15px; display: block; }
+        .rr-card-corpo {
+            margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-strong);
+            font-size: 12.5px; color: var(--text); white-space: pre-wrap; word-break: break-word; line-height: 1.5;
+        }
+
+        .rr-card--edit { border-color: rgba(34,197,94,0.4); }
+        .rr-edit-titulo, .rr-edit-texto {
+            width: 100%; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text); font-size: 12.5px; padding: 8px 9px; font-family: inherit;
+        }
+        .rr-edit-titulo:focus, .rr-edit-texto:focus { outline: none; border-color: var(--accent); }
+        .rr-edit-texto { margin-top: 6px; min-height: 90px; resize: vertical; line-height: 1.5; }
+        .rr-edit-btns { display: flex; gap: 6px; margin-top: 8px; }
+        .rr-btn {
+            flex: 1; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--surface); color: var(--text-dim); font-size: 11.5px; font-weight: 700; cursor: pointer;
+        }
+        .rr-btn--ok { background: var(--accent-dim); border-color: rgba(34,197,94,0.4); color: var(--accent-bright); }
+        .rr-btn--del { flex: 0 0 auto; color: #fca5a5; }
+
+        @media (max-width: 480px) {
+            .rr-tab-text { display: none; }
+            .rr-tab { padding: 12px 5px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .rr-drawer { transition: none; }
+            .rr-backdrop { transition: none; }
+        }
     </style>
 </head>
 <body>
@@ -1022,6 +1133,30 @@
          no canto superior direito, fora de qualquer view/modal pra ficar
          visível em cima de tudo. Ver bloco JS "notificarNovoRegistro". -->
     <div class="toast-container" id="toastContainer"></div>
+    <!-- ============================================================
+         Respostas Rápidas (2026-09-02) — central pessoal de respostas
+         rápidas (post-its digitais) na lateral direita. Recolhida por
+         padrão na aba fina do canto direito; abre como gaveta sobre o
+         painel, sem mexer no layout/menus/serviços existentes. Dados em
+         localStorage['blackout_respostas_rapidas']. Começa vazia — o
+         usuário cadastra os post-its manualmente. Ver bloco CSS '.rr-*'
+         e o bloco JS "Respostas Rápidas". ======================== -->
+    <div class="rr-root" id="rrRoot" data-aberto="0">
+        <button type="button" class="rr-tab" id="rrTab" title="Respostas rápidas" aria-label="Abrir respostas rápidas">
+            <span class="rr-tab-icon">📌</span><span class="rr-tab-text">Respostas</span>
+        </button>
+        <div class="rr-backdrop" id="rrBackdrop"></div>
+        <aside class="rr-drawer" id="rrDrawer" aria-hidden="true" aria-label="Respostas rápidas">
+            <div class="rr-head">
+                <span class="rr-head-title">📌 Respostas rápidas</span>
+                <div class="rr-head-actions">
+                    <button type="button" class="rr-mini rr-novo" id="rrNovo" title="Nova resposta">+</button>
+                    <button type="button" class="rr-mini" id="rrFechar" title="Recolher">✕</button>
+                </div>
+            </div>
+            <div class="rr-list" id="rrList"></div>
+        </aside>
+    </div>
     <div class="lock-screen" id="lockScreen">
         <div class="lock-box" id="lockBox"></div>
     </div>
@@ -12757,6 +12892,202 @@
             // Re-avalia o lembrete de caixa: some sozinho quando passa do horário.
             if (document.getElementById('viewHome').classList.contains('active')) renderHomeCaixaLembrete();
         }, 30000);
+
+        /* ============================================================
+           Respostas Rápidas (2026-09-02) — post-its pessoais na gaveta
+           lateral direita. 100% isolado: não lê/escreve nenhuma tabela
+           do Supabase, não toca em nenhuma view/serviço/menu do painel.
+           Persistência local no aparelho, em localStorage
+           ['blackout_respostas_rapidas'] (array de {id,titulo,texto});
+           o estado aberto/recolhido em ['blackout_respostas_rapidas_aberto'].
+           Remover a função = apagar este bloco + o CSS '.rr-*' + o
+           markup #rrRoot. ========================================== */
+        const RR_KEY = 'blackout_respostas_rapidas';
+        const RR_ABERTO_KEY = 'blackout_respostas_rapidas_aberto';
+        // Arte fixa do ícone Visualizar (olho, traço "outline" moderno).
+        // Constante literal, sem dado do usuário — innerHTML seguro.
+        const RR_ICON_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+        let rrDados = [];
+        const rrExpandido = new Set();   // ids com o corpo (👁) aberto
+        let rrEditando = null;           // id do card em edição, ou null
+
+        function rrLer() {
+            try { const v = JSON.parse(localStorage.getItem(RR_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+            catch (_) { return []; }
+        }
+        function rrGravar() {
+            try { localStorage.setItem(RR_KEY, JSON.stringify(rrDados)); } catch (_) {}
+        }
+        function rrNovoId() {
+            return 'rr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        }
+        function rrToggle(abrir) {
+            const root = document.getElementById('rrRoot');
+            if (!root) return;
+            const novo = abrir === undefined ? root.dataset.aberto !== '1' : !!abrir;
+            root.dataset.aberto = novo ? '1' : '0';
+            const drawer = document.getElementById('rrDrawer');
+            if (drawer) drawer.setAttribute('aria-hidden', novo ? 'false' : 'true');
+            try { localStorage.setItem(RR_ABERTO_KEY, novo ? '1' : '0'); } catch (_) {}
+        }
+        function rrCriar() {
+            const id = rrNovoId();
+            rrDados.unshift({ id, titulo: '', texto: '' });
+            rrEditando = id;
+            rrRender();
+            const inp = document.querySelector('.rr-card[data-id="' + id + '"] .rr-edit-titulo');
+            if (inp) inp.focus();
+        }
+        function rrSalvarEdicao(id) {
+            const card = document.querySelector('.rr-card[data-id="' + id + '"]');
+            if (!card) return;
+            const t = (card.querySelector('.rr-edit-titulo').value || '').trim();
+            const x = card.querySelector('.rr-edit-texto').value || '';
+            const item = rrDados.find(r => r.id === id);
+            if (!item) return;
+            if (!t && !x.trim()) { rrDados = rrDados.filter(r => r.id !== id); }
+            else { item.titulo = t || '(sem título)'; item.texto = x; }
+            rrEditando = null;
+            rrGravar();
+            rrRender();
+        }
+        function rrCancelarEdicao(id) {
+            const item = rrDados.find(r => r.id === id);
+            if (item && !item.titulo && !item.texto) rrDados = rrDados.filter(r => r.id !== id);
+            rrEditando = null;
+            rrRender();
+        }
+        function rrExcluir(id) {
+            if (!confirm('Excluir esta resposta rápida?')) return;
+            rrDados = rrDados.filter(r => r.id !== id);
+            rrExpandido.delete(id);
+            rrEditando = null;
+            rrGravar();
+            rrRender();
+        }
+        function rrCopiarFallback(texto, ok) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta);
+                ok();
+            } catch (_) {}
+        }
+        function rrCopiar(id, btn) {
+            const item = rrDados.find(r => r.id === id);
+            if (!item) return;
+            const texto = item.texto || '';
+            const ok = () => {
+                if (!btn) return;
+                btn.textContent = 'Copiado!';
+                btn.classList.add('rr-ok');
+                setTimeout(() => { btn.textContent = '📋'; btn.classList.remove('rr-ok'); }, 1400);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto).then(ok, () => rrCopiarFallback(texto, ok));
+            } else {
+                rrCopiarFallback(texto, ok);
+            }
+        }
+        function rrRender() {
+            const list = document.getElementById('rrList');
+            if (!list) return;
+            list.textContent = '';
+            rrDados.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'rr-card';
+                card.dataset.id = item.id;
+                if (rrEditando === item.id) {
+                    card.classList.add('rr-card--edit');
+                    const it = document.createElement('input');
+                    it.className = 'rr-edit-titulo'; it.type = 'text';
+                    it.placeholder = 'Título da resposta'; it.value = item.titulo || ''; it.maxLength = 80;
+                    const tx = document.createElement('textarea');
+                    tx.className = 'rr-edit-texto'; tx.placeholder = 'Texto completo da resposta';
+                    tx.value = item.texto || '';
+                    const btns = document.createElement('div'); btns.className = 'rr-edit-btns';
+                    const bOk = document.createElement('button');
+                    bOk.type = 'button'; bOk.className = 'rr-btn rr-btn--ok'; bOk.dataset.act = 'salvar'; bOk.textContent = 'Salvar';
+                    const bC = document.createElement('button');
+                    bC.type = 'button'; bC.className = 'rr-btn'; bC.dataset.act = 'cancelar'; bC.textContent = 'Cancelar';
+                    const bD = document.createElement('button');
+                    bD.type = 'button'; bD.className = 'rr-btn rr-btn--del'; bD.dataset.act = 'excluir'; bD.textContent = '🗑'; bD.title = 'Excluir';
+                    btns.append(bOk, bC, bD);
+                    card.append(it, tx, btns);
+                    it.addEventListener('keydown', e => {
+                        if (e.key === 'Enter') { e.preventDefault(); rrSalvarEdicao(item.id); }
+                        if (e.key === 'Escape') { e.preventDefault(); rrCancelarEdicao(item.id); }
+                    });
+                } else {
+                    const row = document.createElement('div'); row.className = 'rr-card-row';
+                    const tit = document.createElement('span'); tit.className = 'rr-card-titulo';
+                    tit.textContent = item.titulo || '(sem título)';
+                    tit.title = item.titulo || '';
+                    const icons = document.createElement('div'); icons.className = 'rr-card-icons';
+                    const bVer = document.createElement('button');
+                    bVer.type = 'button'; bVer.className = 'rr-ico' + (rrExpandido.has(item.id) ? ' is-on' : '');
+                    bVer.dataset.act = 'ver'; bVer.innerHTML = RR_ICON_EYE; bVer.title = 'Visualizar';
+                    const bCop = document.createElement('button');
+                    bCop.type = 'button'; bCop.className = 'rr-ico'; bCop.dataset.act = 'copiar'; bCop.textContent = '📋'; bCop.title = 'Copiar texto';
+                    const bEd = document.createElement('button');
+                    bEd.type = 'button'; bEd.className = 'rr-ico'; bEd.dataset.act = 'editar'; bEd.textContent = '✏️'; bEd.title = 'Editar';
+                    icons.append(bVer, bCop, bEd);
+                    row.append(tit, icons);
+                    card.append(row);
+                    if (rrExpandido.has(item.id)) {
+                        const corpo = document.createElement('div'); corpo.className = 'rr-card-corpo';
+                        corpo.textContent = item.texto || '(sem texto)';
+                        card.append(corpo);
+                    }
+                }
+                list.append(card);
+            });
+        }
+        function rrInit() {
+            const root = document.getElementById('rrRoot');
+            if (!root) return;
+            rrDados = rrLer();
+            let aberto = '0';
+            try { aberto = localStorage.getItem(RR_ABERTO_KEY) || '0'; } catch (_) {}
+            root.dataset.aberto = aberto === '1' ? '1' : '0';
+            const drawer = document.getElementById('rrDrawer');
+            if (drawer) drawer.setAttribute('aria-hidden', root.dataset.aberto === '1' ? 'false' : 'true');
+
+            document.getElementById('rrTab').addEventListener('click', () => rrToggle(true));
+            document.getElementById('rrFechar').addEventListener('click', () => rrToggle(false));
+            document.getElementById('rrBackdrop').addEventListener('click', () => rrToggle(false));
+            document.getElementById('rrNovo').addEventListener('click', () => rrCriar());
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && root.dataset.aberto === '1' && rrEditando === null) rrToggle(false);
+            });
+            document.getElementById('rrList').addEventListener('click', e => {
+                const btn = e.target.closest('[data-act]');
+                if (!btn) return;
+                const card = btn.closest('.rr-card');
+                if (!card) return;
+                const id = card.dataset.id;
+                const act = btn.dataset.act;
+                if (act === 'ver') {
+                    if (rrExpandido.has(id)) rrExpandido.delete(id); else rrExpandido.add(id);
+                    rrRender();
+                } else if (act === 'copiar') {
+                    rrCopiar(id, btn);
+                } else if (act === 'editar') {
+                    rrEditando = id; rrRender();
+                    const inp = document.querySelector('.rr-card[data-id="' + id + '"] .rr-edit-titulo');
+                    if (inp) { inp.focus(); inp.select(); }
+                } else if (act === 'salvar') {
+                    rrSalvarEdicao(id);
+                } else if (act === 'cancelar') {
+                    rrCancelarEdicao(id);
+                } else if (act === 'excluir') {
+                    rrExcluir(id);
+                }
+            });
+            rrRender();
+        }
+        rrInit();
     </script>
 </body>
 </html>

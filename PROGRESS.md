@@ -2785,3 +2785,42 @@ Ajuste só de layout, pedido do usuário. Nas declarações de Residência ("End
 - Sem `SyntaxError`; sem erro novo no console (só o 404 estático pré-existente, já visto em sessões anteriores). Nenhuma outra categoria (Procurações) afetada — layout delas não usa esse ramo.
 
 **Publicado** (`main`) a pedido do usuário, junto com a remoção da opção "Declaração para mim" acima.
+
+## Respostas Rápidas — gaveta lateral de post-its pessoais (2026-09-02) — **PUBLICADO** (`main` → lanblackout.com)
+
+Central pessoal de respostas rápidas dentro do painel, pra substituir aos poucos os post-its físicos da mesa. **Função 100% isolada** — não toca em nenhuma view, menu, serviço, formulário, tabela do Supabase nem no layout central. Só `paineldecontrole/index.html`, três blocos novos claramente delimitados (CSS `.rr-*`, markup `#rrRoot`, bloco JS "Respostas Rápidas"). Remover = apagar os três blocos.
+
+**Onde vive / persistência:** nada de backend. `localStorage['blackout_respostas_rapidas']` = array de `{id, titulo, texto}`; `localStorage['blackout_respostas_rapidas_aberto']` = `'1'`/`'0'` (estado aberto/recolhido, lembrado entre sessões). Como é localStorage, os post-its ficam **por aparelho** — não sincronizam entre dispositivos (mesma limitação dos limites/ledger pessoais). Sincronizar exigiria tabela + `db-write`, fica pra depois se o usuário pedir.
+
+**UI:**
+- **Recolhida por padrão** numa aba fina vertical (`.rr-tab`, 📌 + "Respostas") colada na borda direita, meio da tela, `z-index:900`. Ocupa ~24px. Some quando a gaveta abre.
+- **Aberta** = gaveta `position:fixed` da direita (`.rr-drawer`, `width: min(340px, 92vw)`, `translateX` + transição) **sobre** o painel, com backdrop `rgba(0,0,0,.45)` clicável pra fechar. `z-index` da gaveta 990 / backdrop 980 — abaixo dos modais (1000), então qualquer modal do painel cobre a gaveta. **Nunca empurra nem redimensiona o container central** (que segue `max-width:800/1320px` centralizado); em telas largas a aba fica na margem, em telas estreitas a gaveta cobre parte da grade só enquanto aberta de propósito. Fecha com ✕, com clique no backdrop ou com `Esc` (Esc só fecha a gaveta se nenhum card estiver em edição).
+- **Cards (post-its)** recolhidos por padrão: só o **título em negrito** (clamp de 2 linhas, `title=` com o texto inteiro no hover) + 3 ícones pequenos: 👁️ Visualizar · 📋 Copiar · ✏️ Editar.
+  - **👁️** expande o corpo (texto completo, `white-space:pre-wrap`) *dentro do próprio card*; clicar de novo recolhe. Estado de expandido vive só em memória (`Set` `rrExpandido`) — reabrir a página volta tudo recolhido.
+  - **📋** copia **só o texto** (nunca o título) via `navigator.clipboard.writeText` com fallback `textarea`+`execCommand`. Feedback: o próprio botão vira "Copiado!" (classe `.rr-ok`, verde) por 1,4s, sem alert/modal.
+  - **✏️** troca o card pra modo edição inline: `<input>` título (maxlength 80) + `<textarea>` texto + **Salvar / Cancelar / 🗑**. Enter no título salva, Esc cancela. Salvar com título+texto vazios descarta o card; Cancelar num card recém-criado em branco também descarta. 🗑 pede `confirm()`.
+- **"+"** no cabeçalho da gaveta cria um card novo já em modo edição, no topo da lista, com foco no título.
+- Lista com rolagem vertical própria (`.rr-list`, `overflow-y:auto`) — o resto do painel não rola junto. Mensagem `:empty::before` quando não há nenhum post-it.
+- Começa **vazia** (nenhum post-it pré-cadastrado) — o usuário migra os dele manualmente.
+
+**Responsivo:** `@media (max-width:480px)` a aba mostra só o 📌 (esconde "Respostas"). Gaveta sempre `92vw` no máximo. `@media (prefers-reduced-motion: reduce)` zera as transições da gaveta/backdrop.
+
+**Testado (static server porta 8790, `localStorage['fc_write_pwd']='x'` pra pular a tela de senha — sem tocar em produção):**
+- Sem `SyntaxError`, sem erro novo no console (só os 2 × 404 estáticos pré-existentes). Os 19 tiles do menu continuam renderizando; abrir view (Currículo) + `goHome()` funcionam com a função presente.
+- Recolhida por padrão; abrir pela aba → `data-aberto="1"`, drawer `transform:none`, backdrop opaco, estado salvo no localStorage; fechar por ✕/backdrop/Esc → volta a `0` e persiste após reload.
+- Criar 2 post-its via "+" → gravados no localStorage e listados (mais novo no topo). 👁️ expande/recolhe o corpo com o texto certo incl. quebras de linha. 📋 → botão vira "Copiado!" 1,4s e volta a 📋 (writeText resolveu; leitura do clipboard bloqueada no harness, esperado). ✏️ → inputs aparecem, editar o texto e Salvar persiste; "+" seguido de Cancelar remove o card em branco.
+- Título longo ("RESPOSTA — ORÇAMENTO DE IMPRESSÃO COLORIDA COM ENCADERNAÇÃO") faz clamp em 2 linhas + reticências; título médio ("RESPOSTA — CLIENTE AGUARDANDO") aparece inteiro. Os 3 ícones (26px cada) sempre presentes; título recebe ~209px numa gaveta de 340px.
+- Reload: post-its e estado aberto/recolhido persistem; cards voltam recolhidos.
+- 1440px: aba fica na margem direita, sem encostar no container. ~800–1100px: aba encosta na borda de 1 tile (a gaveta é recolhida por padrão, então só enquanto aberta de propósito).
+
+**Falta:** teste ao vivo logado no painel real (publicado a pedido do usuário; mudança 100% aditiva, sem tocar em nada existente).
+
+### Ajuste visual dos post-its (2026-09-02) — só estética, mesma sessão
+
+Pedido do usuário, sem tocar em nenhuma lógica/ação/tamanho/posição:
+- **Ícone Visualizar**: o emoji `👁️` ficava apagado no fundo escuro. Trocado por um **SVG de olho "outline"** (`RR_ICON_EYE`, constante literal, `innerHTML` seguro) com `stroke=currentColor`; `.rr-ico[data-act="ver"]` recolhido = `#e8e8ea` (claro, alto contraste), expandido (`.is-on`) = `var(--accent-bright)`. `svg` 15×15 dentro do botão 26×26 (inalterado).
+- **Título recolhido**: `.rr-card-titulo` `color` branco → **`var(--accent-bright)`** (verde da identidade), mantendo `font-weight:800` e o clamp de 2 linhas.
+- **Texto interno** (`.rr-card-corpo`): `color` `var(--text-dim)` → **`var(--text)`** (branco), como o usuário esperava que já fosse.
+- `.rr-ico` opacity 0.75 → 0.85 (📋/✏️ um pouco mais nítidos). Nada de função/edição/cópia/DB mudou.
+
+Testado (static server): título `rgb(74,222,128)` peso 800, olho recolhido `#e8e8ea` / expandido verde, corpo `var(--text)` branco, botão do olho segue 26×26, sem erro no console.
