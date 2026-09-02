@@ -2824,3 +2824,40 @@ Pedido do usuário, sem tocar em nenhuma lógica/ação/tamanho/posição:
 - `.rr-ico` opacity 0.75 → 0.85 (📋/✏️ um pouco mais nítidos). Nada de função/edição/cópia/DB mudou.
 
 Testado (static server): título `rgb(74,222,128)` peso 800, olho recolhido `#e8e8ea` / expandido verde, corpo `var(--text)` branco, botão do olho segue 26×26, sem erro no console.
+
+## Respostas Rápidas viram GLOBAIS — post-its saem do localStorage pro Supabase (2026-09-02) — **PUBLICADO** (`main` → lanblackout.com)
+
+Bug relatado: post-its cadastrados num terminal não apareciam em outro. Causa: a 1ª versão (mesma data, seções acima) guardava tudo em `localStorage['blackout_respostas_rapidas']` — local e individual por navegador. Pedido: transformar em serviço **global** do painel, compartilhado entre todos os terminais, com sincronização automática. **Sem mexer na interface** (gaveta lateral direita, títulos verdes, corpo branco, ícone de olho, copiar, editar, cards recolhidos, expansão, rolagem interna — tudo intacto). Só arquitetura/armazenamento.
+
+**Análise da implementação anterior (antes de mexer):** função vivia 100% em `paineldecontrole/index.html`, 3 blocos (`CSS .rr-*`, markup `#rrRoot`, bloco JS "Respostas Rápidas"). Dados: `localStorage` (array `{id,titulo,texto}`, ids `rr_...` gerados no cliente). Nenhuma tabela no Supabase. Infra já existente reaproveitada: cliente `supabase` (anon) pra SELECT + Realtime; `dbInsert`/`dbUpdate`/`dbDelete` → Edge Function `db-write` (senha da equipe, grava com service_role); `assinarRealtimeTabela(table, onChange)` (com fallback de polling 5s); padrão RLS "anon só SELECT, escrita via db-write" (igual `recibos`/`curriculos`/`declaracoes_pendentes`).
+
+**Banco (migration `create_respostas_rapidas_global`):**
+- Tabela nova `public.respostas_rapidas`: `id uuid pk default gen_random_uuid()`, `titulo text`, `texto text`, `posicao double precision`, `criado_em timestamptz`, `atualizado_em timestamptz`.
+- RLS ligado; policy `anon pode ler respostas_rapidas` (SELECT `using(true)`) — mesmo nível de exposição de leitura das outras tabelas do painel. **Nenhuma** policy de escrita pro anon: criar/editar/excluir só pela `db-write`.
+- Trigger `trg_rr_set_posicao` (BEFORE INSERT): se `posicao` vier 0/null, recebe `max(posicao)+1` → card novo entra no topo. Painel ordena `posicao desc, criado_em desc` (mantém "mais novo em cima", como era; deixa espaço pra reordenar manualmente no futuro sem migração).
+- Trigger `trg_rr_touch` (BEFORE UPDATE): `atualizado_em = now()`.
+- Tabela adicionada à publication `supabase_realtime`.
+
+**Edge Function `db-write` — v10 → v11:** só somou `respostas_rapidas: ['insert', 'update', 'delete']` ao mapa `ALLOWED`. `verify_jwt` mantido `true`. Nada mais mudou na função.
+
+**Cliente (`paineldecontrole/index.html`, só o bloco JS "Respostas Rápidas"):**
+- `RR_KEY`/`rrLer()`/`rrGravar()` (localStorage) **removidos**. Novo `RR_TABLE='respostas_rapidas'` + `async rrCarregar()` — SELECT via `supabase.from(...)`, mapeia pra `{id,titulo,texto}`, `rrRender()`. Guarda `rrPendenteReload`: se um card está em edição **neste** terminal, adia a recarga (não apaga o que está sendo digitado) e aplica quando a edição fecha.
+- `rrNovoId()` passou a gerar id **`draft_...`** (rascunho só local — card novo ainda não gravado). `rrEhRascunho(id)` novo. O uuid definitivo é o do banco, no INSERT.
+- `rrCriar()` — inalterado no efeito: cria o rascunho local em modo edição. Só grava no banco no **Salvar** com conteúdo (evita linha vazia trafegando pros outros terminais).
+- `rrSalvarEdicao()` virou `async`: rascunho + conteúdo → `dbInsert`; rascunho vazio → descarta; card existente vazio → `dbDelete` (era o comportamento antigo de "limpar os 2 campos"); card existente alterado → `dbUpdate`. Sempre `await rrCarregar()` no fim.
+- `rrExcluir()` `async` → `dbDelete({id})` (rascunho: só tira da lista local). `confirm()` mantido.
+- `rrCopiar`/`rrRender`/`rrToggle`/expandir (👁) — **intactos**, são ações locais lendo de `rrDados` (que agora vem do banco).
+- `rrInit()` — tira `rrDados = rrLer()`; no fim chama `rrCarregar()` + `assinarRealtimeTabela(RR_TABLE, rrCarregar)`. A preferência de **gaveta aberta/recolhida** (`blackout_respostas_rapidas_aberto`) **continua em localStorage** de propósito — é ajuste de tela por aparelho, não conteúdo.
+- Erros de escrita: `rrErro()` → `alert('Respostas rápidas — não consegui …: <msg>')`, sem travar a UI.
+
+**Testado (static server porta 8791 + 2 abas do navegador embutido = Terminal A / Terminal B; escritas "do outro terminal" simuladas via SQL service-role, com limpeza no fim):**
+- Sem `SyntaxError`; módulo carrega (menu dos 19 tiles OK). Só o erro pré-existente de service worker (sem `sw.js` no static server).
+- Anon SELECT em `respostas_rapidas`: 200. Gaveta abre e `rrCarregar()` popula da tabela.
+- **INSERT** (SQL) → aba A mostra o card sozinho em ~6s (Realtime/polling). Aba B, aberta depois, já carrega o mesmo card. `posicao` = 1 (trigger).
+- **UPDATE** (SQL, título+texto) → propaga pras 2 abas; `atualizado_em` bumpado pelo trigger.
+- 2º **INSERT** (SQL) → aparece nas 2 abas, **mais novo no topo** (posicao 2 acima de 1).
+- **DELETE** (SQL) → some das 2 abas; placeholder "Nenhuma resposta ainda…" reaparece.
+- UI local: 👁 expande/recolhe o corpo; ✏️ abre inputs com o valor certo + botão Salvar; Cancelar volta pra view; "+" cria card `draft_` em edição; Cancelar no rascunho remove o card.
+- Caminho de escrita com senha inválida (`fc_write_pwd='x'`): Salvar → `alert("… não consegui criar: Senha inválida")`, rascunho descartado, **sem crash**, card existente intacto — confirma que a chamada chega na `db-write` e só é barrada pela senha (tabela+ação já liberadas na v11).
+
+**Falta:** rodar o cenário exato do pedido (criar/editar/excluir **pela UI** logado no painel real, em 2 terminais) — precisa da senha da equipe pra `db-write`, que o ambiente de teste não tem. Toda a arquitetura de sincronização (SELECT + Realtime + ordem + os 3 tipos de mutação propagando entre 2 terminais) foi validada; o único passo não exercido é um INSERT/UPDATE/DELETE da UI **com senha válida** (código idêntico ao usado pelo resto do painel). Publicado a pedido do usuário — mudança aditiva, sem tocar em nenhum outro serviço.

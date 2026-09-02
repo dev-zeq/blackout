@@ -1137,10 +1137,10 @@
          Respostas Rápidas (2026-09-02) — central pessoal de respostas
          rápidas (post-its digitais) na lateral direita. Recolhida por
          padrão na aba fina do canto direito; abre como gaveta sobre o
-         painel, sem mexer no layout/menus/serviços existentes. Dados em
-         localStorage['blackout_respostas_rapidas']. Começa vazia — o
-         usuário cadastra os post-its manualmente. Ver bloco CSS '.rr-*'
-         e o bloco JS "Respostas Rápidas". ======================== -->
+         painel, sem mexer no layout/menus/serviços existentes. Dados na
+         tabela `respostas_rapidas` do Supabase (globais, compartilhados
+         entre terminais, sincronizados via Realtime). Ver bloco CSS
+         '.rr-*' e o bloco JS "Respostas Rápidas". ================ -->
     <div class="rr-root" id="rrRoot" data-aberto="0">
         <button type="button" class="rr-tab" id="rrTab" title="Respostas rápidas" aria-label="Abrir respostas rápidas">
             <span class="rr-tab-icon">📌</span><span class="rr-tab-text">Respostas</span>
@@ -12894,15 +12894,21 @@
         }, 30000);
 
         /* ============================================================
-           Respostas Rápidas (2026-09-02) — post-its pessoais na gaveta
-           lateral direita. 100% isolado: não lê/escreve nenhuma tabela
-           do Supabase, não toca em nenhuma view/serviço/menu do painel.
-           Persistência local no aparelho, em localStorage
-           ['blackout_respostas_rapidas'] (array de {id,titulo,texto});
-           o estado aberto/recolhido em ['blackout_respostas_rapidas_aberto'].
+           Respostas Rápidas (2026-09-02) — post-its na gaveta lateral
+           direita. GLOBAL (2026-09-02, 2ª rodada): os post-its agora
+           moram na tabela `respostas_rapidas` do Supabase e são
+           compartilhados por TODOS os terminais do painel. Leitura
+           direta (anon SELECT, mesmo padrão de recibos/curriculos);
+           criar/editar/excluir passam pela Edge Function db-write com a
+           senha da equipe — o mesmo caminho de escrita do resto do
+           painel. Sincroniza sozinho entre terminais via Supabase
+           Realtime (assinarRealtimeTabela), com polling de 5s de reserva.
+           O único dado que continua local no aparelho é a preferência de
+           gaveta aberta/recolhida (['blackout_respostas_rapidas_aberto'])
+           — é ajuste de tela, não conteúdo.
            Remover a função = apagar este bloco + o CSS '.rr-*' + o
-           markup #rrRoot. ========================================== */
-        const RR_KEY = 'blackout_respostas_rapidas';
+           markup #rrRoot (e, se quiser, a tabela). ================= */
+        const RR_TABLE = 'respostas_rapidas';
         const RR_ABERTO_KEY = 'blackout_respostas_rapidas_aberto';
         // Arte fixa do ícone Visualizar (olho, traço "outline" moderno).
         // Constante literal, sem dado do usuário — innerHTML seguro.
@@ -12910,17 +12916,38 @@
         let rrDados = [];
         const rrExpandido = new Set();   // ids com o corpo (👁) aberto
         let rrEditando = null;           // id do card em edição, ou null
+        let rrPendenteReload = false;    // recarga adiada enquanto edita neste terminal
 
-        function rrLer() {
-            try { const v = JSON.parse(localStorage.getItem(RR_KEY) || '[]'); return Array.isArray(v) ? v : []; }
-            catch (_) { return []; }
+        function rrErro(msg, e) {
+            alert('Respostas rápidas — ' + msg + (e && e.message ? ': ' + e.message : ''));
         }
-        function rrGravar() {
-            try { localStorage.setItem(RR_KEY, JSON.stringify(rrDados)); } catch (_) {}
+        // Lê/relê a lista da fonte central (Supabase). Enquanto um card está
+        // em edição NESTE terminal, adia a recarga (rrPendenteReload) pra não
+        // apagar o que está sendo digitado; aplica assim que a edição fecha.
+        async function rrCarregar() {
+            if (rrEditando !== null) { rrPendenteReload = true; return; }
+            rrPendenteReload = false;
+            let linhas;
+            try {
+                const { data, error } = await supabase
+                    .from(RR_TABLE).select('id,titulo,texto,posicao,criado_em')
+                    .order('posicao', { ascending: false }).order('criado_em', { ascending: false });
+                if (error) throw error;
+                linhas = data || [];
+            } catch (e) {
+                console.warn('Respostas rápidas — falha ao carregar:', e && e.message);
+                return;
+            }
+            rrDados = linhas.map(r => ({ id: r.id, titulo: r.titulo || '', texto: r.texto || '' }));
+            Array.from(rrExpandido).forEach(id => { if (!rrDados.some(r => r.id === id)) rrExpandido.delete(id); });
+            rrRender();
         }
         function rrNovoId() {
-            return 'rr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+            // id só do RASCUNHO local (card novo ainda não gravado). O id
+            // definitivo é o uuid que o banco gera no INSERT.
+            return 'draft_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
         }
+        function rrEhRascunho(id) { return typeof id === 'string' && id.slice(0, 6) === 'draft_'; }
         function rrToggle(abrir) {
             const root = document.getElementById('rrRoot');
             if (!root) return;
@@ -12938,32 +12965,54 @@
             const inp = document.querySelector('.rr-card[data-id="' + id + '"] .rr-edit-titulo');
             if (inp) inp.focus();
         }
-        function rrSalvarEdicao(id) {
+        async function rrSalvarEdicao(id) {
             const card = document.querySelector('.rr-card[data-id="' + id + '"]');
             if (!card) return;
             const t = (card.querySelector('.rr-edit-titulo').value || '').trim();
             const x = card.querySelector('.rr-edit-texto').value || '';
             const item = rrDados.find(r => r.id === id);
             if (!item) return;
-            if (!t && !x.trim()) { rrDados = rrDados.filter(r => r.id !== id); }
-            else { item.titulo = t || '(sem título)'; item.texto = x; }
+            const vazio = !t && !x.trim();
+            const titulo = t || '(sem título)';
+            if (rrEhRascunho(id)) {
+                // card novo: só cria no banco se tiver algum conteúdo; senão descarta
+                rrDados = rrDados.filter(r => r.id !== id);
+                rrEditando = null;
+                if (!vazio) {
+                    try { await dbInsert(RR_TABLE, { titulo, texto: x }); }
+                    catch (e) { rrErro('não consegui criar', e); }
+                }
+                await rrCarregar();
+                return;
+            }
+            // card existente: limpar os dois campos = excluir (comportamento antigo)
             rrEditando = null;
-            rrGravar();
-            rrRender();
+            if (vazio) {
+                try { await dbDelete(RR_TABLE, { id }); }
+                catch (e) { rrErro('não consegui salvar', e); }
+            } else if (item.titulo !== titulo || item.texto !== x) {
+                try { await dbUpdate(RR_TABLE, { titulo, texto: x }, { id }); }
+                catch (e) { rrErro('não consegui salvar', e); }
+            }
+            await rrCarregar();
         }
         function rrCancelarEdicao(id) {
+            // rascunho (card novo) ou card sem conteúdo → só descarta da lista local
             const item = rrDados.find(r => r.id === id);
-            if (item && !item.titulo && !item.texto) rrDados = rrDados.filter(r => r.id !== id);
+            if (rrEhRascunho(id) || (item && !item.titulo && !item.texto)) {
+                rrDados = rrDados.filter(r => r.id !== id);
+            }
             rrEditando = null;
-            rrRender();
+            if (rrPendenteReload) rrCarregar(); else rrRender();
         }
-        function rrExcluir(id) {
+        async function rrExcluir(id) {
             if (!confirm('Excluir esta resposta rápida?')) return;
-            rrDados = rrDados.filter(r => r.id !== id);
             rrExpandido.delete(id);
             rrEditando = null;
-            rrGravar();
-            rrRender();
+            if (rrEhRascunho(id)) { rrDados = rrDados.filter(r => r.id !== id); rrRender(); return; }
+            try { await dbDelete(RR_TABLE, { id }); }
+            catch (e) { rrErro('não consegui excluir', e); }
+            await rrCarregar();
         }
         function rrCopiarFallback(texto, ok) {
             try {
@@ -13047,7 +13096,6 @@
         function rrInit() {
             const root = document.getElementById('rrRoot');
             if (!root) return;
-            rrDados = rrLer();
             let aberto = '0';
             try { aberto = localStorage.getItem(RR_ABERTO_KEY) || '0'; } catch (_) {}
             root.dataset.aberto = aberto === '1' ? '1' : '0';
@@ -13085,7 +13133,12 @@
                     rrExcluir(id);
                 }
             });
-            rrRender();
+            rrRender();          // pinta a gaveta já (vazia) enquanto carrega
+            rrCarregar();        // traz os post-its da fonte central (Supabase)
+            // Sincronização entre terminais: recarrega a lista sempre que a
+            // tabela muda em qualquer lugar (Realtime; cai pra polling de 5s
+            // se o websocket não conectar) — mesma helper das outras listas.
+            assinarRealtimeTabela(RR_TABLE, rrCarregar);
         }
         rrInit();
     </script>
