@@ -1125,6 +1125,98 @@
             .rr-drawer { transition: none; }
             .rr-backdrop { transition: none; }
         }
+
+        /* ============================================================
+           "Envio de Pix" — pré-visualização FIXA lado a lado (2026-09-03,
+           revisada no mesmo dia). Coluna direita SEMPRE visível na tela
+           "Troca por Pix": um cartão quadrado 1:1 que lê os valores que o
+           serviço JÁ calculou (mfTrocaPixCalcular) — NÃO recalcula taxa/
+           total nem toca em nenhum outro serviço. Sem botão de abrir, sem
+           modal. Função isolada: este bloco CSS '.pxc-*', o markup dentro
+           de #mfScreen-troca-pix (.pxc-layout) e o bloco JS "Envio de Pix
+           — pré-visualização". Remover = apagar os 3 blocos + reverter os
+           2 ganchos em mfTrocaPixCalcular/movFinTela.
+           ============================================================ */
+        .pxc-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 16px; align-items: start; margin-bottom: 16px; }
+        .pxc-layout .pxc-form { margin-bottom: 0; }
+        /* formulário compacto — só dentro desta tela */
+        .pxc-layout .pxc-form .fin-field { margin-bottom: 9px; }
+        .pxc-layout .pxc-form .fin-field label { font-size: 10px; margin-bottom: 3px; }
+        .pxc-layout .pxc-form .fin-field input { padding: 9px 12px; font-size: 14px; border-radius: 10px; }
+        .pxc-layout .pxc-form .extenso-valor { font-size: 10.5px; margin-top: 3px; min-height: 12px; }
+        .pxc-layout .pxc-form .fin-check { margin-top: 4px; }
+        .pxc-layout .pxc-form .fin-submit { padding: 12px; margin-top: 10px; }
+
+        .pxc-side { position: sticky; top: 16px; }
+        .pxc-side-cap { font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px;
+            text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px; }
+        .pxc-dl { margin-top: 9px; width: 100%; padding: 9px; border-radius: 9px;
+            border: 1px solid var(--border-strong); background: var(--surface);
+            color: var(--text-dim); font-size: 12px; font-weight: 700;
+            cursor: pointer; font-family: inherit; }
+        .pxc-dl:hover { color: var(--text); border-color: var(--accent); }
+        .pxc-dl:disabled { opacity: 0.5; cursor: default; }
+
+        /* ---- Cartão quadrado (área capturável — SÓ apresentação) ---- */
+        .pxc-square { width: 100%; aspect-ratio: 1 / 1; container-type: inline-size;
+            background: #ffffff; border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--border); }
+        .pxc-doc { width: 100%; height: 100%; box-sizing: border-box;
+            display: flex; flex-direction: column; padding: 9cqw 8.5cqw 7.5cqw;
+            color: #0f1a15; font-family: inherit; -webkit-font-smoothing: antialiased; }
+        .pxc-doc-brand { font-size: 3.2cqw; font-weight: 800; letter-spacing: 2.5px;
+            text-transform: uppercase; color: #12805a; }
+        .pxc-doc-title { margin-top: 1.5cqw; font-size: 6.2cqw; font-weight: 800;
+            letter-spacing: 0.5px; text-transform: uppercase; color: #0f1a15; }
+        .pxc-doc-sep { height: 2px; background: #e7eae8; margin: 6cqw 0; }
+        .pxc-doc-rows { display: flex; flex-direction: column; gap: 4.5cqw; }
+        .pxc-doc-cell { display: flex; flex-direction: column; gap: 0.6cqw; }
+        .pxc-doc-lb { font-size: 3.5cqw; font-weight: 700; letter-spacing: 1.2px;
+            text-transform: uppercase; color: #5b665f; }
+        .pxc-doc-vl { font-size: 6.4cqw; font-weight: 700; color: #0f1a15;
+            line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .pxc-doc-cell--desc .pxc-doc-vl { color: #12805a; }
+        .pxc-doc-total { margin-top: auto; padding-top: 6cqw; }
+        .pxc-doc-total-lb { font-size: 3.7cqw; font-weight: 800; letter-spacing: 2.5px;
+            text-transform: uppercase; color: #5b665f; }
+        .pxc-doc-total-vl { margin-top: 1.6cqw; font-size: 13.5cqw; font-weight: 800;
+            line-height: 1; color: #0c7a45; font-variant-numeric: tabular-nums; }
+        .pxc-doc-foot { margin-top: 5.5cqw; font-size: 3cqw; font-weight: 500;
+            letter-spacing: 0.2px; color: #909a93; }
+        /* estado neutro (sem valor) — some tudo menos marca + título */
+        .pxc-doc-empty { display: none; margin: auto 0; font-size: 4.6cqw;
+            font-weight: 600; color: #9aa39d; }
+        .pxc-doc[data-vazio="1"] .pxc-doc-sep,
+        .pxc-doc[data-vazio="1"] .pxc-doc-rows,
+        .pxc-doc[data-vazio="1"] .pxc-doc-total,
+        .pxc-doc[data-vazio="1"] .pxc-doc-foot { display: none; }
+        .pxc-doc[data-vazio="1"] .pxc-doc-empty { display: block; }
+
+        /* ---- Frame fixo 1080 usado SÓ na exportação PNG (html2canvas não
+               lê container-queries/aspect-ratio de forma confiável) ---- */
+        .pxc-shot { position: fixed; left: -99999px; top: 0; width: 1080px; height: 1080px; }
+        .pxc-shot .pxc-square { width: 1080px; height: 1080px; aspect-ratio: auto; border-radius: 0; border: none; }
+        .pxc-shot .pxc-doc { padding: 98px 92px 82px; }
+        .pxc-shot .pxc-doc-brand { font-size: 35px; letter-spacing: 6px; }
+        .pxc-shot .pxc-doc-title { font-size: 67px; margin-top: 16px; }
+        .pxc-shot .pxc-doc-sep { margin: 64px 0; }
+        .pxc-shot .pxc-doc-rows { gap: 48px; }
+        .pxc-shot .pxc-doc-cell { gap: 7px; }
+        .pxc-shot .pxc-doc-lb { font-size: 38px; letter-spacing: 3px; }
+        .pxc-shot .pxc-doc-vl { font-size: 69px; }
+        .pxc-shot .pxc-doc-total { padding-top: 64px; }
+        .pxc-shot .pxc-doc-total-lb { font-size: 40px; letter-spacing: 6px; }
+        .pxc-shot .pxc-doc-total-vl { font-size: 146px; margin-top: 18px; }
+        .pxc-shot .pxc-doc-foot { font-size: 32px; margin-top: 60px; }
+
+        /* telas menores: cartão desce pra baixo do formulário */
+        @media (max-width: 900px) {
+            .pxc-layout { grid-template-columns: 1fr; }
+            .pxc-side { position: static; }
+            .pxc-square { max-width: 420px; }
+            .pxc-layout .pxc-form .fin-field { margin-bottom: 12px; }
+        }
     </style>
 </head>
 <body>
@@ -2053,7 +2145,14 @@
                     <span class="fin-subhead-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg></span>
                     <h2>Troca por Pix</h2>
                 </div>
-                <div class="fin-card">
+                <!-- Envio de Pix — layout 2 colunas (2026-09-03): à esquerda o
+                     formulário compacto do serviço; à direita o cartão de
+                     pré-visualização pro cliente, SEMPRE visível (sem botão de
+                     abrir), atualizado por mfTrocaPixCalcular()→window.pxcSync.
+                     Só a área .pxc-square deve entrar no print. Ver bloco CSS
+                     '.pxc-*' e o bloco JS "Envio de Pix — pré-visualização". -->
+                <div class="pxc-layout">
+                <div class="fin-card pxc-form">
                     <div class="fin-field">
                         <label>Data</label>
                         <input type="text" id="mfTpData" readonly>
@@ -2083,6 +2182,39 @@
                     </div>
                     <button type="button" class="fin-submit" id="mfTpSubmit" onclick="mfRegistrarTrocaPix()">Registrar</button>
                     <div class="fin-msg" id="mfTpMsg"></div>
+                </div>
+
+                <aside class="pxc-side" aria-label="Pré-visualização para o cliente">
+                    <div class="pxc-side-cap">Pré-visualização para o cliente</div>
+                    <div class="pxc-square">
+                        <div class="pxc-doc" id="pxcDoc" data-vazio="1">
+                            <div class="pxc-doc-brand">Blackout</div>
+                            <div class="pxc-doc-title">Envio de Pix</div>
+                            <div class="pxc-doc-empty">Informe o valor desejado</div>
+                            <div class="pxc-doc-sep"></div>
+                            <div class="pxc-doc-rows">
+                                <div class="pxc-doc-cell">
+                                    <span class="pxc-doc-lb">Valor solicitado</span>
+                                    <span class="pxc-doc-vl" id="pxcVSolic">R$ 0,00</span>
+                                </div>
+                                <div class="pxc-doc-cell">
+                                    <span class="pxc-doc-lb">Taxa do serviço</span>
+                                    <span class="pxc-doc-vl" id="pxcVTaxa">R$ 0,00</span>
+                                </div>
+                                <div class="pxc-doc-cell pxc-doc-cell--desc" id="pxcLinhaDesc" style="display:none;">
+                                    <span class="pxc-doc-lb">Desconto</span>
+                                    <span class="pxc-doc-vl" id="pxcVDesc">− R$ 0,00</span>
+                                </div>
+                            </div>
+                            <div class="pxc-doc-total">
+                                <div class="pxc-doc-total-lb">Valor total</div>
+                                <div class="pxc-doc-total-vl" id="pxcVTotal">R$ 0,00</div>
+                            </div>
+                            <div class="pxc-doc-foot">Valor referente ao serviço de envio de Pix.</div>
+                        </div>
+                    </div>
+                    <button type="button" class="pxc-dl" id="pxcDl" onclick="pxcSalvarImagem()">📷 Salvar como imagem</button>
+                </aside>
                 </div>
 
                 <div class="fin-card">
@@ -4040,6 +4172,10 @@
             // Módulo "Prestação de Serviço" (2026-08-26) — ícone de caixa de
             // ferramentas.
             prestador: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="3" y="9" width="18" height="10" rx="1.5"/><path d="M8 9V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="10.5" y1="12.5" x2="13.5" y2="15.5"/></svg>`,
+            // "Troca por Pix" (2026-09-03) — atalho na tela principal pro serviço
+            // que já vive em Movimentação Financeira → Envio de Pix. Mesmo par de
+            // setas do .fin-subhead-ico daquela tela. NÃO é um serviço novo.
+            trocapix: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M4 9h13l-3-3M20 15H7l3 3"/><circle cx="12" cy="12" r="9" opacity=".4"/></svg>`,
         };
 
         // Espelha o grid de atalhos da planilha "PAINEL DE CONTROLE" usada na loja.
@@ -4052,6 +4188,12 @@
             // solicitado em 1x a 12x, espelhando as taxas da aba "PAINEL DE
             // CONTROLE" da planilha (AD7:AF18). Sem backend.
             { icon: 'simulador', label: 'Simulador de Valores', action: { type: 'view', view: 'simulador' }, desc: 'Simule o parcelamento de um valor solicitado de 1x a 12x, com valor da parcela e valor total de cada opção, e exporte a tabela como imagem para o cliente.' },
+            // "Troca por Pix" (2026-09-03) — ATALHO, não um serviço novo. Abre
+            // direto Movimentação Financeira → Envio de Pix (tela mfScreen-troca-pix),
+            // que é a ÚNICA implementação: cálculo de taxa/total e o cartão pro
+            // cliente continuam 100% naquele módulo. `action.tela` é lido por
+            // handleMenuClick, que chama movFinTela() logo após openView('movfin').
+            { icon: 'trocapix', label: 'Troca por Pix', action: { type: 'view', view: 'movfin', tela: 'troca-pix' }, desc: 'Abre direto o Envio de Pix (Movimentação Financeira): informe o valor e o sistema calcula a taxa e o total, com o cartão de pré-visualização para o cliente.' },
             { icon: 'curriculo', label: 'Currículo', action: { type: 'view', view: 'curriculo' }, badgeKey: 'curriculo' },
             { icon: 'declaracao', label: 'Declarações e Procurações', action: { type: 'view', view: 'declProc' }, badgeKey: 'declProc' },
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
@@ -4224,6 +4366,13 @@
                 window.open(resolveWebLink('menu', item.label, item.action.url), '_blank', 'noopener');
             } else if (item.action.type === 'view') {
                 openView(item.action.view, item.action.scrollTo);
+                // Atalho pra uma tela interna de um módulo (ex.: "Troca por Pix" →
+                // Movimentação Financeira → Envio de Pix). Não duplica nada: só
+                // navega pra tela que já existe, logo após o módulo abrir.
+                if (item.action.tela) {
+                    if (item.action.view === 'movfin' && typeof window.movFinTela === 'function') window.movFinTela(item.action.tela);
+                    else if (item.action.view === 'financeiro' && typeof window.financeiroTela === 'function') window.financeiroTela(item.action.tela);
+                }
             } else if (item.action.type === 'sub') {
                 openSubPanel(item.action.key);
             }
@@ -5093,7 +5242,7 @@
             if (nome === 'troca-pix') {
                 const d = document.getElementById('mfTpData');
                 if (d) d.value = new Date().toLocaleDateString('pt-BR');
-                mfTrocaPixCalcular();
+                mfTrocaPixCalcular();   // também repinta a pré-visualização fixa (window.pxcSync)
                 mfTrocaPixHistApurar();
             }
             if (nome === 'reembolso') { mfReembolsoValidar(); mfReembolsoHistApurar(); }
@@ -5371,6 +5520,15 @@
             //  - Receita = taxa − desconto (só isso entra como ganho no caixa do dia).
             setT('mfTpTransfInterna', mfBRL(valor));
             setT('mfTpReceita', mfBRL(Math.max(0, taxa - desconto)));
+            // Pré-visualização do cliente (2026-09-03) — camada SÓ de
+            // apresentação: repassa os valores JÁ calculados acima, sem
+            // recalcular nada. A janela pode nem estar aberta; a função
+            // guarda o último estado e pinta quando abrir.
+            if (typeof window.pxcSync === 'function') window.pxcSync({
+                valor: valor, taxa: taxa, total: total,
+                descontoOn: on, desconto: desconto, final: total - desconto,
+                temValor: valor >= 1
+            });
         }
         window.mfTrocaPixCalcular = mfTrocaPixCalcular;
 
@@ -13141,6 +13299,78 @@
             assinarRealtimeTabela(RR_TABLE, rrCarregar);
         }
         rrInit();
+
+        // ============================================================
+        // Envio de Pix — pré-visualização FIXA lado a lado (2026-09-03,
+        // revisada no mesmo dia). Camada SÓ de apresentação. O cartão
+        // (.pxc-square em #mfScreen-troca-pix) fica SEMPRE visível — sem
+        // botão de abrir, sem modal. window.pxcSync recebe os valores que
+        // mfTrocaPixCalcular() JÁ calculou e os pinta. NÃO recalcula regra
+        // de negócio, não grava, não altera nenhum campo do formulário nem
+        // outro serviço. Ver o bloco CSS '.pxc-*' e o markup '.pxc-layout'.
+        // ============================================================
+        (function () {
+            var ultimo = null;   // último payload recebido de pxcSync (p/ nome do PNG)
+            function el(id) { return document.getElementById(id); }
+            function brl(n) {
+                return 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR',
+                    { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            // d = { valor, taxa, total, descontoOn, desconto, final, temValor }
+            function pxcSync(d) {
+                ultimo = d || null;
+                var doc = el('pxcDoc');
+                if (!doc) return;
+                var temValor = !!(d && d.temValor);
+                doc.dataset.vazio = temValor ? '0' : '1';   // estado neutro: sem NaN/undefined/valor velho
+                if (!temValor) return;
+                var descOn = !!(d.descontoOn && d.desconto > 0);
+                var total = descOn ? d.final : d.total;
+                if (el('pxcVSolic')) el('pxcVSolic').textContent = brl(d.valor);
+                if (el('pxcVTaxa')) el('pxcVTaxa').textContent = brl(d.taxa);
+                var linhaDesc = el('pxcLinhaDesc');
+                if (linhaDesc) {
+                    linhaDesc.style.display = descOn ? '' : 'none';
+                    if (descOn && el('pxcVDesc')) el('pxcVDesc').textContent = '− ' + brl(d.desconto);
+                }
+                if (el('pxcVTotal')) el('pxcVTotal').textContent = brl(total);
+            }
+            // Exportação opcional em PNG 1080x1080 — mesmo padrão do
+            // orcGerarCanvas/simGerarCanvas (frame fixo fora da tela +
+            // html2canvas já importado no topo deste módulo). O print de
+            // tela continua funcionando sem isto.
+            async function pxcSalvarImagem() {
+                var doc = el('pxcDoc');
+                var btn = el('pxcDl');
+                if (!doc || doc.dataset.vazio === '1') return;
+                var frame = document.createElement('div');
+                frame.className = 'pxc-shot';
+                frame.innerHTML = '<div class="pxc-square">' + doc.outerHTML + '</div>';
+                document.body.appendChild(frame);
+                var antes = btn ? btn.textContent : '';
+                if (btn) { btn.disabled = true; btn.textContent = 'Gerando…'; }
+                try {
+                    var alvo = frame.querySelector('.pxc-square');
+                    var canvas = await html2canvas(alvo, {
+                        width: 1080, height: 1080, scale: 1,
+                        backgroundColor: '#ffffff', useCORS: true
+                    });
+                    var ref = ultimo ? (ultimo.descontoOn && ultimo.desconto > 0 ? ultimo.final : ultimo.total) : 0;
+                    var a = document.createElement('a');
+                    a.download = 'envio-pix-' + brl(ref).replace(/[^\d]/g, '') + '.png';
+                    a.href = canvas.toDataURL('image/png');
+                    a.click();
+                } catch (e) {
+                    alert('Não consegui gerar a imagem: ' + (e && e.message ? e.message : e)
+                        + '\nVocê ainda pode tirar um print da tela.');
+                } finally {
+                    frame.remove();
+                    if (btn) { btn.disabled = false; btn.textContent = antes || '📷 Salvar como imagem'; }
+                }
+            }
+            window.pxcSync = pxcSync;
+            window.pxcSalvarImagem = pxcSalvarImagem;
+        })();
     </script>
 </body>
 </html>

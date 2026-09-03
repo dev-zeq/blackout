@@ -2861,3 +2861,71 @@ Bug relatado: post-its cadastrados num terminal não apareciam em outro. Causa: 
 - Caminho de escrita com senha inválida (`fc_write_pwd='x'`): Salvar → `alert("… não consegui criar: Senha inválida")`, rascunho descartado, **sem crash**, card existente intacto — confirma que a chamada chega na `db-write` e só é barrada pela senha (tabela+ação já liberadas na v11).
 
 **Falta:** rodar o cenário exato do pedido (criar/editar/excluir **pela UI** logado no painel real, em 2 terminais) — precisa da senha da equipe pra `db-write`, que o ambiente de teste não tem. Toda a arquitetura de sincronização (SELECT + Realtime + ordem + os 3 tipos de mutação propagando entre 2 terminais) foi validada; o único passo não exercido é um INSERT/UPDATE/DELETE da UI **com senha válida** (código idêntico ao usado pelo resto do painel). Publicado a pedido do usuário — mudança aditiva, sem tocar em nenhum outro serviço.
+
+## Envio de Pix — janela de pré-visualização pro cliente (2026-09-03) — NÃO publicado
+
+Pedido: no serviço "Troca por Pix" da **Movimentação Financeira** (o "Envio de Pix" — atendente informa o valor, o sistema calcula taxa + total a cobrar), adicionar uma **segunda visualização SÓ pra apresentar ao cliente** — um cartão quadrado 1:1, limpo, pronto pra print + WhatsApp — **sem duplicar nem alterar o cálculo existente**.
+
+**Serviço analisado (intocado no cálculo):** tela `#mfScreen-troca-pix`. Campo `#mfTpValor` (valor desejado) → `mfTrocaPixCalcular()` (roda no `oninput` e no toggle de desconto) calcula `taxa` (`mfTrocaPixTaxa` — faixas 10 fixo / 5,5% / 5% / 4,5%) e `total` (`mfTrocaPixArredComercial` — arredondamento comercial da planilha), e o "Valor final a cobrar" quando há desconto (`#mfTpFinal` = total − desconto). Nada disso foi mexido.
+
+**Camada nova = SÓ apresentação. Função 100% isolada**, 3 blocos delimitados em `paineldecontrole/index.html` (CSS `.pxc-*`, markup `#pxcRoot` dentro de `#mfScreen-troca-pix`, bloco JS `(function(){…})()` "Envio de Pix — pré-visualização") + **2 ganchos mínimos**:
+- No fim de `mfTrocaPixCalcular()`: `if (typeof window.pxcSync === 'function') window.pxcSync({ valor, taxa, total, descontoOn:on, desconto, final: total-desconto, temValor: valor>=1 })` — **repassa os valores que já foram calculados nas linhas acima, não recalcula nada**.
+- Na branch `troca-pix` de `movFinTela()`: `window.pxcReset && window.pxcReset()` — a pré-visualização começa **fechada** a cada entrada na tela (cada atendimento parte do zero). Não toca em nenhum campo.
+
+**Como funciona:**
+- Botão **"👁 Visualizar para cliente"** (`.pxc-open`) dentro da tela, abaixo de "Registrar" → `pxcAbrir()` seta `#pxcRoot[data-aberto="1"]` e re-chama `mfTrocaPixCalcular()` (só leitura) pra puxar o estado atual.
+- `#pxcRoot` é `position:fixed` (canto sup. direito em telas ≥1180px — ao lado do formulário, que continua visível/usável; em telas menores vira barra flutuante embaixo, `left/right:12px`, sem backdrop). `z-index:950` (abaixo dos modais 1000). **Fica DENTRO de `#mfScreen-troca-pix` de propósito**: quando a tela perde `.active` (`display:none`), o `position:fixed` descendente **some sozinho** — sem precisar de hook de navegação pra Home/outras telas/outros módulos. Confirmado por `getBoundingClientRect`/`checkVisibility`.
+- **Área capturável = `.pxc-square`** (1:1 exato via `aspect-ratio:1/1` + `container-type:inline-size`; tudo em `cqw` pra escalar igual em qualquer tamanho). Conteúdo: "BLACKOUT" (wordmark texto, sem logo pesada) · "ENVIO DE PIX" · linhas "Valor solicitado" / "Taxa do serviço" / (linha "Desconto" `− R$ x` só quando o desconto do serviço está ligado e > 0) · bloco **"VALOR TOTAL" gigante** (verde `#0c7a45`, 14cqw) · rodapé "Valor referente ao serviço de envio de Pix." Cartão branco, 1 cor de destaque, sem sombra na área capturável. A barra ("Pré-visualização do cliente" + ✕), o botão "📷 Salvar como imagem" e a dica ficam **fora** do `.pxc-square`.
+- **Valor total exibido** = `final` (total − desconto) quando há desconto ligado; senão `total`. Sempre = o que o serviço já mostra em `#mfTpFinal`/`#mfTpTotal`.
+- **Estado vazio/zero** (`valor < 1`): `#pxcDoc[data-vazio="1"]` esconde linhas/total/rodapé e mostra só "Informe o valor do Pix". Nunca aparece `NaN`/`undefined`/valor antigo (os nós de valor ficam com texto velho mas `display:none`).
+- **✕ / `pxcFechar()`**: só fecha (`data-aberto="0"`) — **não toca no `#mfTpValor` nem em nenhum campo** (confirmado: valor digitado permanece).
+- **"📷 Salvar como imagem"** (`pxcSalvarImagem()`) — opcional, extra: monta um frame fixo `.pxc-shot` de **1080×1080** fora da tela (fontes em px, porque html2canvas 1.4.1 não lê container-queries/aspect-ratio de forma confiável), fotografa com `html2canvas` (já importado no topo do módulo, mesmo padrão de `orcGerarCanvas`/`simGerarCanvas`) e baixa `envio-pix-<total>.png`. Se falhar, `alert` avisando que dá pra tirar print mesmo assim. O print de tela funciona sem isso.
+
+**Testado (static server porta 8790, `localStorage['fc_write_pwd']='x'` pra pular a senha — sem tocar em produção nem no banco):**
+- Sem `SyntaxError`; só os 2 × 404 estáticos pré-existentes no console. As 5 telas da Movimentação Financeira (`inicio`/`retirada`/`troca-pix`/`reembolso`/`transferencia`) navegam sem erro; Reembolso continua calculando.
+- Digitar 500 → preview = form (Taxa R$ 27,50 / Total R$ 527,50). Trocar pra 800 → 40,00 / 840,00. Zero e vazio → estado neutro "Informe o valor do Pix", sem número velho à vista. 87.654,32 → 3.944,44 / 91.599,00 (= form). Alterações rápidas (12→1→250→1500→999,99→2000) → assenta no último, sem lag/stale.
+- Desconto ligado (valor 500, desconto 20) → preview mostra linha "Desconto − R$ 20,00" e **VALOR TOTAL R$ 507,50** (= `#mfTpFinal`); desligar → volta a R$ 527,50, linha some.
+- Abrir com campo vazio pelo botão real `#pxcOpen` → estado neutro; `pxcSalvarImagem()` nesse estado = no-op sem erro. Fechar pelo ✕ real → `data-aberto="0"` e **`#mfTpValor` mantém "320,50"**.
+- Isolamento: com a preview aberta, ir pra `inicio`/`reembolso`/Home → `#pxcRoot` deixa de ser renderizado (`width:0`, `checkVisibility()=false`); voltar pra `troca-pix` → `pxcReset()` deixa fechada.
+- `.pxc-square` mede 354×354 (ratio 1.0000) na gaveta e 1080×1080 no frame de exportação. `html2canvas` gerou PNG (~144 KB base64), nome `envio-pix-156750.png` pra total R$ 1.567,50; botão restaura de "Gerando…" pro texto normal.
+- Layouts: ≥1180px → cartão no canto sup. direito ao lado do formulário (todos os campos do form visíveis). ~1134px e mobile 375px → barra flutuante embaixo, cartão centralizado, hierarquia legível, VALOR TOTAL dominante. Screenshots (desktop lado a lado, ~1134, mobile, frame 1080) entregues.
+
+**Falta:** teste ao vivo logado no painel real + aprovação pra publicar. Nenhum outro serviço/tabela/migração tocado; mudança 100% aditiva.
+
+### Revisão no mesmo dia — pré-visualização vira FIXA lado a lado (2026-09-03) — NÃO publicado
+
+Pedido: tirar o botão "👁 Visualizar para cliente" e o comportamento de janela flutuante/modal. O cartão do cliente passa a ficar **permanentemente visível numa 2ª coluna à direita** do formulário, que fica **compacto**. Sem etapa de abrir. Restrito ao serviço "Troca por Pix"/"Envio de Pix" (`#mfScreen-troca-pix`); nada nos outros serviços da Movimentação (Retirada/Reembolso/Transferência/Histórico).
+
+**Reaproveitou tudo da versão anterior** — o cálculo (`mfTrocaPixCalcular` → `mfTrocaPixTaxa`/`mfTrocaPixArredComercial`/desconto) segue **intocado**; o gancho `window.pxcSync({...})` no fim de `mfTrocaPixCalcular()` continua igual (repassa os valores já calculados, não recalcula); o cartão (`.pxc-doc`), o estado neutro por `data-vazio`, o frame de export 1080 e `pxcSalvarImagem()` foram mantidos.
+
+**O que mudou em `paineldecontrole/index.html`:**
+- **Markup** (`#mfScreen-troca-pix`): a 1ª `.fin-card` (formulário) + um `<aside class="pxc-side">` novo agora ficam dentro de um `<div class="pxc-layout">` (CSS Grid `minmax(0,1fr) 320px`). O `.pxc-doc` saiu do bloco flutuante do fim da tela (removido por inteiro: `.pxc-root`/`.pxc-bar`/`.pxc-stage`/`.pxc-hint`) e virou o conteúdo do `.pxc-square` dentro do `.pxc-side`. Cartão com caption "Pré-visualização para o cliente" acima (fora do quadrado) e o botão "📷 Salvar como imagem" abaixo (fora do quadrado). **Removido:** botão `.pxc-open` "👁 Visualizar para cliente".
+- **Estrutura do cartão**: linhas viraram `.pxc-doc-cell` (rótulo em cima, valor embaixo — "VALOR SOLICITADO" / "R$ 500,00"), rótulos em maiúsculas, como no mock do pedido. VALOR TOTAL segue sendo o maior elemento (13,5cqw, verde). Estado neutro: "Informe o valor desejado".
+- **CSS**: bloco `.pxc-*` reescrito. `.pxc-layout` (grid 2 col) + compactação **escopada** só a esta tela (`.pxc-layout .pxc-form .fin-field { margin-bottom:9px }`, label 10px, input `padding:9px 12px`/`font-size:14px`, etc. — mesma técnica do `#rfConfigModal`). `.pxc-side { position: sticky; top: 16px }`. `@media (max-width:900px)` → 1 coluna (cartão desce pra baixo do formulário), `.pxc-square { max-width:420px }`, `.pxc-side` volta a `static`. `.pxc-square` mantém `aspect-ratio:1/1` + `container-type:inline-size` (tudo em `cqw`). Frame `.pxc-shot` (1080) re-tunado pras novas proporções.
+- **JS**: removidas `pxcAbrir`/`pxcFechar`/`pxcReset` e os `window.*` correspondentes (não há mais abrir/fechar — o cartão está sempre no DOM da tela). Sobraram `window.pxcSync` e `window.pxcSalvarImagem`. O gancho em `movFinTela()` (branch `troca-pix`) voltou ao original (a chamada a `mfTrocaPixCalcular()` que já existia repinta o cartão sozinha) — **a única linha de `movFinTela` que ficou diferente do original é um comentário**.
+
+**Testado (static server porta 8790, `localStorage['fc_write_pwd']='x'` — sem tocar em produção/banco):**
+- Sem `SyntaxError`; só os 2 × 404 estáticos pré-existentes. `window.pxcAbrir/pxcFechar/pxcReset` = `undefined` (removidas); `#pxcOpen`/`#pxcRoot` não existem mais; há **1** `.pxc-square`, só sob `#mfScreen-troca-pix`.
+- Grid em ~1079px de container: `743px 320px`; `.pxc-square` 320×320 (ratio 1.000). Layout 2 colunas com o formulário compacto à esquerda e o cartão fixo à direita, sem clicar em nada.
+- Tempo real: 500 → cartão = form (Taxa 27,50 / Total 527,50). 700 → 38,50 / 738,50. 87.654,32 → 3.944,44 / 91.599,00. Vazio e 0 → estado neutro "Informe o valor desejado" (linhas/total escondidos), sem `NaN`/valor velho à vista. Desconto 20 em 500 → linha "Desconto − R$ 20,00" + VALOR TOTAL R$ 507,50 (= `#mfTpFinal`); desligar → volta a 527,50.
+- Responsivo: `@media(max-width:900px)` e mobile 375px → 1 coluna, `.pxc-side` `static` (cartão abaixo do form), `.pxc-square` 335×335, **sem rolagem horizontal** (`scrollWidth == innerWidth`).
+- Export: `pxcSalvarImagem()` gera PNG 1080×1080 (~138 KB), nome `envio-pix-52750.png`; botão restaura de "Gerando…".
+- Outros serviços: `movFinTela` navega OK pras 5 telas; Reembolso calcula. Nenhum `.pxc-*` aparece fora da tela Troca por Pix.
+- Screenshots (desktop 2 colunas, frame 1080, mobile 1 coluna) entregues.
+
+**Falta:** teste ao vivo logado + aprovação pra publicar. Mudança restrita a `#mfScreen-troca-pix` + os 3 blocos `pxc-*`; cálculo e demais serviços intocados.
+
+### Atalho "Troca por Pix" na tela principal de Serviços (2026-09-03) — NÃO publicado
+
+Pedido: deixar o serviço "Envio de Pix" (que vive em Movimentação Financeira → tela `mfScreen-troca-pix`) acessível direto pela tela principal, **sem duplicar** formulário/cálculo/regra de taxa. Analisadas 2 opções; escolhida a **B (atalho)**.
+
+**Análise:** a tela principal renderiza `MENU_ITEMS` em `renderMenu()` (grid `#menuGrid`); cada tile chama `handleMenuClick(i)`. Ações existentes: `type:'link'` (`window.open`), `type:'view'` (`openView(view, scrollTo)`), `type:'sub'` (`openSubPanel`). `openView('movfin')` sempre cai em `movFinTela('inicio')`. Navegação interna da Movimentação = `movFinTela(nome)` (exposta em `window`), telas `.fin-screen#mfScreen-*`. Já havia o precedente de "abrir a view e depois fazer um passo a mais" (`scrollTo` → `scrollToSection`). Opção A (mover o HTML/JS do serviço pra tela principal) traria risco de IDs duplicados (`mfTp*`, `pxc*`), 2 pontos de estado/cálculo e manutenção dobrada — sem ganho real. Opção B é 1 tile + navegação.
+
+**Implementado (B) — `paineldecontrole/index.html`, 3 pontos, nada no módulo do Pix:**
+- `ICONS.trocapix` — SVG novo (as mesmas setas de troca do `.fin-subhead-ico` da tela, + círculo esmaecido).
+- `MENU_ITEMS` — entrada nova logo após "Simulador de Valores" (vira o 4º tile): `{ icon:'trocapix', label:'Troca por Pix', action:{ type:'view', view:'movfin', tela:'troca-pix' }, desc:'…' }`. "Troca por Pix" é o nome comercial na tela principal; o módulo interno segue chamado "Envio de Pix"/"Troca por Pix" como está.
+- `handleMenuClick()` — no ramo `type:'view'`, **depois** de `openView(...)`, um `if (item.action.tela)` que chama `window.movFinTela(item.action.tela)` (ou `window.financeiroTela` se algum atalho futuro apontar pro Financeiro). É o único ponto novo de lógica: navega pra tela que já existe. Nenhum outro tile tem `action.tela`, então o comportamento dos demais é idêntico.
+
+**Testado (static server 8790, `fc_write_pwd='x'`):** 20 tiles (era 19), "Troca por Pix" no índice 3 com ícone renderizando, estilo idêntico aos outros. Clique (real, via `.menu-tile.onclick`) → `#viewMovFin` ativo, Home inativo, **cai direto em `#mfScreen-troca-pix`** (não em `inicio`), layout 2 colunas + `.pxc-square` visível, Data pré-preenchida; digitar 500 → taxa R$ 27,50 / total R$ 527,50 no form e no cartão. Tile "Movimentação Financeira" (sem `action.tela`) continua caindo em `inicio`. Tiles Simulador/Recibo abrem as views certas. Atalho repetível. Sem `SyntaxError`; só os 2 × 404 estáticos pré-existentes. Screenshots (menu com o tile novo, tela após o clique) entregues.
+
+**Falta:** teste ao vivo logado + aprovação. Some junto com o ajuste do layout 2 colunas acima quando publicar.
