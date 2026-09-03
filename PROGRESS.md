@@ -2862,7 +2862,7 @@ Bug relatado: post-its cadastrados num terminal não apareciam em outro. Causa: 
 
 **Falta:** rodar o cenário exato do pedido (criar/editar/excluir **pela UI** logado no painel real, em 2 terminais) — precisa da senha da equipe pra `db-write`, que o ambiente de teste não tem. Toda a arquitetura de sincronização (SELECT + Realtime + ordem + os 3 tipos de mutação propagando entre 2 terminais) foi validada; o único passo não exercido é um INSERT/UPDATE/DELETE da UI **com senha válida** (código idêntico ao usado pelo resto do painel). Publicado a pedido do usuário — mudança aditiva, sem tocar em nenhum outro serviço.
 
-## Envio de Pix — janela de pré-visualização pro cliente (2026-09-03) — NÃO publicado
+## Envio de Pix — janela de pré-visualização pro cliente (2026-09-03) — SUPERADO pela revisão abaixo, **PUBLICADO** (`main` `7df26ae`)
 
 Pedido: no serviço "Troca por Pix" da **Movimentação Financeira** (o "Envio de Pix" — atendente informa o valor, o sistema calcula taxa + total a cobrar), adicionar uma **segunda visualização SÓ pra apresentar ao cliente** — um cartão quadrado 1:1, limpo, pronto pra print + WhatsApp — **sem duplicar nem alterar o cálculo existente**.
 
@@ -2890,9 +2890,9 @@ Pedido: no serviço "Troca por Pix" da **Movimentação Financeira** (o "Envio d
 - `.pxc-square` mede 354×354 (ratio 1.0000) na gaveta e 1080×1080 no frame de exportação. `html2canvas` gerou PNG (~144 KB base64), nome `envio-pix-156750.png` pra total R$ 1.567,50; botão restaura de "Gerando…" pro texto normal.
 - Layouts: ≥1180px → cartão no canto sup. direito ao lado do formulário (todos os campos do form visíveis). ~1134px e mobile 375px → barra flutuante embaixo, cartão centralizado, hierarquia legível, VALOR TOTAL dominante. Screenshots (desktop lado a lado, ~1134, mobile, frame 1080) entregues.
 
-**Falta:** teste ao vivo logado no painel real + aprovação pra publicar. Nenhum outro serviço/tabela/migração tocado; mudança 100% aditiva.
+**Nota:** esta 1ª versão (janela flutuante com botão "Visualizar para cliente") **não foi ao ar como está** — foi substituída pela revisão abaixo (cartão fixo em 2 colunas) antes de publicar. O que foi pra `main` é a versão revisada.
 
-### Revisão no mesmo dia — pré-visualização vira FIXA lado a lado (2026-09-03) — NÃO publicado
+### Revisão no mesmo dia — pré-visualização vira FIXA lado a lado (2026-09-03) — **PUBLICADO** (`main` `7df26ae` → lanblackout.com)
 
 Pedido: tirar o botão "👁 Visualizar para cliente" e o comportamento de janela flutuante/modal. O cartão do cliente passa a ficar **permanentemente visível numa 2ª coluna à direita** do formulário, que fica **compacto**. Sem etapa de abrir. Restrito ao serviço "Troca por Pix"/"Envio de Pix" (`#mfScreen-troca-pix`); nada nos outros serviços da Movimentação (Retirada/Reembolso/Transferência/Histórico).
 
@@ -2913,9 +2913,9 @@ Pedido: tirar o botão "👁 Visualizar para cliente" e o comportamento de janel
 - Outros serviços: `movFinTela` navega OK pras 5 telas; Reembolso calcula. Nenhum `.pxc-*` aparece fora da tela Troca por Pix.
 - Screenshots (desktop 2 colunas, frame 1080, mobile 1 coluna) entregues.
 
-**Falta:** teste ao vivo logado + aprovação pra publicar. Mudança restrita a `#mfScreen-troca-pix` + os 3 blocos `pxc-*`; cálculo e demais serviços intocados.
+**Publicado** (`main` `7df26ae`, junto com o atalho abaixo) a pedido do usuário. Mudança restrita a `#mfScreen-troca-pix` + os 3 blocos `pxc-*`; cálculo e demais serviços intocados. **Falta:** só o teste ao vivo logado no painel real (o ambiente de teste não tem a senha da equipe).
 
-### Atalho "Troca por Pix" na tela principal de Serviços (2026-09-03) — NÃO publicado
+### Atalho "Troca por Pix" na tela principal de Serviços (2026-09-03) — **PUBLICADO** (`main` `7df26ae` → lanblackout.com)
 
 Pedido: deixar o serviço "Envio de Pix" (que vive em Movimentação Financeira → tela `mfScreen-troca-pix`) acessível direto pela tela principal, **sem duplicar** formulário/cálculo/regra de taxa. Analisadas 2 opções; escolhida a **B (atalho)**.
 
@@ -2928,4 +2928,6 @@ Pedido: deixar o serviço "Envio de Pix" (que vive em Movimentação Financeira 
 
 **Testado (static server 8790, `fc_write_pwd='x'`):** 20 tiles (era 19), "Troca por Pix" no índice 3 com ícone renderizando, estilo idêntico aos outros. Clique (real, via `.menu-tile.onclick`) → `#viewMovFin` ativo, Home inativo, **cai direto em `#mfScreen-troca-pix`** (não em `inicio`), layout 2 colunas + `.pxc-square` visível, Data pré-preenchida; digitar 500 → taxa R$ 27,50 / total R$ 527,50 no form e no cartão. Tile "Movimentação Financeira" (sem `action.tela`) continua caindo em `inicio`. Tiles Simulador/Recibo abrem as views certas. Atalho repetível. Sem `SyntaxError`; só os 2 × 404 estáticos pré-existentes. Screenshots (menu com o tile novo, tela após o clique) entregues.
 
-**Falta:** teste ao vivo logado + aprovação. Some junto com o ajuste do layout 2 colunas acima quando publicar.
+**Verificação final antes de publicar (static server 8790):** 0 IDs duplicados no DOM (`lockErr` no fonte é da tela de senha, nunca 2 no DOM); fonte única de cálculo (`mfTrocaPixCalcular`; `pxcSync` só lê; 1× `.pxc-square`, 1× `#mfTpValor`); cartão = form em 123,45 / 1.500 / 49,99 e no caminho com desconto (cartão = `#mfTpFinal`); tile "Troca por Pix" → `mfScreen-troca-pix`; tile "Movimentação Financeira" → `mfScreen-inicio`; Retirada/Reembolso/Transferência navegam OK; sem `SyntaxError` (só os 2 × 404 estáticos pré-existentes).
+
+**Publicado** (`main` `7df26ae` → lanblackout.com) junto com o ajuste de layout 2 colunas. **Falta:** teste ao vivo logado no painel real.
