@@ -2931,3 +2931,227 @@ Pedido: deixar o serviço "Envio de Pix" (que vive em Movimentação Financeira 
 **Verificação final antes de publicar (static server 8790):** 0 IDs duplicados no DOM (`lockErr` no fonte é da tela de senha, nunca 2 no DOM); fonte única de cálculo (`mfTrocaPixCalcular`; `pxcSync` só lê; 1× `.pxc-square`, 1× `#mfTpValor`); cartão = form em 123,45 / 1.500 / 49,99 e no caminho com desconto (cartão = `#mfTpFinal`); tile "Troca por Pix" → `mfScreen-troca-pix`; tile "Movimentação Financeira" → `mfScreen-inicio`; Retirada/Reembolso/Transferência navegam OK; sem `SyntaxError` (só os 2 × 404 estáticos pré-existentes).
 
 **Publicado** (`main` `7df26ae` → lanblackout.com) junto com o ajuste de layout 2 colunas. **Falta:** teste ao vivo logado no painel real.
+
+## "Ler Documento" (leitura por foto) na Compra e Venda de Imóvel (2026-09-06) — NÃO publicado
+
+Pedido: replicar na Compra e Venda de Imóvel a mesma funcionalidade de "Ler Documento" (tirar foto / enviar imagem do RG/CNH → IA lê → preenche os campos, sem adivinhar, deixando em branco o ilegível) que já existia **só** na Locação de Imóvel. Mesmo padrão visual e de uso. **Sem tocar** na Locação nem na Compra e Venda de Veículo. Analisar antes e reaproveitar a estrutura.
+
+**Estrutura existente analisada (`paineldecontrole/contrato-form.html`):** toda a leitura já era genérica — overlay `#docOverlay` + inputs ocultos `#docInputCamera`/`#docInputGaleria` (compartilhados), `comprimirImagem()` (canvas nativo, sem lib), `processarImagemDocumento()` → `supabase.functions.invoke('documento-ia', { imagem_base64, papel })`, `mostrarDocConfirmacao()` (tela "Confira os dados lidos" com 5 campos: nome, CPF, RG, nacionalidade, estado civil), `aplicarDadosDocumento()` → grava em `s[p+'_nome']` etc. e re-`render()`. A imagem só vive em memória, nunca sobe pro Storage nem é salva no registro. O único ponto que amarrava tudo à Locação era a flag `const pilotoDocumento = s.tipo === 'imovel_locacao'` em `stepPessoa()` e dois literais `p === 'a' ? 'LOCADOR' : 'LOCATÁRIO'`.
+
+**Mudanças em `contrato-form.html` (só isso):**
+- `pilotoDocumento` agora é `s.tipo === 'imovel_locacao' || s.tipo === 'imovel_cv'` — o botão "📷 Ler Documento" passa a aparecer nas duas etapas de pessoa (VENDEDOR e COMPRADOR) da Compra e Venda de Imóvel, com o mesmo CSS `.btn-ler-doc`.
+- `ehLocadorLocacao` (que some com os campos de endereço na etapa do Locador, porque na Locação o endereço é etapa própria) foi **desacoplado** de `pilotoDocumento` → agora é `p === 'a' && s.tipo === 'imovel_locacao'`. Assim o VENDEDOR da Compra e Venda **continua** com Rua/Número/Cidade/Estado na própria etapa (comportamento intocado).
+- Nova função `papelPessoa(p)`: Locação → LOCADOR/LOCATÁRIO; Compra e Venda (imóvel ou veículo) → VENDEDOR/COMPRADOR. Usada no texto do overlay (`abrirLeituraDocumento`) e no `papel` mandado pra Edge Function (`processarImagemDocumento`) — substituiu os dois literais fixos.
+- Compra e Venda de **Veículo** não renderiza o botão (só imóvel_locacao/imovel_cv) — intocada. Comentários "piloto: só Locação" atualizados.
+
+**Edge Function `documento-ia` v2 → v4:** era hardcoded pra "contrato de locação de imóvel" e só aceitava `papel` LOCADOR/LOCATÁRIO (resto virava "uma das partes"). v4: `PAPEIS_VALIDOS = ["LOCADOR","LOCATÁRIO","VENDEDOR","COMPRADOR"]` e o texto do prompt passou a dizer só "um contrato" (neutro). **O schema JSON de saída, as regras de vocabulário (estado civil / UF / nacionalidade vs naturalidade), a validação e o "NUNCA invente, retorne null se não estiver legível" são idênticos** — Locação continua chamando com LOCADOR/LOCATÁRIO e recebe exatamente a mesma resposta de antes. `verify_jwt` mantido `true`, modelo `gpt-4o-mini` mantido.
+
+**Testado (static server 8790, `window.fetch` da Edge Function stubado com respostas mock — sem chamar OpenAI, sem tocar produção/banco):**
+- **Compra e Venda de Imóvel → VENDEDOR:** botão "📷 Ler Documento" aparece (`data-pessoa="a"`); overlay diz "…do VENDEDOR"; mock `{nome, cpf, rg, data_nascimento, nacionalidade:"BRASILEIRA", orgao_emissor, uf_emissor}` → tela de confirmação com os 5 campos → "Usar estes dados" → `a_nome`/`a_cpf`/`a_rg` preenchidos exatos, `a_estado_civil` vazio (mock null → fica em branco, não inventa), nacionalidade "BRASILEIRA" cai em "Outra"+outro (mesmo comportamento da Locação — código compartilhado). Campos de endereço (`a_rua`) **não** foram tocados.
+- **Compra e Venda de Imóvel → COMPRADOR:** botão com `data-pessoa="b"`; overlay "…do COMPRADOR"; `papel` enviado à Edge Function = `"COMPRADOR"` (confirmado no body interceptado); dados caem em `b_nome`/`b_cpf`/`b_rg`/`b_estado_civil` ("Casado(a)" aplicado); `b_rua` intacto.
+- **Regressão Locação de Imóvel:** etapa LOCADOR ainda mostra o botão, overlay ainda diz "…do LOCADOR", e o endereço do Locador **continua** fora dessa etapa (`a_rua` ausente — etapa própria preservada).
+- **Regressão Compra e Venda de Veículo:** etapa VENDEDOR **sem** botão "Ler Documento".
+- Sem `SyntaxError` / erro de runtime no console (só 404 de favicon/sw.js do static server).
+
+**Campos → destino conferido:** `nome_completo→s[p+'_nome']`, `cpf→s[p+'_cpf']`, `rg→s[p+'_rg']`, `estado_civil→s[p+'_estado_civil']` (só valores da lista válida), `nacionalidade→s[p+'_nacionalidade']` (+`_outro`), com `p='a'` pro VENDEDOR e `p='b'` pro COMPRADOR — as mesmas chaves que `stepPessoa()` renderiza e que `montarRegistro().pessoa()` lê. `data_nascimento`/`orgao_emissor`/`uf_emissor` não entram (não estão na tela de confirmação, idêntico à Locação hoje) → seguem `null` no registro, contrato gerado byte-a-byte igual.
+
+**Falta:** teste ao vivo logado no painel real com uma foto de documento de verdade (o ambiente de teste não chama a OpenAI).
+
+### Endurecimento do descarte da imagem (2026-09-06) — NÃO publicado
+
+Pedido: tornar o descarte da foto do documento o mais determinístico possível — a imagem só deve existir pelo tempo de ser processada e enviada; depois, nenhuma referência desnecessária deve sobrar no navegador nem na Edge Function. Sem mudar o funcionamento da leitura, dos dados extraídos, da Locação ou da Compra e Venda de Veículo.
+
+**Auditoria antes de mexer (fluxo hoje):** a foto **nunca** é persistida. Navegador: `File` do input → `comprimirImagem()` desenha num `<canvas>` local e devolve base64 JPEG (`toDataURL`, cap 1600px, q 0.82); object URL revogado no `onload`/`onerror`. `processarImagemDocumento()` manda `{ imagem_base64, papel }` pra Edge Function `documento-ia` via `supabase.functions.invoke` e zera `imagem_base64`. Nada em `localStorage`/`sessionStorage`/IndexedDB/estado `s`/registro. Único bucket do projeto é `curriculo-fotos` (formulário de currículo, sem relação). Edge Function: só RAM do isolate durante o request. **Não existe rotina de exclusão porque não existe armazenamento.** Único ponto onde a imagem persiste além de segundos: OpenAI (retenção ~30 dias p/ abuso, salvo ZDR) — fora do escopo desta mudança.
+
+**Ajustes aplicados — só em `paineldecontrole/contrato-form.html`, 2 funções:**
+- `comprimirImagem()`: `url`/`img` viraram `let`; helper `limpar(canvas)` revoga o object URL, desliga os handlers e faz `img.src=''`/`img=null` e zera `canvas.width/height`. Chamado nos 3 desfechos: sucesso (`try { drawImage + toDataURL } finally { limpar(canvas) }`), exceção na conversão (mesmo `finally`) e `img.onerror` (`limpar()`). Retorno, cap de 1600px, qualidade 0.82 e mensagem de erro **idênticos**.
+- `processarImagemDocumento()`: a chamada à Edge Function agora é `try { ({data,error} = await invoke(...)) } catch (e) { error = e } finally { imagem_base64 = null }` — a imagem é descartada **sempre** (sucesso, erro retornado, exceção, timeout, falha de rede). O `catch` roteia falha de rede pro caminho de mensagem amigável que já existia (`if (error || !data)`), em vez de deixar o spinner "Lendo documento..." travado. Guard `docAlvo !== p`, `mostrarDocErro`, `mostrarDocConfirmacao(data.dados)` e o preenchimento dos campos **inalterados**.
+- `e.target.value = ''` nos dois listeners de `change`: mantido. Nenhum armazenamento novo (permanente ou temporário).
+
+**Edge Function `documento-ia` — auditada, NÃO alterada (v4 mantida como está):**
+- **Não grava imagens no Storage** (sem client Supabase, sem `storage`, sem upload).
+- **Não grava imagens no banco** (sem DML, sem `apply_migration`).
+- **Não registra `imagem_base64` nem o `body` em logs** — não há **nenhum** `console.log`/`console.error` no arquivo; os logs de Edge Function do Supabase capturam só metadados (método, path, status, tempo), não o corpo.
+- **Usa a imagem apenas durante o processamento da requisição** — vive só na RAM do isolate, liberada ao responder.
+- **Retorna somente os dados extraídos** — resposta é `{ legivel, motivo_nao_legivel, dados }`; a imagem não volta.
+- **Não deve ser alterada futuramente para persistir ou registrar a imagem sem uma decisão explícita.** Decidido não fazer redeploy só pra inserir comentário: não há ganho prático em mexer numa função que já está correta.
+
+**Testado (static server 8790, `window.fetch` da Edge Function stubado + `URL.createObjectURL/revokeObjectURL` instrumentados — sem OpenAI, sem produção/banco):**
+- **Sucesso (CV Imóvel VENDEDOR):** payload = `{ imagem_base64: "data:image/jpeg;base64,…", papel:"VENDEDOR" }` (shape idêntico); tela de confirmação com os 5 campos; "Usar" → `a_nome`/`a_cpf`/`a_rg` preenchidos, `estado_civil` null → em branco (não inventa); `a_rua` intocado; **1 object URL criado / 1 revogado (balanceado)**; overlay fechado; input limpo.
+- **`comprimirImagem` rejeita (arquivo não-imagem → `img.onerror`):** `invoke` **nunca** chamado; **1 criado / 1 revogado**; overlay de erro "Não foi possível abrir essa imagem"; input limpo; `imagem_base64` nunca atribuído.
+- **`invoke` lança (falha de rede/timeout):** mensagem "Não foi possível ler agora", **sem spinner travado**; object URLs balanceados; leitura seguinte funciona normal (estado não corrompido).
+- **`invoke` retorna `{error}` (502):** mesma mensagem amigável, sem spinner; balanceado.
+- **`legivel:false`:** mostra o `motivo_nao_legivel`, sem campos de confirmação, sem preencher nada; balanceado.
+- **Regressão Locação (LOCADOR):** etapa, ausência do endereço nessa etapa, `papel="LOCADOR"`, 5 campos de confirmação, preenchimento em `a_*`, object URLs balanceados, overlay fechado, input limpo — **tudo igual**.
+- **Compra e Venda de Veículo:** sem botão "Ler Documento" — as 2 funções alteradas nem são exercidas nesse fluxo.
+- Sem `SyntaxError` / erro de runtime no console (só 404 de favicon/sw.js do static server).
+
+**Falta:** teste ao vivo logado no painel real com foto de documento de verdade.
+
+## Compra e Venda de Imóvel — "Rua e número" vira campo único (2026-09-06) — NÃO publicado
+
+Pedido: no fluxo `imovel_cv`, trocar os campos separados `rua` + `numero` por um só "Rua e número", seguindo **exatamente** o padrão já usado na Locação. Aplicar a VENDEDOR, COMPRADOR e IMÓVEL. Não mexer em Locação nem em Veículo. Atualizar validação, montagem do endereço e salvamento, mantendo compatibilidade com contratos antigos que têm rua/número separados.
+
+**Arquivo:** só `paineldecontrole/contrato-form.html`. `index.html` (motor `TIPOS.CONTRATO_CV_IMOVEL`) **não muda** — ele já consome `especifico.endereco_imovel` e `pessoa.endereco` (compostos), nunca os campos soltos. Sem DB, sem Edge Function, sem deploy.
+
+**Como replica o padrão da Locação — novo helper:**
+```js
+function ruaNumeroUnificado(p) {
+    if (s.tipo === 'imovel_locacao') return p === 'a' || p === 'im';
+    if (s.tipo === 'imovel_cv') return p === 'a' || p === 'b' || p === 'im';
+    return false;
+}
+```
+Retorna `false` sempre pra `veiculo_cv`; pra `imovel_locacao` devolve exatamente o conjunto atual (`a`/`im`). Todos os pontos que testavam `s.tipo === 'imovel_locacao'` / `!== 'imovel_locacao'` passaram a chamar `ruaNumeroUnificado(p)` — comportamento idêntico pra locação/veículo, aditivo pro CV imóvel:
+- `stepPessoa` ([bloco de endereço](paineldecontrole/contrato-form.html:770)): 1 campo **"Rua e número *"** (`data-key="{p}_rua"`, placeholder `Rua Monte Neblina, 563`) quando `ruaNumeroUnificado(p)`; senão mantém Rua*/Número*.
+- `stepImovelCV`: 1 campo "Rua e número *" (igual a `stepImovelLocacao`).
+- `enderecoFinal(p)`: condição do ramo combinado agora é `ruaNumeroUnificado(p)`.
+- `validarPessoa(p)`: `numeroObrigatorio = !ruaNumeroUnificado(p)`.
+- `validateCurrentStep` case `imovel`: `numeroObrigatorio = !ruaNumeroUnificado('im')`.
+- `carregarEnderecoSolto(p, …)`: ramo de junção agora vale pra `ruaNumeroUnificado(p)` — junta `rua`+`numero` de registros antigos num "Rua e número" só ao reabrir edição.
+
+`montarRegistro` **inalterado**: continua gravando `endereco`/`endereco_imovel` (composto, agora a partir do campo único) **e** `rua`/`numero`/`rua_imovel`/`numero_imovel`. Pra CV novo, `numero`/`numero_imovel` viram `null` e `rua`/`rua_imovel` guardam a string "Rua, 123" — exatamente como a Locação já faz. Nada some do JSON.
+
+**Compatibilidade com contratos antigos:** (1) shape do registro preservado; (2) registro antigo com `rua`+`numero` separados → `carregarEnderecoSolto` junta em `"{rua}, {numero}"` no reload de edição; (3) registro bem antigo só com `endereco`/`endereco_imovel` composto → fallback pro composto; (4) geração do contrato inalterada (usa o composto).
+
+**Testado (static server 8790):**
+- **Render:** VENDEDOR, COMPRADOR e IMÓVEL do CV imóvel mostram **1 campo "Rua e número *"** (placeholder certo), **sem** "Número".
+- **Validação:** `im_rua`/`{p}_rua` vazio bloqueia com "Preencha todos os campos obrigatórios (*)"; preenchido com valor combinado ("Rua Central, 45") passa por todas as etapas até "Confira e envie".
+- **Salvamento** (payload do insert interceptado): `pessoa_a.endereco` = `pessoa_a.rua` = `"Rua das Flores, 100"`, `pessoa_a.numero` = `null`; idem `pessoa_b`; `especifico.endereco_imovel` = `especifico.rua_imovel` = `"Rua Central, 45"`, `especifico.numero_imovel` = `null`.
+- **Compat (unit test do código exato de `carregarEnderecoSolto`+`ruaNumeroUnificado`, 8 cenários):** CV vendedor/comprador/imóvel com `rua`+`numero` separados → `"{rua}, {numero}"`, `numero` limpo, complemento preservado; CV só com composto → campo recebe o composto; CV já unificado → passa igual; **regressão** Veículo pessoa mantém `rua`/`numero` separados; **regressão** Locação locador junta (como já era) e locatário `b` fica separado.
+- **Regressão de render:** Veículo VENDEDOR/COMPRADOR ainda com "Rua *" + "Número *"; Locação — LOCADOR sem endereço na etapa de pessoa, "Endereço do Locador" com campo único, LOCATÁRIO comercial com Rua/Número separados, "Dados do Imóvel" (locação) com campo único — tudo inalterado.
+- Sem `SyntaxError` / erro de runtime (o 406 no console é do teste de `?editId` inexistente, caminho "Não foi possível abrir este contrato" funcionando).
+
+**Falta:** teste do reabrir-edição ao vivo com um registro CV real antigo (o classificador bloqueou inserir linha de teste no banco de produção; a lógica de junção foi validada com o código-fonte exato em unit test isolado).
+
+## `qualificarCV` — fim das vírgulas órfãs na qualificação das partes (2026-09-06) — NÃO publicado
+
+Pedido: corrigir só as vírgulas/espaços soltos que apareciam na qualificação de VENDEDOR/COMPRADOR quando faltava estado civil, profissão, nacionalidade ou RG. Seguir a mesma lógica do `qualificar()` das Declarações (array de partes + `.filter(Boolean)`). Não mexer em formulário, leitura de documentos, `documento-ia`.
+
+**Arquivo:** só `paineldecontrole/index.html`, **só a função `qualificarCV`** (~linha 8563). Sem DB, sem Edge Function, sem deploy.
+
+**Nota de escopo:** `qualificarCV` é compartilhada — além do Compra e Venda de Imóvel, é usada pelos 6 templates de Compra e Venda de Veículo, pelo Contrato de Locação de Imóvel (via `semPrefixoPapel(...)`) e por 2 Procurações. Confirmado com o usuário (escolheu corrigir na própria função). **Para dados completos a saída é byte a byte idêntica à anterior** (mesma redação e ordem) — veículo/locação só mudam no caso de campo faltando, onde o texto hoje já estava quebrado.
+
+**O que mudou:** antes montava uma string fixa com `${flexGenero(nacionalidade)}, ${flexGenero(estado_civil)}, ${profissao || ''}, portador... nº ${rg || ''}, inscrito... nº ${cpf}` — campos vazios viravam `", , "` e `"nº , "`. Agora:
+- `partes = [ "PAPEL: Nome", nacionalidade||null, estado_civil||null, profissao||null, docRgCpf ].filter(Boolean).join(', ')`
+- `docRgCpf`: com RG → `"portador... da Carteira de Identidade nº {rg}, inscrito... no C.P.F. nº {cpf}"` (redação atual intacta); sem RG → só `"inscrito... no C.P.F. nº {cpf}"`.
+- Trecho de endereço (`, residente e domiciliad... bairro ... da Cidade de .../...`) **inalterado** — não estava no escopo e o `qualificar()` das Declarações também não filtra bairro/cidade/estado.
+- Concordância de gênero (`portador/portadora`, `inscrito/inscrita`, `domiciliado/domiciliada`) e exceção "União Estável" → "em união estável" preservadas.
+
+**Testado (unit test isolado com as deps `g`/`flexGenero`/`escapeHtml`/`titleCase` copiadas verbatim de `index.html`, OLD × NEW, 10 cenários):**
+- `completo` (todos os campos): **saída idêntica à versão anterior** (`identicalToOld: true`) — garante veículo/locação intocados no caso normal.
+- `sem profissão`, `sem RG`, `sem estado_civil`, `sem nacionalidade`, `sem prof+sem RG`, `só nome+cpf+endereço`, `feminino sem prof`, `união estável sem RG`, `semEndereco=true`: OLD tinha pontuação quebrada em todos; **NEW não tem pontuação quebrada em nenhum**.
+
+**Prévia real do contrato (pipeline real do painel — `loadDeclaracoesPendentes` → `abrirDeclFormatado` → `montarContrato` → `TIPOS.CONTRATO_CV_IMOVEL.corpo` → `qualificarCV`; leitura do banco mockada por `fetch` stub, nada gravado):**
+Registro sintético: VENDEDOR **sem profissão** (masc.), COMPRADOR **sem RG** (fem.).
+- VENDEDOR: `"VENDEDOR: João Carlos Pereira, brasileiro, casado, portador da Carteira de Identidade nº 12.345.678-9, inscrito no C.P.F. nº 123.456.789-00, residente e domiciliado na Rua das Palmeiras, 250, bairro Centro da Cidade de Camboriú/SC."` — sem vírgula solta onde ficaria a profissão.
+- COMPRADOR: `"COMPRADOR: Maria Aparecida Lima, brasileira, solteira, Professora, inscrita no C.P.F. nº 987.654.321-00, residente e domiciliada na Avenida Brasil, 1400, bairro Centro da Cidade de Itajaí/SC."` — pula direto pra "inscrita no C.P.F.", sem fragmento "Carteira de Identidade nº ,".
+- Varredura das 19 cláusulas/parágrafos renderizados: **0** com vírgula dupla / espaço antes de vírgula / "nº ," / ", ." / espaço duplo. Objeto, pagamento, multa, foro, assinaturas renderizam normal.
+- Sem `SyntaxError` / erro de runtime (o 406 no console é de chamadas do painel ao supabase sem auth no static server, pré-existente).
+
+## Leitura do documento do veículo por foto ou PDF (Compra e Venda de Imóvel) (2026-09-06) — NÃO publicado
+
+Pedido: quando há veículo entrando na negociação (troca) na Compra e Venda de Imóvel, oferecer leitura automática do documento do veículo (foto ou PDF). Extrair **só 8 campos**: Renavam, placa, ano de fabricação, ano modelo, marca, modelo/versão, chassi, cor predominante. **Nada** de proprietário/CPF/CNPJ/endereço/município/UF/categoria/combustível. Reaproveitar a estrutura da leitura de RG/CNH/CPF **sem mexer nela**. Não tocar em Locação, Compra e Venda de Veículo, `documento-ia`, cláusulas nem `index.html`.
+
+**Arquivos alterados:** `paineldecontrole/contrato-form.html` + **Edge Function nova `documento-veiculo-ia`** (deploy). `index.html`, `documento-ia`, cláusulas: intocados.
+
+### Cliente (`contrato-form.html`)
+- Botão **"📷 Ler Documento do Veículo"** em `stepEntrada()`, **abaixo da pergunta** "Teve algum veículo entrando na negociação (troca)?", **só quando `s.tipo === 'imovel_cv'`** (gate). Aparece sempre que a pergunta aparece, antes mesmo de responder Sim/Não. Compra e Venda de Veículo continua sem o botão.
+- 2 inputs ocultos novos: `#docVeicInputCamera` (`accept="image/*" capture="environment"`) e `#docVeicInputArquivo` (`accept="image/*,application/pdf"`).
+- Bloco JS isolado (nenhuma função do fluxo de identidade tocada): `abrirLeituraVeiculo()`, `processarDocumentoVeiculo()`, `pdfParaBase64()`, `mostrarConfirmacaoVeiculo()`, `aplicarDadosVeiculo()`, `anoSelecionavel()`, guard `docVeicAtivo`. Reaproveita sem alterar: `comprimirImagem`, `renderDocOverlay`, `fecharDocOverlay`, `mostrarDocCarregando`, `mostrarDocErro`, `paraSelecaoOutro`, CSS `.doc-*`/`.btn-ler-doc`.
+- 3 branches aditivos no listener do `#docOverlay` (`veic-camera`/`veic-arquivo`/`veic-usar` — os 4 do fluxo de pessoa intactos); 2 listeners de `change` novos; +1 branch `[data-action="ler-veiculo"]` no `cardEl` click; +1 linha `docVeicAtivo = false` em `fecharDocOverlay` (espelha `docAlvo = null`, zero efeito no fluxo de pessoa).
+- **Foto** → `comprimirImagem` (redimensiona ≤1600px + JPEG 0.82) → `data:image/jpeg;base64`. **PDF** → `FileReader.readAsDataURL` → `data:application/pdf;base64` (sem converter pra imagem; **pdf.js foi removido** — a 1ª tentativa usava pdf.js pra rasterizar a página 1, mas `page.render()` travava; trocado por enviar o PDF inteiro pra IA, que lê PDF nativamente).
+- Envia `{ arquivo_base64 }` pra `documento-veiculo-ia`. `arquivo_base64 = null` num `finally` (sucesso/erro/timeout/rede) — mesmo descarte determinístico da leitura de identidade. Nada é gravado em `localStorage`/estado/registro.
+- **Limites de tamanho**: cliente rejeita PDF > 15 MB e imagem > 25 MB antes de enviar; rejeita arquivo que não seja `image/*` nem `application/pdf` (mensagem "Envie uma foto (JPG/PNG) ou um PDF"), sem chamar a Edge Function.
+- **Confirmação "Confira os dados do veículo"**: 8 inputs editáveis pré-preenchidos; campo que a IA devolveu `null` fica **em branco**. "Usar estes dados" / "Descartar". Ao usar: `entrada_veiculo` vira "Sim" (abre o bloco `ev_*`); grava só os não-vazios em `s.ev_*` (`marca`→`ev_fabricante` via `paraSelecaoOutro`+canon acento/caixa, `modelo`→`ev_modelo`, anos→`ev_ano_*`, `cor`→`ev_cor` idem, `placa`/`chassi`/`renavam` direto); **nunca sobrescreve** um `ev_*` já preenchido com vazio; **não** toca `ev_tipo_veiculo` nem `ev_valor` (manuais).
+- **Ressalva do ano**: ano lido fora da faixa do `<select>` (`ANO_ATUAL`..`ANO_ATUAL-40`) **não** é aplicado nem substituído — aparece na confirmação com aviso "fora da lista de anos… ajuste manualmente… nada foi inventado nem trocado", e os `ev_ano_*` ficam vazios pra preenchimento manual. Limite do seletor de anos **não** foi alterado.
+
+### Edge Function `documento-veiculo-ia` (v2, `verify_jwt: true`, `gpt-4o-mini`)
+- Entrada `{ arquivo_base64 }` — aceita `data:image/*` **ou** `data:application/pdf`; qualquer outro → 400. Guard `MAX_BASE64_LENGTH = 20 MB`.
+- Foto → conteúdo `image_url` (`detail:"high"`); PDF → conteúdo `file` (`file_data`), formato de PDF nativo da OpenAI. Mesmo `systemPrompt`, mesmas regras dos 8 campos, mesma validação de saída (placa/renavam/chassi/ano; marca e cor casadas com as listas do formulário sem caixa/acento), mesma forma de resposta `{ legivel, motivo_nao_legivel, dados }`.
+- **Não** grava imagem/PDF em Storage, banco nem log; **nenhum** `console.*`; o arquivo só vive na RAM do isolate durante o request. `documento-ia` **não** foi tocada.
+
+### Testes (static server 8790, Edge Function stubada — sem OpenAI, sem produção/banco)
+1. **Foto** — payload `{ arquivo_base64: "data:image/jpeg;base64,…" }`; confirmação com 8 campos; "Usar" → `entrada_veiculo='Sim'`, bloco `ev_*` aberto, `ev_fabricante`/`ev_modelo`/`ev_ano_fabricacao`(2019)/`ev_ano_modelo`(2020 — distintos)/`ev_placa`/`ev_renavam`/`ev_chassi`/`ev_cor` preenchidos; `ev_tipo_veiculo`/`ev_valor` vazios.
+2. **PDF** — payload `{ arquivo_base64: "data:application/pdf;base64,…" }` (sem pdf.js); mesma confirmação; "VOLKSWAGEN"→"Volkswagen", anos 2016/2017 distintos, campos aplicados.
+3. **PDF/arquivo inválido** — `.txt` → cliente rejeita ("Envie uma foto… ou um PDF"), **Edge não chamada**. `.pdf` com conteúdo quebrado → cliente envia (não valida conteúdo), Edge devolve 502 → "Não foi possível ler agora".
+4. **Documento ilegível** — `legivel:false` → sheet "Não foi possível ler" + `motivo_nao_legivel`, sem campos de confirmação.
+5. **Campos `null`** — resposta toda-null → 8 campos em branco; "Usar" não grava nada e **não sobrescreve** `ev_modelo`/`ev_placa` já preenchidos.
+6. **Confirmação e descarte** — "Descartar" → overlay fecha, `ev_*` inalterado, nada gravado; `arquivo_base64` descartado no `finally`.
+7. **Regressão RG/CNH/CPF** — botão "📷 Ler Documento" da pessoa continua chamando **`documento-ia`** com `{ imagem_base64, papel }`, sheet "Confira os dados lidos" com os 5 campos, aplica `a_nome/a_cpf/a_rg/a_estado_civil`; `documento-veiculo-ia` **não** é chamada; botão do veículo não aparece na etapa de pessoa.
+
+Sem `SyntaxError` / erro de runtime (só 406 supabase-sem-auth e 404 favicon/sw.js do static server).
+
+**Falta:** teste ao vivo logado no painel real com um documento de veículo de verdade (foto e PDF) — o ambiente de teste não chama a OpenAI.
+
+## Saldo restante no "à vista + veículo" — Compra e Venda de Imóvel (2026-09-06) — NÃO publicado
+
+Pedido: só no cenário **Compra e Venda de Imóvel + à vista + veículo entrando na troca**. Saldo restante = valor total do imóvel − valor do veículo, **sempre calculado, nunca digitado**. Saldo 0 → só confirmar que o veículo quita. Saldo > 0 → perguntar "como será pago o saldo restante no ato": Dinheiro / Pix / Transferência / Depósito / Outro. Pix → tipo de chave, chave, titular. Transferência ou Depósito → banco, agência, conta, tipo de conta, titular. Dinheiro → só registrar. Outro → descrição. Não mexer em A Prazo, Locação, Compra e Venda de Veículo, leitura de RG/CNH, leitura do veículo, nem cláusulas.
+
+**Arquivo alterado:** só `paineldecontrole/contrato-form.html`. Sem `index.html`, sem Edge Function, sem banco.
+
+### Decisões aplicadas (do usuário)
+- Saldo **nunca digitado** — campo só-leitura, calculado ao vivo (`valor_total − ev_valor`).
+- Veículo > imóvel → **bloqueia** (mensagem em vermelho + `Avançar` barrado pedindo correção); nunca zera calado.
+- "Outro" = só um campo de descrição.
+- Chaves Pix: CPF, CNPJ, Celular, E-mail, Chave aleatória.
+- Tipo de conta: Corrente / Poupança.
+- `saldo_forma` e os sub-tipos (chave Pix, tipo de conta) como **botões (radio-pills)**, não select — tudo visível de cara.
+- "Dinheiro": compatibilidade **interna** — `montarRegistro` espelha `valor_entrada = saldo` e `teve_dinheiro_entrada = 'Sim'` (a cláusula atual de "à vista + veículo" usa esses campos), mas o usuário **nunca** vê esse nome — em tela e na revisão é sempre "Saldo restante".
+
+### Mudanças em `contrato-form.html`
+- Estado `s`: +`saldo_forma`, `saldo_pix_tipo_chave/chave/titular`, `saldo_banco/agencia/conta/tipo_conta/titular`, `saldo_outro_desc`.
+- `stepEntrada()`: +`<div id="condSaldoAVista"></div>`.
+- Helpers novos: `saldoAVistaAtivo()` = `tipo==='imovel_cv' && forma==='Vista' && entrada_veiculo==='Sim'`; `saldoRestanteAVista()` = `valor_total − ev_valor`; constantes `SALDO_FORMAS`/`PIX_TIPOS_CHAVE`/`TIPOS_CONTA`.
+- `renderCondSaldoAVista()` + `renderCondSaldoForma()` (novos) — chamados no fim de `renderCondEntradaVeiculo()` (e no ramo de "entrada_veiculo != Sim", pra limpar).
+- `renderCondEntradaDinheiroParcelas()`: early-return quando `saldoAVistaAtivo()` — some a pergunta antiga "teve dinheiro no ato?" **só nesse cenário**; todos os outros ramos (A Prazo, sem veículo, `veiculo_cv`) **idênticos**.
+- Handlers: `input` recalcula o saldo ao digitar `ev_valor`; `change` re-renderiza os sub-campos ao trocar `saldo_forma`.
+- `validateCurrentStep` case `'entrada'`: ramo escopado — saldo < 0 bloqueia ("corrija os valores"); saldo > 0 exige `saldo_forma` e os campos da forma escolhida; saldo 0 passa direto. As checagens antigas de dinheiro/parcelas **não rodam** nesse cenário (rodam normalmente em todos os outros).
+- `montarRegistro()` (bloco `imovel_cv`): grava `saldo_restante` + `saldo_forma` + os campos da forma escolhida (`null` no resto); espelho interno de `valor_entrada`/`teve_dinheiro_entrada` só quando `saldo_forma === 'Dinheiro'`.
+- `carregarParaEdicao()` (`imovel_cv`): carrega os `saldo_*` de volta.
+- `stepRevisao()`: linha "Saldo restante no ato — R$ X — via {forma}" (ou "R$ 0,00 — o veículo quita o negócio"); a linha antiga "Entrada em dinheiro" só aparece nos outros cenários.
+
+### Testes (static server 8790, insert interceptado — nada gravado)
+1. **Saldo > 0** (total 300k, veículo 100k → 200k): display "R$ 200.000,00 — duzentos mil reais"; pergunta com 5 **botões**; pergunta antiga sumiu. Pix → tipo de chave (5 botões) + chave + titular; Transferência/Depósito → banco/agência/conta/tipo de conta (Corrente/Poupança) /titular; Dinheiro → só nota; Outro → descrição.
+2. **Saldo = 0** (veículo = imóvel): "O veículo quita o valor do imóvel. Nenhum saldo a pagar no ato." — sem pergunta; `Avançar` passa.
+3. **Veículo > imóvel** (150k > 100k): bloco em vermelho + `Avançar` barrado ("O valor do veículo é maior… Corrija os valores."). Corrigir → volta ao normal.
+4. **Validação**: saldo > 0 sem forma → bloqueia; Pix com tipo+chave mas sem titular → bloqueia; Pix completo → avança.
+5. **Registro** — Pix: `saldo_restante:200000, saldo_forma:'Pix', saldo_pix_tipo_chave:'E-mail', saldo_pix_chave, saldo_pix_titular`, `teve_dinheiro_entrada:'Não'`, `valor_entrada:0`. Dinheiro: `saldo_forma:'Dinheiro'` + espelho `teve_dinheiro_entrada:'Sim'`, `valor_entrada:180000`. Depósito: `saldo_banco/agencia/conta/tipo_conta('Poupança')/titular` preenchidos, `saldo_pix_chave:null`, sem espelho.
+6. **Revisão**: "Saldo restante no ato — R$ 200.000,00 — via Pix" / "… — via Dinheiro" (nunca "Entrada em dinheiro").
+7. **Regressão**: `imovel_cv` A Prazo + veículo → pergunta antiga "teve dinheiro na entrada?" presente, **sem** bloco de saldo. `veiculo_cv` à vista + veículo → fluxo antigo intacto. `imovel_cv` à vista **sem** veículo → sem bloco de saldo, sem pergunta antiga, avança.
+
+Sem `SyntaxError` / erro de runtime (só 406 supabase-sem-auth e 404 favicon/sw.js do static server).
+
+**Falta:** cláusula do contrato para PIX/Transferência/Depósito/Outro (hoje o dado fica gravado no registro mas só o caso "Dinheiro" sai no texto, via o espelho) — é a próxima etapa, quando formos mexer nas cláusulas. Teste ao vivo logado.
+
+## Cláusula "à vista + veículo" do Compra e Venda de Imóvel — RENAVAM + forma do saldo (2026-09-06) — NÃO publicado
+
+Pedido: no `TIPOS.CONTRATO_CV_IMOVEL.corpo(d)`, **só** no ramo `!aPrazo && veiculoEntrada`: (1) trocar "categoria PARTICULAR, registrado no DETRAN/DUT sob o nº {RENAVAM}" por "registrado sob o nº de RENAVAM {RENAVAM}"; (2) usar o saldo calculado (`valor_total − veiculo_entrada.valor`, nunca digitado) e a forma de pagamento do saldo (`e.saldo_forma`) para os 6 cenários A–F. Não tocar em mais nada.
+
+**Arquivo:** só `paineldecontrole/index.html`, **só o ramo `!aPrazo && veiculoEntrada`** de `CONTRATO_CV_IMOVEL.corpo` (era ~7 linhas, virou ~35). Uma única `clausulaCV(n++, texto)` — numeração das cláusulas seguintes intacta.
+
+- `descricaoVeiculoTroca()` **não** foi alterada (é compartilhada com `CONTRATO_CV_VEICULO`). A troca de texto é feita com `.replace('categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ', 'registrado sob o nº de RENAVAM ')` **só no resultado da chamada dentro deste ramo**.
+- `saldo = Math.max(valor_total − valorEntradaVeiculo, 0)`. `temSaldoInfo = e.saldo_restante != null` distingue registro do formulário novo do antigo.
+- **A** (`temSaldoInfo && saldo === 0`): acrescenta "O valor do veículo corresponde integralmente ao valor do imóvel, não havendo saldo restante a ser pago." (sem "b)").
+- **B–F** (`temSaldoInfo && saldo > 0`, por `e.saldo_forma`):
+  - `Dinheiro` / forma ausente → texto **idêntico** ao atual ("b) Mais a quantia em dinheiro no valor de {saldo} … pagamento em dinheiro ocorrerão simultaneamente").
+  - `Pix` → "b) Mais o valor restante de {saldo} … por meio de PIX, chave do tipo {saldo_pix_tipo_chave}, chave {saldo_pix_chave}, de titularidade de {saldo_pix_titular}, sendo que … o pagamento do saldo ocorrerão simultaneamente."
+  - `Transferência`/`Depósito` → "… por meio de transferência bancária | depósito bancário para a conta {tipo_conta minúsculo} nº {saldo_conta}, agência {saldo_agencia}, do {saldo_banco}, de titularidade de {saldo_titular}, sendo que …"
+  - `Outro` → "… da seguinte forma: {saldo_outro_desc}, sendo que …"
+- **Fallback registro antigo** (`!temSaldoInfo`): se `valor_entrada > 0` → "b) Mais a quantia em dinheiro no valor de {valor_entrada} …" (valor e texto exatamente como antes); se nem isso → só "a) …" (não quebra).
+- Sem expressões jurídicas novas (nada de "plena, geral e irrevogável quitação"). `escapeHtml` em tudo; `titleCase` só nos dois titulares.
+
+**Testado (static server 8790, pipeline real do painel — `loadDeclaracoesPendentes`/`abrirDeclFormatado`/`montarContrato`/`corpo`; SELECT e `documento-revisao` mockados, nada gravado):**
+- **1. Veículo R$ 300k quita imóvel R$ 300k:** "…placa: ABC-1D23, registrado sob o nº de RENAVAM 123456789, avaliado em R$ 300.000,00…" + "O valor do veículo corresponde integralmente… não havendo saldo restante." Sem "b)".
+- **2. Veículo R$ 100k + saldo R$ 200k Dinheiro:** "b) Mais a quantia em dinheiro no valor de R$ 200.000,00 (duzentos mil reais) a ser quitada no ato… pagamento em dinheiro ocorrerão simultaneamente."
+- **3. Pix:** "b) Mais o valor restante de R$ 200.000,00 … por meio de PIX, chave do tipo E-mail, chave ana@example.com, de titularidade de Ana Vendedora, sendo que a transferência do veículo e o pagamento do saldo ocorrerão simultaneamente."
+- **4. Transferência:** "… por meio de transferência bancária para a conta corrente nº 98765-0, agência 1234-5, do Banco do Brasil, de titularidade de Ana Vendedora, …"
+- **5. Depósito:** "… por meio de depósito bancário para a conta poupança nº 98765-0, agência 1234-5, do Banco do Brasil, …"
+- **6. Outro:** "… da seguinte forma: cheque administrativo entregue na assinatura, sendo que …"
+- **7.** Todos os 6: contêm "registrado sob o nº de RENAVAM", **não** contêm "categoria PARTICULAR" nem "DETRAN/DUT" nessa cláusula. Grep confirma que as 5 ocorrências em Compra e Venda de Veículo (`blocoObjetoVista`/`blocoObjetoPrazo`/`trechoVeiculoEntradaVista`/`trechoVeiculoEntradaPrazo`/`descricaoVeiculoTroca`) ficaram intactas.
+- **8.** Sem dupla contagem: a) veículo R$ 100k + b) saldo R$ 200k = R$ 300k (valor total).
+- **9.** Numeração das cláusulas seguintes inalterada: 1–9 nos cenários à vista (DA MULTA = 7ª, DO FORO = 9ª); 1–10 quando a prazo.
+- **10. Regressão:** imóvel à vista **sem** veículo → "a quantia de R$ 300.000,00 a ser quitada no ato" (inalterado). Imóvel **a prazo + veículo** → mantém "categoria PARTICULAR, registrado no DETRAN/DUT sob o nº" (ramo não tocado) + numeração 1–10. **CONTRATO_CV_VEICULO** com carro na entrada → mantém "categoria PARTICULAR / DETRAN/DUT". **Locação** → renderiza normal, sem relação. Registro antigo (à vista + veículo + `valor_entrada` 200k, sem `saldo_restante`) → "b) Mais a quantia em dinheiro no valor de R$ 200.000,00 …" pelo caminho `valor_entrada` (texto/valor de antes). Registro antigo sem dinheiro → só "a) …", não quebra.
+- Sem `SyntaxError` / erro de runtime (só 406/404 pré-existentes do static server).
+
+**Falta:** teste ao vivo logado com um registro real de cada cenário.

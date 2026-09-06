@@ -8562,9 +8562,22 @@
         // DO OBJETO E FINALIDADE (que já mostrava o endereço do imóvel alugado).
         function qualificarCV(p, papel, semEndereco) {
             const fem = p.genero === 'Feminino';
-            let out = `${papel.toUpperCase()}: ${escapeHtml(titleCase(p.nome))}, ${escapeHtml(flexGenero(p.nacionalidade, fem))}, ${escapeHtml(flexGenero(p.estado_civil, fem))}, ${escapeHtml(p.profissao || '')}, `
-                + `portador${g(p.genero, '', 'a')} da Carteira de Identidade nº ${escapeHtml(p.rg || '')}, `
-                + `inscrit${g(p.genero, 'o', 'a')} no C.P.F. nº ${escapeHtml(p.cpf || '')}`;
+            // Mesma lógica de qualificar() das Declarações: monta as partes num
+            // array e filtra as vazias antes de juntar com ", ". Assim
+            // nacionalidade, estado civil, profissão ou RG ausentes não deixam
+            // vírgula/espaço solto no texto. Com todos os campos preenchidos a
+            // saída é idêntica à versão anterior (mesma redação/ordem).
+            const docRgCpf = p.rg
+                ? `portador${g(p.genero, '', 'a')} da Carteira de Identidade nº ${escapeHtml(p.rg)}, inscrit${g(p.genero, 'o', 'a')} no C.P.F. nº ${escapeHtml(p.cpf || '')}`
+                : `inscrit${g(p.genero, 'o', 'a')} no C.P.F. nº ${escapeHtml(p.cpf || '')}`;
+            const partes = [
+                `${papel.toUpperCase()}: ${escapeHtml(titleCase(p.nome))}`,
+                p.nacionalidade ? escapeHtml(flexGenero(p.nacionalidade, fem)) : null,
+                p.estado_civil ? escapeHtml(flexGenero(p.estado_civil, fem)) : null,
+                p.profissao ? escapeHtml(p.profissao) : null,
+                docRgCpf,
+            ].filter(Boolean);
+            let out = partes.join(', ');
             out += semEndereco ? '.' : `, residente e domiciliad${g(p.genero, 'o', 'a')} na ${escapeHtml(titleCase(p.endereco))}, bairro ${escapeHtml(p.bairro || '')} da Cidade de ${escapeHtml(p.cidade || '')}/${escapeHtml(p.estado || '')}.`;
             return out;
         }
@@ -9526,9 +9539,36 @@
                     if (!aPrazo && !veiculoEntrada) {
                         out += clausulaCV(n++, `O COMPRADOR pagará ao VENDEDOR, pela compra do imóvel objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}) a ser quitada no ato da assinatura desse contrato.`);
                     } else if (!aPrazo && veiculoEntrada) {
+                        // Descrição do veículo: mesma de sempre, só troca "categoria
+                        // PARTICULAR, registrado no DETRAN/DUT sob o nº" por "registrado
+                        // sob o nº de RENAVAM" NESTE contrato (descricaoVeiculoTroca é
+                        // compartilhada com o de Compra e Venda de Veículo — não mexer nela).
+                        const descVeic = descricaoVeiculoTroca(veiculoEntrada)
+                            .replace('categoria PARTICULAR, registrado no DETRAN/DUT sob o nº ', 'registrado sob o nº de RENAVAM ');
+                        // Saldo = valor do imóvel − valor do veículo, sempre calculado aqui
+                        // (nunca digitado). O formulário já barra veículo maior que o
+                        // imóvel; clampa em 0 por segurança.
+                        const saldo = Math.max((Number(e.valor_total) || 0) - valorEntradaVeiculo, 0);
+                        const temSaldoInfo = e.saldo_restante != null; // registro salvo pelo formulário novo
+                        const saldoForma = e.saldo_forma || null;
                         let texto = `O COMPRADOR pagará ao VENDEDOR, pela compra do imóvel objeto deste contrato, a quantia de ${fmt(e.valor_total)} (${extensoReais(e.valor_total)}), sendo pago da seguinte forma:<br><br>`
-                            + `a) Através da entrega de ${descricaoVeiculoTroca(veiculoEntrada)}`;
-                        if (valorEntradaDinheiro > 0) {
+                            + `a) Através da entrega de ${descVeic}`;
+                        if (temSaldoInfo && saldo === 0) {
+                            texto += `<br><br>O valor do veículo corresponde integralmente ao valor do imóvel, não havendo saldo restante a ser pago.`;
+                        } else if (temSaldoInfo && saldo > 0) {
+                            if (saldoForma === 'Pix') {
+                                texto += `<br><br>b) Mais o valor restante de ${fmt(saldo)} (${extensoReais(saldo)}) a ser pago no ato da assinatura desse contrato por meio de PIX, chave do tipo ${escapeHtml(e.saldo_pix_tipo_chave || '')}, chave ${escapeHtml(e.saldo_pix_chave || '')}, de titularidade de ${escapeHtml(titleCase(e.saldo_pix_titular || ''))}, sendo que a transferência do veículo e o pagamento do saldo ocorrerão simultaneamente.`;
+                            } else if (saldoForma === 'Transferência' || saldoForma === 'Depósito') {
+                                const via = saldoForma === 'Depósito' ? 'depósito bancário' : 'transferência bancária';
+                                texto += `<br><br>b) Mais o valor restante de ${fmt(saldo)} (${extensoReais(saldo)}) a ser pago no ato da assinatura desse contrato por meio de ${via} para a conta ${e.saldo_tipo_conta ? escapeHtml(e.saldo_tipo_conta.toLowerCase()) + ' ' : ''}nº ${escapeHtml(e.saldo_conta || '')}, agência ${escapeHtml(e.saldo_agencia || '')}, do ${escapeHtml(e.saldo_banco || '')}, de titularidade de ${escapeHtml(titleCase(e.saldo_titular || ''))}, sendo que a transferência do veículo e o pagamento do saldo ocorrerão simultaneamente.`;
+                            } else if (saldoForma === 'Outro') {
+                                texto += `<br><br>b) Mais o valor restante de ${fmt(saldo)} (${extensoReais(saldo)}) a ser pago no ato da assinatura desse contrato da seguinte forma: ${escapeHtml(e.saldo_outro_desc || '')}, sendo que a transferência do veículo e o pagamento do saldo ocorrerão simultaneamente.`;
+                            } else {
+                                // 'Dinheiro' ou forma não informada — redação compatível com a cláusula atual.
+                                texto += `<br><br>b) Mais a quantia em dinheiro no valor de ${fmt(saldo)} (${extensoReais(saldo)}) a ser quitada no ato da assinatura desse contrato, sendo que a transferência do veículo e o pagamento em dinheiro ocorrerão simultaneamente.`;
+                            }
+                        } else if (valorEntradaDinheiro > 0) {
+                            // Registro antigo (sem saldo_forma): mantém texto e valor exatamente como antes.
                             texto += `<br><br>b) Mais a quantia em dinheiro no valor de ${fmt(valorEntradaDinheiro)} (${extensoReais(valorEntradaDinheiro)}) a ser quitada no ato da assinatura desse contrato, sendo que a transferência do veículo e o pagamento em dinheiro ocorrerão simultaneamente.`;
                         }
                         out += clausulaCV(n++, texto);

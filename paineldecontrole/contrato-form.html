@@ -77,7 +77,7 @@
     .success-box p { color: var(--text-dim); font-size: 13.5px; }
     @media (max-width: 380px) { .card { padding: 18px 14px; } }
 
-    /* ---- Ler Documento (piloto: só Locação de Imóvel) ---- */
+    /* ---- Ler Documento (Locação de Imóvel + Compra e Venda de Imóvel) ---- */
     .btn-ler-doc {
         display: flex; align-items: center; justify-content: center; gap: 8px;
         width: 100%; padding: 13px; margin-bottom: 18px; border-radius: 14px;
@@ -145,9 +145,12 @@
     <div class="card" id="cardArea"></div>
 </div>
 
-<!-- Ler Documento (piloto Locação de Imóvel): inputs ocultos + overlay compartilhado -->
+<!-- Ler Documento (Locação de Imóvel + Compra e Venda de Imóvel): inputs ocultos + overlay compartilhado -->
 <input type="file" id="docInputCamera" accept="image/*" capture="environment" style="display:none">
 <input type="file" id="docInputGaleria" accept="image/*" style="display:none">
+<!-- Ler Documento do Veículo (só Compra e Venda de Imóvel, quando há veículo na troca): aceita foto OU PDF -->
+<input type="file" id="docVeicInputCamera" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="docVeicInputArquivo" accept="image/*,application/pdf" style="display:none">
 <div id="docOverlay" class="doc-overlay" style="display:none"></div>
 
 <script type="module">
@@ -305,6 +308,14 @@ const s = {
 
     forma_pagamento: '', valor_total: '', teve_dinheiro_entrada: '', valor_entrada: '', num_parcelas: '', data_primeira_parcela: '',
 
+    // Saldo restante — só Compra e Venda de Imóvel à vista com veículo na troca.
+    // O saldo em si nunca é digitado (calculado: valor_total − ev_valor); aqui
+    // só a forma de pagamento do saldo no ato e os dados dela.
+    saldo_forma: '', // 'Dinheiro' | 'Pix' | 'Transferência' | 'Depósito' | 'Outro'
+    saldo_pix_tipo_chave: '', saldo_pix_chave: '', saldo_pix_titular: '',
+    saldo_banco: '', saldo_agencia: '', saldo_conta: '', saldo_tipo_conta: '', saldo_titular: '',
+    saldo_outro_desc: '',
+
     entrada_veiculo: '', // 'Sim' | 'Não' — houve veículo dado como parte do pagamento (troca)
     ev_tipo_veiculo: '', ev_tipo_veiculo_outro: '', ev_fabricante: '', ev_fabricante_outro: '', ev_modelo: '',
     ev_ano_fabricacao: '', ev_ano_modelo: '', ev_cor: '', ev_cor_outro: '', ev_placa: '', ev_chassi: '', ev_renavam: '', ev_valor: '',
@@ -347,18 +358,23 @@ function renderCondAreaImovel() {
 function cidadeFinal(p) { return s[p + '_cidade'] === 'Outra' ? s[p + '_cidade_outra'] : s[p + '_cidade']; }
 function bairroFinal(p) { return (s[p + '_cidade'] === 'Outra' || s[p + '_bairro'] === '__outro__') ? s[p + '_bairro_outro'] : s[p + '_bairro']; }
 function nacionalidadeFinal(p) { return s[p + '_nacionalidade'] === 'Outra' ? s[p + '_nacionalidade_outro'] : s[p + '_nacionalidade']; }
-// Rua/Número/Complemento entram separados (evita gente colando tudo junto ou
-// esquecendo o número) e são compostos num endereço só na hora de enviar/exibir.
+// "Rua e número" em campo único (a rua já vem com o número incluso, ex:
+// "Rua Monte Neblina, 563") em vez de Rua/Número separados. Locação de Imóvel:
+// Locador ('a') e imóvel locado ('im'). Compra e Venda de Imóvel (2026-09-06,
+// pedido do usuário): as duas pessoas ('a'/'b') e o imóvel do contrato ('im').
+// Compra e Venda de Veículo continua com Rua/Número separados, sem mudança.
+function ruaNumeroUnificado(p) {
+    if (s.tipo === 'imovel_locacao') return p === 'a' || p === 'im';
+    if (s.tipo === 'imovel_cv') return p === 'a' || p === 'b' || p === 'im';
+    return false;
+}
+// Rua/Número/Complemento (quando separados) são compostos num endereço só na
+// hora de enviar/exibir; quando o campo é único (ver ruaNumeroUnificado) a rua
+// já traz o número e só o complemento é concatenado.
 function enderecoFinal(p) {
     const rua = (s[p + '_rua'] || '').trim();
     const complemento = (s[p + '_complemento'] || '').trim();
-    // "Rua e número" campo único em Locação de Imóvel (2026-08-26, pedido do
-    // usuário) — tanto pro Locador ('a') quanto pro imóvel locado ('im'):
-    // rua já vem com o número incluso (ex: "Rua Monte Neblina, 563"), não
-    // concatena número separado. Locatário e Compra e Venda (Vendedor/
-    // Comprador/Imóvel do contrato) continuam com Rua/Número separados, sem
-    // nenhuma mudança.
-    if ((p === 'a' || p === 'im') && s.tipo === 'imovel_locacao') {
+    if (ruaNumeroUnificado(p)) {
         if (!rua) return '';
         let out = complemento ? `${rua}, ${complemento}` : rua;
         // Unidade dentro da mesma propriedade do Locador (2026-08-26, pedido
@@ -430,11 +446,20 @@ function renderCondBairroOutro(p) {
     el.innerHTML = s[p + '_bairro'] === '__outro__' ? `<div class="field"><label>Qual bairro? *</label><input type="text" data-key="${p}_bairro_outro" value="${esc(s[p + '_bairro_outro'])}"></div>` : '';
 }
 
-// ---------- Ler Documento (piloto: só Locação de Imóvel) ----------
+// ---------- Ler Documento (Locação de Imóvel + Compra e Venda de Imóvel) ----------
 // A imagem nunca é salva: só existe em memória (canvas/base64) durante a
 // leitura, some assim que a Edge Function responde ou o overlay é fechado —
 // não sobe pro Storage nem é gravada em `s`/no registro do contrato.
 let docAlvo = null; // 'a' | 'b' — pra qual pessoa a leitura em andamento se aplica
+let docVeicAtivo = false; // guarda a leitura do documento do veículo em andamento (mesmo papel do docAlvo)
+
+// Rótulo da parte conforme o tipo de contrato — usado no texto do overlay e no
+// `papel` mandado pra Edge Function. Locação: LOCADOR/LOCATÁRIO; Compra e Venda
+// (imóvel ou veículo): VENDEDOR/COMPRADOR.
+function papelPessoa(p) {
+    if (s.tipo === 'imovel_locacao') return p === 'a' ? 'LOCADOR' : 'LOCATÁRIO';
+    return p === 'a' ? 'VENDEDOR' : 'COMPRADOR';
+}
 
 function abrirLeituraDocumento(p, papel) {
     docAlvo = p;
@@ -456,6 +481,7 @@ function fecharDocOverlay() {
     overlay.innerHTML = '';
     delete overlay.dataset.nacValor; delete overlay.dataset.nacOutro;
     docAlvo = null;
+    docVeicAtivo = false; // espelha o reset de docAlvo — descarta leitura de veículo pendente ao fechar
 }
 function mostrarDocCarregando() {
     renderDocOverlay(`<div class="doc-loading"><div class="spin"></div>Lendo documento...</div>`);
@@ -476,8 +502,15 @@ function mostrarDocErro(motivoDetalhe) {
 // pra IA — reduz custo/latência e o tamanho do payload da Edge Function.
 function comprimirImagem(file) {
     return new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(file);
-        const img = new Image();
+        let url = URL.createObjectURL(file);
+        let img = new Image();
+        // Libera object URL, <img> e <canvas> assim que a conversão termina ou
+        // falha — nenhuma referência à imagem original fica pendurada.
+        const limpar = (canvas) => {
+            if (url) { URL.revokeObjectURL(url); url = null; }
+            if (img) { img.onload = img.onerror = null; img.src = ''; img = null; }
+            if (canvas) { canvas.width = 0; canvas.height = 0; }
+        };
         img.onload = () => {
             const maxLado = 1600;
             let { width, height } = img;
@@ -487,11 +520,16 @@ function comprimirImagem(file) {
             }
             const canvas = document.createElement('canvas');
             canvas.width = width; canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-            URL.revokeObjectURL(url);
-            resolve(canvas.toDataURL('image/jpeg', 0.82));
+            let dataUrl;
+            try {
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            } finally {
+                limpar(canvas);
+            }
+            resolve(dataUrl);
         };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível abrir a imagem.')); };
+        img.onerror = () => { limpar(); reject(new Error('Não foi possível abrir a imagem.')); };
         img.src = url;
     });
 }
@@ -499,7 +537,7 @@ function comprimirImagem(file) {
 async function processarImagemDocumento(file) {
     if (!file || !docAlvo) return;
     const p = docAlvo;
-    const papel = p === 'a' ? 'LOCADOR' : 'LOCATÁRIO';
+    const papel = papelPessoa(p);
     mostrarDocCarregando();
     let imagem_base64;
     try {
@@ -508,8 +546,14 @@ async function processarImagemDocumento(file) {
         mostrarDocErro('Não foi possível abrir essa imagem. Tenta outra ou preencha manualmente.');
         return;
     }
-    const { data, error } = await supabase.functions.invoke('documento-ia', { body: { imagem_base64, papel } });
-    imagem_base64 = null; // descarta a referência assim que a chamada termina
+    let data, error;
+    try {
+        ({ data, error } = await supabase.functions.invoke('documento-ia', { body: { imagem_base64, papel } }));
+    } catch (e) {
+        error = e;
+    } finally {
+        imagem_base64 = null; // descarta a imagem SEMPRE — sucesso, erro, timeout ou falha de rede
+    }
     if (docAlvo !== p) return; // usuário fechou/cancelou enquanto a IA respondia
     if (error || !data) {
         mostrarDocErro('Não foi possível ler agora. Tenta de novo ou preencha manualmente.');
@@ -527,8 +571,8 @@ function mostrarDocConfirmacao(dados) {
     // Locação de Imóvel (2026-08-26): não pede mais confirmação de nascimento/
     // órgão emissor/UF emissor pra nenhuma das duas pessoas — esses campos
     // saíram completamente da etapa de dados pessoais (ver stepPessoa). O
-    // "Ler Documento" só existe em Locação de Imóvel (pilotoDocumento), então
-    // esse overlay nunca abre em Compra e Venda.
+    // "Ler Documento" existe em Locação de Imóvel e Compra e Venda de Imóvel
+    // (ver pilotoDocumento em stepPessoa); nunca abre em Compra e Venda de Veículo.
     const campos = [
         ['nome_completo', 'Nome completo', dados.nome_completo],
         ['cpf', 'CPF', dados.cpf],
@@ -577,6 +621,156 @@ function aplicarDadosDocumento() {
     render();
 }
 
+// ---------- Ler Documento do Veículo (só Compra e Venda de Imóvel) ----------
+// Bloco isolado: reaproveita a UI/overlay/compressão da leitura de RG/CNH/CPF,
+// mas NÃO toca em nenhuma função daquele fluxo. Só entra em jogo na etapa
+// "Entrada / Negociação" quando s.tipo === 'imovel_cv'. Lê APENAS 8 campos do
+// documento do veículo (marca, modelo/versão, ano fab., ano modelo, placa,
+// Renavam, chassi, cor) — nada de proprietário/CPF/endereço/UF/etc. A imagem
+// nunca é salva: mesmo descarte determinístico da leitura de identidade.
+function abrirLeituraVeiculo() {
+    docVeicAtivo = false;
+    renderDocOverlay(`
+        <h3>Ler Documento do Veículo</h3>
+        <p class="doc-sub">Tire uma foto ou envie o PDF do documento do veículo (CRLV / CRV / ATPV-e). A leitura pega só marca, modelo/versão, anos, placa, Renavam, chassi e cor.</p>
+        <button type="button" class="doc-action-btn primary" data-doc-action="veic-camera">📷 Tirar foto</button>
+        <button type="button" class="doc-action-btn" data-doc-action="veic-arquivo">📎 Enviar foto ou PDF</button>
+        <button type="button" class="doc-action-btn cancel" data-doc-action="fechar">Cancelar</button>`);
+}
+
+// Lê o PDF como data URL base64 (sem converter pra imagem) — a Edge Function
+// repassa o PDF direto pra IA, que lê PDF nativamente. Foto continua indo pelo
+// comprimirImagem (redimensiona + JPEG).
+const VEIC_PDF_MAX_BYTES = 15 * 1024 * 1024;   // 15 MB de PDF (base64 ~20 MB)
+const VEIC_IMG_MAX_BYTES = 25 * 1024 * 1024;   // foto antes de comprimir
+function pdfParaBase64(file) {
+    return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result); // "data:application/pdf;base64,..."
+        fr.onerror = () => reject(new Error('Não foi possível ler o PDF.'));
+        fr.readAsDataURL(file);
+    });
+}
+
+async function processarDocumentoVeiculo(file) {
+    if (!file) return;
+    const ehImagem = (file.type || '').startsWith('image/');
+    const ehPdf = file.type === 'application/pdf';
+    if (!ehImagem && !ehPdf) {
+        mostrarDocErro('Envie uma foto (JPG/PNG) ou um PDF do documento do veículo.');
+        return;
+    }
+    if (ehPdf && file.size > VEIC_PDF_MAX_BYTES) {
+        mostrarDocErro('Esse PDF é muito grande (máx. 15 MB). Envie um PDF menor ou uma foto.');
+        return;
+    }
+    if (ehImagem && file.size > VEIC_IMG_MAX_BYTES) {
+        mostrarDocErro('Essa imagem é muito grande. Tire uma foto menor ou envie um PDF.');
+        return;
+    }
+    docVeicAtivo = true;
+    mostrarDocCarregando();
+    let arquivo_base64;
+    try {
+        arquivo_base64 = ehPdf ? await pdfParaBase64(file) : await comprimirImagem(file);
+    } catch {
+        if (docVeicAtivo) mostrarDocErro('Não foi possível abrir esse arquivo. Tenta outra foto/PDF ou preencha manualmente.');
+        return;
+    }
+    let data, error;
+    try {
+        ({ data, error } = await supabase.functions.invoke('documento-veiculo-ia', { body: { arquivo_base64 } }));
+    } catch (e) {
+        error = e;
+    } finally {
+        arquivo_base64 = null; // descarta a foto/PDF SEMPRE — sucesso, erro, timeout ou falha de rede
+    }
+    if (!docVeicAtivo) return; // usuário fechou/cancelou enquanto a IA respondia
+    if (error || !data) {
+        mostrarDocErro('Não foi possível ler agora. Tenta de novo ou preencha manualmente.');
+        return;
+    }
+    if (!data.legivel) {
+        mostrarDocErro(data.motivo_nao_legivel || null);
+        return;
+    }
+    mostrarConfirmacaoVeiculo(data.dados || {});
+}
+
+// Ano que o <select> ev_ano_* consegue representar (mesma faixa de anoOptions:
+// ANO_ATUAL .. ANO_ATUAL-40). Um ano lido fora dessa faixa NÃO é aplicado nem
+// substituído — fica visível na confirmação pra preenchimento manual.
+function anoSelecionavel(v) {
+    const t = String(v ?? '').trim();
+    if (!/^\d{4}$/.test(t)) return false;
+    const n = Number(t);
+    return n >= (ANO_ATUAL - 40) && n <= ANO_ATUAL;
+}
+
+function mostrarConfirmacaoVeiculo(dados) {
+    const campos = [
+        ['marca', 'Marca', dados.marca],
+        ['modelo', 'Modelo / Versão', dados.modelo],
+        ['ano_fabricacao', 'Ano de fabricação', dados.ano_fabricacao],
+        ['ano_modelo', 'Ano modelo', dados.ano_modelo],
+        ['placa', 'Placa', dados.placa],
+        ['renavam', 'Renavam', dados.renavam],
+        ['chassi', 'Chassi', dados.chassi],
+        ['cor', 'Cor predominante', dados.cor],
+    ];
+    const anoFora = (dados.ano_fabricacao && !anoSelecionavel(dados.ano_fabricacao))
+        || (dados.ano_modelo && !anoSelecionavel(dados.ano_modelo));
+    const avisoAno = anoFora
+        ? `<p class="doc-sub" style="color:var(--text-faint); margin-top:-6px;">O ano lido está fora da lista de anos do formulário — ele aparece aqui como referência, mas não vai ser pré-selecionado; ajuste manualmente na etapa. Nada foi inventado nem trocado.</p>`
+        : '';
+    renderDocOverlay(`
+        <h3>Confira os dados do veículo</h3>
+        <p class="doc-sub">Corrija o que estiver errado antes de preencher o formulário. O que não foi lido fica em branco.</p>
+        <div class="doc-confirma">
+            ${campos.map(([k, label, v]) => `<div class="field"><label>${esc(label)}</label><input type="text" data-doc-campo="${k}" value="${esc(v || '')}"></div>`).join('')}
+        </div>
+        ${avisoAno}
+        <button type="button" class="doc-action-btn primary" data-doc-action="veic-usar">Usar estes dados</button>
+        <button type="button" class="doc-action-btn cancel" data-doc-action="fechar">Descartar</button>`);
+}
+
+function aplicarDadosVeiculo() {
+    const overlay = document.getElementById('docOverlay');
+    const campo = k => (overlay.querySelector(`[data-doc-campo="${k}"]`)?.value || '').trim();
+    // Casa "FIAT"/"branca" com o rótulo exato da lista do formulário (sem
+    // maiúsculas/acento); se não bater, mantém o texto lido (vai pra "Outro").
+    const canon = (valor, lista) => {
+        const n = x => String(x || '').toLowerCase().trim()
+            .replace(/[áàâã]/g, 'a').replace(/[éèê]/g, 'e').replace(/[íï]/g, 'i')
+            .replace(/[óòôõ]/g, 'o').replace(/[úùü]/g, 'u').replace(/ç/g, 'c').replace(/ë/g, 'e');
+        return lista.find(o => n(o) === n(valor)) || valor;
+    };
+
+    // Leitura implica que há veículo na troca — abre o bloco se ainda estiver "Não".
+    if (s.entrada_veiculo !== 'Sim') s.entrada_veiculo = 'Sim';
+
+    const marca = campo('marca');
+    if (marca) {
+        const m = paraSelecaoOutro(canon(marca, MARCAS_VEICULO), MARCAS_VEICULO);
+        s.ev_fabricante = m.valor; s.ev_fabricante_outro = m.outro;
+    }
+    if (campo('modelo')) s.ev_modelo = campo('modelo');
+    if (anoSelecionavel(campo('ano_fabricacao'))) s.ev_ano_fabricacao = campo('ano_fabricacao');
+    if (anoSelecionavel(campo('ano_modelo'))) s.ev_ano_modelo = campo('ano_modelo');
+    const cor = campo('cor');
+    if (cor) {
+        const c = paraSelecaoOutro(canon(cor, CORES_VEICULO), CORES_VEICULO);
+        s.ev_cor = c.valor; s.ev_cor_outro = c.outro;
+    }
+    if (campo('placa')) s.ev_placa = campo('placa');
+    if (campo('chassi')) s.ev_chassi = campo('chassi');
+    if (campo('renavam')) s.ev_renavam = campo('renavam');
+    // ev_tipo_veiculo e ev_valor NÃO são tocados (preenchimento manual, por decisão).
+
+    fecharDocOverlay();
+    render();
+}
+
 document.getElementById('docOverlay').addEventListener('click', e => {
     const btn = e.target.closest('[data-doc-action]');
     if (!btn) return;
@@ -585,6 +779,9 @@ document.getElementById('docOverlay').addEventListener('click', e => {
     else if (action === 'galeria') document.getElementById('docInputGaleria').click();
     else if (action === 'fechar') fecharDocOverlay();
     else if (action === 'usar') aplicarDadosDocumento();
+    else if (action === 'veic-camera') document.getElementById('docVeicInputCamera').click();
+    else if (action === 'veic-arquivo') document.getElementById('docVeicInputArquivo').click();
+    else if (action === 'veic-usar') aplicarDadosVeiculo();
 });
 document.getElementById('docInputCamera').addEventListener('change', e => {
     const file = e.target.files[0]; e.target.value = '';
@@ -593,6 +790,14 @@ document.getElementById('docInputCamera').addEventListener('change', e => {
 document.getElementById('docInputGaleria').addEventListener('change', e => {
     const file = e.target.files[0]; e.target.value = '';
     processarImagemDocumento(file);
+});
+document.getElementById('docVeicInputCamera').addEventListener('change', e => {
+    const file = e.target.files[0]; e.target.value = '';
+    processarDocumentoVeiculo(file);
+});
+document.getElementById('docVeicInputArquivo').addEventListener('change', e => {
+    const file = e.target.files[0]; e.target.value = '';
+    processarDocumentoVeiculo(file);
 });
 
 let stepIndex = 0;
@@ -706,9 +911,10 @@ function locatarioSemEnderecoProprio() {
 }
 
 function stepPessoa(p, papel, subtitulo) {
-    // Piloto controlado: "Ler Documento" só aparece em Locação de Imóvel —
-    // Compra e Venda (veículo/imóvel) reaproveita esta mesma função sem mudança.
-    const pilotoDocumento = s.tipo === 'imovel_locacao';
+    // "Ler Documento" (leitura por foto) aparece em Locação de Imóvel e em
+    // Compra e Venda de Imóvel — mesma UI, mesma Edge Function. Compra e Venda
+    // de Veículo reaproveita esta função sem o botão.
+    const pilotoDocumento = s.tipo === 'imovel_locacao' || s.tipo === 'imovel_cv';
     // Dados pessoais padronizados entre Locador e Locatário (2026-08-26,
     // pedido do usuário) — nascimento/órgão emissor/UF emissor saem
     // completamente da Locação de Imóvel pras duas pessoas (removidos do
@@ -717,7 +923,7 @@ function stepPessoa(p, papel, subtitulo) {
     // O endereço do Locador vira uma etapa própria (ver stepEnderecoLocador
     // logo abaixo) — só pra esta pessoa ('a') neste tipo de contrato;
     // Locatário continua com endereço dentro da própria etapa, sem mudança.
-    const ehLocadorLocacao = p === 'a' && pilotoDocumento;
+    const ehLocadorLocacao = p === 'a' && s.tipo === 'imovel_locacao';
     return `
     <h2>${esc(papel)}</h2>
     <p class="step-sub">${esc(subtitulo)}</p>
@@ -735,8 +941,10 @@ function stepPessoa(p, papel, subtitulo) {
     <div class="field"><label>Profissão</label><input type="text" data-key="${p}_profissao" value="${esc(s[p + '_profissao'])}"></div>
     ${ehLocadorLocacao ? '' : p === 'b' && locatarioSemEnderecoProprio() ? `
     <p class="hint" style="margin:-4px 0 16px;">Como é uma locação residencial, o endereço do LOCATÁRIO será o próprio imóvel alugado — não precisa repetir aqui.</p>` : `
-    <div class="field"><label>Rua *</label><input type="text" data-key="${p}_rua" value="${esc(s[p + '_rua'])}"></div>
-    <div class="field"><label>Número *</label><input type="text" data-key="${p}_numero" value="${esc(s[p + '_numero'])}"></div>
+    ${ruaNumeroUnificado(p)
+        ? `<div class="field"><label>Rua e número *</label><input type="text" data-key="${p}_rua" value="${esc(s[p + '_rua'])}" placeholder="Rua Monte Neblina, 563"></div>`
+        : `<div class="field"><label>Rua *</label><input type="text" data-key="${p}_rua" value="${esc(s[p + '_rua'])}"></div>
+    <div class="field"><label>Número *</label><input type="text" data-key="${p}_numero" value="${esc(s[p + '_numero'])}"></div>`}
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" data-key="${p}_complemento" value="${esc(s[p + '_complemento'])}"></div>
     ${cidadeCampoHtml(p)}
     <div id="cond_${p}_estado">${estadoCampoHtml(p)}</div>`}
@@ -791,8 +999,7 @@ function stepImovelCV() {
     <h2>Dados do Imóvel</h2>
     <p class="step-sub">Objeto do contrato de compra e venda.</p>
     ${campoSelecaoComOutro('im_tipo_imovel', 'Tipo de imóvel', TIPOS_IMOVEL, true)}
-    <div class="field"><label>Rua *</label><input type="text" data-key="im_rua" value="${esc(s.im_rua)}"></div>
-    <div class="field"><label>Número *</label><input type="text" data-key="im_numero" value="${esc(s.im_numero)}"></div>
+    <div class="field"><label>Rua e número *</label><input type="text" data-key="im_rua" value="${esc(s.im_rua)}" placeholder="Rua Monte Neblina, 563"></div>
     <div class="field"><label>Complemento (não obrigatório)</label><input type="text" data-key="im_complemento" value="${esc(s.im_complemento)}"></div>
     ${cidadeCampoHtml('im')}
     <div id="cond_im_estado">${estadoCampoHtml('im')}</div>
@@ -917,15 +1124,17 @@ function stepEntrada() {
     <div class="field"><label>Teve algum veículo entrando na negociação como parte do pagamento (troca)? *</label>
         <div class="radio-group">${pill('entrada_veiculo', 'Sim', s.entrada_veiculo === 'Sim')}${pill('entrada_veiculo', 'Não', s.entrada_veiculo === 'Não')}</div>
     </div>
+    ${s.tipo === 'imovel_cv' ? `<button type="button" class="btn-ler-doc" data-action="ler-veiculo">📷 Ler Documento do Veículo</button>` : ''}
     <div id="condEntradaVeiculo"></div>
     <div id="condEntradaDinheiroParcelas"></div>
+    <div id="condSaldoAVista"></div>
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
 function renderCondEntradaVeiculo() {
     const el = document.getElementById('condEntradaVeiculo');
     if (!el) return;
-    if (s.entrada_veiculo !== 'Sim') { el.innerHTML = ''; renderCondEntradaDinheiroParcelas(); return; }
+    if (s.entrada_veiculo !== 'Sim') { el.innerHTML = ''; renderCondEntradaDinheiroParcelas(); renderCondSaldoAVista(); return; }
     el.innerHTML = `
         <h3 style="font-size:13px; color:var(--accent-bright); margin:18px 0 10px;">Dados do veículo dado na entrada</h3>
         ${campoSelecaoComOutro('ev_tipo_veiculo', 'Tipo de veículo', TIPOS_VEICULO, true)}
@@ -944,6 +1153,7 @@ function renderCondEntradaVeiculo() {
         ${campoValor('Valor desse veículo na negociação *', 'ev_valor')}`;
     ['ev_tipo_veiculo', 'ev_fabricante', 'ev_cor'].forEach(renderCondSelecaoOutro);
     renderCondEntradaDinheiroParcelas();
+    renderCondSaldoAVista();
 }
 // Valor restante a prazo, descontando entrada em dinheiro (se houver) e o
 // veículo dado na troca (se houver) — mesma conta que o painel faz na hora
@@ -966,6 +1176,11 @@ function renderCondEntradaDinheiroParcelas() {
     const el = document.getElementById('condEntradaDinheiroParcelas');
     if (!el) return;
     if (!s.entrada_veiculo) { el.innerHTML = ''; return; }
+    // Compra e Venda de Imóvel à vista com veículo na troca: o pagamento do
+    // saldo restante é tratado por renderCondSaldoAVista() — não mostra a
+    // pergunta antiga de "dinheiro no ato" aqui. Demais casos (A Prazo, sem
+    // veículo, Compra e Venda de Veículo) seguem inalterados.
+    if (saldoAVistaAtivo()) { el.innerHTML = ''; return; }
     let html = '';
     const labelDinheiro = s.entrada_veiculo === 'Sim'
         ? (s.forma_pagamento === 'Prazo' ? 'Além do veículo, teve valor em dinheiro na entrada?' : 'Além do veículo, teve valor em dinheiro pago no ato?')
@@ -989,6 +1204,77 @@ function renderCondValorEntradaDinheiro() {
     if (!el) return;
     if (s.teve_dinheiro_entrada !== 'Sim') { s.valor_entrada = ''; el.innerHTML = ''; return; }
     el.innerHTML = campoValor('Qual o valor em dinheiro da entrada?', 'valor_entrada');
+}
+
+// ---------- Saldo restante — só Compra e Venda de Imóvel à vista com veículo ----------
+// Cenário: imóvel à vista + veículo entrando na troca. Saldo = valor total do
+// imóvel − valor do veículo, SEMPRE calculado, nunca digitado. Se o veículo
+// vale mais que o imóvel, bloqueia (pede correção — não zera calado). Se o
+// saldo é 0, o veículo quita. Se há saldo, pergunta como será pago no ato.
+function saldoAVistaAtivo() {
+    return s.tipo === 'imovel_cv' && s.forma_pagamento === 'Vista' && s.entrada_veiculo === 'Sim';
+}
+function saldoRestanteAVista() {
+    return (Number(s.valor_total) || 0) - (Number(s.ev_valor) || 0);
+}
+const SALDO_FORMAS = ['Dinheiro', 'Pix', 'Transferência', 'Depósito', 'Outro'];
+const PIX_TIPOS_CHAVE = ['CPF', 'CNPJ', 'Celular', 'E-mail', 'Chave aleatória'];
+const TIPOS_CONTA = ['Corrente', 'Poupança'];
+
+function renderCondSaldoAVista() {
+    const el = document.getElementById('condSaldoAVista');
+    if (!el) return;
+    if (!saldoAVistaAtivo()) { el.innerHTML = ''; return; }
+    const total = Number(s.valor_total) || 0;
+    const veic = Number(s.ev_valor) || 0;
+    if (!s.valor_total || !s.ev_valor) {
+        el.innerHTML = `<p class="hint" style="margin:10px 0 14px;">Informe o valor do veículo acima para calcular o saldo restante.</p>`;
+        return;
+    }
+    if (veic > total) {
+        el.innerHTML = `<p class="hint" style="margin:10px 0 14px; color:var(--danger);">O valor do veículo (${formatarValorBRLExibicao(String(veic))}) é maior que o valor total do imóvel (${formatarValorBRLExibicao(String(total))}). Corrija os valores para continuar.</p>`;
+        return;
+    }
+    const saldo = total - veic;
+    if (saldo === 0) {
+        el.innerHTML = `<p class="hint" style="margin:10px 0 14px; color:var(--accent-bright);">O veículo quita o valor do imóvel. Nenhum saldo a pagar no ato.</p>`;
+        return;
+    }
+    el.innerHTML = `
+        <div class="field"><label>Saldo restante a pagar no ato</label>
+            <input type="text" value="${esc(legendaExtensoTexto(String(saldo)))}" disabled style="opacity:.75;"></div>
+        <div class="field"><label>Como será pago o saldo restante no ato? *</label>
+            <div class="radio-group">${SALDO_FORMAS.map(f => pill('saldo_forma', f, s.saldo_forma === f)).join('')}</div>
+        </div>
+        <div id="condSaldoForma"></div>`;
+    renderCondSaldoForma();
+}
+function renderCondSaldoForma() {
+    const el = document.getElementById('condSaldoForma');
+    if (!el) return;
+    if (s.saldo_forma === 'Pix') {
+        el.innerHTML = `
+            <div class="field"><label>Tipo de chave Pix *</label>
+                <div class="radio-group">${PIX_TIPOS_CHAVE.map(t => pill('saldo_pix_tipo_chave', t, s.saldo_pix_tipo_chave === t)).join('')}</div>
+            </div>
+            <div class="field"><label>Chave Pix *</label><input type="text" data-key="saldo_pix_chave" value="${esc(s.saldo_pix_chave)}"></div>
+            <div class="field"><label>Nome do titular da chave *</label><input type="text" data-key="saldo_pix_titular" value="${esc(s.saldo_pix_titular)}"></div>`;
+    } else if (s.saldo_forma === 'Transferência' || s.saldo_forma === 'Depósito') {
+        el.innerHTML = `
+            <div class="field"><label>Banco *</label><input type="text" data-key="saldo_banco" value="${esc(s.saldo_banco)}"></div>
+            <div class="field"><label>Agência *</label><input type="text" data-key="saldo_agencia" value="${esc(s.saldo_agencia)}"></div>
+            <div class="field"><label>Conta *</label><input type="text" data-key="saldo_conta" value="${esc(s.saldo_conta)}"></div>
+            <div class="field"><label>Tipo de conta *</label>
+                <div class="radio-group">${TIPOS_CONTA.map(t => pill('saldo_tipo_conta', t, s.saldo_tipo_conta === t)).join('')}</div>
+            </div>
+            <div class="field"><label>Titular da conta *</label><input type="text" data-key="saldo_titular" value="${esc(s.saldo_titular)}"></div>`;
+    } else if (s.saldo_forma === 'Outro') {
+        el.innerHTML = `<div class="field"><label>Descreva como o saldo será pago *</label><input type="text" data-key="saldo_outro_desc" value="${esc(s.saldo_outro_desc)}"></div>`;
+    } else if (s.saldo_forma === 'Dinheiro') {
+        el.innerHTML = `<p class="hint" style="margin:-2px 0 12px;">Pagamento do saldo em dinheiro, no ato.</p>`;
+    } else {
+        el.innerHTML = '';
+    }
 }
 
 // ---------- Etapa: condições da locação ----------
@@ -1123,7 +1409,14 @@ function stepRevisao() {
         if (s.entrada_veiculo === 'Sim') {
             rows.push(['Veículo na entrada', `${valorSelecaoOutro('ev_fabricante')} ${s.ev_modelo} — ${s.ev_placa} (R$ ${s.ev_valor})`]);
         }
-        if (s.valor_entrada) rows.push(['Entrada em dinheiro', `R$ ${s.valor_entrada}`]);
+        if (saldoAVistaAtivo()) {
+            const saldo = Math.max((Number(s.valor_total) || 0) - (Number(s.ev_valor) || 0), 0);
+            rows.push(['Saldo restante no ato', saldo === 0
+                ? 'R$ 0,00 — o veículo quita o negócio'
+                : `${formatarValorBRLExibicao(String(saldo))}${s.saldo_forma ? ` — via ${s.saldo_forma}` : ''}`]);
+        } else if (s.valor_entrada) {
+            rows.push(['Entrada em dinheiro', `R$ ${s.valor_entrada}`]);
+        }
     }
     return `
     <h2>${editMode ? 'Confira e salve' : 'Confira e envie'}</h2>
@@ -1144,7 +1437,10 @@ function validarPessoa(p) {
     // Locatário em locação residencial não tem campo de endereço próprio pra
     // validar — ver locatarioSemEnderecoProprio() e stepPessoa().
     if (p === 'b' && locatarioSemEnderecoProprio()) return null;
-    if (!s[p + '_rua'] || !s[p + '_numero'] || !cidadeFinal(p) || !bairroFinal(p) || !estadoFinal(p)) {
+    // Campo único "Rua e número" (ver ruaNumeroUnificado): não exige `_numero`
+    // separado — a rua já traz o número.
+    const numeroObrigatorio = !ruaNumeroUnificado(p);
+    if (!s[p + '_rua'] || (numeroObrigatorio && !s[p + '_numero']) || !cidadeFinal(p) || !bairroFinal(p) || !estadoFinal(p)) {
         return 'Preencha todos os campos obrigatórios (*).';
     }
     return null;
@@ -1163,10 +1459,10 @@ function validateCurrentStep() {
             if (!valorSelecaoOutro('v_tipo_veiculo') || !valorSelecaoOutro('v_fabricante') || !s.v_modelo || !s.v_placa) return 'Preencha todos os campos obrigatórios (*).';
             return null;
         case 'imovel': {
-            // Locação de Imóvel: "Rua e número" é campo único (ver
-            // stepImovelLocacao), não pede im_numero separado. Compra e Venda
-            // continua exatamente como sempre.
-            const numeroObrigatorio = s.tipo !== 'imovel_locacao';
+            // "Rua e número" é campo único em Locação de Imóvel e em Compra e
+            // Venda de Imóvel (ver ruaNumeroUnificado / stepImovelLocacao /
+            // stepImovelCV) — nesses casos não pede im_numero separado.
+            const numeroObrigatorio = !ruaNumeroUnificado('im');
             if (!valorSelecaoOutro('im_tipo_imovel') || !s.im_rua || (numeroObrigatorio && !s.im_numero) || !cidadeFinal('im') || !bairroFinal('im') || !estadoFinal('im')) return 'Preencha todos os campos obrigatórios (*).';
             if (s.tipo === 'imovel_cv' && valorSelecaoOutro('im_tipo_imovel') === 'Terreno' && (!s.im_terreno_frente || !s.im_terreno_fundo)) return 'Informe os metros de frente e de fundo do terreno.';
             if (enderecoImovelIgualLocador() && !s.im_mesma_propriedade_locador) return 'Responda se o imóvel fica na mesma propriedade do Locador.';
@@ -1182,6 +1478,17 @@ function validateCurrentStep() {
         case 'entrada':
             if (!s.entrada_veiculo) return 'Responda se teve veículo entrando na negociação.';
             if (s.entrada_veiculo === 'Sim' && (!valorSelecaoOutro('ev_tipo_veiculo') || !valorSelecaoOutro('ev_fabricante') || !s.ev_placa || !s.ev_valor)) return 'Preencha os dados do veículo dado na entrada.';
+            if (saldoAVistaAtivo()) {
+                const saldo = saldoRestanteAVista();
+                if (saldo < 0) return 'O valor do veículo é maior que o valor total do imóvel. Corrija os valores.';
+                if (saldo > 0) {
+                    if (!s.saldo_forma) return 'Informe como o saldo restante será pago no ato.';
+                    if (s.saldo_forma === 'Pix' && (!s.saldo_pix_tipo_chave || !(s.saldo_pix_chave || '').trim() || !(s.saldo_pix_titular || '').trim())) return 'Preencha os dados do Pix (tipo de chave, chave e titular).';
+                    if ((s.saldo_forma === 'Transferência' || s.saldo_forma === 'Depósito') && (!(s.saldo_banco || '').trim() || !(s.saldo_agencia || '').trim() || !(s.saldo_conta || '').trim() || !s.saldo_tipo_conta || !(s.saldo_titular || '').trim())) return 'Preencha os dados bancários (banco, agência, conta, tipo e titular).';
+                    if (s.saldo_forma === 'Outro' && !(s.saldo_outro_desc || '').trim()) return 'Descreva como o saldo será pago.';
+                }
+                return null; // saldo 0 (veículo quita) ou dados completos — não roda as checagens antigas de dinheiro/parcelas
+            }
             if ((s.forma_pagamento === 'Prazo' || s.entrada_veiculo === 'Sim') && !s.teve_dinheiro_entrada) return 'Responda se teve valor em dinheiro na entrada.';
             if (s.teve_dinheiro_entrada === 'Sim' && !s.valor_entrada) return 'Informe o valor em dinheiro da entrada.';
             if (s.forma_pagamento === 'Prazo' && (!s.num_parcelas || !s.data_primeira_parcela)) return 'Preencha o número de parcelas e a data da primeira parcela.';
@@ -1233,6 +1540,10 @@ cardEl.addEventListener('input', e => {
             const disp = document.getElementById('parcelaValorDisplay');
             if (disp) disp.value = valorParcelaTexto();
         }
+        // Valor do veículo mudou → recalcula o saldo restante ao vivo (cenário
+        // Compra e Venda de Imóvel à vista com veículo). renderCondSaldoAVista
+        // já se auto-limita ao cenário certo; noutros casos vira no-op.
+        if (key === 'ev_valor') renderCondSaldoAVista();
         return;
     }
     if (key && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.type !== 'radio') {
@@ -1278,6 +1589,7 @@ cardEl.addEventListener('change', e => {
     if (t.dataset.role === 'garantia') { renderCondGarantia(); }
     if (key === 'entrada_veiculo') { renderCondEntradaVeiculo(); }
     if (key === 'teve_dinheiro_entrada') { renderCondValorEntradaDinheiro(); const disp = document.getElementById('parcelaValorDisplay'); if (disp) disp.value = valorParcelaTexto(); }
+    if (key === 'saldo_forma') { renderCondSaldoForma(); }
     if (key === 'tem_testemunhas') { renderCondTestemunhas(); }
     if (key === 'multa_rescisao' || key === 'multa_rescisao_tipo') { renderCondMultaRescisao(); }
     if (key === 'im_estado') { renderCondMesmaPropriedade(); }
@@ -1287,7 +1599,11 @@ cardEl.addEventListener('click', e => {
     const lerDocBtn = e.target.closest('[data-action="ler-documento"]');
     if (lerDocBtn) {
         const p = lerDocBtn.dataset.pessoa;
-        abrirLeituraDocumento(p, p === 'a' ? 'LOCADOR' : 'LOCATÁRIO');
+        abrirLeituraDocumento(p, papelPessoa(p));
+        return;
+    }
+    if (e.target.closest('[data-action="ler-veiculo"]')) {
+        abrirLeituraVeiculo();
         return;
     }
     const card = e.target.closest('[data-tipo-choice]');
@@ -1364,6 +1680,17 @@ function montarRegistro() {
         };
     } else if (s.tipo === 'imovel_cv') {
         tipo_contrato = 'CONTRATO_CV_IMOVEL';
+        // Bloco do saldo restante — só quando imóvel à vista + veículo na troca.
+        // O saldo é sempre calculado (valor_total − ev_valor), nunca digitado;
+        // já validado como >= 0. "Dinheiro" espelha valor_entrada/
+        // teve_dinheiro_entrada só pra compatibilidade interna (a cláusula
+        // atual usa esses campos) — o usuário nunca vê esse nome.
+        const _saldoAtivo = s.forma_pagamento === 'Vista' && s.entrada_veiculo === 'Sim';
+        const _saldo = _saldoAtivo ? Math.max((Number(s.valor_total) || 0) - (Number(s.ev_valor) || 0), 0) : null;
+        const _saldoForma = (_saldoAtivo && _saldo > 0) ? (s.saldo_forma || null) : null;
+        const _pix = _saldoForma === 'Pix';
+        const _banco = _saldoForma === 'Transferência' || _saldoForma === 'Depósito';
+        const _saldoDinheiro = _saldoForma === 'Dinheiro';
         especifico = {
             ...especifico,
             tipo_imovel: valorSelecaoOutro('im_tipo_imovel'), endereco_imovel: enderecoFinal('im'),
@@ -1376,10 +1703,22 @@ function montarRegistro() {
             forma_pagamento: s.forma_pagamento, valor_total: Number(s.valor_total) || 0,
             entrada_veiculo: s.entrada_veiculo || 'Não',
             veiculo_entrada: veiculoEntrada(),
-            teve_dinheiro_entrada: s.teve_dinheiro_entrada || 'Não',
-            valor_entrada: s.valor_entrada ? Number(s.valor_entrada) : 0,
+            teve_dinheiro_entrada: _saldoAtivo ? (_saldoDinheiro ? 'Sim' : 'Não') : (s.teve_dinheiro_entrada || 'Não'),
+            valor_entrada: _saldoAtivo ? (_saldoDinheiro ? _saldo : 0) : (s.valor_entrada ? Number(s.valor_entrada) : 0),
             num_parcelas: s.num_parcelas ? Number(s.num_parcelas) : null,
             data_primeira_parcela: s.data_primeira_parcela || null,
+            // Saldo restante e forma de pagamento do saldo no ato (só no cenário acima).
+            saldo_restante: _saldo,
+            saldo_forma: _saldoForma,
+            saldo_pix_tipo_chave: _pix ? (s.saldo_pix_tipo_chave || null) : null,
+            saldo_pix_chave: _pix ? ((s.saldo_pix_chave || '').trim() || null) : null,
+            saldo_pix_titular: _pix ? ((s.saldo_pix_titular || '').trim() || null) : null,
+            saldo_banco: _banco ? ((s.saldo_banco || '').trim() || null) : null,
+            saldo_agencia: _banco ? ((s.saldo_agencia || '').trim() || null) : null,
+            saldo_conta: _banco ? ((s.saldo_conta || '').trim() || null) : null,
+            saldo_tipo_conta: _banco ? (s.saldo_tipo_conta || null) : null,
+            saldo_titular: _banco ? ((s.saldo_titular || '').trim() || null) : null,
+            saldo_outro_desc: _saldoForma === 'Outro' ? ((s.saldo_outro_desc || '').trim() || null) : null,
         };
     } else if (s.tipo === 'imovel_locacao') {
         tipo_contrato = 'CONTRATO_LOCACAO_IMOVEL';
@@ -1517,14 +1856,13 @@ function carregarCidadeBairro(p, cidadeSalva, bairroSalvo) {
     }
 }
 function carregarEnderecoSolto(p, rua, numero, complemento, enderecoComposto) {
-    // "Rua e número" é campo único em Locação de Imóvel (2026-08-26) — tanto
-    // pro Locador ('a') quanto pro imóvel locado ('im'): registro salvo antes
-    // dessa mudança ainda tem rua/número separados; junta os dois de volta
-    // num "Rua e número" só ao reabrir pra edição (mesmo padrão já usado nos
+    // "Rua e número" é campo único em Locação de Imóvel (2026-08-26) e em
+    // Compra e Venda de Imóvel (2026-09-06) — ver ruaNumeroUnificado. Registro
+    // salvo antes dessas mudanças ainda tem rua/número separados: junta os dois
+    // de volta num "Rua e número" só ao reabrir pra edição (mesmo padrão dos
     // formulários públicos de Declaração/Procuração), sem perder o número.
-    // Locatário/Compra e Venda continuam com rua/número separados, sem
-    // nenhuma mudança.
-    if ((p === 'a' || p === 'im') && s.tipo === 'imovel_locacao') {
+    // Compra e Venda de Veículo continua com rua/número separados, sem mudança.
+    if (ruaNumeroUnificado(p)) {
         if (rua || numero) {
             s[p + '_rua'] = numero ? `${rua || ''}${rua ? ', ' : ''}${numero}` : (rua || '');
             s[p + '_complemento'] = complemento || '';
@@ -1596,6 +1934,18 @@ function carregarParaEdicao(row) {
         s.valor_entrada = e.valor_entrada ? String(e.valor_entrada) : '';
         s.num_parcelas = e.num_parcelas != null ? String(e.num_parcelas) : '';
         s.data_primeira_parcela = e.data_primeira_parcela || '';
+        if (s.tipo === 'imovel_cv') {
+            s.saldo_forma = e.saldo_forma || '';
+            s.saldo_pix_tipo_chave = e.saldo_pix_tipo_chave || '';
+            s.saldo_pix_chave = e.saldo_pix_chave || '';
+            s.saldo_pix_titular = e.saldo_pix_titular || '';
+            s.saldo_banco = e.saldo_banco || '';
+            s.saldo_agencia = e.saldo_agencia || '';
+            s.saldo_conta = e.saldo_conta || '';
+            s.saldo_tipo_conta = e.saldo_tipo_conta || '';
+            s.saldo_titular = e.saldo_titular || '';
+            s.saldo_outro_desc = e.saldo_outro_desc || '';
+        }
     } else if (s.tipo === 'imovel_locacao') {
         s.valor_aluguel = e.valor_aluguel != null ? String(e.valor_aluguel) : '';
         s.dia_vencimento = e.dia_vencimento != null ? String(e.dia_vencimento) : '';
