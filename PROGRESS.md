@@ -3156,7 +3156,7 @@ Pedido: no `TIPOS.CONTRATO_CV_IMOVEL.corpo(d)`, **só** no ramo `!aPrazo && veic
 
 **Falta:** teste ao vivo logado com um registro real de cada cenário.
 
-## Histórico de Troca por Pix — corrige dados fictícios, filtro/Limpar quebrados e bug de fuso horário (2026-09-10) — NÃO publicado
+## Histórico de Troca por Pix — corrige dados fictícios, filtro/Limpar quebrados e bug de fuso horário (2026-09-10) — **PUBLICADO** (`main` `edfeb9c`)
 
 Pedido: análise técnica completa e correção do "Histórico de Troca por Pix" (dentro do serviço Troca por Pix, em Movimentação Financeira → `paineldecontrole/index.html`). Não tocar em mais nada do painel.
 
@@ -3189,7 +3189,7 @@ Pedido: análise técnica completa e correção do "Histórico de Troca por Pix"
 
 **Falta:** teste ao vivo logado no painel real (Supabase de produção) registrando um Pix de verdade perto da meia-noite, e confirmar visualmente o filtro/Limpar na interface (o ambiente de teste não abre navegador).
 
-## Histórico de Troca por Pix — auditoria da correção anterior (2026-09-10, 2ª etapa) — NÃO publicado
+## Histórico de Troca por Pix — auditoria da correção anterior (2026-09-10, 2ª etapa) — **PUBLICADO** (`main` `edfeb9c`)
 
 Pedido: auditar (sem recriar) a correção anterior — confirmar wiring, consulta real, ausência de dados fictícios, datas/timezone, Limpar, gravação→histórico, ordenação, performance e tratamento de erros. Só corrigir se os testes achassem problema real.
 
