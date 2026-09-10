@@ -2243,8 +2243,8 @@
                         <input type="date" id="mfTpHistDataInput" style="margin-top:10px; display:none;">
                     </div>
                     <div class="fin-actions-row">
-                        <button type="button" class="fin-submit" style="flex:2;">Filtrar</button>
-                        <button type="button" class="fin-btn-ghost" style="flex:1;">Limpar</button>
+                        <button type="button" class="fin-submit" style="flex:2;" onclick="mfTrocaPixHistRender()">Filtrar</button>
+                        <button type="button" class="fin-btn-ghost" style="flex:1;" onclick="mfTrocaPixHistLimpar()">Limpar</button>
                     </div>
                 </div>
                 <div class="fin-table-wrap">
@@ -2259,24 +2259,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>27/08/2026</td>
-                                    <td class="fin-table-amount">R$ 500,00</td>
-                                    <td class="fin-table-amount">R$ 27,50</td>
-                                    <td class="fin-table-amount">R$ 527,50</td>
-                                </tr>
-                                <tr>
-                                    <td>27/08/2026</td>
-                                    <td class="fin-table-amount">R$ 200,00</td>
-                                    <td class="fin-table-amount">R$ 11,00</td>
-                                    <td class="fin-table-amount">R$ 211,00</td>
-                                </tr>
-                                <tr>
-                                    <td>27/08/2026</td>
-                                    <td class="fin-table-amount">R$ 950,00</td>
-                                    <td class="fin-table-amount">R$ 47,50</td>
-                                    <td class="fin-table-amount">R$ 997,50</td>
-                                </tr>
+                                <tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Carregando…</td></tr>
                             </tbody>
                             <tfoot>
                                 <tr>
@@ -2294,7 +2277,7 @@
                         </table>
                     </div>
                 </div>
-                <div class="fin-note">A apuração do dia soma <b>só as taxas</b> (receita real). O Valor desejado é transferência interna e fica de fora. Etapa 1 — filtro só por data, dados fictícios.</div>
+                <div class="fin-note">A apuração do dia soma <b>só as taxas</b> (receita real). O Valor desejado é transferência interna e fica de fora. Lançamentos reais do painel, ordenados do mais recente para o mais antigo; a data usa o fuso local (não UTC).</div>
             </div>
 
             <!-- TELA: Reembolso ----------------------------------- -->
@@ -3782,6 +3765,9 @@
                 if (mov && mov.classList.contains('active') && document.getElementById('mfScreen-retirada') && document.getElementById('mfScreen-retirada').classList.contains('active')) {
                     mfRetiradaHistRecarregar();
                 }
+                if (mov && mov.classList.contains('active') && document.getElementById('mfScreen-troca-pix') && document.getElementById('mfScreen-troca-pix').classList.contains('active')) {
+                    mfTrocaPixHistRecarregar();
+                }
             });
         }
 
@@ -5243,7 +5229,7 @@
                 const d = document.getElementById('mfTpData');
                 if (d) d.value = new Date().toLocaleDateString('pt-BR');
                 mfTrocaPixCalcular();   // também repinta a pré-visualização fixa (window.pxcSync)
-                mfTrocaPixHistApurar();
+                mfTrocaPixHistRecarregar();
             }
             if (nome === 'reembolso') { mfReembolsoValidar(); mfReembolsoHistApurar(); }
             if (nome === 'transferencia') mfTransferenciaClassificar();
@@ -5557,9 +5543,74 @@
             const esp = document.querySelector('input[name="mfTpHistData"][value="especificar"]').checked;
             const inp = document.getElementById('mfTpHistDataInput');
             inp.style.display = esp ? '' : 'none';
-            if (!esp) inp.value = '';
+            if (!esp) { inp.value = ''; mfTrocaPixHistRender(); }
         }
         window.mfTrocaPixHistData = mfTrocaPixHistData;
+
+        // "Hoje" em data LOCAL (não UTC) — `todayISO()` usa `toISOString()`, que
+        // converte pro fuso UTC e pode jogar um Pix feito à noite no Brasil pro
+        // dia seguinte (ou anterior, de madrugada). Usada só aqui (gravação e
+        // filtro do histórico da Troca por Pix) pra não mexer em mais nada que
+        // já depende de `todayISO()` noutras telas.
+        function tpTodayLocalISO() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        // ---------- Histórico de Troca por Pix — só lançamentos REAIS do painel ----------
+        // Lê direto de `lancamentos` (tipo TROCA_PIX). Cada registro grava 2 pernas
+        // (pix_enviado + caixa_recebido, ligadas por meta.par) — a perna
+        // caixa_recebido já carrega valor_desejado/taxa/desconto/receita e o valor
+        // cobrado do cliente (r.valor), então é a única usada pra montar cada linha.
+        let mfTpHistCache = null;
+        async function mfCarregarTrocaPixHist() {
+            try {
+                const { data, error } = await supabase.from('lancamentos')
+                    .select('id,valor,data,meta,created_at').eq('tipo', 'TROCA_PIX');
+                if (error) throw new Error(error.message);
+                mfTpHistCache = (data || []).filter(r => (r.meta || {}).perna === 'caixa_recebido');
+            } catch (_) { mfTpHistCache = []; }
+        }
+        function mfTrocaPixHistFiltroData() {
+            const esp = (document.querySelector('input[name="mfTpHistData"][value="especificar"]') || {}).checked;
+            const dataEsp = (document.getElementById('mfTpHistDataInput') || {}).value || '';
+            return (esp && dataEsp) ? dataEsp : tpTodayLocalISO();
+        }
+        async function mfTrocaPixHistRender() {
+            const body = document.querySelector('#mfScreen-troca-pix .fin-table tbody');
+            if (!body) return;
+            if (mfTpHistCache === null) {
+                body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Carregando…</td></tr>';
+                await mfCarregarTrocaPixHist();
+            }
+            const dataAlvo = mfTrocaPixHistFiltroData();
+            const rows = (mfTpHistCache || []).filter(r => r.data === dataAlvo)
+                .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+            const linhas = rows.map(r => {
+                const m = r.meta || {};
+                return `<tr>
+                    <td>${histDataBR ? histDataBR(r.data) : r.data}</td>
+                    <td class="fin-table-amount">${mfBRL(Number(m.valor_desejado) || 0)}</td>
+                    <td class="fin-table-amount">${mfBRL(Number(m.taxa) || 0)}</td>
+                    <td class="fin-table-amount">${mfBRL(Number(r.valor) || 0)}</td>
+                </tr>`;
+            }).join('');
+            body.innerHTML = linhas || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Nenhuma Troca por Pix real nesta data.</td></tr>';
+            mfTrocaPixHistApurar();
+        }
+        // Limpar = reseta o filtro pro padrão (Hoje, sem data especificada) e
+        // re-renderiza os lançamentos reais de hoje — não mantém nada do filtro anterior.
+        function mfTrocaPixHistLimpar() {
+            const hoje = document.querySelector('input[name="mfTpHistData"][value="hoje"]');
+            if (hoje) hoje.checked = true;
+            const inp = document.getElementById('mfTpHistDataInput');
+            if (inp) { inp.value = ''; inp.style.display = 'none'; }
+            mfTrocaPixHistRender();
+        }
+        async function mfTrocaPixHistRecarregar() { mfTpHistCache = null; await mfTrocaPixHistRender(); }
+        window.mfTrocaPixHistRender = mfTrocaPixHistRender;
+        window.mfTrocaPixHistLimpar = mfTrocaPixHistLimpar;
+        window.mfTrocaPixHistRecarregar = mfTrocaPixHistRecarregar;
 
         // ---------- Reembolso ----------
         // "Origem do Reembolso" é obrigatória; o botão "Registrar Reembolso" só
@@ -5758,14 +5809,15 @@
                 const par = finUUID();
                 const idSicredi = await finContaId('sicredi');
                 const idCaixa = await finContaId('caixa_loja');
+                const hojeLocal = tpTodayLocalISO();
                 await finLancar([
                     {
-                        conta_id: idSicredi, data: todayISO(), valor: -pixEnviado, tipo: 'TROCA_PIX',
+                        conta_id: idSicredi, data: hojeLocal, valor: -pixEnviado, tipo: 'TROCA_PIX',
                         descricao: 'Troca por Pix — Pix enviado ao cliente', origem: 'troca-pix',
                         meta: { par, perna: 'pix_enviado', valor_desejado: valorDesejado },
                     },
                     {
-                        conta_id: idCaixa, data: todayISO(), valor: caixaRecebido, tipo: 'TROCA_PIX',
+                        conta_id: idCaixa, data: hojeLocal, valor: caixaRecebido, tipo: 'TROCA_PIX',
                         descricao: 'Troca por Pix — dinheiro recebido no balcão', origem: 'troca-pix',
                         meta: { par, perna: 'caixa_recebido', valor_desejado: valorDesejado, taxa, desconto, receita },
                     },
@@ -5774,6 +5826,7 @@
                 const v = document.getElementById('mfTpValor'); if (v) { v.value = ''; const l = v.parentElement && v.parentElement.querySelector('.extenso-valor'); if (l) l.textContent = ''; }
                 mfTrocaPixCalcular();
                 await finPosGravacao();
+                mfTrocaPixHistRecarregar();
             } catch (e) {
                 finMsg('mfTpMsg', 'err', 'Erro ao registrar: ' + e.message);
             } finally { btn.disabled = false; }

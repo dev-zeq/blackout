@@ -3155,3 +3155,36 @@ Pedido: no `TIPOS.CONTRATO_CV_IMOVEL.corpo(d)`, **só** no ramo `!aPrazo && veic
 - Sem `SyntaxError` / erro de runtime (só 406/404 pré-existentes do static server).
 
 **Falta:** teste ao vivo logado com um registro real de cada cenário.
+
+## Histórico de Troca por Pix — corrige dados fictícios, filtro/Limpar quebrados e bug de fuso horário (2026-09-10) — NÃO publicado
+
+Pedido: análise técnica completa e correção do "Histórico de Troca por Pix" (dentro do serviço Troca por Pix, em Movimentação Financeira → `paineldecontrole/index.html`). Não tocar em mais nada do painel.
+
+### Causa raiz (investigação)
+- A tabela do histórico era **100% estática/fictícia** — 3 `<tr>` fixos no HTML com dados de exemplo ("27/08/2026… Etapa 1 — filtro só por data, dados fictícios"), nunca ligada ao banco.
+- Os botões **"Filtrar" e "Limpar" não tinham `onclick`** — não faziam absolutamente nada (por isso "Limpar" parecia quebrado: nunca existiu handler).
+- `mfTrocaPixHistData()` só mostrava/escondia o campo de data; nenhuma função consultava o Supabase pra esse histórico.
+- **Bug de fuso horário na origem do dado**: `mfRegistrarTrocaPix()` gravava a coluna `lancamentos.data` (tipo `date`) usando a função global `todayISO()`, que é `new Date().toISOString().slice(0,10)` — **UTC**, não local. No Brasil (UTC-3), qualquer Pix feito depois de ~21h já vira o dia seguinte no banco (confirmado com teste: 22h30 de 10/09 em Brasília gravaria "2026-09-11"). `todayISO()` é usada por várias outras telas (Retirada, Reembolso, Transferência, Fechamento) — **não foi alterada**, pra não mexer em nada fora do escopo pedido; criei uma função local só pra Troca por Pix.
+- Cada registro de Troca por Pix grava **2 lançamentos** (`tipo: 'TROCA_PIX'`) ligados por `meta.par`: perna `pix_enviado` (Sicredi, saída) e perna `caixa_recebido` (Caixa da Loja, entrada — carrega `valor_desejado`/`taxa`/`desconto`/`receita` e o total cobrado é o próprio `valor` dessa perna). O histórico usa só a perna `caixa_recebido` pra montar cada linha.
+
+### Correções (só `paineldecontrole/index.html`, só a tela `mfScreen-troca-pix`)
+- **Nova função `tpTodayLocalISO()`**: monta `YYYY-MM-DD` com `getFullYear()/getMonth()/getDate()` (hora local), sem `toISOString()`. Usada em 2 lugares: (1) na gravação (`mfRegistrarTrocaPix`, substitui as 2 chamadas a `todayISO()`), e (2) como "hoje" padrão do filtro do histórico.
+- **`mfCarregarTrocaPixHist()`**: busca real `supabase.from('lancamentos').select(...).eq('tipo','TROCA_PIX')`, filtra em memória só a perna `caixa_recebido`. Cache em `mfTpHistCache` (mesmo padrão do "Histórico de retiradas").
+- **`mfTrocaPixHistRender()`**: aplica o filtro (Hoje = `tpTodayLocalISO()`; Especificar data = valor do `<input type="date">`) por **igualdade exata de string** (`r.data === dataAlvo`, sem range nem conversão) — não traz data errada. Ordena por `created_at` **decrescente** (mais recente primeiro). Monta as linhas reais e chama a função de apuração já existente (`mfTrocaPixHistApurar`, inalterada).
+- **`mfTrocaPixHistLimpar()`**: marca "Hoje", limpa e esconde o `<input type="date">`, re-renderiza — volta mesmo pro histórico de hoje.
+- **`mfTrocaPixHistRecarregar()`**: zera o cache e re-renderiza (chamada ao abrir a tela, após registrar um novo Pix, e no listener realtime de `lancamentos` — mesmo padrão da Retirada).
+- Botões **"Filtrar"** (`onclick="mfTrocaPixHistRender()"`) e **"Limpar"** (`onclick="mfTrocaPixHistLimpar()"`) ganharam handler. Selecionar "Hoje" no rádio também re-renderiza na hora.
+- Linhas fictícias removidas do HTML (placeholder "Carregando…" até a 1ª consulta real); nota de rodapé atualizada (não fala mais em "dados fictícios").
+- **Nada tocado** em `todayISO()` global, Retirada, Reembolso, Transferência, Fechamento, Relatórios, Contratos, Currículo, Recibos, autenticação, ou qualquer outra tela.
+
+### Testes (Node, fora do navegador — funções extraídas literalmente do arquivo, DOM e Supabase simulados, TZ forçada `America/Sao_Paulo`)
+1. **Abrir histórico** — 3 lançamentos de "hoje" (10/09) cadastrados, incl. 1 feito às 23h50 → aparecem os 3, nenhum de outro dia.
+2. **Data anterior (09/09)** → só o registro daquele dia; **data antiga (01/08)** → só o registro daquele dia; nenhum de outra data vaza.
+3. **Voltar pra hoje** → os 3 registros de hoje voltam corretamente.
+4. **Limpar** — filtro em "01/08" → clicar Limpar → rádio volta pra "Hoje", campo de data fica vazio e escondido, histórico mostra os 3 registros de hoje automaticamente.
+5. **Virada do dia** — registro gravado às 23h50 BRT do dia 10/09 fica com `data='2026-09-10'` (não "11/09"); buscando 11/09 vem vazio, buscando 09/09 não traz o registro de 10/09.
+6. **Ordenação** — dentro do mesmo dia, o lançamento mais recente (23h50) aparece antes do mais antigo (13h).
+7. **Fuso horário isolado** — reproduzido o bug antigo lado a lado: `todayISO()` (UTC) devolve `2026-09-11` às 22h30 de Brasília do dia 10; `tpTodayLocalISO()` devolve `2026-09-10` (correto) no mesmo instante.
+8. Arquivo inteiro passa em `node --check` (sintaxe válida) e o bloco novo roda sem erro de runtime no harness.
+
+**Falta:** teste ao vivo logado no painel real (Supabase de produção) registrando um Pix de verdade perto da meia-noite, e confirmar visualmente o filtro/Limpar na interface (o ambiente de teste não abre navegador).
