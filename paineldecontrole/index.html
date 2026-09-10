@@ -5558,34 +5558,46 @@
         }
 
         // ---------- Histórico de Troca por Pix — só lançamentos REAIS do painel ----------
-        // Lê direto de `lancamentos` (tipo TROCA_PIX). Cada registro grava 2 pernas
-        // (pix_enviado + caixa_recebido, ligadas por meta.par) — a perna
-        // caixa_recebido já carrega valor_desejado/taxa/desconto/receita e o valor
-        // cobrado do cliente (r.valor), então é a única usada pra montar cada linha.
-        let mfTpHistCache = null;
-        async function mfCarregarTrocaPixHist() {
+        // Lê direto de `lancamentos` (tipo TROCA_PIX), filtrando a DATA já no Supabase
+        // (auditoria 2026-09-10: antes buscava a tabela TROCA_PIX inteira desde sempre
+        // e filtrava em memória — sem período/range aqui, o filtro é sempre 1 data só,
+        // então dá pra pedir só ela ao banco: menos dado trafegado, e não cresce sem
+        // limite conforme o histórico envelhece). Ordenação por `created_at` também no
+        // banco (mais recente primeiro). Cada registro grava 2 pernas (pix_enviado +
+        // caixa_recebido, ligadas por meta.par) — a perna caixa_recebido já carrega
+        // valor_desejado/taxa/desconto/receita e o valor cobrado do cliente (r.valor),
+        // então é a única usada pra montar cada linha.
+        let mfTpHistErro = false;
+        async function mfCarregarTrocaPixHist(dataAlvo) {
+            mfTpHistErro = false;
             try {
                 const { data, error } = await supabase.from('lancamentos')
-                    .select('id,valor,data,meta,created_at').eq('tipo', 'TROCA_PIX');
+                    .select('id,valor,data,meta,created_at')
+                    .eq('tipo', 'TROCA_PIX').eq('data', dataAlvo)
+                    .order('created_at', { ascending: false });
                 if (error) throw new Error(error.message);
-                mfTpHistCache = (data || []).filter(r => (r.meta || {}).perna === 'caixa_recebido');
-            } catch (_) { mfTpHistCache = []; }
+                return (data || []).filter(r => (r.meta || {}).perna === 'caixa_recebido');
+            } catch (_) { mfTpHistErro = true; return null; }
         }
         function mfTrocaPixHistFiltroData() {
             const esp = (document.querySelector('input[name="mfTpHistData"][value="especificar"]') || {}).checked;
             const dataEsp = (document.getElementById('mfTpHistDataInput') || {}).value || '';
             return (esp && dataEsp) ? dataEsp : tpTodayLocalISO();
         }
+        // Erro de conexão/consulta NUNCA vira "nenhum registro" — mensagens distintas
+        // pra quem opera não confundir "sem Pix hoje" com "não consegui carregar".
         async function mfTrocaPixHistRender() {
             const body = document.querySelector('#mfScreen-troca-pix .fin-table tbody');
             if (!body) return;
-            if (mfTpHistCache === null) {
-                body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Carregando…</td></tr>';
-                await mfCarregarTrocaPixHist();
-            }
+            body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Carregando…</td></tr>';
             const dataAlvo = mfTrocaPixHistFiltroData();
-            const rows = (mfTpHistCache || []).filter(r => r.data === dataAlvo)
-                .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+            const rows = await mfCarregarTrocaPixHist(dataAlvo);
+            if (rows === null) {
+                body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#fca5a5;">Não foi possível carregar o histórico. Tente novamente.</td></tr>';
+                const t = document.getElementById('mfTpHistTransf'); if (t) t.textContent = '—';
+                const r = document.getElementById('mfTpHistReceita'); if (r) r.textContent = '—';
+                return;
+            }
             const linhas = rows.map(r => {
                 const m = r.meta || {};
                 return `<tr>
@@ -5595,7 +5607,7 @@
                     <td class="fin-table-amount">${mfBRL(Number(r.valor) || 0)}</td>
                 </tr>`;
             }).join('');
-            body.innerHTML = linhas || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Nenhuma Troca por Pix real nesta data.</td></tr>';
+            body.innerHTML = linhas || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Não há Trocas por Pix nesta data.</td></tr>';
             mfTrocaPixHistApurar();
         }
         // Limpar = reseta o filtro pro padrão (Hoje, sem data especificada) e
@@ -5607,7 +5619,7 @@
             if (inp) { inp.value = ''; inp.style.display = 'none'; }
             mfTrocaPixHistRender();
         }
-        async function mfTrocaPixHistRecarregar() { mfTpHistCache = null; await mfTrocaPixHistRender(); }
+        async function mfTrocaPixHistRecarregar() { await mfTrocaPixHistRender(); }
         window.mfTrocaPixHistRender = mfTrocaPixHistRender;
         window.mfTrocaPixHistLimpar = mfTrocaPixHistLimpar;
         window.mfTrocaPixHistRecarregar = mfTrocaPixHistRecarregar;

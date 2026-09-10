@@ -3188,3 +3188,33 @@ Pedido: análise técnica completa e correção do "Histórico de Troca por Pix"
 8. Arquivo inteiro passa em `node --check` (sintaxe válida) e o bloco novo roda sem erro de runtime no harness.
 
 **Falta:** teste ao vivo logado no painel real (Supabase de produção) registrando um Pix de verdade perto da meia-noite, e confirmar visualmente o filtro/Limpar na interface (o ambiente de teste não abre navegador).
+
+## Histórico de Troca por Pix — auditoria da correção anterior (2026-09-10, 2ª etapa) — NÃO publicado
+
+Pedido: auditar (sem recriar) a correção anterior — confirmar wiring, consulta real, ausência de dados fictícios, datas/timezone, Limpar, gravação→histórico, ordenação, performance e tratamento de erros. Só corrigir se os testes achassem problema real.
+
+### Achados (2 problemas reais confirmados; resto aprovado sem alteração)
+1. **Erro de conexão virava "sem registros" silenciosamente** — `mfCarregarTrocaPixHist()` tinha `catch (_) { mfTpHistCache = []; }`: uma falha de rede/Supabase ficava indistinguível de "não há Pix nesta data" (violava o item 9 do pedido). **Corrigido**: erro agora marca `mfTpHistErro`, a função retorna `null` (não `[]`), e `mfTrocaPixHistRender()` mostra "Não foi possível carregar o histórico. Tente novamente." (vermelho) e marca os totais do rodapé como "—" — nunca mais confundido com a mensagem de vazio genuína ("Não há Trocas por Pix nesta data.").
+2. **Consulta buscava a tabela `TROCA_PIX` inteira desde sempre e filtrava em memória** — sem paginação nem piso de data, crescendo sem limite conforme o histórico envelhece (item 8). Como esta tela só suporta 1 data por vez (sem período/range), dava pra filtrar a data **no próprio Supabase**: `mfCarregarTrocaPixHist(dataAlvo)` agora faz `.eq('tipo','TROCA_PIX').eq('data', dataAlvo).order('created_at', {ascending:false})` — o banco já devolve só o necessário, já ordenado. Sem cache de tabela inteira em memória (removida a variável `mfTpHistCache`); cada Filtrar/Limpar/Recarregar busca de novo (operação pontual, não é hot path).
+
+### O que já estava correto (confirmado, não alterado)
+- `mfCarregarTrocaPixHist`/`mfTrocaPixHistRender`/`mfTrocaPixHistLimpar`/`mfTrocaPixHistRecarregar`/`mfRegistrarTrocaPix`/`tpTodayLocalISO` — todas corretamente conectadas (`window.*` nos handlers `onclick`, chamadas nos pontos certos: abrir a tela, após registrar, no listener realtime de `lancamentos`).
+- Filtro `.eq('tipo','TROCA_PIX')` já garantia que nenhum lançamento de Retirada/Reembolso/Transferência aparecesse — confirmado com um lançamento `RETIRADA` fictício na mesma data no teste, que nunca apareceu na tabela.
+- `tpTodayLocalISO()` mantida exatamente como estava; `todayISO()` global **não tocada**.
+- Gravação (`mfRegistrarTrocaPix`) já propagava erro corretamente pro usuário (try/catch existente, sem alteração).
+
+### Testes (Node, funções extraídas literalmente do arquivo pós-correção; DOM e Supabase simulados — o simulado agora valida a própria query enviada, não só o resultado; TZ forçada `America/Sao_Paulo`; **sem navegador — nenhum clique foi feito numa interface real**)
+1. **Datas**: hoje (3 registros), ontem, 7 dias atrás, 30 dias atrás — cada consulta trouxe só a data pedida; um lançamento `RETIRADA` e uma perna `pix_enviado` na mesma data de "hoje" nunca apareceram.
+2. **Sequência Hoje → Ontem → antiga → Hoje** — sem vazamento entre consultas.
+3. **Limpar** — com "30 dias atrás" filtrado: clicar Limpar volta o rádio pra "Hoje" (confirmado via simulação de exclusividade nativa do `<input type=radio>`), esvazia e esconde o campo de data, e recarrega os registros de hoje sozinho.
+4. **Timezone** — `tpTodayLocalISO()` testada nos 6 horários pedidos (20:59, 21:59, 22:30, 23:30, 23:59, 00:01, todos em horário de Brasília): os 5 primeiros ficam no dia anterior (10/09), só 00:01 vira o dia novo (11/09) — sem erro de virada.
+5. **Ordenação** — dentro do mesmo dia, registro das 23h50 aparece antes do das 18h e do das 13h; confirmado também que o `.order('created_at', {ascending:false})` é enviado ao Supabase (ordenação no banco, não só em JS).
+6. **Erros** — consulta forçada a falhar → mensagem de erro exibida, totais viram "—", **nenhuma linha fictícia**; consulta sem resultado (data sem Pix) → mensagem de vazio, diferente da de erro; nova tentativa após o erro funciona normalmente (sem cache travado no estado de erro).
+7. **Gravação → Histórico** — simulado o payload exato que `mfRegistrarTrocaPix()` grava (2 pernas, `meta.par`, `valor_desejado`/`taxa`/`desconto`/`receita`) pra um Pix de R$ 500,00 + taxa R$ 27,50: `mfTrocaPixHistRecarregar()` (a mesma função chamada após `finLancar` na gravação real) mostra o registro na hora, sem nenhuma alteração manual no banco, com valor/taxa/total corretos (R$ 500,00 / R$ 27,50 / R$ 527,50).
+8. **Consulta real** — confirmado, inspecionando a query enviada ao Supabase falso, que o filtro por `tipo` E `data` acontece no banco (não busca mais a tabela inteira).
+9. **Regressão** — arquivo inteiro passa em `node --check` (sintaxe válida); nenhuma outra função/tela foi tocada (diff isolado só nos 4 métodos do histórico, dentro do bloco Troca por Pix).
+
+**Observação sobre o item 5 do pedido ("horário" exibido):** a tabela nunca teve coluna de horário — só Data, Valor desejado, Taxa e Total cobrado (`created_at` é usado internamente só pra ordenar, não é mostrado). Isso já era assim antes da 1ª correção; não é regressão, e não alterei o layout da tabela por não ter sido apontado como problema por nenhum teste (evitar mudança não solicitada).
+
+**Falta:** teste ao vivo logado no painel real com navegador (Supabase de produção) — clique físico em Filtrar/Limpar, registro real de um Pix e verificação visual da tabela; este ambiente não tem navegador.
+
