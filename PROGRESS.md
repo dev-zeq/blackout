@@ -3754,3 +3754,53 @@ Pergunta do usuário: por que o campo de resposta de Forma de Pagamento não ia 
 4. **Sem Prazo nem Validade** (só Forma de Pagamento) → 1ª tabela SEM a classe `--divisoria` (sem linha sobrando), 2ª tabela vazia.
 
 **Falta:** teste ao vivo no navegador — o efeito de Forma de Pagamento esticar até a borda só é visível renderizando de verdade; este ambiente não tem navegador. Mas a solução (tabelas independentes) é uma garantia estrutural de HTML/CSS, não uma heurística sujeita a variação entre navegadores.
+
+
+## Orçamento de Prestação de Serviço — cores/fundos sumindo na exportação para PDF (2026-09-13, correção)
+
+Pedido: corrigir só a exportação pra PDF — na tela e na imagem (JPG/PNG via html2canvas) o orçamento aparece com a paleta cinza/fundos/bordas corretos, mas o PDF saía quase todo branco, perdendo `background-color` de títulos, faixas de seção e células de rótulo. Layout, dados, fórmulas e paleta não podiam ser tocados — só a exportação.
+
+**Investigação (antes de alterar):**
+1. O PDF deste documento não usa nenhuma lib de PDF (jsPDF etc.) nem passa por Canvas — é gerado com `window.print()` do navegador (`imprimirDeclFormatada()`, chamada de "Imprimir" na tela do orçamento formatado), o usuário escolhe "Salvar como PDF" no diálogo de impressão do próprio navegador.
+2. A imagem (JPG) é um caminho totalmente separado, via `html2canvas` — por isso ela não é afetada pelo mesmo bug: `html2canvas` fotografa o DOM/CSS calculado, ignora as regras `@media print`.
+3. Causa raiz confirmada: navegadores, por padrão, **não imprimem `background-color`/`background`** (economia de tinta), a menos que o CSS marque explicitamente `-webkit-print-color-adjust: exact` / `print-color-adjust: exact` no elemento. O currículo (`.cv2-doc`) já tinha essa regra dentro do seu próprio `@media print` (linha ~570) — por isso o currículo nunca teve esse problema. O Orçamento de Prestação de Serviço (`.presta-doc`) nunca teve essa regra — o `@media print` dele só define `@page`/margem (linhas 735-738), nada sobre cor.
+4. Bordas (`border`) não são afetadas por essa política do navegador — só fundos (`background-color`) e cor de texto (`color`, quando o texto tiver baixo contraste automático) são descartados; por isso a moldura/divisórias sobreviviam parcialmente enquanto os fundos coloridos (títulos, faixas de seção, células de rótulo) sumiam.
+
+**Correção aplicada:** 1 regra CSS nova, dentro do `@media print` que já existia só pra este tipo de documento (`paineldecontrole/index.html`, ~linha 740):
+```css
+#printArea .presta-doc, #printArea .presta-doc * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+```
+Escopada por `#printArea .presta-doc` — só afeta a impressão/PDF deste documento específico, igual ao padrão já usado em `.cv2-doc`. Nenhuma outra classe, seletor, dado, cálculo ou layout tocado.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida (a mudança é só CSS, JS intocado).
+2. `git diff` conferido: 1 arquivo, 6 linhas adicionadas, nenhuma removida — só o bloco CSS acima.
+3. Confirmado por grep que `.presta-doc` só é usado dentro de `TIPOS.PRESTACAO_SERVICO.corpo()` (nenhum outro tipo de documento usa essa classe) — a correção não pode vazar pra Orçamento de Impressões, Currículos, Contratos, Declarações, Procurações ou Recibos.
+
+**Falta:** teste ao vivo no navegador (Tela → Imagem → PDF lado a lado) — este ambiente não tem navegador/impressora real pra confirmar visualmente. A causa raiz e a correção são bem documentadas (mesmo padrão já comprovado funcionando em `.cv2-doc`), mas o resultado final no PDF gerado pelo navegador do usuário ainda precisa de confirmação visual real.
+
+
+## Orçamento de Prestação de Serviço — layout diferente entre tela e PDF (2026-09-13, ajuste)
+
+Pedido de acompanhamento: a correção de cores no PDF (ver seção acima) funcionou, mas o usuário testou de verdade e viu que o **layout** do PDF ficava diferente do que aparece na tela (elementos reorganizados, proporções diferentes) — mesmo com as cores certas agora. Pediu pra corrigir só isso, sem tocar na correção de cores nem no modelo/paleta/dados.
+
+**Investigação (antes de alterar):**
+- `.presta-doc` (a caixa que envolve o orçamento inteiro) nunca teve uma largura própria — é um `<div>` de bloco comum, `width:auto`, que sempre ocupa 100% do espaço do container em que está.
+- Na **tela**, esse container é o modal (`.modal-content.wide`, `max-width:820px`, `padding:28px 24px`) → `.presta-doc` renderiza a ~**772px** de largura (820 − 2×24, com `box-sizing:border-box` global já aplicado no projeto inteiro).
+- No **PDF**, o container é `#printArea` dentro da `@page presta-servico` (A4, margem 10mm de cada lado — regra já existente, ver ajuste anterior "aproveitamento de página"), cujo espaço útil dá **190mm ≈ 718px**. A técnica de `margin:-24px` (já existente, pra cancelar o padding genérico de `#printArea`) faz `.presta-doc` ocupar essa faixa inteira.
+- Ou seja: **772px na tela vs. ~718px no PDF** — ~7,5% mais estreito. Como o conteúdo é todo em tabelas/flexbox reagindo à largura do container (texto que quebra linha, colunas que recalculam largura conforme o espaço disponível), essa diferença de largura é o que fazia o PDF "reorganizar" tudo — quebras de linha diferentes, colunas com proporções diferentes — mesmo sem nenhuma regra alterando fonte/cor/espaçamento diretamente. Bordas, fundos e cores (corrigidos na etapa anterior) não são afetados por isso; é puramente a largura do container que muda o *reflow* do conteúdo.
+- Não é `transform`/`zoom`/escala do navegador — é simplesmente um container mais estreito no PDF do que na tela.
+
+**Correção aplicada:** 1 propriedade nova (mais comentário) em `.presta-doc` (`paineldecontrole/index.html`): `max-width: 718px; margin: 0 auto;` — trava a largura do orçamento no valor que já é o espaço disponível no PDF (a menor das duas larguras), e centraliza. Resultado:
+- **No PDF:** nada muda — 718px já era exatamente o espaço ocupado ali.
+- **Na tela:** o orçamento passa de "esticado até a borda do modal" (772px) pra "centralizado com ~27px de margem branca de cada lado" (718px) — a ÚNICA mudança visual na tela é essa margem extra ao redor; nenhum elemento interno (logo, títulos, tabelas, textos) se move, redimensiona ou reflui de forma diferente, porque o conteúdo interno inteiro (fontes, paddings, larguras de coluna) continua exatamente igual a antes.
+- Mesmo padrão (`max-width` + `margin:0 auto`) já usado por `.decl-doc` (Declarações/Contratos) nesta mesma folha de estilo — não é uma técnica nova, só nunca tinha sido aplicada a `.presta-doc`.
+- A correção de cores da etapa anterior (`print-color-adjust: exact` em `.presta-doc`) não foi tocada.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida (mudança é só CSS).
+2. `git diff` conferido: só a propriedade `max-width`/`margin` adicionada a `.presta-doc`, mais o comentário — nenhuma outra classe/seletor tocado.
+3. Confirmado por grep que a regra de cor (`print-color-adjust`) da etapa anterior continua intacta, sem alteração.
+4. Cálculo conferido a mão: `@page presta-servico` (A4, margem 10mm) → 190mm de espaço útil → 718,1px (96dpi) — bate com o valor travado.
+
+**Falta:** teste ao vivo (Tela → PDF, lado a lado) — este ambiente não tem navegador/impressora real. O cálculo e a técnica (mesma já usada em `.decl-doc`) dão alta confiança, mas a confirmação visual final depende do usuário testar de novo.
