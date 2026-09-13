@@ -624,71 +624,115 @@
             #printArea .recibo-doc-watermark svg { width: 340px; height: 340px; }
         }
 
-        /* Orçamento de Prestação de Serviço — layout corporativo (2026-08-26,
-           pedido do usuário: "visual corporativo, limpo e profissional",
-           ajustado no mesmo dia — logo maior, nome em destaque, sem número do
-           orçamento, data por extenso, CNPJ mascarado e assinatura no rodapé).
-           Só usado por TIPOS.PRESTACAO_SERVICO.corpo() (ver montarContrato() /
-           tituloProprio) — nenhum outro tipo de documento usa estas classes.
-           Paleta em variáveis CSS na raiz .presta-doc (--pd-*) — quando há
-           logo, `corpo()` tenta extrair uma cor de destaque da própria imagem
-           (ver extrairCorAccentLogo()) e sobrescreve `--pd-accent` inline só
-           naquele documento; sem logo, ou se a extração falhar, fica a
-           paleta neutra fixa abaixo. Sempre claro (papel), igual ao
-           .recibo-doc, mesmo com o painel/modal escuros. */
+        /* Orçamento de Prestação de Serviço — layout FORMAL/EMPRESARIAL em
+           tabela (2026-09-13, reformulação pedida pelo usuário: substituir o
+           visual de cartões arredondados/dashboard por algo mais próximo de
+           um orçamento empresarial tradicional — linhas, bordas, cabeçalhos
+           em cinza, preto/branco/cinza). Reformulação EXCLUSIVAMENTE visual:
+           todas as classes abaixo são consumidas só por
+           TIPOS.PRESTACAO_SERVICO.corpo() — a lógica que calcula/formata cada
+           dado (nomeCabecalho, docPrestador, clienteEndereco, servicosHtml,
+           e.valor_total, materialTexto, etc.) não foi tocada; só a marcação
+           HTML em volta desses valores e este CSS mudaram. Paleta
+           estritamente monocromática (ver bloco de variáveis --pd-* logo
+           abaixo) — sempre claro (papel), igual ao .recibo-doc, mesmo com o
+           painel/modal escuros. */
+        /* Paleta monocromática (2026-09-13, ajuste pedido: só tons de cinza,
+           nada de verde ou qualquer outra cor). Hierarquia:
+           --pd-ink       = cinza bem escuro, moldura/divisórias fortes;
+           --pd-titulo-bg/--pd-titulo-texto = fundo escuro + texto claro nos
+             4 títulos principais (o geral e as 3 faixas de seção) — "chamam
+             mais atenção";
+           --pd-label-bg  = cinza bem claro, fundo das células de rótulo
+             (Cliente/Endereço/Material/etc.) — "campos de informação claros";
+           --pd-border    = cinza claro, só as linhas finas internas (os
+             divisores fortes entre seções continuam em --pd-ink);
+           --pd-frame     = cinza escuro dedicado à MOLDURA EXTERNA única
+             (2026-09-13, ajuste pedido: uma linha fina em volta de todo o
+             orçamento, do cabeçalho à assinatura — .presta-doc já é o único
+             elemento que envolve o documento inteiro, então já funcionava
+             como moldura única; nenhuma seção interna tem borda própria nas
+             4 laterais, só divisores de topo/base entre elas).
+           Antes havia uma cor de destaque (--pd-accent) extraída da logo do
+           cliente (ver extrairCorAccentLogo(), função inalterada) — deixou
+           de ser aplicada neste documento (ver `corpo()`) pra garantir que
+           o PDF fique sempre em cinza, mesmo com uma logo colorida. */
         .presta-doc {
-            --pd-ink: #1e293b; --pd-text: #334155; --pd-dim: #64748b;
-            --pd-accent: #2c4a6e; --pd-border: #e2e8f0; --pd-card-bg: #f8fafc;
+            --pd-ink: #1a1a1a; --pd-text: #262626; --pd-dim: #6e6e6e;
+            --pd-titulo-bg: #3a3a3a; --pd-titulo-texto: #f5f5f5;
+            --pd-label-bg: #f2f2f2; --pd-border: #d6d6d6; --pd-frame: #4d4d4d;
             background: #fff; color: var(--pd-text); font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
-            border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid var(--pd-frame); border-radius: 0; overflow: hidden;
         }
-        .presta-doc-content { padding: 22px 28px; }
-        .presta-doc-header { display: flex; align-items: center; gap: 18px; padding-bottom: 14px; border-bottom: 2px solid var(--pd-border); flex-wrap: wrap; }
-        .presta-doc-logo { width: 150px; height: 110px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .presta-doc-header { display: flex; align-items: stretch; border-bottom: 2px solid var(--pd-ink); }
+        .presta-doc-logo { width: 120px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 8px; border-right: 1.5px solid var(--pd-ink); }
         .presta-doc-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .presta-doc-brand-info { flex: 1; min-width: 180px; }
-        .presta-doc-empresa { font-size: 27px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pd-ink); line-height: 1.15; }
-        .presta-doc-prestador-linha { font-size: 13px; color: var(--pd-dim); margin-top: 2px; line-height: 1.4; }
-        .presta-doc-titulo-area { text-align: center; margin: 14px 0 12px; }
-        .presta-doc-titulo { font-size: 21px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--pd-ink); }
-        .presta-doc-titulo-meta { font-size: 13px; color: var(--pd-dim); margin-top: 4px; letter-spacing: 0.3px; }
-        .presta-doc-card { background: var(--pd-card-bg); border: 1px solid var(--pd-border); border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
-        .presta-doc-card-titulo { font-size: 11.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-accent); margin-bottom: 7px; padding-left: 10px; border-left: 3px solid var(--pd-accent); }
-        .presta-doc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 18px; }
-        .presta-doc-campo-label { font-size: 10.5px; color: var(--pd-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1px; }
-        .presta-doc-campo-valor { font-size: 14.5px; color: var(--pd-ink); font-weight: 600; }
-        .presta-doc-descricao { font-size: 14px; line-height: 1.45; color: var(--pd-text); white-space: pre-line; }
-        .presta-doc-tabela { width: 100%; border-collapse: collapse; font-size: 13.5px; break-inside: avoid; page-break-inside: avoid; }
-        .presta-doc-tabela th { text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; background: var(--pd-accent); padding: 6px 10px; }
+        .presta-doc-brand-info { flex: 1; min-width: 180px; padding: 10px 16px; }
+        .presta-doc-empresa { font-size: 21px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pd-ink); line-height: 1.2; }
+        .presta-doc-prestador-linha { font-size: 11.5px; color: var(--pd-dim); margin-top: 3px; line-height: 1.4; }
+        .presta-doc-prestador-linha-row { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 11.5px; color: var(--pd-dim); margin-top: 4px; }
+        /* Identidade coesa dos 4 títulos principais (2026-09-13, ajuste: fonte
+           maior e espaçamento consistente entre o título geral e as 3 faixas
+           de seção — Descrição dos Serviços/Do Valor da Mão de Obra/
+           Informações Gerais — pra ficar mais próximo do primeiro modelo).
+           Mesma família/peso/uppercase/letter-spacing nos 4; o título geral
+           só fica um pouco maior por ser o principal do documento. */
+        .presta-doc-titulo-area { text-align: center; padding: 11px 10px; background: var(--pd-titulo-bg); border-bottom: 2px solid var(--pd-ink); }
+        .presta-doc-titulo { font-size: 18px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--pd-titulo-texto); }
+        .presta-doc-secao-titulo { background: var(--pd-titulo-bg); text-align: center; font-size: 13px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: var(--pd-titulo-texto); padding: 8px 8px; border-bottom: 1.5px solid var(--pd-ink); border-top: 1.5px solid var(--pd-ink); }
+        /* Campos de informação (Cliente/Endereço/Material/Nota Fiscal/Forma de
+           Pagamento/Prazo/Validade) — mesmo tamanho de fonte, altura de linha
+           e espaçamento interno nas 2 tabelas que os exibem
+           (.presta-doc-dados-tabela e .presta-doc-checkbox-tabela). */
+        .presta-doc-dados-tabela { width: 100%; border-collapse: collapse; }
+        .presta-doc-dados-tabela, .presta-doc-checkbox-tabela { font-size: 13px; }
+        .presta-doc-dados-tabela th, .presta-doc-checkbox-tabela th { line-height: 1.35; font-size: 11px; letter-spacing: 0.5px; padding: 6px 14px 6px 10px; vertical-align: top; }
+        .presta-doc-dados-tabela td, .presta-doc-checkbox-tabela td { line-height: 1.35; padding: 6px 10px; vertical-align: top; }
+        .presta-doc-dados-tabela th { width: 1%; white-space: nowrap; text-align: left; background: var(--pd-label-bg); font-weight: 800; text-transform: uppercase; color: var(--pd-ink); border-right: 1px solid var(--pd-border); border-bottom: 1px solid var(--pd-border); }
+        .presta-doc-dados-tabela td { border-bottom: 1px solid var(--pd-border); border-right: 1px solid var(--pd-border); color: var(--pd-text); }
+        .presta-doc-dados-tabela td:last-child { border-right: none; }
+        .presta-doc-dados-tabela tr:last-child th, .presta-doc-dados-tabela tr:last-child td { border-bottom: none; }
+        /* --divisoria (2026-09-13) — devolve a linha divisória quando esta
+           <table> (só 1 linha) é seguida de OUTRA <table> da mesma seção
+           (ver "Informações Gerais": Forma de Pagamento e Prazo/Validade
+           viraram 2 tabelas independentes pra não compartilhar largura de
+           coluna entre si — ver comentário no HTML). Mais específica que a
+           regra de cima, então vence. */
+        .presta-doc-dados-tabela.presta-doc-dados-tabela--divisoria tr:last-child th,
+        .presta-doc-dados-tabela.presta-doc-dados-tabela--divisoria tr:last-child td { border-bottom: 1px solid var(--pd-border); }
+        .presta-doc-descricao { font-size: 12.5px; line-height: 1.5; color: var(--pd-text); white-space: pre-line; padding: 10px 14px; border-bottom: 1.5px solid var(--pd-ink); }
+        .presta-doc-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .presta-doc-tabela th { text-align: left; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--pd-ink); background: var(--pd-label-bg); padding: 6px 10px; border: 1px solid var(--pd-border); }
         .presta-doc-tabela th:last-child, .presta-doc-tabela td:last-child { text-align: right; }
-        .presta-doc-tabela td { padding: 6px 10px; border-bottom: 1px solid var(--pd-border); color: var(--pd-text); }
-        .presta-doc-tabela tr:last-child td { border-bottom: none; }
-        .presta-doc-total-linha { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 2px solid var(--pd-accent); }
-        .presta-doc-total-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-accent); }
-        .presta-doc-total-valor { font-size: 24px; font-weight: 900; color: var(--pd-ink); }
-        .presta-doc-assinatura { margin-top: 20px; display: flex; flex-direction: column; align-items: center; break-inside: avoid; page-break-inside: avoid; }
-        .presta-doc-assinatura-linha { width: 260px; border-top: 1px solid var(--pd-ink); margin-bottom: 6px; }
-        .presta-doc-assinatura-nome { font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pd-ink); text-align: center; }
-        .presta-doc-assinatura-tel { font-size: 12px; color: var(--pd-dim); margin-top: 2px; text-align: center; }
-        .presta-doc-footer { text-align: center; font-size: 11px; color: var(--pd-dim); margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--pd-border); }
+        .presta-doc-tabela td { padding: 5px 10px; border: 1px solid var(--pd-border); color: var(--pd-text); }
+        .presta-doc-valor-texto { padding: 10px 14px; border-bottom: 1.5px solid var(--pd-ink); font-size: 12.5px; line-height: 1.55; color: var(--pd-text); text-align: justify; }
+        .presta-doc-valor-negrito { font-weight: 800; color: var(--pd-ink); }
+        .presta-doc-checkbox-tabela { width: 100%; border-collapse: collapse; border-bottom: 1.5px solid var(--pd-ink); }
+        .presta-doc-checkbox-tabela th { text-align: left; background: var(--pd-label-bg); font-weight: 800; text-transform: uppercase; color: var(--pd-ink); border-right: 1px solid var(--pd-border); white-space: nowrap; }
+        .presta-doc-checkbox-tabela td { border-right: 1px solid var(--pd-border); }
+        .presta-doc-checkbox-tabela td:last-child { border-right: none; }
+        .presta-doc-rodape { padding: 16px 14px 10px; display: flex; flex-direction: column; align-items: center; }
+        .presta-doc-rodape-data { font-size: 12px; color: var(--pd-text); margin-bottom: 22px; align-self: flex-start; }
+        .presta-doc-assinatura-linha { width: 280px; border-top: 1px solid var(--pd-ink); margin-bottom: 6px; }
+        .presta-doc-assinatura-nome { font-size: 12.5px; font-weight: 800; letter-spacing: 0.4px; color: var(--pd-ink); text-align: center; }
+        .presta-doc-assinatura-tel { font-size: 11.5px; color: var(--pd-dim); margin-top: 2px; text-align: center; }
+        .presta-doc-footer { text-align: center; font-size: 10px; color: var(--pd-dim); padding: 8px 10px 10px; border-top: 1px solid var(--pd-border); }
         @media (max-width: 480px) {
-            .presta-doc-content { padding: 18px 16px; }
-            .presta-doc-header { gap: 14px; }
-            .presta-doc-logo { width: 96px; height: 76px; }
-            .presta-doc-empresa { font-size: 20px; }
-            .presta-doc-grid { grid-template-columns: 1fr; }
-            .presta-doc-total-valor { font-size: 21px; }
+            .presta-doc-header { flex-wrap: wrap; }
+            .presta-doc-logo { width: 90px; }
+            .presta-doc-empresa { font-size: 17px; }
+            .presta-doc-checkbox-tabela { font-size: 11px; }
+            .presta-doc-valor-texto { font-size: 11.5px; }
         }
-        /* Impressão (2026-08-26, ajuste de aproveitamento de página) — @page
-           própria com margem menor (10mm em vez dos 12mm padrão de #printArea)
-           + margin:-24px pra cancelar o padding:24px do #printArea genérico
-           (mesmo truque já usado em .cv2-print-page/@page cv2-curriculo, ver
-           acima) — some com a moldura dupla que sobraria espaço morto na
-           folha A4. Escopada só pela classe .presta-servico-print (aplicada
-           só na impressão deste tipo, ver imprimirDeclFormatada()) — não
-           afeta nenhum outro contrato/declaração/documento. */
+        /* Impressão (aproveitamento de página, mantido do layout anterior) —
+           @page própria com margem menor (10mm em vez dos 12mm padrão de
+           #printArea) + margin:-24px pra cancelar o padding:24px do
+           #printArea genérico (mesmo truque já usado em
+           .cv2-print-page/@page cv2-curriculo). Escopada só pela classe
+           .presta-servico-print (aplicada só na impressão deste tipo, ver
+           imprimirDeclFormatada()) — não afeta nenhum outro contrato/
+           declaração/documento. */
         @media print {
-            #printArea .presta-doc { border-radius: 0; box-shadow: none; }
             @page presta-servico { size: A4 portrait; margin: 10mm; }
             #printArea .presta-servico-print { page: presta-servico; margin: -24px; }
         }
@@ -8858,8 +8902,10 @@
         // luminosidade máxima de 35% (garante contraste legível como cor de
         // texto/borda em fundo branco, já que a cor "crua" da logo pode ser
         // clara demais pra isso). Nunca lança erro — qualquer falha (imagem
-        // corrompida, CORS, etc.) devolve null e quem chama cai na paleta
-        // neutra padrão (--pd-accent já definida no CSS de .presta-doc).
+        // corrompida, CORS, etc.) devolve null. Deixou de ser usada pelo
+        // Orçamento de Prestação de Serviço (2026-09-13, paleta monocromática
+        // pedida pelo usuário) — função mantida sem alteração pra não afetar
+        // nenhum outro ponto que ainda a chame.
         function extrairCorAccentLogo(base64) {
             return new Promise((resolve) => {
                 try {
@@ -9957,21 +10003,47 @@
                         return [base, estado].filter(Boolean).join('/');
                     };
                     const enderecoPrestador = enderecoDoc(e.empresa_endereco, e.empresa_complemento, e.empresa_bairro, e.empresa_cidade, e.empresa_estado);
+                    // Cidade do rodapé (2026-09-13, ajuste: data saiu de baixo do
+                    // título e passou a acompanhar a cidade no rodapé, igual ao
+                    // modelo de referência "Cidade, DD de mês de AAAA") — MESMO
+                    // campo que já formava enderecoPrestador acima (e.empresa_cidade,
+                    // só existe quando `tem_empresa === 'Sim'`); sem empresa
+                    // cadastrada, não há cidade coletada do prestador e o rodapé
+                    // mostra só a data (nenhum campo novo, nenhuma invenção).
+                    const cidadePrestador = titleCase(e.empresa_cidade || '');
 
                     // Número do orçamento removido do PDF (pedido do usuário) — só a
                     // data, por extenso em pt-BR ("26 de agosto de 2026").
                     const dataObj = d.data_pedido ? new Date(d.data_pedido) : new Date();
                     const dataDoc = dataPorExtenso(dataObj);
 
-                    // Cor de destaque extraída da logo, quando houver (ver
-                    // extrairCorAccentLogo() acima) — sobrescreve só --pd-accent
-                    // deste documento; sem logo, ou se a extração falhar, fica a
-                    // paleta neutra fixa do CSS de .presta-doc.
+                    // 2026-09-13 (ajuste de paleta): este documento passou a ser
+                    // estritamente monocromático (pedido do usuário — "nada de
+                    // verde ou qualquer outra cor") — parou de chamar
+                    // extrairCorAccentLogo() (função em si não foi tocada,
+                    // só deixou de ser usada aqui) pra garantir que o PDF
+                    // fique sempre em tons de cinza, mesmo com uma logo colorida.
                     const temLogo = e.quer_logo === 'Sim' && !!e.logo_base64;
-                    const corAccent = temLogo ? await extrairCorAccentLogo(e.logo_base64) : null;
-                    const estiloAccent = corAccent ? ` style="--pd-accent:${corAccent};"` : '';
 
-                    const campo = (label, valor) => valor ? `<div><div class="presta-doc-campo-label">${escapeHtml(label)}</div><div class="presta-doc-campo-valor">${escapeHtml(String(valor))}</div></div>` : '';
+                    // linha() (2026-09-13, reformulação de layout): mesmo papel do
+                    // antigo campo() (só formatação, nenhum dado novo) — monta
+                    // uma <tr> label|valor pro novo layout em tabela ("Cliente"/
+                    // "Endereço", "Informações Gerais" etc.), no lugar do antigo
+                    // par label/valor empilhado num grid.
+                    const linha = (label, valor) => valor ? `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(String(valor))}</td></tr>` : '';
+                    // linhaDupla() (2026-09-13, ajuste: Prazo de Execução e
+                    // Orçamento Válido Por lado a lado, mesma linha) — mesma
+                    // classe/CSS de linha() (.presta-doc-dados-tabela th já
+                    // encolhe ao texto do rótulo, sobrando o resto da linha pro
+                    // valor); só monta 2 pares label/valor numa <tr> só, em vez
+                    // de 2 <tr> separadas. Cada par continua opcional
+                    // individualmente (mesma regra de "sem valor, sem linha/
+                    // coluna" que já existia em linha()) — nenhum dado novo.
+                    const linhaDupla = (label1, valor1, label2, valor2) => {
+                        const c1 = valor1 ? `<th>${escapeHtml(label1)}</th><td>${escapeHtml(String(valor1))}</td>` : '';
+                        const c2 = valor2 ? `<th>${escapeHtml(label2)}</th><td>${escapeHtml(String(valor2))}</td>` : '';
+                        return (c1 || c2) ? `<tr>${c1}${c2}</tr>` : '';
+                    };
 
                     // Cliente — nomes de campo atualizados junto com a reformulação
                     // da Etapa 3 (2026-08-26): tipo_pessoa/cpf/cnpj/tem_endereco/
@@ -9996,70 +10068,108 @@
                         servicosHtml = `<div class="presta-doc-descricao">${escapeHtml(e.desc_servicos)}</div>`;
                     }
 
-                    const materialTexto = e.material_incluso === 'Sim' ? 'Incluso no orçamento' : (e.material_incluso === 'Não' ? 'Por conta do cliente' : '');
+                    // 2026-09-13 (ajuste de espaço): só pra decidir se a tabela de
+                    // Forma de Pagamento precisa da linha divisória (--divisoria)
+                    // — sem ela, "Forma de Pagamento" ficaria sem borda embaixo
+                    // quando não há Prazo/Validade preenchidos (tabela seguinte
+                    // vazia), igual já acontecia antes desta mudança.
+                    const temPrazoOuValidade = !!(e.dias_execucao || e.validade_orcamento);
 
+                    // Frases de Material/Nota Fiscal (2026-09-13, ajuste pedido pelo
+                    // usuário: em vez de checkbox SIM/NÃO, mostrar a resposta já
+                    // coletada como frase) — MESMO booleano de sempre
+                    // (e.material_incluso/e.nota_fiscal === 'Sim'/'Não', já
+                    // calculado pelo formulário), só muda o texto exibido.
+                    const materialTexto = e.material_incluso === 'Sim' ? 'Material incluso neste orçamento' : (e.material_incluso === 'Não' ? 'Material não incluso neste orçamento' : '');
+                    const notaFiscalTexto = e.nota_fiscal === 'Sim' ? 'Orçamento com emissão de nota fiscal' : (e.nota_fiscal === 'Não' ? 'Orçamento sem emissão de nota fiscal' : '');
+
+                    // Layout em tabela formal (2026-09-13, reformulação pedida pelo
+                    // usuário, referência: orçamento empresarial tradicional em
+                    // vez de cartões arredondados). TODOS os valores abaixo
+                    // (nomeCabecalho, docPrestador, enderecoPrestador, dataDoc,
+                    // clienteDocLabel/clienteDoc/clienteTelefone/clienteEndereco,
+                    // servicosHtml, e.valor_total, e.material_incluso,
+                    // e.nota_fiscal, e.forma_pagamento, e.dias_execucao,
+                    // e.validade_orcamento, e.especificar_material/lista_material,
+                    // e.tem_observacao/observacao, a.nome/ddd/numero) já vinham
+                    // exatamente assim calculados antes desta reformulação — só
+                    // a marcação HTML ao redor deles mudou.
                     return `
-                    <div class="presta-doc"${estiloAccent}>
-                        <div class="presta-doc-content">
-                            <div class="presta-doc-header">
-                                ${temLogo ? `<div class="presta-doc-logo"><img src="${e.logo_base64}" alt="Logo"></div>` : ''}
-                                <div class="presta-doc-brand-info">
-                                    <div class="presta-doc-empresa">${escapeHtml(nomeCabecalho || '')}</div>
-                                    ${docPrestador ? `<div class="presta-doc-prestador-linha">${docPrestadorLabel}: ${escapeHtml(docPrestador)}</div>` : ''}
-                                    ${enderecoPrestador ? `<div class="presta-doc-prestador-linha">${escapeHtml(enderecoPrestador)}</div>` : ''}
-                                    ${a.ddd && a.numero ? `<div class="presta-doc-prestador-linha">(${escapeHtml(a.ddd)}) ${escapeHtml(a.numero)}</div>` : ''}
+                    <div class="presta-doc">
+                        <div class="presta-doc-header">
+                            ${temLogo ? `<div class="presta-doc-logo"><img src="${e.logo_base64}" alt="Logo"></div>` : ''}
+                            <div class="presta-doc-brand-info">
+                                <div class="presta-doc-empresa">${escapeHtml(nomeCabecalho || '')}</div>
+                                ${enderecoPrestador ? `<div class="presta-doc-prestador-linha">${escapeHtml(enderecoPrestador)}</div>` : ''}
+                                <div class="presta-doc-prestador-linha-row">
+                                    ${docPrestador ? `<span>${docPrestadorLabel}: ${escapeHtml(docPrestador)}</span>` : ''}
+                                    ${a.ddd && a.numero ? `<span>Fone: (${escapeHtml(a.ddd)}) ${escapeHtml(a.numero)}</span>` : ''}
                                 </div>
                             </div>
-
-                            <div class="presta-doc-titulo-area">
-                                <div class="presta-doc-titulo">Orçamento de Prestação de Serviços</div>
-                                <div class="presta-doc-titulo-meta">${escapeHtml(dataDoc)}</div>
-                            </div>
-
-                            <div class="presta-doc-card">
-                                <div class="presta-doc-card-titulo">Dados do Cliente</div>
-                                <div class="presta-doc-grid">
-                                    ${campo('Nome', titleCase(b.nome))}
-                                    ${campo(clienteDocLabel, clienteDoc)}
-                                    ${campo('Telefone', clienteTelefone)}
-                                    ${campo(clienteEnderecoLabel, clienteEndereco)}
-                                </div>
-                            </div>
-
-                            <div class="presta-doc-card">
-                                <div class="presta-doc-card-titulo">Serviços</div>
-                                ${servicosHtml}
-                                <div class="presta-doc-total-linha">
-                                    <span class="presta-doc-total-label">Valor Total</span>
-                                    <span class="presta-doc-total-valor">${fmt(e.valor_total)}</span>
-                                </div>
-                            </div>
-
-                            <div class="presta-doc-card">
-                                <div class="presta-doc-card-titulo">Informações Complementares</div>
-                                <div class="presta-doc-grid">
-                                    ${campo('Material', materialTexto)}
-                                    ${campo('Forma de pagamento', e.forma_pagamento)}
-                                    ${campo('Prazo de execução', e.dias_execucao ? `${e.dias_execucao} dias` : '')}
-                                    ${campo('Validade do orçamento', e.validade_orcamento)}
-                                    ${campo('Nota fiscal', e.nota_fiscal)}
-                                </div>
-                                ${e.especificar_material === 'Sim' && e.lista_material ? `<div class="presta-doc-descricao" style="margin-top:12px;">${escapeHtml(e.lista_material)}</div>` : ''}
-                            </div>
-
-                            ${e.tem_observacao === 'Sim' && e.observacao ? `<div class="presta-doc-card">
-                                <div class="presta-doc-card-titulo">Observações</div>
-                                <div class="presta-doc-descricao">${escapeHtml(e.observacao)}</div>
-                            </div>` : ''}
-
-                            <div class="presta-doc-assinatura">
-                                <div class="presta-doc-assinatura-linha"></div>
-                                <div class="presta-doc-assinatura-nome">${escapeHtml(titleCase(a.nome) || '')}</div>
-                                ${a.ddd && a.numero ? `<div class="presta-doc-assinatura-tel">Telefone: (${escapeHtml(a.ddd)}) ${escapeHtml(a.numero)}</div>` : ''}
-                            </div>
-
-                            <div class="presta-doc-footer">Orçamento gerado digitalmente pelo sistema Blackout</div>
                         </div>
+
+                        <div class="presta-doc-titulo-area">
+                            <div class="presta-doc-titulo">Orçamento de Prestação de Serviços</div>
+                        </div>
+
+                        <table class="presta-doc-dados-tabela"><tbody>
+                            ${linha('Cliente', titleCase(b.nome))}
+                            ${linha(clienteDocLabel, clienteDoc)}
+                            ${linha('Telefone', clienteTelefone)}
+                            ${linha(clienteEnderecoLabel, clienteEndereco)}
+                        </tbody></table>
+
+                        <div class="presta-doc-secao-titulo">Descrição dos Serviços a Serem Realizados</div>
+                        ${servicosHtml}
+
+                        <div class="presta-doc-secao-titulo">Do Valor da Mão de Obra</div>
+                        <div class="presta-doc-valor-texto">
+                            O Cliente pagará a Empresa <span class="presta-doc-valor-negrito">${escapeHtml(nomeCabecalho || '')}</span> o Valor de <span class="presta-doc-valor-negrito">${fmt(e.valor_total)} (${extensoReais(e.valor_total)})</span> pelos serviços citados acima, caso haja a necessidade de realizar outros serviços além dos descritos nesse orçamento, desconsidere o valor e solicite um novo orçamento com os dados atualizados.
+                        </div>
+
+                        <table class="presta-doc-checkbox-tabela"><tbody><tr>
+                            <th>Material:</th>
+                            <td>${escapeHtml(materialTexto)}</td>
+                            <th>Nota Fiscal:</th>
+                            <td>${escapeHtml(notaFiscalTexto)}</td>
+                        </tr></tbody></table>
+                        ${e.especificar_material === 'Sim' && e.lista_material ? `<div class="presta-doc-descricao">${escapeHtml(e.lista_material)}</div>` : ''}
+
+                        <div class="presta-doc-secao-titulo">Informações Gerais</div>
+                        <!-- 2026-09-13 (ajuste de espaço): Forma de Pagamento e a
+                             linha dupla (Prazo + Validade) viraram 2 <table>
+                             independentes — colunas de uma <table> compartilham
+                             largura entre TODAS as suas linhas; com as 2 num
+                             tabela só, o texto mais longo de Forma de Pagamento
+                             travava a largura das colunas de Prazo/Validade
+                             (mesmo usando colspan), impedindo o valor de Forma
+                             de Pagamento de esticar até a borda direita. Com
+                             tabelas separadas, cada uma calcula suas colunas só
+                             a partir do próprio conteúdo — Forma de Pagamento
+                             ocupa 100% da largura disponível, e Prazo/Validade
+                             ficam compactos, independente um do outro. A classe
+                             "--divisoria" só devolve a linha divisória entre as
+                             2 tabelas (que sumiria por padrão, já que cada uma
+                             passou a ter só 1 linha, tratada como "última" pela
+                             regra de bordas). Nenhum dado/campo/regra mudou. -->
+                        <table class="presta-doc-dados-tabela${temPrazoOuValidade ? ' presta-doc-dados-tabela--divisoria' : ''}"><tbody>
+                            ${linha('Forma de Pagamento', e.forma_pagamento)}
+                        </tbody></table>
+                        <table class="presta-doc-dados-tabela"><tbody>
+                            ${linhaDupla('Prazo de Execução', e.dias_execucao ? `${e.dias_execucao} dias` : '', 'Orçamento válido por', e.validade_orcamento)}
+                        </tbody></table>
+
+                        ${e.tem_observacao === 'Sim' && e.observacao ? `
+                        <div class="presta-doc-secao-titulo">Observações</div>
+                        <div class="presta-doc-descricao">${escapeHtml(e.observacao)}</div>` : ''}
+
+                        <div class="presta-doc-rodape">
+                            <div class="presta-doc-rodape-data">${cidadePrestador ? `${escapeHtml(cidadePrestador)}, ` : ''}${escapeHtml(dataDoc)}</div>
+                            <div class="presta-doc-assinatura-linha"></div>
+                            <div class="presta-doc-assinatura-nome">${escapeHtml(titleCase(a.nome) || '')}</div>
+                            ${a.ddd && a.numero ? `<div class="presta-doc-assinatura-tel">Fone: (${escapeHtml(a.ddd)}) ${escapeHtml(a.numero)}</div>` : ''}
+                        </div>
+                        <div class="presta-doc-footer">Orçamento gerado digitalmente pelo sistema Blackout</div>
                     </div>`;
                 },
             },

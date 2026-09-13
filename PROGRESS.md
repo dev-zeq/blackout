@@ -3487,3 +3487,270 @@ Conferindo a tabela de preços unitários por folha do pedido, cada valor de cad
 7. **`git diff`**: só a tabela de preços (2 linhas de dados) e o texto/flag das opções do seletor — nenhuma função de cálculo tocada.
 
 **Falta:** teste ao vivo logado no painel real com navegador — selecionar 12×18 Couchê Fino/Cartão na interface e conferir visualmente que os campos não aparecem mais bloqueados; este ambiente não tem navegador.
+
+
+## Orçamento de Prestação de Serviço — reformulação visual do PDF, formato empresarial em tabela (2026-09-13)
+
+Pedido: reformular EXCLUSIVAMENTE o layout do PDF de "Orçamento de Prestação de Serviços" (módulo `TIPOS.PRESTACAO_SERVICO`), usando como referência um PDF real (anexado pelo usuário) — um orçamento empresarial tradicional em tabela, preto/branco/cinza, com cabeçalho logo+dados da empresa, faixas de título por seção, linhas de tabela pra Cliente/Endereço, checkboxes SIM/NÃO pra Material/Nota Fiscal, e rodapé com assinatura. Regra absoluta do pedido: não alterar nenhuma fórmula/cálculo/regra/dado — só a apresentação visual dos mesmos dados que já eram gerados.
+
+**Arquivo:** só `paineldecontrole/index.html`, só o CSS `.presta-doc-*` e a marcação HTML retornada por `TIPOS.PRESTACAO_SERVICO.corpo()` (o `return` no final da função). **Nenhuma linha da lógica de derivação de dados foi tocada** — `nomeCabecalho`, `docPrestadorLabel`/`docPrestador`, `enderecoPrestador`, `dataDoc`, `temLogo`/`corAccent`/`estiloAccent`, `clienteDocLabel`/`clienteDoc`/`clienteTelefone`/`clienteEnderecoLabel`/`clienteEndereco`, `servicosHtml` (itemizado vs. descrição livre), `materialTexto`, e todos os campos lidos direto de `e.*` (valor_total, material_incluso, nota_fiscal, forma_pagamento, dias_execucao, validade_orcamento, especificar_material/lista_material, tem_observacao/observacao) continuam exatamente como estavam, calculados do mesmo jeito, com os mesmos nomes.
+
+### O que mudou (só visual)
+- **CSS `.presta-doc`**: abandonado o cartão arredondado com sombra (`border-radius:14px; box-shadow`) — agora é uma caixa com borda reta preta (`border: 1.5px solid`), sem arredondamento, mais próxima de um documento formal impresso.
+- **Cabeçalho**: logo numa célula própria à esquerda com borda separadora; nome da empresa + endereço + linha com CNPJ/CPF e telefone lado a lado à direita — igual à estrutura do PDF de referência.
+- **Título**: faixa cinza (`--pd-header-bg`) centralizada com "Orçamento de Prestação de Serviços" — no lugar do título solto sem fundo.
+- **Dados do Cliente**: virou uma tabela linha-a-linha (`<table class="presta-doc-dados-tabela">`, uma `<tr>` por campo: Cliente/Documento/Telefone/Endereço) — no lugar do grid 2 colunas dentro de um cartão.
+- **Serviços**: a mesma `servicosHtml` de sempre (tabela itemizada OU descrição livre, lógica 100% inalterada) agora aparece direto sob uma faixa de seção "Descrição dos Serviços a Serem Realizados", sem o cartão arredondado ao redor; a tabela itemizada (`.presta-doc-tabela`) ganhou bordas em todas as células (visual de tabela formal) no lugar do cabeçalho colorido antigo.
+- **Valor**: nova faixa "Do Valor da Mão de Obra" com o mesmo `fmt(e.valor_total)` de sempre, num bloco com borda em vez do cartão com linha superior colorida.
+- **Material/Nota Fiscal**: virou checkboxes `[X] SIM [ ] NÃO`/`[ ] SIM [X] NÃO`, desenhados a partir EXATAMENTE dos mesmos booleanos que já decidiam o texto antes (`e.material_incluso === 'Sim'`, `e.nota_fiscal === 'Sim'`) — nova função `checkbox(marcado)`, só formatação, não recalcula nada. O texto descritivo antigo (`materialTexto`, ex. "Incluso no orçamento") foi mantido como linha auxiliar logo abaixo dos checkboxes, pra não perder informação que já existia.
+- **Informações Gerais**: também virou tabela linha-a-linha (Forma de Pagamento/Prazo de Execução/Validade), igual ao padrão do PDF de referência.
+- **Observações**: mantida, agora com faixa de seção própria em vez de cartão.
+- **Rodapé**: data + linha de assinatura + nome/telefone do responsável + nota discreta "Orçamento gerado digitalmente pelo sistema Blackout" (mantida, só reposicionada).
+- Removidas do CSS as classes que ficaram sem uso após a reformulação (`.presta-doc-content`, `.presta-doc-card`, `.presta-doc-card-titulo`, `.presta-doc-grid`, `.presta-doc-campo-label`, `.presta-doc-campo-valor`, `.presta-doc-total-linha/label/valor`) — conferido via grep que nada mais no arquivo referenciava essas classes.
+- Nova função de formatação `linha(label, valor)` (substitui `campo()` nas tabelas Cliente/Informações Gerais — mesma assinatura, só monta uma `<tr>` em vez de um par label/valor empilhado) e `checkbox(marcado)` — ambas só formatação, sem nenhum dado novo.
+- `corAccent`/`estiloAccent` (extração de cor da logo, já existente e inalterada) continua funcionando: sobrescreve `--pd-accent`, usado agora na cor do título da faixa central.
+
+### Testes (Node, fora do navegador — `corpo()` extraída do arquivo pós-mudança, com `extrairCorAccentLogo` mockada pra não depender de `<canvas>`)
+1. `node --check` no `<script>` inteiro → sintaxe válida.
+2. **Cenário PJ + itens + material/lista/observação** (dados parecidos com o PDF de referência): nome da empresa, CNPJ mascarado do prestador e do cliente, telefone, endereço, tabela de itens com os valores certos, valor total formatado, checkboxes de Material e Nota Fiscal marcados em SIM, lista de material, observação, forma de pagamento/prazo/validade, assinatura e rodapé — todos presentes e corretos no HTML gerado.
+3. **Cenário PF autônomo + descrição livre + sem endereço/telefone/observação**: nome do responsável (sem empresa), CPF sem máscara (regra inalterada — só CNPJ é mascarado), "Referência do local" no lugar de Endereço (regra `b.tem_endereco` inalterada), descrição livre com quebra de linha preservada, checkboxes de Material/Nota Fiscal em NÃO, seção Telefone e Observações corretamente OMITIDAS (mesma condicional de antes).
+4. **`git diff` revisado**: todas as linhas removidas são CSS ou HTML de apresentação — nenhuma linha de cálculo/derivação de dado foi tocada (conferido grep-eando por `const`/ternários removidos: só o antigo helper `campo()` e uma linha de template, ambos puramente de formatação).
+5. Conferido por `grep` que nenhuma classe CSS removida (`.presta-doc-card`, `.presta-doc-grid`, etc.) ainda é referenciada em algum outro lugar do arquivo.
+
+**Falta:** teste ao vivo logado no painel real com navegador/impressão (gerar o PDF de verdade e comparar visualmente com o modelo de referência); este ambiente não tem navegador. Preview enviado ao usuário como Artifact antes de publicar, aguardando confirmação visual.
+
+
+## Orçamento de Prestação de Serviço — texto de "Do Valor da Mão de Obra" (2026-09-13, ajuste)
+
+Pedido de acompanhamento: incluir, na seção "DO VALOR DA MÃO DE OBRA", o texto do modelo de referência ("O Cliente pagará a Empresa... o Valor de... pelos serviços citados acima..."), com o valor ajustado dinamicamente pelos dados reais do sistema.
+
+**Arquivo:** só `paineldecontrole/index.html`, só o bloco `.presta-doc-valor-texto`/`.presta-doc-valor-negrito` (CSS) e a marcação HTML dessa seção dentro de `TIPOS.PRESTACAO_SERVICO.corpo()`. Substituídas as classes antigas `.presta-doc-valor-bloco`/`-label`/`-destaque` (não usadas em mais nenhum lugar do arquivo, confirmado por grep).
+
+### O que mudou
+- A antiga linha simples "Valor total dos serviços: R$ X" virou o parágrafo: *"O Cliente pagará a Empresa **{nomeCabecalho}** o Valor de **{fmt(e.valor_total)} ({extensoReais(e.valor_total)})** pelos serviços citados acima, caso haja a necessidade de realizar outros serviços além dos descritos nesse orçamento, desconsidere o valor e solicite um novo orçamento com os dados atualizados."*
+- `nomeCabecalho` e `e.valor_total` são exatamente os mesmos valores já calculados acima na função (inalterados) — só passaram a ser interpolados dentro desse texto em vez de ficarem numa linha "label: valor".
+- **`extensoReais()` reaproveitada sem nenhuma alteração** — é a mesma função (baseada no pacote `extenso`, importado no topo do módulo) já usada em todas as cláusulas de pagamento dos contratos de veículo/imóvel/aluguel/recibo. Nenhuma lógica de conversão número→texto foi criada.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `corpo()` executada com os mesmos dados de exemplo do PDF de referência (empresa "Marques Empreiteira", valor R$79.500,00) e uma implementação de extenso equivalente à do pacote real → gerou exatamente: *"O Cliente pagará a Empresa Marques Empreiteira o Valor de R$ 79.500,00 (setenta e nove mil e quinhentos reais) pelos serviços citados acima..."* — idêntico ao texto pedido, com os dados vindos dos mesmos campos de sempre.
+3. Conferido por grep que as classes CSS antigas removidas não são referenciadas em nenhum outro lugar do arquivo.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview atualizado e reenviado ao usuário para validação antes de sair do rascunho.
+
+
+## Orçamento de Prestação de Serviço — Material/Nota Fiscal viram frase, sem checkbox (2026-09-13, ajuste)
+
+Pedido: em vez de mostrar quadradinhos [X] SIM/[ ] NÃO pra Material Incluso e Nota Fiscal, converter a resposta já existente em uma frase ("Material incluso neste orçamento"/"Material não incluso neste orçamento", "Orçamento com emissão de nota fiscal"/"Orçamento sem emissão de nota fiscal"), mantendo a seção no mesmo lugar do layout. Sem nova lógica, mesmos campos.
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()`.
+
+### O que mudou
+- `materialTexto` (já existia) teve só o TEXTO ajustado: de "Incluso no orçamento"/"Por conta do cliente" para "Material incluso neste orçamento"/"Material não incluso neste orçamento" — mesma condição `e.material_incluso === 'Sim'/'Não'`, sem tocar a regra.
+- Nova constante `notaFiscalTexto` (mesmo padrão): "Orçamento com emissão de nota fiscal"/"Orçamento sem emissão de nota fiscal", a partir de `e.nota_fiscal === 'Sim'/'Não'` — mesmo campo que já existia, só formatado como frase.
+- A tabela "Material:/Nota Fiscal:" (mesma estrutura de 2 colunas do layout, no mesmo lugar) passou a mostrar essas frases direto nas células, no lugar dos checkboxes.
+- Removida a função `checkbox(marcado)` (não usada mais em nenhum lugar) e a classe CSS `.presta-doc-checkbox` (o quadradinho) — confirmado por grep que não sobrou nenhuma referência.
+- Removida a linha auxiliar "Material: {materialTexto}" que existia logo abaixo da tabela de checkboxes — ficaria duplicada, já que a frase completa agora está na própria célula da tabela.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `corpo()` testada nas 4 combinações (Material Sim/Não × Nota Fiscal Sim/Não) → cada uma gerou exatamente a frase esperada, sem nenhum "SIM"/"NÃO" solto nem checkbox.
+3. Confirmado que a marcação de checkbox (`presta-doc-checkbox"`) não aparece mais em nenhum HTML gerado.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado ao usuário pra validação.
+
+
+## Orçamento de Prestação de Serviço — rótulos compactos nas tabelas de dados (2026-09-13, ajuste)
+
+Pedido de esclarecimento: o ajuste anterior de Material/Nota Fiscal estava certo, mas o pedido real agora era outro — as células cinzas de rótulo (Cliente, Endereço, Forma de Pagamento, Prazo de Execução, Orçamento Válido Por) estavam largas demais (34%/42% fixo da linha); o rótulo deveria ocupar só o espaço do próprio texto, sobrando o resto da linha pro valor. Confirmado: quando não há telefone, a linha já nem aparece (comportamento existente, inalterado).
+
+**Arquivo:** só `paineldecontrole/index.html`, só a regra CSS `.presta-doc-dados-tabela th` (e a remoção do override de largura no `@media (max-width:480px)`). Nenhum HTML/JS tocado — as mesmas `<tr><th>Label</th><td>Valor</td></tr>` de sempre (função `linha()`, inalterada) continuam sendo usadas nas 2 tabelas que usam essa classe (Cliente/Documento/Telefone/Endereço, e Forma de Pagamento/Prazo/Validade).
+
+### Correção
+- Antes: `.presta-doc-dados-tabela th { width: 34%; ... }` (e `42%` no mobile) — reservava sempre quase 1/3 a quase metade da linha pro rótulo, sobrando pouco espaço pro valor.
+- Agora: `width: 1%; white-space: nowrap;` — truque padrão de CSS pra tabela: a coluna encolhe até o mínimo necessário pra caber o texto do rótulo sem quebrar linha, e a coluna do valor (sem largura fixa) absorve todo o espaço restante automaticamente. Aplica-se às 2 tabelas que usam essa classe, incluindo Forma de Pagamento/Prazo de Execução/Orçamento Válido Por, como pedido.
+- Removido o override `width: 42%` do `@media (max-width: 480px)` — não fazia mais sentido com a largura compacta.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado (já esperado, comportamento existente) que, sem telefone (`b.tem_telefone !== 'Sim'`), a linha "Telefone" simplesmente não é gerada — nenhum espaço em branco reservado.
+3. Com telefone preenchido, a linha aparece normalmente com o rótulo compacto.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado ao usuário pra validação.
+
+
+## Orçamento de Prestação de Serviço — Prazo de Execução e Orçamento Válido Por lado a lado (2026-09-13, ajuste)
+
+Pedido: juntar Prazo de Execução e Orçamento Válido Por na mesma linha (2 colunas), mantendo Forma de Pagamento em linha própria — mais próximo do primeiro modelo, elimina linha desnecessária, sem mudar dados/regras.
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()` (nova função `linhaDupla`) e um pequeno acréscimo de CSS (`border-right` nas células `td` de `.presta-doc-dados-tabela`, pra separar visualmente os 2 pares quando estão na mesma linha).
+
+### O que mudou
+- Nova função `linhaDupla(label1, valor1, label2, valor2)`: monta uma única `<tr>` com até 2 pares label/valor (`<th><td><th><td>`), cada par continuando **opcional individualmente** (mesma regra de "sem valor, sem essa parte" que `linha()` já tinha) — reaproveita a MESMA classe `.presta-doc-dados-tabela` já ajustada na etapa anterior (rótulo compacto, valor ocupa o resto), então os 2 pares dividem o espaço restante da linha automaticamente, sem nenhum CSS novo específico pra esse caso além do `border-right` divisório.
+- A tabela de "Informações Gerais" passou de 3 linhas (Forma de Pagamento / Prazo / Validade, cada uma sozinha) pra 2: Forma de Pagamento sozinha, depois Prazo de Execução + Orçamento Válido Por juntos na mesma linha.
+- `e.forma_pagamento`, `e.dias_execucao`, `e.validade_orcamento` continuam exatamente os mesmos campos/valores de sempre — só a forma como são agrupados na tabela mudou.
+- CSS: adicionado `border-right` em `.presta-doc-dados-tabela td` (com `:last-child` cancelando o último) — só afeta visualmente linhas com 2 pares (a maioria das linhas, com 1 par só, já tinha o td como último elemento, então nada muda nelas).
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. **Ambos presentes** (prazo=15 dias, validade=30 dias) → uma única `<tr>` com os 2 pares.
+3. **Só prazo**, **só validade**, **nenhum dos dois** → cada caso gera exatamente a linha esperada (sem coluna vazia, sem linha em branco).
+4. **Sem forma de pagamento** → a linha dupla aparece sozinha, sem linha vazia acima.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — data só no rodapé com a cidade (2026-09-13, ajuste)
+
+Pedido: remover a data que aparecia logo abaixo do título (repetia informação) e deixá-la só no rodapé, junto com a cidade, antes da assinatura — igual ao modelo de referência ("Balneário Camboriú, 04 de setembro de 2026").
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()` (nova variável `cidadePrestador`) e a marcação do título/rodapé. Removida a classe CSS `.presta-doc-titulo-meta` (sem uso após a mudança, confirmado por grep).
+
+### O que mudou
+- Removida a linha `<div class="presta-doc-titulo-meta">{dataDoc}</div>` de baixo do título — a área do título agora só tem "Orçamento de Prestação de Serviços".
+- Nova constante `cidadePrestador = titleCase(e.empresa_cidade || '')` — **mesmo campo** que já formava `enderecoPrestador` (`e.empresa_cidade`, só existe quando `tem_empresa === 'Sim'`); nenhum campo novo, nenhuma invenção.
+- Rodapé: `<div class="presta-doc-rodape-data">` passou de só a data pra `{cidade}, {data}` quando há cidade cadastrada (empresa), ou só a data quando não há (autônomo sem empresa) — nunca inventa uma cidade que não existe nos dados.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado que a área do título não tem mais `presta-doc-titulo-meta` (data removida de lá).
+3. **Com empresa cadastrada** (empresa_cidade = "camboriú") → rodapé mostra "Camboriú, 4 de setembro de 2026", igual ao formato do modelo de referência.
+4. **Sem empresa (autônomo)** → rodapé mostra só "4 de setembro de 2026", sem cidade inventada.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — identidade tipográfica coesa (2026-09-13, ajuste)
+
+Pedido: (1) aumentar e padronizar os 4 títulos principais (Orçamento de Prestação de Serviços, Descrição dos Serviços a Serem Realizados, Do Valor da Mão de Obra, Informações Gerais) com fonte/espaçamento coesos; (2) padronizar fonte/altura/espaçamento interno das células de dados (Cliente, Endereço, Material, Nota Fiscal, Forma de Pagamento, Prazo, Validade). Puramente visual — CSS.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS (`.presta-doc-titulo`, `.presta-doc-secao-titulo`, `.presta-doc-dados-tabela`/`th`/`td`, `.presta-doc-checkbox-tabela`/`th`/`td`). Nenhum HTML/JS tocado.
+
+### O que mudou
+- **Título geral**: 15px → 18px, letter-spacing 1,2px → 1,4px; área do título com mais respiro (padding 8px → 11px).
+- **3 faixas de seção** ("Descrição dos Serviços...", "Do Valor da Mão de Obra", "Informações Gerais"): 11,5px → 13px, letter-spacing 1px → 1,1px, padding 5px → 8px — mesma família/peso/uppercase do título geral, só um pouco menor por serem secundárias, com identidade visual coesa entre os 4.
+- **Células de dados** (Cliente/Endereço/Material/Nota Fiscal/Forma de Pagamento/Prazo/Validade): unificado o tamanho de fonte (13px pro texto do valor, 11px pro rótulo — antes 12,5px/10,5px em `.presta-doc-dados-tabela` e uma mistura ligeiramente diferente em `.presta-doc-checkbox-tabela`), `line-height: 1.4` e `padding: 8px` (antes 6px) nas DUAS tabelas que exibem esses campos — mesma altura de linha e espaçamento interno em ambas.
+- Removidas declarações de font-size/padding duplicadas/conflitantes que existiam separadamente em `.presta-doc-checkbox-tabela th/td` (agora herdam da regra compartilhada com `.presta-doc-dados-tabela`, sem sobrescrever com valores antigos).
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Conferido que não sobrou nenhuma declaração duplicada de `font-size`/`padding` nas 2 tabelas (grep).
+3. `corpo()` executada com dados de exemplo → HTML gerado idêntico em estrutura/dados às etapas anteriores (só o CSS mudou).
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — paleta monocromática (2026-09-13, ajuste)
+
+Pedido: paleta 100% em tons de cinza — títulos em cinza mais escuro (chamam mais atenção), campos de informação em cinza bem mais claro, nada de verde ou qualquer outra cor. Puramente visual.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS (variáveis `--pd-*` e os seletores de título/rótulo) + remoção do uso do recurso de cor extraída da logo dentro de `TIPOS.PRESTACAO_SERVICO.corpo()`. Nenhuma regra/fórmula/dado tocado.
+
+### Decisão tomada (avisada ao usuário antes de implementar)
+- O documento já tinha um recurso existente (`extrairCorAccentLogo()`, de uma etapa bem anterior) que extraía uma cor de destaque da logo do cliente e sobrescrevia `--pd-accent` — isso quebraria a exigência de "nada de outra cor" se o cliente tivesse uma logo colorida. Removida só a **aplicação** desse recurso neste documento (parou de chamar `extrairCorAccentLogo()` e de gerar o `style="--pd-accent:...` inline); a função em si (`extrairCorAccentLogo`) não foi alterada — só deixou de ser usada aqui, garantindo que o PDF fique sempre em cinza.
+
+### Nova paleta (variáveis em `.presta-doc`)
+- `--pd-ink` (cinza bem escuro, moldura e divisórias fortes): `#1a1a1a`.
+- `--pd-titulo-bg` / `--pd-titulo-texto` (fundo escuro + texto claro nos 4 títulos principais — geral e as 3 faixas de seção): `#3a3a3a` / `#f5f5f5`.
+- `--pd-label-bg` (fundo bem claro das células de rótulo — Cliente/Endereço/Material/Nota Fiscal/Forma de Pagamento/Prazo/Validade, e o cabeçalho da tabela de itens): `#f2f2f2`.
+- `--pd-border` (linhas finas internas, mais claras que antes pra dar uma hierarquia elegante): `#d6d6d6`.
+- `--pd-text`/`--pd-dim` ajustados pro mesmo espírito neutro: `#262626`/`#6e6e6e`.
+- Removida a variável `--pd-header-bg` (duplicada com o mesmo valor de `--pd-label-bg` após a renomeação) — todos os usos migrados pra `--pd-label-bg`.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado por grep que não sobra nenhuma referência funcional a `--pd-accent`/`corAccent`/`estiloAccent` (só comentários explicando a mudança).
+3. `corpo()` executada com `quer_logo: 'Sim'` e uma logo qualquer → gerado sem chamar extração de cor e sem nenhum `style="--pd-accent...` no HTML — documento sempre monocromático, mesmo com logo colorida.
+4. Estrutura/dados do HTML gerado idênticos às etapas anteriores — só as cores mudaram.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — moldura externa única, linha fina cinza escuro (2026-09-13, ajuste)
+
+Pedido: uma moldura externa única em volta de todo o orçamento (do cabeçalho à assinatura), linha fina em cinza escuro, sem molduras separadas por seção. Puramente visual.
+
+**Verificação:** `.presta-doc` já era o único elemento que envolve o documento inteiro (cabeçalho, título, tabelas, valor, observações, rodapé/assinatura) e já tinha uma borda completa nas 4 laterais — nenhuma outra seção interna tem `border` nas 4 laterais (só divisores `border-top`/`border-bottom` entre seções, que não formam moldura própria). Confirmado por grep: nenhum outro seletor `.presta-doc-*` usa a propriedade `border` (shorthand de 4 lados). Ou seja, a estrutura de "moldura única" já existia — só precisava ajustar a espessura/cor.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS.
+
+### O que mudou
+- Nova variável `--pd-frame: #4d4d4d` (cinza escuro, dedicada só à moldura externa — antes a borda usava `--pd-ink`, compartilhada com divisores internos fortes).
+- `.presta-doc { border: 1px solid var(--pd-frame); }` — era `1.5px solid var(--pd-ink)`, agora mais fina (1px) e numa cor cinza-escuro própria, distinta do preto quase puro usado nos divisores internos.
+- Divisores internos entre seções (header, título, faixas de seção, tabela de checkbox) continuam em `--pd-ink`, inalterados — só a moldura externa mudou.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado por grep que só `.presta-doc` tem uma borda de 4 lados — nenhuma seção interna forma moldura própria.
+3. `corpo()` executada com dados de exemplo → estrutura/dados do HTML idênticos às etapas anteriores, só a cor/espessura da moldura mudou.
+
+**Falta:** teste ao vivo no navegador/impressão (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — células de dados mais compactas (2026-09-13, ajuste)
+
+Pedido: "Forma de Pagamento" ficava com muito espaço vazio/altura maior que os outros campos; padronizar altura, deixar padding/espaçamento compacto, sem tirar fonte/conteúdo. Prazo de Execução e Orçamento Válido Por continuam lado a lado.
+
+**Causa raiz:** células de tabela (`<th>`/`<td>`) usam `vertical-align: middle` por padrão do navegador quando não especificado. Como "Forma de Pagamento" tem um texto mais longo que às vezes quebra em 2 linhas, a linha da tabela cresce pra caber esse conteúdo — e o rótulo (texto curto, 1 linha) fica centralizado no meio dessa linha mais alta, sobrando espaço vazio acima/abaixo dele, dando a impressão de "célula muito alta" mesmo a altura sendo dirigida pelo próprio conteúdo.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS (`.presta-doc-dados-tabela th/td`, `.presta-doc-checkbox-tabela th/td`).
+
+### O que mudou
+- `vertical-align: top` adicionado (antes ausente, caindo no padrão `middle` do navegador) — rótulo e valor agora colam no topo da célula, eliminando o espaço vazio que sobrava quando uma linha ficava mais alta que as outras por causa de quebra de texto.
+- Padding vertical reduzido de 8px pra 6px (compacto, igual ao que já era antes da etapa de "identidade tipográfica"), `line-height` de 1,4 pra 1,35 — mesma fonte, só menos espaçamento morto.
+- Nenhuma mudança de fonte, conteúdo, dado ou regra — só as 2 propriedades de espaçamento/alinhamento acima, nas mesmas 2 tabelas que já compartilhavam esse CSS desde a etapa de padronização de fonte.
+- Prazo de Execução/Orçamento Válido Por continuam na mesma `<tr>` (`linhaDupla()`, inalterada) — não mexido.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `corpo()` executada com Forma de Pagamento de texto longo (quebra em 2 linhas) → estrutura/dados idênticos, só o CSS de alinhamento/padding mudou.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um, e a quebra real de linha só é visível renderizando). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — Orçamento Válido Por mais compacto, mais espaço pro Prazo (2026-09-13, ajuste)
+
+Pedido: "Orçamento Válido Por" estava sendo empurrado pra direita, sobrando pouco espaço pra "Prazo de Execução"; ajustar só o espaço/posição (otimização de layout), sem mudar dados/regras.
+
+**Causa raiz:** "Forma de Pagamento" e a linha dupla "Prazo de Execução + Orçamento Válido Por" dividem a mesma `<table>`. Em HTML, colunas de uma tabela compartilham largura entre TODAS as linhas — como o valor de Forma de Pagamento é um texto mais longo, ele "travava" a largura da 2ª coluna da tabela inteira, forçando a célula "15 dias" (Prazo) a ficar tão larga quanto o texto de Forma de Pagamento, e empurrando "Orçamento Válido Por" (3ª/4ª colunas) mais pra direita/apertado.
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()`.
+
+### Correção
+- `linha()` ganhou um 3º parâmetro opcional `colspanValor` (retrocompatível — todas as outras chamadas, como Cliente/Endereço, continuam sem passar esse argumento e funcionam exatamente igual).
+- A chamada de Forma de Pagamento passou a usar `linha('Forma de Pagamento', e.forma_pagamento, 3)` — o valor agora ocupa as MESMAS 3 colunas que "Prazo + Válido Por" ocupam juntas (`colspan="3"`), em vez de ficar preso só na 2ª coluna. Isso libera as colunas de Prazo/Validade pra se ajustarem ao próprio conteúdo (curto), deixando "Orçamento Válido Por" mais compacto e mais à esquerda, com mais espaço sobrando pra "Prazo de Execução".
+- Nenhum dado, campo ou regra tocado — só a distribuição de colunas da tabela.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado no HTML gerado: `<td colspan="3">` na linha de Forma de Pagamento; linha de Prazo/Validade inalterada.
+3. Confirmado que a tabela de Cliente/Endereço (outra chamada de `linha()`, sem passar `colspanValor`) continua sem nenhum `colspan` — retrocompatibilidade OK.
+
+**Falta:** teste ao vivo no navegador (o efeito de distribuição de colunas de tabela só é visível renderizando de verdade; este ambiente não tem navegador).
+
+
+## Orçamento de Prestação de Serviço — Forma de Pagamento até a borda direita (2026-09-13, ajuste)
+
+Pergunta do usuário: por que o campo de resposta de Forma de Pagamento não ia até o final da margem/borda lateral, impedindo aproveitar a largura total. Resposta + correção definitiva (a tentativa anterior com `colspan` não resolveu de forma garantida).
+
+**Causa raiz (explicada ao usuário):** em HTML, as colunas de uma `<table>` compartilham largura entre TODAS as suas linhas. Como "Forma de Pagamento" e a linha "Prazo de Execução + Orçamento Válido Por" estavam na MESMA tabela, e a linha de Prazo/Validade tem uma coluna extra (`<th>Orçamento válido por</th>`) com `width:1%` (rótulo compacto), essa coluna "travava" o cálculo de larguras pra tabela inteira de um jeito que não garantia o valor de Forma de Pagamento esticar até a borda direita — mesmo usando `colspan` (tentativa da etapa anterior), o resultado dependia de como cada navegador resolve a ambiguidade de colunas compartilhadas entre linhas de formatos diferentes.
+
+**Correção definitiva:** Forma de Pagamento e a linha de Prazo/Validade viraram **2 `<table>` independentes** — cada uma calcula suas próprias colunas só a partir do seu próprio conteúdo, sem nenhuma influência cruzada. Isso garante, de forma determinística (não depende de heurística de nenhum navegador), que:
+- Forma de Pagamento ocupa 100% da largura disponível, até a borda direita;
+- Prazo de Execução/Orçamento Válido Por continuam compactos e lado a lado, sem depender do tamanho do texto de Forma de Pagamento.
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()` + 1 regra CSS nova (`--divisoria`).
+
+### Detalhes
+- Revertida a tentativa de `colspan` da etapa anterior (`linha()` voltou à assinatura original de 2 parâmetros).
+- Nova constante `temPrazoOuValidade` só decide se a linha divisória entre as 2 tabelas deve aparecer (evita uma linha "sobrando" no caso raro de não haver nem Prazo nem Validade preenchidos — mesmo comportamento de antes, testado).
+- Nova classe CSS `.presta-doc-dados-tabela--divisoria`: como cada tabela agora só tem 1 linha (tratada como "última" pela regra que remove a borda debaixo da última linha), essa classe devolve a linha divisória só na tabela de Forma de Pagamento, só quando a tabela de Prazo/Validade vai de fato aparecer depois dela.
+- Nenhum dado, campo, cálculo ou regra alterado — só a divisão em 2 tabelas e a regra de borda.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. **Caso normal** (Forma de Pagamento + Prazo + Validade preenchidos) → 2 `<table>` geradas corretamente, com a linha divisória entre elas.
+3. **Sem Forma de Pagamento** → 1ª tabela vazia (invisível), 2ª tabela (Prazo/Validade) intacta.
+4. **Sem Prazo nem Validade** (só Forma de Pagamento) → 1ª tabela SEM a classe `--divisoria` (sem linha sobrando), 2ª tabela vazia.
+
+**Falta:** teste ao vivo no navegador — o efeito de Forma de Pagamento esticar até a borda só é visível renderizando de verdade; este ambiente não tem navegador. Mas a solução (tabelas independentes) é uma garantia estrutural de HTML/CSS, não uma heurística sujeita a variação entre navegadores.
