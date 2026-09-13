@@ -3577,3 +3577,24 @@ Pedido de esclarecimento: o ajuste anterior de Material/Nota Fiscal estava certo
 3. Com telefone preenchido, a linha aparece normalmente com o rótulo compacto.
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado ao usuário pra validação.
+
+
+## Orçamento de Prestação de Serviço — Prazo de Execução e Orçamento Válido Por lado a lado (2026-09-13, ajuste)
+
+Pedido: juntar Prazo de Execução e Orçamento Válido Por na mesma linha (2 colunas), mantendo Forma de Pagamento em linha própria — mais próximo do primeiro modelo, elimina linha desnecessária, sem mudar dados/regras.
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()` (nova função `linhaDupla`) e um pequeno acréscimo de CSS (`border-right` nas células `td` de `.presta-doc-dados-tabela`, pra separar visualmente os 2 pares quando estão na mesma linha).
+
+### O que mudou
+- Nova função `linhaDupla(label1, valor1, label2, valor2)`: monta uma única `<tr>` com até 2 pares label/valor (`<th><td><th><td>`), cada par continuando **opcional individualmente** (mesma regra de "sem valor, sem essa parte" que `linha()` já tinha) — reaproveita a MESMA classe `.presta-doc-dados-tabela` já ajustada na etapa anterior (rótulo compacto, valor ocupa o resto), então os 2 pares dividem o espaço restante da linha automaticamente, sem nenhum CSS novo específico pra esse caso além do `border-right` divisório.
+- A tabela de "Informações Gerais" passou de 3 linhas (Forma de Pagamento / Prazo / Validade, cada uma sozinha) pra 2: Forma de Pagamento sozinha, depois Prazo de Execução + Orçamento Válido Por juntos na mesma linha.
+- `e.forma_pagamento`, `e.dias_execucao`, `e.validade_orcamento` continuam exatamente os mesmos campos/valores de sempre — só a forma como são agrupados na tabela mudou.
+- CSS: adicionado `border-right` em `.presta-doc-dados-tabela td` (com `:last-child` cancelando o último) — só afeta visualmente linhas com 2 pares (a maioria das linhas, com 1 par só, já tinha o td como último elemento, então nada muda nelas).
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. **Ambos presentes** (prazo=15 dias, validade=30 dias) → uma única `<tr>` com os 2 pares.
+3. **Só prazo**, **só validade**, **nenhum dos dois** → cada caso gera exatamente a linha esperada (sem coluna vazia, sem linha em branco).
+4. **Sem forma de pagamento** → a linha dupla aparece sozinha, sem linha vazia acima.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.

@@ -660,7 +660,8 @@
         .presta-doc-secao-titulo { background: var(--pd-header-bg); text-align: center; font-size: 11.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-ink); padding: 5px 8px; border-bottom: 1.5px solid var(--pd-ink); border-top: 1.5px solid var(--pd-ink); }
         .presta-doc-dados-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
         .presta-doc-dados-tabela th { width: 1%; white-space: nowrap; text-align: left; background: var(--pd-header-bg); font-weight: 800; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.4px; color: var(--pd-ink); padding: 6px 14px 6px 10px; border-right: 1px solid var(--pd-border); border-bottom: 1px solid var(--pd-border); }
-        .presta-doc-dados-tabela td { padding: 6px 10px; border-bottom: 1px solid var(--pd-border); color: var(--pd-text); }
+        .presta-doc-dados-tabela td { padding: 6px 10px; border-bottom: 1px solid var(--pd-border); border-right: 1px solid var(--pd-border); color: var(--pd-text); }
+        .presta-doc-dados-tabela td:last-child { border-right: none; }
         .presta-doc-dados-tabela tr:last-child th, .presta-doc-dados-tabela tr:last-child td { border-bottom: none; }
         .presta-doc-descricao { font-size: 12.5px; line-height: 1.5; color: var(--pd-text); white-space: pre-line; padding: 10px 14px; border-bottom: 1.5px solid var(--pd-ink); }
         .presta-doc-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -9983,6 +9984,19 @@
                     // "Endereço", "Informações Gerais" etc.), no lugar do antigo
                     // par label/valor empilhado num grid.
                     const linha = (label, valor) => valor ? `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(String(valor))}</td></tr>` : '';
+                    // linhaDupla() (2026-09-13, ajuste: Prazo de Execução e
+                    // Orçamento Válido Por lado a lado, mesma linha) — mesma
+                    // classe/CSS de linha() (.presta-doc-dados-tabela th já
+                    // encolhe ao texto do rótulo, sobrando o resto da linha pro
+                    // valor); só monta 2 pares label/valor numa <tr> só, em vez
+                    // de 2 <tr> separadas. Cada par continua opcional
+                    // individualmente (mesma regra de "sem valor, sem linha/
+                    // coluna" que já existia em linha()) — nenhum dado novo.
+                    const linhaDupla = (label1, valor1, label2, valor2) => {
+                        const c1 = valor1 ? `<th>${escapeHtml(label1)}</th><td>${escapeHtml(String(valor1))}</td>` : '';
+                        const c2 = valor2 ? `<th>${escapeHtml(label2)}</th><td>${escapeHtml(String(valor2))}</td>` : '';
+                        return (c1 || c2) ? `<tr>${c1}${c2}</tr>` : '';
+                    };
 
                     // Cliente — nomes de campo atualizados junto com a reformulação
                     // da Etapa 3 (2026-08-26): tipo_pessoa/cpf/cnpj/tem_endereco/
@@ -10071,8 +10085,7 @@
                         <div class="presta-doc-secao-titulo">Informações Gerais</div>
                         <table class="presta-doc-dados-tabela"><tbody>
                             ${linha('Forma de Pagamento', e.forma_pagamento)}
-                            ${linha('Prazo de Execução', e.dias_execucao ? `${e.dias_execucao} dias` : '')}
-                            ${linha('Orçamento válido por', e.validade_orcamento)}
+                            ${linhaDupla('Prazo de Execução', e.dias_execucao ? `${e.dias_execucao} dias` : '', 'Orçamento válido por', e.validade_orcamento)}
                         </tbody></table>
 
                         ${e.tem_observacao === 'Sim' && e.observacao ? `
