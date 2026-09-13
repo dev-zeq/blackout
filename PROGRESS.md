@@ -3804,3 +3804,21 @@ Pedido de acompanhamento: a correção de cores no PDF (ver seção acima) funci
 4. Cálculo conferido a mão: `@page presta-servico` (A4, margem 10mm) → 190mm de espaço útil → 718,1px (96dpi) — bate com o valor travado.
 
 **Falta:** teste ao vivo (Tela → PDF, lado a lado) — este ambiente não tem navegador/impressora real. O cálculo e a técnica (mesma já usada em `.decl-doc`) dão alta confiança, mas a confirmação visual final depende do usuário testar de novo.
+
+
+## Orçamento de Prestação de Serviço — fonte maior no cabeçalho (2026-09-13, ajuste)
+
+Pedido: aumentar a fonte do nome da empresa, endereço, CNPJ/CPF e telefone no cabeçalho do orçamento. Puramente visual.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS (`.presta-doc-empresa`, `.presta-doc-prestador-linha`, `.presta-doc-prestador-linha-row`).
+
+### O que mudou
+- **Nome da empresa** (`.presta-doc-empresa`): 21px → 24px.
+- **Endereço** (`.presta-doc-prestador-linha`) e **CNPJ/CPF + telefone** (`.presta-doc-prestador-linha-row`, mesma linha, lado a lado): 11,5px → 13,5px.
+- Nenhuma outra propriedade tocada (cor, peso, espaçamento entre linhas, layout do cabeçalho) — só o tamanho da fonte dos 4 itens pedidos.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `git diff` conferido: só os 3 seletores de fonte do cabeçalho alterados.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um).
