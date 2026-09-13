@@ -3278,7 +3278,7 @@ Pedido (revisão do usuário): na primeira versão das 3 tabelas independentes, 
 
 **Publicado** (`main` `f2ae483`, junto com a estrutura de 3 tabelas acima, no mesmo merge) a pedido do usuário. **Falta:** só o teste ao vivo logado no painel real com navegador (preencher as 3 categorias + o campo de páginas da encadernação e conferir visualmente o card exportado); este ambiente não tem navegador.
 
-## Orçamento de Impressões — Tipo de papel individual por categoria (2026-09-13, 3ª etapa) — NÃO publicado
+## Orçamento de Impressões — Tipo de papel individual por categoria (2026-09-13, 3ª etapa) — **PUBLICADO** (`main` `b04031e`)
 
 Pedido: o "Tipo de papel" ainda era 1 campo único compartilhado pelas 3 categorias (Escritas/Imagens/Chapadas). Transformar em campo próprio dentro de cada categoria, permitindo, por exemplo, Escritas em Sulfite 75g + Imagens em Papel Foto + Chapadas em Cartão no mesmo orçamento. Encadernação não faz parte desta alteração.
 
@@ -3310,4 +3310,4 @@ Pedido: o "Tipo de papel" ainda era 1 campo único compartilhado pelas 3 categor
 12. Layout do orçamento final: com 1 categoria, HTML idêntico ao formato anterior (mesma linha "Tipo de papel", sem linhas extras); com 2+ categorias e papéis diferentes, linhas extras mostram papel por categoria e a linha "Tipo de papel" combina os papéis distintos — estrutura do documento (classes CSS, seções) inalterada.
 - Arquivo inteiro passa em `node --check` (sintaxe válida).
 
-**Falta:** teste ao vivo logado no painel real com navegador (selecionar papéis diferentes nas 3 caixas e conferir visualmente o card exportado); este ambiente não tem navegador.
+**Publicado** (`main` `b04031e`) a pedido do usuário. **Falta:** só o teste ao vivo logado no painel real com navegador (selecionar papéis diferentes nas 3 caixas e conferir visualmente o card exportado); este ambiente não tem navegador.
