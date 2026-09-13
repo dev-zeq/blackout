@@ -3558,3 +3558,22 @@ Pedido: em vez de mostrar quadradinhos [X] SIM/[ ] NÃO pra Material Incluso e N
 3. Confirmado que a marcação de checkbox (`presta-doc-checkbox"`) não aparece mais em nenhum HTML gerado.
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado ao usuário pra validação.
+
+
+## Orçamento de Prestação de Serviço — rótulos compactos nas tabelas de dados (2026-09-13, ajuste)
+
+Pedido de esclarecimento: o ajuste anterior de Material/Nota Fiscal estava certo, mas o pedido real agora era outro — as células cinzas de rótulo (Cliente, Endereço, Forma de Pagamento, Prazo de Execução, Orçamento Válido Por) estavam largas demais (34%/42% fixo da linha); o rótulo deveria ocupar só o espaço do próprio texto, sobrando o resto da linha pro valor. Confirmado: quando não há telefone, a linha já nem aparece (comportamento existente, inalterado).
+
+**Arquivo:** só `paineldecontrole/index.html`, só a regra CSS `.presta-doc-dados-tabela th` (e a remoção do override de largura no `@media (max-width:480px)`). Nenhum HTML/JS tocado — as mesmas `<tr><th>Label</th><td>Valor</td></tr>` de sempre (função `linha()`, inalterada) continuam sendo usadas nas 2 tabelas que usam essa classe (Cliente/Documento/Telefone/Endereço, e Forma de Pagamento/Prazo/Validade).
+
+### Correção
+- Antes: `.presta-doc-dados-tabela th { width: 34%; ... }` (e `42%` no mobile) — reservava sempre quase 1/3 a quase metade da linha pro rótulo, sobrando pouco espaço pro valor.
+- Agora: `width: 1%; white-space: nowrap;` — truque padrão de CSS pra tabela: a coluna encolhe até o mínimo necessário pra caber o texto do rótulo sem quebrar linha, e a coluna do valor (sem largura fixa) absorve todo o espaço restante automaticamente. Aplica-se às 2 tabelas que usam essa classe, incluindo Forma de Pagamento/Prazo de Execução/Orçamento Válido Por, como pedido.
+- Removido o override `width: 42%` do `@media (max-width: 480px)` — não fazia mais sentido com a largura compacta.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado (já esperado, comportamento existente) que, sem telefone (`b.tem_telefone !== 'Sim'`), a linha "Telefone" simplesmente não é gerada — nenhum espaço em branco reservado.
+3. Com telefone preenchido, a linha aparece normalmente com o rótulo compacto.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado ao usuário pra validação.
