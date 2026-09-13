@@ -704,10 +704,29 @@
         .orc-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .orc-cat-box { border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         .orc-cat-titulo { font-size: 12.5px; font-weight: 700; color: var(--text-dim); text-align: center; }
-        .orc-cat-box input, .orc-cat-box select { width: 100%; box-sizing: border-box; }
+        /* Correção visual (2026-09-13, 7ª etapa): os inputs/selects destas caixas
+           já herdavam o estilo escuro de ".form-group input, .form-group select"
+           por aninhamento, mas isso dependia da estrutura do HTML ao redor.
+           Repetindo aqui, explicitamente, os MESMOS valores (mesma cor de fundo,
+           borda, raio, texto, fonte e foco já usados pelos campos da A4) —
+           nenhum valor novo, só garante o padrão escuro do painel pras 3 abas
+           (A4/A3/12×18), que reaproveitam exatamente estas mesmas caixas. */
+        .orc-cat-box input, .orc-cat-box select { width: 100%; box-sizing: border-box; padding: 12px 16px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 16px; font-family: inherit; }
+        .orc-cat-box input:focus, .orc-cat-box select:focus { outline: none; border-color: var(--accent); }
+        .orc-cat-box select { appearance: none; }
+        /* "Valor por folha" (2026-09-13) — só de uso interno do painel, nunca
+           aparece no orçamento do cliente (ver orcAtualizarValorPorFolha). */
+        .orc-cat-valor-folha { font-size: 11px; color: var(--text-faint); text-align: center; min-height: 14px; }
         @media (max-width: 480px) {
             .orc-cat-grid { grid-template-columns: 1fr; }
         }
+        /* Abas A4 / A3 / 12×18 (2026-09-13, ajuste) — 100% visual: só troca as
+           OPÇÕES do <select> de papel de cada categoria (ver orcTrocarAba). É o
+           MESMO orçamento/card/botões reaproveitado pelas 3 abas, não painéis
+           separados. */
+        .orc-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 14px; }
+        .orc-tab-btn { padding: 12px 6px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; }
+        .orc-tab-btn.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
         .orc-card-vazio { padding: 32px 20px; text-align: center; color: var(--text-faint); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: 16px; margin-top: 16px; font-size: 13px; }
         .orc-doc { position: relative; background: #fff; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-top: 16px; padding: 28px 26px; }
         .orc-doc-header { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; border-bottom: 3px solid #16a34a; }
@@ -2906,6 +2925,19 @@
             <button class="back-btn" onclick="goHome()">← Menu</button>
             <div class="menu-title">🖨️ Orçamento de Impressões</div>
 
+            <div class="orc-tabs">
+                <button type="button" class="orc-tab-btn selected" id="orc_tab_btn_A4" onclick="orcTrocarAba('A4')">A4</button>
+                <button type="button" class="orc-tab-btn" id="orc_tab_btn_A3" onclick="orcTrocarAba('A3')">A3</button>
+                <button type="button" class="orc-tab-btn" id="orc_tab_btn_12x18" onclick="orcTrocarAba('12x18')">12×18</button>
+            </div>
+
+            <!-- Um único orçamento reaproveitado pelas 3 abas (2026-09-13, ajuste):
+                 a aba ativa só troca as OPÇÕES do <select> de papel de cada categoria
+                 (ver orcTrocarAba/orcAtualizarOpcoesPapel) — os mesmos campos/IDs,
+                 mesmo card, mesmos botões servem A4/A3/12×18. Nada de formulário
+                 paralelo. O "Tipo de papel" de cada categoria já era um <select>
+                 dinâmico desde a etapa anterior (papel por categoria); aqui ele só
+                 passou a aceitar mais de um conjunto de opções, trocado pela aba. -->
             <div class="table-container" style="padding:20px;">
                 <div class="form-group">
                     <label>Categorias de impressão</label>
@@ -2913,38 +2945,20 @@
                         <div class="orc-cat-box">
                             <div class="orc-cat-titulo">✍️ Escritas</div>
                             <input type="number" id="orc_paginas_Escritas" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
-                            <select id="orc_papel_Escritas" onchange="atualizarOrcamento()">
-                                <option value="">Tipo de papel</option>
-                                <option value="Sulfite 75g">Sulfite 75g</option>
-                                <option value="A Laser 75g">A Laser 75g</option>
-                                <option value="P.Cartão">Papel Cartão</option>
-                                <option value="P.Foto">Papel Foto</option>
-                                <option value="P.Adesivo">Papel Adesivo</option>
-                            </select>
+                            <select id="orc_papel_Escritas" onchange="atualizarOrcamento()"></select>
+                            <div class="orc-cat-valor-folha" id="orc_valor_folha_Escritas"></div>
                         </div>
                         <div class="orc-cat-box">
                             <div class="orc-cat-titulo">🖼️ Imagens</div>
                             <input type="number" id="orc_paginas_Imagens" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
-                            <select id="orc_papel_Imagens" onchange="atualizarOrcamento()">
-                                <option value="">Tipo de papel</option>
-                                <option value="Sulfite 75g">Sulfite 75g</option>
-                                <option value="A Laser 75g">A Laser 75g</option>
-                                <option value="P.Cartão">Papel Cartão</option>
-                                <option value="P.Foto">Papel Foto</option>
-                                <option value="P.Adesivo">Papel Adesivo</option>
-                            </select>
+                            <select id="orc_papel_Imagens" onchange="atualizarOrcamento()"></select>
+                            <div class="orc-cat-valor-folha" id="orc_valor_folha_Imagens"></div>
                         </div>
                         <div class="orc-cat-box">
                             <div class="orc-cat-titulo">🎨 Chapadas</div>
                             <input type="number" id="orc_paginas_Chapadas" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
-                            <select id="orc_papel_Chapadas" onchange="atualizarOrcamento()">
-                                <option value="">Tipo de papel</option>
-                                <option value="Sulfite 75g">Sulfite 75g</option>
-                                <option value="A Laser 75g">A Laser 75g</option>
-                                <option value="P.Cartão">Papel Cartão</option>
-                                <option value="P.Foto">Papel Foto</option>
-                                <option value="P.Adesivo">Papel Adesivo</option>
-                            </select>
+                            <select id="orc_papel_Chapadas" onchange="atualizarOrcamento()"></select>
+                            <div class="orc-cat-valor-folha" id="orc_valor_folha_Chapadas"></div>
                         </div>
                     </div>
                 </div>
@@ -12456,10 +12470,14 @@
             return { ok: true, categorias, papeis, totalPaginas, encadernacoes, paginasEncadernacao };
         }
 
-        // Aplica orcPrecoImpressao (mesma fórmula/tabela de sempre) a cada
-        // categoria preenchida, usando o papel PRÓPRIO daquela categoria, e soma
-        // os resultados — categoria vazia (0 páginas) simplesmente não entra na
-        // soma, sem exigir preenchimento.
+        // Aplica orcPrecoImpressaoGeral (2026-09-13, ajuste: antes chamava
+        // orcPrecoImpressao direto — ver bloco "abas A4 / A3 / 12×18" logo
+        // acima de onde orcPrecoImpressaoGeral é definida) a cada categoria
+        // preenchida, usando o papel PRÓPRIO daquela categoria, e soma os
+        // resultados — categoria vazia (0 páginas) simplesmente não entra na
+        // soma, sem exigir preenchimento. Pra qualquer papel da A4,
+        // orcPrecoImpressaoGeral delega 100% pra orcPrecoImpressao (inalterada)
+        // — resultado idêntico ao de antes desta troca, byte a byte.
         function orcCalcularCategorias(categorias, papeis) {
             let pbTotal = 0, corTotal = 0;
             const detalhes = [];
@@ -12467,7 +12485,7 @@
                 const paginas = categorias[cat];
                 if (paginas > 0) {
                     const papel = papeis[cat];
-                    const { pb, cor } = orcPrecoImpressao(papel, cat, paginas);
+                    const { pb, cor } = orcPrecoImpressaoGeral(papel, cat, paginas);
                     pbTotal += pb;
                     corTotal += cor;
                     detalhes.push({ categoria: cat, paginas, papel, pb, cor });
@@ -12518,10 +12536,12 @@
                 btnExportar.disabled = true;
                 btnWhatsapp.disabled = true;
                 orcUltimoResultado = null;
+                orcAtualizarValorPorFolha([]);
                 return;
             }
             erroEl.textContent = '';
             const { pbTotal, corTotal, detalhes } = orcCalcularCategorias(v.categorias, v.papeis);
+            orcAtualizarValorPorFolha(detalhes);
             // Encadernação independente das 3 categorias: usa v.paginasEncadernacao
             // (campo próprio), nunca a soma de Escritas/Imagens/Chapadas.
             const encad = orcPrecoEncadernacao(v.paginasEncadernacao, v.encadernacoes);
@@ -12577,6 +12597,37 @@
             btnWhatsapp.disabled = false;
         }
         window.atualizarOrcamento = atualizarOrcamento;
+
+        // "Valor por folha" (2026-09-13, 8ª etapa) — informação de USO INTERNO
+        // do painel (nunca aparece no card/story/exportação/WhatsApp, que são
+        // montados só a partir de orcamentoCard/montarOrcStoryHtml, sem nenhuma
+        // referência a estes elementos). NÃO é uma fórmula nova: reaproveita
+        // exatamente `pb`/`cor`/`paginas` que orcCalcularCategorias (inalterada)
+        // já calculou pra cada categoria — só divide o total pela quantidade
+        // (valor total ÷ quantidade), como pedido. Categorias A3 (pb === cor,
+        // já que orcPrecoA3 não distingue P&B/Colorido) mostram 1 valor só;
+        // categorias A4 (pb e cor podem diferir) mostram os 2, sem inventar
+        // nenhum novo cálculo — são os mesmos pb/cor do card ao lado.
+        function orcAtualizarValorPorFolha(detalhes) {
+            const porCategoria = {};
+            for (const d of detalhes) porCategoria[d.categoria] = d;
+            for (const cat of ORC_CATEGORIAS) {
+                const el = document.getElementById(`orc_valor_folha_${cat}`);
+                if (!el) continue;
+                const d = porCategoria[cat];
+                // Sem páginas, ou papel sem preço cadastrado (ex.: 12×18 antes
+                // de existir tabela pra ele) → nada exibido. Nunca mostra
+                // "R$0,00", que passaria a impressão de preço gratuito em vez
+                // de "ainda não configurado".
+                const papelConhecido = d && (ORC_PRECOS.pb[d.papel] || ORC_PRECOS_A3[d.papel]);
+                if (!d || !d.paginas || !papelConhecido) { el.textContent = ''; continue; }
+                const pbPorFolha = d.pb / d.paginas;
+                const corPorFolha = d.cor / d.paginas;
+                el.textContent = Math.abs(pbPorFolha - corPorFolha) < 0.005
+                    ? `Valor por folha: ${fmt(pbPorFolha)}`
+                    : `Valor por folha: ${fmt(pbPorFolha)} (P&B) / ${fmt(corPorFolha)} (Cor)`;
+            }
+        }
 
         // Monta o miolo do "quadro" de story (1080×1920, 9:16) a partir do último
         // orçamento calculado — mesmos dados do card em tela, só que num layout
@@ -12708,6 +12759,144 @@
             }
         }
         window.enviarOrcamentoWhatsapp = enviarOrcamentoWhatsapp;
+
+        // ===== Orçamento de Impressões — abas A4 / A3 / 12×18 (2026-09-13, ajuste
+        // pedido pelo usuário: um ÚNICO orçamento reaproveitado, sem formulário
+        // paralelo e sem campo de valor-base digitado) =====
+        //
+        // Nada da lógica/dados originais da A4 foi alterado: ORC_PRECOS,
+        // orcPrecoImpressao, orcPrecoEncadernacao, orcValidar, orcUltimoResultado,
+        // montarOrcStoryHtml, orcGerarCanvas, exportarOrcamento,
+        // enviarOrcamentoWhatsapp continuam exatamente como estavam. A ÚNICA
+        // função pré-existente tocada é orcCalcularCategorias (abaixo, no
+        // diff) — só troca a chamada direta a orcPrecoImpressao() por
+        // orcPrecoImpressaoGeral() (definida aqui), que PARA QUALQUER PAPEL DA
+        // A4 delega 100% pra orcPrecoImpressao() sem nenhuma outra alteração —
+        // ou seja, pro fluxo A4, o resultado é byte-a-byte idêntico a antes.
+        //
+        // O mesmo formulário (mesmos 3 <select> de papel por categoria, mesmo
+        // card, mesmos botões Exportar/WhatsApp) serve as 3 abas: trocar de aba
+        // só troca as OPÇÕES desses 3 <select> (ver orcAtualizarOpcoesPapel) —
+        // não existe um "orçamento A3" ou "orçamento 12×18" à parte. O usuário
+        // nunca digita valor-base: ele já vem da config abaixo (ORC_PRECOS_A3).
+
+        // Valor-base e multiplicador de categoria de cada papel A3 — únicos
+        // valores fornecidos pelo usuário pra esta implementação (R$10,00 pra
+        // Sulfite 75g, R$13,00 pra Couchê 200g). Nenhum outro valor foi
+        // inventado.
+        // 2026-09-13 (10ª etapa): 12×18 cadastrado aqui também — mesma fórmula,
+        // mesmas faixas de quantidade, só um "papel" a mais no mesmo mapa.
+        // Valores conferidos: dividindo cada preço unitário da tabela do pedido
+        // (ex.: Fino/Chapada 1–5 = R$12,00) pelo multiplicador de faixa
+        // correspondente, o "valor-base" (faixa 1–5, mult 1,00) e os
+        // multiplicadores de categoria batem exatamente com os preços de TODAS
+        // as 5 faixas informadas — não é uma tabela nova, é o mesmo modelo
+        // base×categoria×faixa já usado pela A3, só com dados próprios do 12×18.
+        const ORC_PRECOS_A3 = {
+            'A3 Sulfite 75g': { base: 10.00, categorias: { Escritas: 0.50, Imagens: 0.80, Chapadas: 1.00 } },
+            'A3 Couchê 200g': { base: 13.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } },
+            '12×18 Couchê Fino': { base: 12.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } },
+            '12×18 Couchê Cartão': { base: 15.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } },
+        };
+        // Faixas de quantidade da A3 (mesma tabela pros 2 papéis, conforme
+        // pedido): 1–5 ×1,00 · 6–9 ×0,90 · 10–19 ×0,80 · 20–39 ×0,75 · 40+
+        // ×0,70. Usa orcMultiplicador(tiers, paginas) — já existente e
+        // inalterada — que escolhe o 1º tier cuja "paginas < limite"; por isso
+        // o limite de cada faixa é o começo da faixa seguinte (6, 10, 20, 40,
+        // Infinity), sem sobreposição.
+        const ORC_FAIXAS_QTD_A3 = [[6, 1.00], [10, 0.90], [20, 0.80], [40, 0.75], [Infinity, 0.70]];
+
+        // valor-base × multiplicador da categoria × multiplicador da faixa de
+        // quantidade — nunca um preço fixo gravado; recalculado do zero a cada
+        // chamada. A3 não tem distinção P&B/Colorido (o pedido só descreve 1
+        // preço por categoria/quantidade), então pb e cor saem iguais — o card
+        // final (inalterado) simplesmente mostra o mesmo valor nas 2 opções.
+        // Correção (2026-09-13, 6ª etapa): faltava multiplicar pela quantidade
+        // de folhas — a faixa de quantidade é só o multiplicador aplicado a
+        // cada folha, igual ao padrão já usado em orcPrecoImpressao (A4)
+        // logo acima ("paginas * orcMultiplicador(tabela, paginas)"). Sem essa
+        // multiplicação, "1 a 5 folhas" virava preço fixo (bug reportado:
+        // 3 folhas de Chapada A3 devolvia R$10,00 em vez de R$30,00).
+        function orcPrecoA3(papel, categoria, paginas) {
+            const cfg = ORC_PRECOS_A3[papel];
+            const multCategoria = cfg?.categorias[categoria];
+            if (multCategoria == null) return { pb: 0, cor: 0 };
+            const preco = paginas * cfg.base * multCategoria * orcMultiplicador(ORC_FAIXAS_QTD_A3, paginas);
+            return { pb: preco, cor: preco };
+        }
+
+        // Ponte única entre os formatos: papel de um dos 5 da A4 → delega pra
+        // orcPrecoImpressao (inalterada); papel de um dos 4 cadastrados em
+        // ORC_PRECOS_A3 (A3 Sulfite/Couchê + 12×18 Couchê Fino/Cartão) → usa
+        // orcPrecoA3; qualquer outro papel (desconhecido ou vazio) → sem
+        // preço, sem inventar nada.
+        function orcPrecoImpressaoGeral(papel, categoria, paginas) {
+            if (ORC_PRECOS.pb[papel]) return orcPrecoImpressao(papel, categoria, paginas);
+            if (ORC_PRECOS_A3[papel]) return orcPrecoA3(papel, categoria, paginas);
+            return { pb: 0, cor: 0 };
+        }
+
+        // Opções do <select> "Tipo de papel" de cada categoria, por aba. 12×18
+        // (10ª etapa) agora tem preço cadastrado em ORC_PRECOS_A3 — as opções
+        // deixaram de ser `disabled`, exatamente como A3.
+        const ORC_PAPEL_OPCOES_POR_ABA = {
+            A4: [
+                { valor: '', texto: 'Tipo de papel' },
+                { valor: 'Sulfite 75g', texto: 'Sulfite 75g' },
+                { valor: 'A Laser 75g', texto: 'A Laser 75g' },
+                { valor: 'P.Cartão', texto: 'Papel Cartão' },
+                { valor: 'P.Foto', texto: 'Papel Foto' },
+                { valor: 'P.Adesivo', texto: 'Papel Adesivo' },
+            ],
+            A3: [
+                { valor: '', texto: 'Tipo de papel' },
+                { valor: 'A3 Sulfite 75g', texto: 'A3 Sulfite 75g' },
+                { valor: 'A3 Couchê 200g', texto: 'A3 Couchê 200g' },
+            ],
+            '12x18': [
+                { valor: '', texto: 'Tipo de papel' },
+                { valor: '12×18 Couchê Fino', texto: '12×18 Couchê Fino' },
+                { valor: '12×18 Couchê Cartão', texto: '12×18 Couchê Cartão' },
+            ],
+        };
+
+        // Reescreve as opções dos 3 <select> de papel (Escritas/Imagens/
+        // Chapadas — os mesmos campos da A4, reaproveitados) conforme a aba
+        // ativa, e limpa a seleção anterior (nunca mistura papel de um formato
+        // com preço de outro).
+        function orcAtualizarOpcoesPapel(aba) {
+            const opcoesHtml = ORC_PAPEL_OPCOES_POR_ABA[aba]
+                .map(o => `<option value="${escapeHtml(o.valor)}"${o.desabilitada ? ' disabled' : ''}>${escapeHtml(o.texto)}</option>`)
+                .join('');
+            for (const cat of ORC_CATEGORIAS) {
+                const sel = document.getElementById(ORC_CAT_PAPEL_INPUT_ID[cat]);
+                sel.innerHTML = opcoesHtml;
+                sel.value = '';
+            }
+        }
+
+        let orcAbaAtiva = 'A4';
+
+        // Troca de aba 100% visual/de opções — sem recarregar nada. Só troca
+        // as opções de papel (acima) e recalcula com os campos como estão; é
+        // o MESMO formulário/card/botões da A4 o tempo todo, nunca um
+        // componente novo por aba.
+        function orcTrocarAba(aba) {
+            if (aba === orcAbaAtiva) return;
+            orcAbaAtiva = aba;
+            for (const a of ['A4', 'A3', '12x18']) {
+                const btn = document.getElementById(`orc_tab_btn_${a}`);
+                if (btn) btn.classList.toggle('selected', a === aba);
+            }
+            orcAtualizarOpcoesPapel(aba);
+            atualizarOrcamento();
+        }
+        window.orcTrocarAba = orcTrocarAba;
+
+        // Popula os 3 <select> com as opções da A4 já na primeira renderização
+        // (o HTML só declara os <select> vazios agora — as opções vêm daqui,
+        // pra existir 1 fonte só das opções por aba).
+        orcAtualizarOpcoesPapel(orcAbaAtiva);
 
         // ============ Simulador de Valores (2026-08-31) ============
         // Reproduz 1:1 o cálculo de parcelamento da aba "PAINEL DE CONTROLE" da
