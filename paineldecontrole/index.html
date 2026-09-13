@@ -704,7 +704,16 @@
         .orc-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .orc-cat-box { border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         .orc-cat-titulo { font-size: 12.5px; font-weight: 700; color: var(--text-dim); text-align: center; }
-        .orc-cat-box input, .orc-cat-box select { width: 100%; box-sizing: border-box; }
+        /* Correção visual (2026-09-13, 7ª etapa): os inputs/selects destas caixas
+           já herdavam o estilo escuro de ".form-group input, .form-group select"
+           por aninhamento, mas isso dependia da estrutura do HTML ao redor.
+           Repetindo aqui, explicitamente, os MESMOS valores (mesma cor de fundo,
+           borda, raio, texto, fonte e foco já usados pelos campos da A4) —
+           nenhum valor novo, só garante o padrão escuro do painel pras 3 abas
+           (A4/A3/12×18), que reaproveitam exatamente estas mesmas caixas. */
+        .orc-cat-box input, .orc-cat-box select { width: 100%; box-sizing: border-box; padding: 12px 16px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 16px; font-family: inherit; }
+        .orc-cat-box input:focus, .orc-cat-box select:focus { outline: none; border-color: var(--accent); }
+        .orc-cat-box select { appearance: none; }
         @media (max-width: 480px) {
             .orc-cat-grid { grid-template-columns: 1fr; }
         }

@@ -3395,3 +3395,25 @@ Pedido: correção de bug reportado pelo usuário — a A3 estava tratando o mul
 7. **`git diff`**: 1 linha de código alterada (mais comentário explicativo) — confirma escopo mínimo e cirúrgico da correção.
 
 **Falta:** teste ao vivo logado no painel real com navegador; este ambiente não tem navegador.
+
+
+## Orçamento de Impressões — correção visual: campos A3/12×18 com fundo escuro igual à A4 (2026-09-13, 7ª etapa)
+
+Pedido: correção visual — os campos de quantidade/papel das 3 caixas (Escritas/Imagens/Chapadas) estavam aparecendo com fundo branco, como campo HTML padrão, em vez do padrão escuro do painel. Só ajuste de CSS; nenhuma fórmula, layout, posição ou tamanho de caixa foi tocado.
+
+**Arquivo:** só `paineldecontrole/index.html`, só a regra CSS `.orc-cat-box input, .orc-cat-box select` (mais 2 regras novas de foco/appearance, mesma seletor-base). Nenhum HTML, JS ou lógica de cálculo foi alterado nesta etapa.
+
+### Causa
+- As 3 caixas (`.orc-cat-box`) já são as MESMAS caixas reaproveitadas pelas 3 abas (A4/A3/12×18) desde a 5ª etapa — não existem caixas "novas" separadas. A regra `.orc-cat-box input, .orc-cat-box select` só definia `width`/`box-sizing`; o fundo escuro dependia inteiramente de essas caixas estarem aninhadas dentro de um `.form-group` (regra `.form-group input, .form-group select`, que já define fundo/borda/cor/raio escuros — os mesmos campos usados em todo o resto do painel).
+
+### Correção
+- `.orc-cat-box input, .orc-cat-box select` passou a repetir, explicitamente, os MESMOS valores já usados por `.form-group input, .form-group select`: `padding: 12px 16px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 16px; font-family: inherit;` — nenhum valor novo, cópia literal do padrão já existente da A4.
+- Adicionadas `.orc-cat-box input:focus, .orc-cat-box select:focus { outline: none; border-color: var(--accent); }` e `.orc-cat-box select { appearance: none; }` — mesmas regras de foco/aparência que `.form-group` já aplica aos seus campos.
+- Isso garante o fundo escuro independente de qualquer aninhamento no HTML (mais robusto), sem mexer no HTML/layout/posição/tamanho das caixas.
+
+### Testes
+1. **`node --check`** no `<script>` inteiro do arquivo pós-correção → sintaxe válida (mudança é só CSS, mas confirma que nada mais foi tocado).
+2. **`git diff`**: só a regra CSS alterada (+2 novas regras de foco/appearance no mesmo seletor) — nenhuma linha de HTML, JS ou lógica de cálculo tocada.
+3. Conferido visualmente (leitura do CSS resultante) que os valores usados são idênticos, propriedade por propriedade, aos já usados pelos campos da A4 (`.form-group input, .form-group select`) — mesma cor de fundo (`var(--bg-elev)`), borda (`var(--border)`), raio (12px), texto (`var(--text)`), fonte e comportamento de foco (`var(--accent)`).
+
+**Falta:** teste ao vivo logado no painel real com navegador, comparando visualmente A4 × A3 × 12×18 lado a lado; este ambiente não tem navegador.
