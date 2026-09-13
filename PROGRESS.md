@@ -3218,3 +3218,62 @@ Pedido: auditar (sem recriar) a correção anterior — confirmar wiring, consul
 
 **Falta:** teste ao vivo logado no painel real com navegador (Supabase de produção) — clique físico em Filtrar/Limpar, registro real de um Pix e verificação visual da tabela; este ambiente não tem navegador.
 
+
+## Orçamento de Impressões — 3 tabelas independentes (Escritas/Imagens/Chapadas) somadas (2026-09-13) — NÃO publicado
+
+Pedido: hoje só dava pra escolher UMA categoria (Escritas/Imagens/Chapadas) por orçamento. Transformar em 3 tabelas independentes lado a lado, cada uma com sua própria quantidade de páginas; o sistema soma o resultado das categorias preenchidas. Categoria vazia = R$ 0,00, sem erro, sem obrigar preenchimento. Não alterar fórmulas de precificação, não alterar o layout do orçamento final gerado, não mexer em mais nada do painel.
+
+**Arquivo:** só `paineldecontrole/index.html`, só o módulo `Orçamento de Impressões` (CSS `.orc-*` + view `#viewOrcamento` + funções JS do bloco `// ===== Orçamento de Impressões =====`).
+
+### Análise do que já existia (preservado)
+- `orcPrecoImpressao(papel, categoria, paginas)` e `orcPrecoEncadernacao(paginas, qtdEncadernacoes)` — **não alteradas** (mesma tabela `ORC_PRECOS`, mesmo `orcMultiplicador`). Encadernação já era vinculada ao orçamento geral (não a uma categoria), calculada a partir da **média de páginas por caderno** (`paginas totais / qtd encadernações`) — mantive esse comportamento, só que agora `paginas totais` é a soma das categorias preenchidas.
+- Antes: 1 campo "Quantidade de páginas" + 1 seletor de categoria (só 1 podia ficar selecionada) + 1 seletor de papel (`orc_papel`, único) + 1 campo de encadernações (`orc_encadernacoes`, único). Papel e encadernação já eram únicos pro orçamento inteiro — mantidos assim (pedido item 6 confirma esse comportamento e pede pra preservar).
+
+### O que mudou
+- **Tela:** removido o seletor único "Tipo de impressão" (3 botões, 1 escolha); no lugar, 3 caixas lado a lado (`orc-cat-grid`, uma coluna cada, responsivo — vira 1 coluna abaixo de 480px), cada uma só com "Quantidade de páginas" daquela categoria (`orc_paginas_Escritas`/`orc_paginas_Imagens`/`orc_paginas_Chapadas`). Papel e encadernação continuam com 1 campo único cada.
+- **Cálculo (`atualizarOrcamento`):** `orcValidar()` agora lê as 3 categorias; considera "preenchida" só quem tem páginas > 0; exige só que **ao menos uma** esteja preenchida (antes exigia obrigatoriamente escolher 1 tipo). Nova função `orcCalcularCategorias(papel, categorias)` chama `orcPrecoImpressao` uma vez por categoria preenchida (mesma fórmula de sempre) e soma `pb`/`cor` de cada uma — categoria vazia simplesmente não entra no loop, sem gerar erro. `orcPrecoEncadernacao` passou a receber a soma das páginas das categorias preenchidas (antes recebia a única categoria).
+- **Orçamento final (card/`.orc-doc` e o quadro de story exportado):** estrutura/CSS idênticas às de antes. Com **só 1 categoria preenchida**, o texto gerado é byte-a-byte igual ao anterior (`Quantidade de páginas` = a própria quantidade, `Tipo de impressão` = mesma descrição de sempre, sem linhas extras). Com **2 ou 3 preenchidas**, `Quantidade de páginas` mostra o total somado, `Tipo de impressão` mostra as categorias envolvidas (ex.: "Escritas + Imagens") e aparecem linhas extras (dentro do mesmo grid, não um layout novo) com a quantidade de cada categoria usada — não adicionei uma 4ª "tabela" no documento do cliente, só o detalhamento textual pedido implicitamente pelo item 7/8.
+
+### Testes (Node, fora do navegador — funções extraídas literalmente do arquivo, DOM simulado)
+1. Só Escritas (20, Sulfite 75g) → valor idêntico ao de `orcPrecoImpressao('Sulfite 75g','Escritas',20)` isolado (regressão confirmada).
+2. Só Imagens (10) → idem.
+3. Só Chapadas (5) → idem.
+4. Escritas(20)+Imagens(10) → pb/cor = soma exata das duas chamadas isoladas.
+5. Escritas(20)+Chapadas(5) → soma exata.
+6. Imagens(10)+Chapadas(5) → soma exata.
+7. Escritas(20)+Imagens(10)+Chapadas(5) → soma exata das três; total de páginas = 35.
+8. Nenhuma categoria preenchida (só papel selecionado) → sem cálculo, mensagem "Informe a quantidade de páginas em ao menos uma categoria…"; **formulário 100% vazio** (nada tocado) → sem mensagem de erro nenhuma (mesmo padrão de antes).
+9. Quantidades diferentes (Escritas 100 vs. 1000) → valores diferentes, tiers de página aplicados corretamente.
+10. Papéis diferentes (Sulfite 75g vs. P.Foto, mesma quantidade) → valores diferentes.
+11. Encadernação: Escritas(20)+Imagens(10) com 2 encadernações → usa 30 páginas (soma) na fórmula, batendo com `orcPrecoEncadernacao(30,2)` chamada isolada; com só 1 categoria (20 páginas) + 2 encadernações → bate com `orcPrecoEncadernacao(20,2)` (idêntico ao comportamento antigo).
+12. Layout do card final: com 1 categoria, HTML não tem nenhuma linha extra e a descrição de tipo é a mesma de sempre ("Somente texto" etc.); com 2 categorias, aparecem as linhas extras "Escritas: 20 fls" / "Imagens: 10 fls" e o tipo mostra "Escritas + Imagens".
+- Arquivo inteiro passa em `node --check` (sintaxe válida).
+
+**Decisão de design (não pedida explicitamente, sinalizando aqui):** papel e encadernação continuam como campo único pro orçamento inteiro (não dá pra escolher um papel diferente por categoria) — é o comportamento que já existia antes desta mudança e o pedido não pediu pra separar por categoria; se quiserem papel por categoria no futuro, é um pedido à parte.
+
+**Falta:** teste ao vivo logado no painel real com navegador (clique físico nas 3 caixas, exportar imagem e conferir o card gerado); este ambiente não tem navegador.
+
+## Orçamento de Impressões — correção: encadernação volta a ser 100% independente das 3 categorias (2026-09-13, 2ª etapa) — NÃO publicado
+
+Pedido (revisão do usuário): na primeira versão das 3 tabelas independentes, a encadernação passou a usar a **soma das páginas** das 3 categorias (`orcPrecoEncadernacao(v.totalPaginas, v.encadernacoes)`) — isso não era o comportamento original e o usuário pediu pra reverter só essa parte. As 3 categorias devem servir **exclusivamente** para o cálculo das impressões (Escritas + Imagens + Chapadas = total das impressões); a encadernação deve continuar completamente separada disso.
+
+**Arquivo:** só `paineldecontrole/index.html`, só dentro do bloco `Orçamento de Impressões` — `orcValidar()` e a linha que chama `orcPrecoEncadernacao` em `atualizarOrcamento()`. **`orcPrecoEncadernacao` continua exatamente igual, nunca foi tocada** (nem nesta correção nem na etapa anterior) — mesma tabela de faixas (`<50` → R$7, `<150` → R$10, `<250` → R$12, `≥250` → R$15).
+
+### Correção
+- Antes (errado, 1ª versão das 3 categorias): `orcPrecoEncadernacao(v.totalPaginas, v.encadernacoes)`, onde `totalPaginas` era a soma de Escritas+Imagens+Chapadas — a encadernação ficava acoplada às categorias de impressão.
+- Agora: novo campo próprio no formulário, **"Quantidade de páginas (encadernação)"** (`orc_paginas_encadernacao`), separado das 3 caixas de categoria. `orcValidar()` lê esse campo isoladamente (`v.paginasEncadernacao`) e `atualizarOrcamento()` chama `orcPrecoEncadernacao(v.paginasEncadernacao, v.encadernacoes)` — o mesmo padrão de chamada que existia antes de a tela ter 3 categorias (um valor de páginas dedicado, não derivado de outro cálculo).
+- Validação nova (só entra em vigor quando há encadernações a calcular): se `Quantidade de encadernações > 0` e o campo de páginas da encadernação estiver vazio/zero, mostra erro "Informe a quantidade de páginas para calcular a encadernação." Se `encadernações = 0` (padrão), o campo de páginas da encadernação é ignorado — mesma regra de sempre (`orcPrecoEncadernacao` já retorna 0 quando `qtdEncadernacoes <= 0`).
+- Campo "Quantidade de encadernações" continua único, sem duplicação, exatamente como já era.
+- Layout do orçamento final não mudou nada nesta correção (as linhas exibidas continuam as mesmas da etapa anterior).
+
+### Testes (Node, fora do navegador — funções extraídas literalmente do arquivo pós-correção)
+1. Só Escritas / só Imagens / só Chapadas → cada uma calcula só sua própria categoria (regressão confirmada, valores idênticos ao `orcPrecoImpressao` isolado).
+2. Escritas+Imagens+Chapadas → soma exata das três forma o total das impressões.
+3/4. Encadernação com campo próprio: Escritas(20)+Imagens(10) [soma=30] + encadernação com **100 páginas** informadas → `encad = orcPrecoEncadernacao(100, qtd)`, **diferente** do que daria `orcPrecoEncadernacao(30, qtd)` (soma das categorias) — confirma que não está mais somando as categorias. `orcPrecoEncadernacao` testada isoladamente nas 4 faixas de preço + caso 0 encadernações → todos batem com os valores de sempre (função não alterada).
+5. Órçamento com uma só categoria continua funcionando (regressão).
+6. As 3 categorias juntas + encadernação independente (páginas de encadernação diferentes da soma das categorias) → impressões e encadernação calculadas corretamente, cada uma com seu próprio dado de entrada.
+7. Layout do card final com 1 categoria: HTML idêntico ao formato de antes (sem linhas extras, mesma descrição de tipo).
+- Caso extra: `encadernações > 0` sem informar páginas da encadernação → erro específico, sem gerar orçamento com valor errado.
+- Arquivo inteiro passa em `node --check` (sintaxe válida).
+
+**Falta:** teste ao vivo logado no painel real com navegador (preencher as 3 categorias + o campo de páginas da encadernação e conferir visualmente o card exportado); este ambiente não tem navegador.
