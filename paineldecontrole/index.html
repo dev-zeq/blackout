@@ -654,12 +654,25 @@
         .presta-doc-empresa { font-size: 21px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pd-ink); line-height: 1.2; }
         .presta-doc-prestador-linha { font-size: 11.5px; color: var(--pd-dim); margin-top: 3px; line-height: 1.4; }
         .presta-doc-prestador-linha-row { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 11.5px; color: var(--pd-dim); margin-top: 4px; }
-        .presta-doc-titulo-area { text-align: center; padding: 8px 10px; background: var(--pd-header-bg); border-bottom: 2px solid var(--pd-ink); }
-        .presta-doc-titulo { font-size: 15px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--pd-accent); }
-        .presta-doc-secao-titulo { background: var(--pd-header-bg); text-align: center; font-size: 11.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-ink); padding: 5px 8px; border-bottom: 1.5px solid var(--pd-ink); border-top: 1.5px solid var(--pd-ink); }
-        .presta-doc-dados-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-        .presta-doc-dados-tabela th { width: 1%; white-space: nowrap; text-align: left; background: var(--pd-header-bg); font-weight: 800; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.4px; color: var(--pd-ink); padding: 6px 14px 6px 10px; border-right: 1px solid var(--pd-border); border-bottom: 1px solid var(--pd-border); }
-        .presta-doc-dados-tabela td { padding: 6px 10px; border-bottom: 1px solid var(--pd-border); border-right: 1px solid var(--pd-border); color: var(--pd-text); }
+        /* Identidade coesa dos 4 títulos principais (2026-09-13, ajuste: fonte
+           maior e espaçamento consistente entre o título geral e as 3 faixas
+           de seção — Descrição dos Serviços/Do Valor da Mão de Obra/
+           Informações Gerais — pra ficar mais próximo do primeiro modelo).
+           Mesma família/peso/uppercase/letter-spacing nos 4; o título geral
+           só fica um pouco maior por ser o principal do documento. */
+        .presta-doc-titulo-area { text-align: center; padding: 11px 10px; background: var(--pd-header-bg); border-bottom: 2px solid var(--pd-ink); }
+        .presta-doc-titulo { font-size: 18px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--pd-accent); }
+        .presta-doc-secao-titulo { background: var(--pd-header-bg); text-align: center; font-size: 13px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: var(--pd-ink); padding: 8px 8px; border-bottom: 1.5px solid var(--pd-ink); border-top: 1.5px solid var(--pd-ink); }
+        /* Campos de informação (Cliente/Endereço/Material/Nota Fiscal/Forma de
+           Pagamento/Prazo/Validade) — mesmo tamanho de fonte, altura de linha
+           e espaçamento interno nas 2 tabelas que os exibem
+           (.presta-doc-dados-tabela e .presta-doc-checkbox-tabela). */
+        .presta-doc-dados-tabela { width: 100%; border-collapse: collapse; }
+        .presta-doc-dados-tabela, .presta-doc-checkbox-tabela { font-size: 13px; }
+        .presta-doc-dados-tabela th, .presta-doc-checkbox-tabela th { line-height: 1.4; font-size: 11px; letter-spacing: 0.5px; padding: 8px 14px 8px 10px; }
+        .presta-doc-dados-tabela td, .presta-doc-checkbox-tabela td { line-height: 1.4; padding: 8px 10px; }
+        .presta-doc-dados-tabela th { width: 1%; white-space: nowrap; text-align: left; background: var(--pd-header-bg); font-weight: 800; text-transform: uppercase; color: var(--pd-ink); border-right: 1px solid var(--pd-border); border-bottom: 1px solid var(--pd-border); }
+        .presta-doc-dados-tabela td { border-bottom: 1px solid var(--pd-border); border-right: 1px solid var(--pd-border); color: var(--pd-text); }
         .presta-doc-dados-tabela td:last-child { border-right: none; }
         .presta-doc-dados-tabela tr:last-child th, .presta-doc-dados-tabela tr:last-child td { border-bottom: none; }
         .presta-doc-descricao { font-size: 12.5px; line-height: 1.5; color: var(--pd-text); white-space: pre-line; padding: 10px 14px; border-bottom: 1.5px solid var(--pd-ink); }
@@ -669,9 +682,9 @@
         .presta-doc-tabela td { padding: 5px 10px; border: 1px solid var(--pd-border); color: var(--pd-text); }
         .presta-doc-valor-texto { padding: 10px 14px; border-bottom: 1.5px solid var(--pd-ink); font-size: 12.5px; line-height: 1.55; color: var(--pd-text); text-align: justify; }
         .presta-doc-valor-negrito { font-weight: 800; color: var(--pd-ink); }
-        .presta-doc-checkbox-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; border-bottom: 1.5px solid var(--pd-ink); }
-        .presta-doc-checkbox-tabela th { text-align: left; background: var(--pd-header-bg); font-weight: 800; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.4px; color: var(--pd-ink); padding: 6px 10px; border-right: 1px solid var(--pd-border); white-space: nowrap; }
-        .presta-doc-checkbox-tabela td { padding: 6px 10px; border-right: 1px solid var(--pd-border); }
+        .presta-doc-checkbox-tabela { width: 100%; border-collapse: collapse; border-bottom: 1.5px solid var(--pd-ink); }
+        .presta-doc-checkbox-tabela th { text-align: left; background: var(--pd-header-bg); font-weight: 800; text-transform: uppercase; color: var(--pd-ink); border-right: 1px solid var(--pd-border); white-space: nowrap; }
+        .presta-doc-checkbox-tabela td { border-right: 1px solid var(--pd-border); }
         .presta-doc-checkbox-tabela td:last-child { border-right: none; }
         .presta-doc-rodape { padding: 16px 14px 10px; display: flex; flex-direction: column; align-items: center; }
         .presta-doc-rodape-data { font-size: 12px; color: var(--pd-text); margin-bottom: 22px; align-self: flex-start; }

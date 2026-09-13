@@ -3618,3 +3618,23 @@ Pedido: remover a data que aparecia logo abaixo do título (repetia informação
 4. **Sem empresa (autônomo)** → rodapé mostra só "4 de setembro de 2026", sem cidade inventada.
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — identidade tipográfica coesa (2026-09-13, ajuste)
+
+Pedido: (1) aumentar e padronizar os 4 títulos principais (Orçamento de Prestação de Serviços, Descrição dos Serviços a Serem Realizados, Do Valor da Mão de Obra, Informações Gerais) com fonte/espaçamento coesos; (2) padronizar fonte/altura/espaçamento interno das células de dados (Cliente, Endereço, Material, Nota Fiscal, Forma de Pagamento, Prazo, Validade). Puramente visual — CSS.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS (`.presta-doc-titulo`, `.presta-doc-secao-titulo`, `.presta-doc-dados-tabela`/`th`/`td`, `.presta-doc-checkbox-tabela`/`th`/`td`). Nenhum HTML/JS tocado.
+
+### O que mudou
+- **Título geral**: 15px → 18px, letter-spacing 1,2px → 1,4px; área do título com mais respiro (padding 8px → 11px).
+- **3 faixas de seção** ("Descrição dos Serviços...", "Do Valor da Mão de Obra", "Informações Gerais"): 11,5px → 13px, letter-spacing 1px → 1,1px, padding 5px → 8px — mesma família/peso/uppercase do título geral, só um pouco menor por serem secundárias, com identidade visual coesa entre os 4.
+- **Células de dados** (Cliente/Endereço/Material/Nota Fiscal/Forma de Pagamento/Prazo/Validade): unificado o tamanho de fonte (13px pro texto do valor, 11px pro rótulo — antes 12,5px/10,5px em `.presta-doc-dados-tabela` e uma mistura ligeiramente diferente em `.presta-doc-checkbox-tabela`), `line-height: 1.4` e `padding: 8px` (antes 6px) nas DUAS tabelas que exibem esses campos — mesma altura de linha e espaçamento interno em ambas.
+- Removidas declarações de font-size/padding duplicadas/conflitantes que existiam separadamente em `.presta-doc-checkbox-tabela th/td` (agora herdam da regra compartilhada com `.presta-doc-dados-tabela`, sem sobrescrever com valores antigos).
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Conferido que não sobrou nenhuma declaração duplicada de `font-size`/`padding` nas 2 tabelas (grep).
+3. `corpo()` executada com dados de exemplo → HTML gerado idêntico em estrutura/dados às etapas anteriores (só o CSS mudou).
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
