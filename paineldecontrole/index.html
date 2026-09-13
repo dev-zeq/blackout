@@ -663,6 +663,23 @@
             --pd-label-bg: #f2f2f2; --pd-border: #d6d6d6; --pd-frame: #4d4d4d;
             background: #fff; color: var(--pd-text); font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
             border: 1px solid var(--pd-frame); border-radius: 0; overflow: hidden;
+            /* Largura travada (2026-09-13, correção de PDF) — sem isto, .presta-doc
+               é width:auto e simplesmente enche o container em que está: ~772px
+               dentro do modal (.modal-content.wide, 820px - 2×24px de padding) na
+               tela, mas só ~718px dentro de #printArea na impressão (@page
+               presta-servico, A4 - 2×10mm de margem). Container mais estreito no
+               PDF = todo texto/tabela reflui/quebra diferente do que aparece na
+               tela, mesmo com fonte/cor/padding idênticos (é isso que causava o
+               "redimensionamento"/reorganização visual reportado). Travando em
+               718px (a MENOR das duas larguras — a do PDF) e centralizando com
+               margin:auto, o documento passa a ocupar exatamente a mesma largura
+               nos dois lugares: no PDF preenche a página normalmente (0 sobra,
+               já é o valor exato disponível ali), na tela fica centralizado
+               dentro do modal com uma margem branca extra nas laterais (~27px
+               de cada lado) — mudança mínima, só essa margem extra, nenhum
+               conteúdo interno se move/reflui. Mesmo padrão já usado em
+               .decl-doc (max-width + margin:auto, ver CSS abaixo). */
+            max-width: 718px; margin: 0 auto;
         }
         .presta-doc-header { display: flex; align-items: stretch; border-bottom: 2px solid var(--pd-ink); }
         .presta-doc-logo { width: 120px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 8px; border-right: 1.5px solid var(--pd-ink); }
