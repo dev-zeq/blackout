@@ -3342,3 +3342,34 @@ Pedido: adicionar abas de formato (A4, A3, 12×18) na tela de Orçamento de Impr
 7. **IDs únicos** — conferido que `orc_tab_A4`/`orc_tab_A3`/`orc_tab_12x18` (painéis) e `orc_tab_btn_A4`/`orc_tab_btn_A3`/`orc_tab_btn_12x18` (botões) não colidem entre si nem com nenhum id já existente na A4; `orcTrocarAba` só alterna essas classes, sem tocar em nenhum campo/valor.
 
 **Falta:** teste ao vivo logado no painel real com navegador — clicar fisicamente A4 → A3 → 12×18 → A4 e conferir visualmente que nenhuma aba vaza campo/valor pra outra, e preencher a A3 na interface real; este ambiente não tem navegador.
+
+
+## Orçamento de Impressões — ajuste: um único orçamento reaproveitado, sem valor-base digitado (2026-09-13, 5ª etapa) — SUBSTITUI a 4ª etapa
+
+Pedido (revisão do usuário sobre a 4ª etapa): a A3/12×18 não podiam ser um "orçamento novo" nem pedir valor-base digitado. Deveriam reaproveitar literalmente o MESMO formulário/card/botões da A4 — só a tabela de preços consultada muda conforme o formato/papel escolhido, e o valor-base tem que vir de configuração interna, nunca de um campo pro usuário digitar.
+
+**Antes de implementar**, como o pedido citava R$10,00 apenas como exemplo ilustrativo da fórmula (não como valor real a cadastrar) e instruía explicitamente a não inventar valores, perguntei ao usuário os valores-base reais. Respostas: **A3 Sulfite 75g = R$10,00**, **A3 Couchê 200g = R$13,00**, e confirmação de que o papel continua sendo escolhido por categoria (mesmo padrão já existente na A4), só com as opções do `<select>` trocando conforme a aba.
+
+**Arquivo:** só `paineldecontrole/index.html`, só dentro do módulo `Orçamento de Impressões`.
+
+### O que mudou em relação à 4ª etapa (revertido/substituído)
+- Removidos por completo: os painéis separados `orc_tab_A3`/`orc_tab_12x18` com blocos por papel, os campos de "Valor base (R$)" digitáveis, `ORC_NOVOS_FORMATOS`, `orcRenderNovosFormatos`, `orcCalcularNovo`/`atualizarOrcamentoNovo`, e todo o CSS exclusivo deles (`.orc-tab-panel`, `.orc-papel-block`, `.orc-novo-*`). Nenhum resquício ficou no HTML/CSS/JS.
+
+### Como ficou agora — um único orçamento
+- O HTML do módulo voltou a ser **um só bloco** (sem painéis por aba): os mesmos 3 `<select id="orc_papel_Escritas/Imagens/Chapadas">` (por categoria, já existentes desde a 3ª etapa) agora começam **vazios** no HTML — as opções são preenchidas por JS (`orcAtualizarOpcoesPapel`), pra existir 1 fonte só das opções por aba.
+- **`ORC_PAPEL_OPCOES_POR_ABA`**: A4 → as mesmas 5 opções de sempre (Sulfite 75g/A Laser 75g/Papel Cartão/Papel Foto/Papel Adesivo); A3 → A3 Sulfite 75g/A3 Couchê 200g; 12×18 → 12×18 Couchê Fino/12×18 Couchê Cartão, ambas com `disabled` (aparecem na lista pra mostrar a estrutura pronta, mas não podem ser selecionadas — sem preço cadastrado, não gera orçamento com valor inventado).
+- **`orcTrocarAba(aba)`**: só troca a classe `.selected` dos botões de aba, chama `orcAtualizarOpcoesPapel(aba)` (repõe as opções dos 3 `<select>` e limpa a seleção anterior — nunca mistura papel de um formato com preço de outro) e recalcula (`atualizarOrcamento()`, já existente). Não há mais visibilidade de painel pra alternar — é sempre o mesmo bloco.
+- **`ORC_PRECOS_A3`**: config isolada com o valor-base e os multiplicadores de categoria de cada papel A3 — `{ 'A3 Sulfite 75g': { base: 10.00, categorias: { Escritas: 0.50, Imagens: 0.80, Chapadas: 1.00 } }, 'A3 Couchê 200g': { base: 13.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } } }`. **`ORC_FAIXAS_QTD_A3`**: `[[6,1.00],[10,0.90],[20,0.80],[40,0.75],[Infinity,0.70]]` (mesma tabela pros 2 papéis, tiers do jeito que `orcMultiplicador` — inalterada — espera: sem sobreposição, 5 cai em `<6`, 6 e 9 em `<10`, 10 e 19 em `<20`, 20 e 39 em `<40`, 40 em `<Infinity`).
+- **`orcPrecoA3(papel, categoria, paginas)`** (nova, isolada): `base × multiplicadorCategoria × orcMultiplicador(faixas, paginas)`. A3 não distingue P&B/Colorido (o pedido só descreve 1 preço por categoria/quantidade) — `pb` e `cor` saem iguais; o card final (inalterado) mostra o mesmo valor nas 2 opções.
+- **`orcPrecoImpressaoGeral(papel, categoria, paginas)`** (nova, isolada) — a ÚNICA ponte entre os formatos: papel de um dos 5 da A4 → delega 100% pra `orcPrecoImpressao` (inalterada, mesmo resultado de sempre); papel de um dos 2 da A3 → `orcPrecoA3`; qualquer outro papel (12×18 sem config, ou vazio) → `{pb:0, cor:0}`, sem inventar nada.
+- **Única função pré-existente tocada:** `orcCalcularCategorias` — 1 linha trocada (`orcPrecoImpressao(...)` → `orcPrecoImpressaoGeral(...)`). Comprovado que, pra qualquer papel da A4, o resultado é idêntico (a nova função delega sem nenhuma outra alteração). `orcValidar`, `atualizarOrcamento`, `orcUltimoResultado`, `montarOrcStoryHtml`, `orcGerarCanvas`, `exportarOrcamento`, `enviarOrcamentoWhatsapp`, `ORC_PRECOS`, `orcPrecoImpressao`, `orcPrecoEncadernacao` — **nenhuma dessas foi tocada**.
+
+### Testes (Node, fora do navegador — trecho `<script>` extraído do arquivo pós-mudança, DOM simulado)
+1. **`node --check`** no `<script>` inteiro → sintaxe válida.
+2. **Regressão A4**: `orcPrecoImpressaoGeral(papel, cat, paginas)` comparado par a par com `orcPrecoImpressao(papel, cat, paginas)` pra 6 combinações de papel/categoria/quantidade (inclui os 5 papéis da A4) — resultado `pb`/`cor` idêntico em todos os casos.
+3. **A3 Sulfite 75g**, valor base R$10,00, 9 quantidades pedidas (1/5/6/9/10/19/20/39/40) nas 3 categorias — bate exatamente com os exemplos do pedido: Escrita R$5,00 → R$4,50 → R$4,00 → R$3,75 → R$3,50.
+4. **A3 Couchê 200g**, valor base R$13,00 (valor real informado pelo usuário, não um exemplo), mesma bateria — Escrita R$7,80 → R$7,02 → R$6,24 → R$5,85 → R$5,46, batendo com `13 × 0,60 × multiplicadorFaixa` em cada faixa; Imagem e Chapada conferidas nas mesmas faixas.
+5. **Fluxo completo simulado (DOM fake)**: A4 com Sulfite 75g/20 páginas → card calculado normalmente; troca pra A3 → papel da categoria reseta e as opções mudam pra A3; escolhe A3 Sulfite 75g/25 folhas → card mostra R$3,75 (25 cai na faixa 20–39, ×0,75); troca o papel pra A3 Couchê 200g sem sair da aba → card passa a mostrar R$5,85 (Couchê), sem nenhum resquício do valor da Sulfite; troca pra 12×18 → papel reseta, opções aparecem desabilitadas, card fica no estado vazio (não calcula com valor inventado); volta pra A4 → opções voltam a ser exatamente as 5 originais (sem nenhuma opção de A3/12×18 vazando) e o cálculo com Sulfite 75g/20 páginas dá o mesmo resultado de sempre (R$12,00).
+6. **`git diff`** revisado linha a linha: fora do bloco novo isolado, a única mudança em código pré-existente é a troca de nome de função dentro de `orcCalcularCategorias` (item 6 dos testes acima prova equivalência).
+
+**Falta:** teste ao vivo logado no painel real com navegador — clicar fisicamente nas abas, preencher A3 Sulfite/Couchê e conferir visualmente o card/exportação; este ambiente não tem navegador.
