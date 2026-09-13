@@ -3313,7 +3313,7 @@ Pedido: o "Tipo de papel" ainda era 1 campo único compartilhado pelas 3 categor
 **Publicado** (`main` `b04031e`) a pedido do usuário. **Falta:** só o teste ao vivo logado no painel real com navegador (selecionar papéis diferentes nas 3 caixas e conferir visualmente o card exportado); este ambiente não tem navegador.
 
 
-## Orçamento de Impressões — abas A4 / A3 / 12×18, com precificação isolada por formato (2026-09-13, 4ª etapa)
+## Orçamento de Impressões — abas A4 / A3 / 12×18, com precificação isolada por formato (2026-09-13, 4ª etapa) — SUBSTITUÍDA pelo ajuste da 5ª etapa (nunca chegou a ir sozinha pro ar)
 
 Pedido: adicionar abas de formato (A4, A3, 12×18) na tela de Orçamento de Impressões, sem alterar a precificação da A4 de nenhuma forma. Cada aba nova (A3, 12×18) tem sua própria estrutura de papéis/categorias/valor base/faixas de quantidade, isolada da lógica A4.
 
@@ -3344,7 +3344,7 @@ Pedido: adicionar abas de formato (A4, A3, 12×18) na tela de Orçamento de Impr
 **Falta:** teste ao vivo logado no painel real com navegador — clicar fisicamente A4 → A3 → 12×18 → A4 e conferir visualmente que nenhuma aba vaza campo/valor pra outra, e preencher a A3 na interface real; este ambiente não tem navegador.
 
 
-## Orçamento de Impressões — ajuste: um único orçamento reaproveitado, sem valor-base digitado (2026-09-13, 5ª etapa) — SUBSTITUI a 4ª etapa
+## Orçamento de Impressões — ajuste: um único orçamento reaproveitado, sem valor-base digitado (2026-09-13, 5ª etapa) — SUBSTITUI a 4ª etapa, **PUBLICADO** (`main` `9e746df`)
 
 Pedido (revisão do usuário sobre a 4ª etapa): a A3/12×18 não podiam ser um "orçamento novo" nem pedir valor-base digitado. Deveriam reaproveitar literalmente o MESMO formulário/card/botões da A4 — só a tabela de preços consultada muda conforme o formato/papel escolhido, e o valor-base tem que vir de configuração interna, nunca de um campo pro usuário digitar.
 
@@ -3375,7 +3375,7 @@ Pedido (revisão do usuário sobre a 4ª etapa): a A3/12×18 não podiam ser um 
 **Falta:** teste ao vivo logado no painel real com navegador — clicar fisicamente nas abas, preencher A3 Sulfite/Couchê e conferir visualmente o card/exportação; este ambiente não tem navegador.
 
 
-## Orçamento de Impressões — correção: A3 não multiplicava pela quantidade de folhas (2026-09-13, 6ª etapa)
+## Orçamento de Impressões — correção: A3 não multiplicava pela quantidade de folhas (2026-09-13, 6ª etapa) — **PUBLICADO** (`main` `9e746df`)
 
 Pedido: correção de bug reportado pelo usuário — a A3 estava tratando o multiplicador da faixa de quantidade como se fosse o preço final, ignorando a quantidade de folhas. Exemplo do próprio pedido: 3 folhas de Chapada A3 (valor-base R$10,00, multiplicador de categoria 1,00, faixa 1–5 = 1,00) deveria dar `3 × 10 × 1,00 × 1,00 = R$30,00`, mas a implementação anterior devolvia R$10,00 (só `base × multCategoria × multFaixa`, sem `× paginas`).
 
@@ -3397,7 +3397,7 @@ Pedido: correção de bug reportado pelo usuário — a A3 estava tratando o mul
 **Falta:** teste ao vivo logado no painel real com navegador; este ambiente não tem navegador.
 
 
-## Orçamento de Impressões — correção visual: campos A3/12×18 com fundo escuro igual à A4 (2026-09-13, 7ª etapa)
+## Orçamento de Impressões — correção visual: campos A3/12×18 com fundo escuro igual à A4 (2026-09-13, 7ª etapa) — **PUBLICADO** (`main` `9e746df`)
 
 Pedido: correção visual — os campos de quantidade/papel das 3 caixas (Escritas/Imagens/Chapadas) estavam aparecendo com fundo branco, como campo HTML padrão, em vez do padrão escuro do painel. Só ajuste de CSS; nenhuma fórmula, layout, posição ou tamanho de caixa foi tocado.
 
@@ -3419,7 +3419,7 @@ Pedido: correção visual — os campos de quantidade/papel das 3 caixas (Escrit
 **Falta:** teste ao vivo logado no painel real com navegador, comparando visualmente A4 × A3 × 12×18 lado a lado; este ambiente não tem navegador.
 
 
-## Orçamento de Impressões — "Valor por folha" (informação interna, 2026-09-13, 8ª etapa)
+## Orçamento de Impressões — "Valor por folha" (informação interna, 2026-09-13, 8ª etapa) — **PUBLICADO** (`main` `9e746df`)
 
 Pedido: mostrar, dentro de cada caixa (Escritas/Imagens/Chapadas), o valor unitário efetivo (valor total ÷ quantidade) daquela configuração — só informação de USO INTERNO do painel (nunca no orçamento/card/PDF/WhatsApp enviado ao cliente), sem criar nenhuma fórmula nova, reaproveitando o resultado já calculado.
 
@@ -3443,7 +3443,7 @@ Pedido: mostrar, dentro de cada caixa (Escritas/Imagens/Chapadas), o valor unit�
 **Falta:** teste ao vivo logado no painel real com navegador — conferir visualmente o texto discreto dentro das caixas e confirmar que não aparece em nenhuma exportação; este ambiente não tem navegador.
 
 
-## Orçamento de Impressões — "Valor por folha" confirmado nas 3 categorias × 3 abas + blindagem contra R$0,00 (2026-09-13, 9ª etapa)
+## Orçamento de Impressões — "Valor por folha" confirmado nas 3 categorias × 3 abas + blindagem contra R$0,00 (2026-09-13, 9ª etapa) — **PUBLICADO** (`main` `9e746df`)
 
 Pedido: confirmar que "Valor por folha" funciona em todas as categorias (Escritas/Imagens/Chapadas) nas 3 abas (A4/A3/12×18), sempre que o campo for usado.
 
@@ -3463,7 +3463,7 @@ Pedido: confirmar que "Valor por folha" funciona em todas as categorias (Escrita
 **Falta:** teste ao vivo logado no painel real com navegador; este ambiente não tem navegador.
 
 
-## Orçamento de Impressões — cadastra a precificação do 12×18 (2026-09-13, 10ª etapa)
+## Orçamento de Impressões — cadastra a precificação do 12×18 (2026-09-13, 10ª etapa) — **PUBLICADO** (`main` `9e746df`)
 
 Pedido: o 12×18 estava sendo tratado como "sem preço cadastrado" (opções `disabled` no seletor). Os preços já foram definidos pelo usuário e precisavam ser registrados na mesma estrutura já usada pela A3 — sem criar lógica nova.
 
