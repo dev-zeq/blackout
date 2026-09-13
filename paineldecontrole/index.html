@@ -12615,7 +12615,12 @@
                 const el = document.getElementById(`orc_valor_folha_${cat}`);
                 if (!el) continue;
                 const d = porCategoria[cat];
-                if (!d || !d.paginas) { el.textContent = ''; continue; }
+                // Sem páginas, ou papel sem preço cadastrado (ex.: 12×18 antes
+                // de existir tabela pra ele) → nada exibido. Nunca mostra
+                // "R$0,00", que passaria a impressão de preço gratuito em vez
+                // de "ainda não configurado".
+                const papelConhecido = d && (ORC_PRECOS.pb[d.papel] || ORC_PRECOS_A3[d.papel]);
+                if (!d || !d.paginas || !papelConhecido) { el.textContent = ''; continue; }
                 const pbPorFolha = d.pb / d.paginas;
                 const corPorFolha = d.cor / d.paginas;
                 el.textContent = Math.abs(pbPorFolha - corPorFolha) < 0.005

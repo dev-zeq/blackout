@@ -3441,3 +3441,23 @@ Pedido: mostrar, dentro de cada caixa (Escritas/Imagens/Chapadas), o valor unit�
 6. **`git diff`**: 100% aditivo (0 linhas removidas) — confirma que nenhuma fórmula/layout/valor pré-existente foi tocado.
 
 **Falta:** teste ao vivo logado no painel real com navegador — conferir visualmente o texto discreto dentro das caixas e confirmar que não aparece em nenhuma exportação; este ambiente não tem navegador.
+
+
+## Orçamento de Impressões — "Valor por folha" confirmado nas 3 categorias × 3 abas + blindagem contra R$0,00 (2026-09-13, 9ª etapa)
+
+Pedido: confirmar que "Valor por folha" funciona em todas as categorias (Escritas/Imagens/Chapadas) nas 3 abas (A4/A3/12×18), sempre que o campo for usado.
+
+**Verificação:** o mecanismo já era universal desde a 8ª etapa — `orcAtualizarValorPorFolha` percorre as 3 categorias independentemente da aba ativa, usando o mesmo `detalhes` que o card já usa. Testado (Node, DOM simulado): A4 com as 3 categorias preenchidas simultaneamente (papéis diferentes por categoria) → cada uma mostra seu próprio valor (P&B/Cor); A3 com as 3 categorias preenchidas com papéis diferentes (Sulfite/Couchê misturados) → cada uma mostra seu valor correto; categoria vazia nunca mostra nada, em nenhuma aba.
+
+**Ajuste feito:** ao testar 12×18 (que hoje não tem preço cadastrado, papel aparece `disabled` no `<select>` pra impedir seleção pela interface), encontrei um caso-limite: se o papel fosse de algum jeito atribuído sem estar nas tabelas de preço (`ORC_PRECOS`/`ORC_PRECOS_A3`), a função calculava `0/paginas = R$0,00` e exibia isso — o que passaria a falsa impressão de "preço zero" em vez de "ainda não configurado". Corrigido: `orcAtualizarValorPorFolha` agora só exibe o valor quando o papel é reconhecido em `ORC_PRECOS` ou `ORC_PRECOS_A3`; caso contrário, fica vazio (mesmo comportamento de "campo não usado"). Blindagem только — não muda em nada o comportamento pra A4/A3, que sempre tiveram papel reconhecido nesse ponto.
+
+**Arquivo:** só `paineldecontrole/index.html`, só `orcAtualizarValorPorFolha` (1 condição adicionada).
+
+### Testes (Node, DOM simulado, trecho `<script>` extraído do arquivo pós-ajuste)
+1. `node --check` → sintaxe válida.
+2. A4, 3 categorias simultâneas com papéis diferentes (Sulfite 75g/Papel Foto/A Laser 75g) → cada categoria mostra seu valor P&B/Cor corretamente.
+3. A3, 3 categorias simultâneas com papéis diferentes (Sulfite/Couchê misturados) → cada categoria usa o preço do seu próprio papel, sem mistura.
+4. 12×18 forçado (contornando o `disabled` só no teste) com papel sem preço cadastrado → antes mostrava "R$0,00"; agora fica vazio, como esperado.
+5. Categoria não preenchida em qualquer aba → sempre vazio.
+
+**Falta:** teste ao vivo logado no painel real com navegador; este ambiente não tem navegador.
