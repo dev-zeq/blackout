@@ -3518,3 +3518,22 @@ Pedido: reformular EXCLUSIVAMENTE o layout do PDF de "Orçamento de Prestação 
 5. Conferido por `grep` que nenhuma classe CSS removida (`.presta-doc-card`, `.presta-doc-grid`, etc.) ainda é referenciada em algum outro lugar do arquivo.
 
 **Falta:** teste ao vivo logado no painel real com navegador/impressão (gerar o PDF de verdade e comparar visualmente com o modelo de referência); este ambiente não tem navegador. Preview enviado ao usuário como Artifact antes de publicar, aguardando confirmação visual.
+
+
+## Orçamento de Prestação de Serviço — texto de "Do Valor da Mão de Obra" (2026-09-13, ajuste)
+
+Pedido de acompanhamento: incluir, na seção "DO VALOR DA MÃO DE OBRA", o texto do modelo de referência ("O Cliente pagará a Empresa... o Valor de... pelos serviços citados acima..."), com o valor ajustado dinamicamente pelos dados reais do sistema.
+
+**Arquivo:** só `paineldecontrole/index.html`, só o bloco `.presta-doc-valor-texto`/`.presta-doc-valor-negrito` (CSS) e a marcação HTML dessa seção dentro de `TIPOS.PRESTACAO_SERVICO.corpo()`. Substituídas as classes antigas `.presta-doc-valor-bloco`/`-label`/`-destaque` (não usadas em mais nenhum lugar do arquivo, confirmado por grep).
+
+### O que mudou
+- A antiga linha simples "Valor total dos serviços: R$ X" virou o parágrafo: *"O Cliente pagará a Empresa **{nomeCabecalho}** o Valor de **{fmt(e.valor_total)} ({extensoReais(e.valor_total)})** pelos serviços citados acima, caso haja a necessidade de realizar outros serviços além dos descritos nesse orçamento, desconsidere o valor e solicite um novo orçamento com os dados atualizados."*
+- `nomeCabecalho` e `e.valor_total` são exatamente os mesmos valores já calculados acima na função (inalterados) — só passaram a ser interpolados dentro desse texto em vez de ficarem numa linha "label: valor".
+- **`extensoReais()` reaproveitada sem nenhuma alteração** — é a mesma função (baseada no pacote `extenso`, importado no topo do módulo) já usada em todas as cláusulas de pagamento dos contratos de veículo/imóvel/aluguel/recibo. Nenhuma lógica de conversão número→texto foi criada.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `corpo()` executada com os mesmos dados de exemplo do PDF de referência (empresa "Marques Empreiteira", valor R$79.500,00) e uma implementação de extenso equivalente à do pacote real → gerou exatamente: *"O Cliente pagará a Empresa Marques Empreiteira o Valor de R$ 79.500,00 (setenta e nove mil e quinhentos reais) pelos serviços citados acima..."* — idêntico ao texto pedido, com os dados vindos dos mesmos campos de sempre.
+3. Conferido por grep que as classes CSS antigas removidas não são referenciadas em nenhum outro lugar do arquivo.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview atualizado e reenviado ao usuário para validação antes de sair do rascunho.
