@@ -3219,7 +3219,7 @@ Pedido: auditar (sem recriar) a correção anterior — confirmar wiring, consul
 **Falta:** teste ao vivo logado no painel real com navegador (Supabase de produção) — clique físico em Filtrar/Limpar, registro real de um Pix e verificação visual da tabela; este ambiente não tem navegador.
 
 
-## Orçamento de Impressões — 3 tabelas independentes (Escritas/Imagens/Chapadas) somadas (2026-09-13) — NÃO publicado
+## Orçamento de Impressões — 3 tabelas independentes (Escritas/Imagens/Chapadas) somadas (2026-09-13) — SUPERADO pela correção abaixo, **PUBLICADO** (`main` `f2ae483`)
 
 Pedido: hoje só dava pra escolher UMA categoria (Escritas/Imagens/Chapadas) por orçamento. Transformar em 3 tabelas independentes lado a lado, cada uma com sua própria quantidade de páginas; o sistema soma o resultado das categorias preenchidas. Categoria vazia = R$ 0,00, sem erro, sem obrigar preenchimento. Não alterar fórmulas de precificação, não alterar o layout do orçamento final gerado, não mexer em mais nada do painel.
 
@@ -3251,9 +3251,9 @@ Pedido: hoje só dava pra escolher UMA categoria (Escritas/Imagens/Chapadas) por
 
 **Decisão de design (não pedida explicitamente, sinalizando aqui):** papel e encadernação continuam como campo único pro orçamento inteiro (não dá pra escolher um papel diferente por categoria) — é o comportamento que já existia antes desta mudança e o pedido não pediu pra separar por categoria; se quiserem papel por categoria no futuro, é um pedido à parte.
 
-**Falta:** teste ao vivo logado no painel real com navegador (clique físico nas 3 caixas, exportar imagem e conferir o card gerado); este ambiente não tem navegador.
+**Nota:** esta 1ª versão foi ao ar já com a correção da encadernação (revisão abaixo) incluída no mesmo merge — o cálculo de encadernação que ficou em produção é o corrigido, não o descrito acima.
 
-## Orçamento de Impressões — correção: encadernação volta a ser 100% independente das 3 categorias (2026-09-13, 2ª etapa) — NÃO publicado
+## Orçamento de Impressões — correção: encadernação volta a ser 100% independente das 3 categorias (2026-09-13, 2ª etapa) — **PUBLICADO** (`main` `f2ae483`)
 
 Pedido (revisão do usuário): na primeira versão das 3 tabelas independentes, a encadernação passou a usar a **soma das páginas** das 3 categorias (`orcPrecoEncadernacao(v.totalPaginas, v.encadernacoes)`) — isso não era o comportamento original e o usuário pediu pra reverter só essa parte. As 3 categorias devem servir **exclusivamente** para o cálculo das impressões (Escritas + Imagens + Chapadas = total das impressões); a encadernação deve continuar completamente separada disso.
 
@@ -3276,4 +3276,4 @@ Pedido (revisão do usuário): na primeira versão das 3 tabelas independentes, 
 - Caso extra: `encadernações > 0` sem informar páginas da encadernação → erro específico, sem gerar orçamento com valor errado.
 - Arquivo inteiro passa em `node --check` (sintaxe válida).
 
-**Falta:** teste ao vivo logado no painel real com navegador (preencher as 3 categorias + o campo de páginas da encadernação e conferir visualmente o card exportado); este ambiente não tem navegador.
+**Publicado** (`main` `f2ae483`, junto com a estrutura de 3 tabelas acima, no mesmo merge) a pedido do usuário. **Falta:** só o teste ao vivo logado no painel real com navegador (preencher as 3 categorias + o campo de páginas da encadernação e conferir visualmente o card exportado); este ambiente não tem navegador.
