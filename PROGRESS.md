@@ -3537,3 +3537,24 @@ Pedido de acompanhamento: incluir, na seção "DO VALOR DA MÃO DE OBRA", o text
 3. Conferido por grep que as classes CSS antigas removidas não são referenciadas em nenhum outro lugar do arquivo.
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview atualizado e reenviado ao usuário para validação antes de sair do rascunho.
+
+
+## Orçamento de Prestação de Serviço — Material/Nota Fiscal viram frase, sem checkbox (2026-09-13, ajuste)
+
+Pedido: em vez de mostrar quadradinhos [X] SIM/[ ] NÃO pra Material Incluso e Nota Fiscal, converter a resposta já existente em uma frase ("Material incluso neste orçamento"/"Material não incluso neste orçamento", "Orçamento com emissão de nota fiscal"/"Orçamento sem emissão de nota fiscal"), mantendo a seção no mesmo lugar do layout. Sem nova lógica, mesmos campos.
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()`.
+
+### O que mudou
+- `materialTexto` (já existia) teve só o TEXTO ajustado: de "Incluso no orçamento"/"Por conta do cliente" para "Material incluso neste orçamento"/"Material não incluso neste orçamento" — mesma condição `e.material_incluso === 'Sim'/'Não'`, sem tocar a regra.
+- Nova constante `notaFiscalTexto` (mesmo padrão): "Orçamento com emissão de nota fiscal"/"Orçamento sem emissão de nota fiscal", a partir de `e.nota_fiscal === 'Sim'/'Não'` — mesmo campo que já existia, só formatado como frase.
+- A tabela "Material:/Nota Fiscal:" (mesma estrutura de 2 colunas do layout, no mesmo lugar) passou a mostrar essas frases direto nas células, no lugar dos checkboxes.
+- Removida a função `checkbox(marcado)` (não usada mais em nenhum lugar) e a classe CSS `.presta-doc-checkbox` (o quadradinho) — confirmado por grep que não sobrou nenhuma referência.
+- Removida a linha auxiliar "Material: {materialTexto}" que existia logo abaixo da tabela de checkboxes — ficaria duplicada, já que a frase completa agora está na própria célula da tabela.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `corpo()` testada nas 4 combinações (Material Sim/Não × Nota Fiscal Sim/Não) → cada uma gerou exatamente a frase esperada, sem nenhum "SIM"/"NÃO" solto nem checkbox.
+3. Confirmado que a marcação de checkbox (`presta-doc-checkbox"`) não aparece mais em nenhum HTML gerado.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado ao usuário pra validação.

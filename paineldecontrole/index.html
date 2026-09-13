@@ -673,7 +673,6 @@
         .presta-doc-checkbox-tabela th { text-align: left; background: var(--pd-header-bg); font-weight: 800; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.4px; color: var(--pd-ink); padding: 6px 10px; border-right: 1px solid var(--pd-border); white-space: nowrap; }
         .presta-doc-checkbox-tabela td { padding: 6px 10px; border-right: 1px solid var(--pd-border); }
         .presta-doc-checkbox-tabela td:last-child { border-right: none; }
-        .presta-doc-checkbox { display: inline-block; width: 12px; height: 12px; border: 1.3px solid var(--pd-ink); text-align: center; line-height: 11px; font-size: 10px; font-weight: 900; margin-right: 3px; }
         .presta-doc-rodape { padding: 16px 14px 10px; display: flex; flex-direction: column; align-items: center; }
         .presta-doc-rodape-data { font-size: 12px; color: var(--pd-text); margin-bottom: 22px; align-self: flex-start; }
         .presta-doc-assinatura-linha { width: 280px; border-top: 1px solid var(--pd-ink); margin-bottom: 6px; }
@@ -9985,9 +9984,6 @@
                     // "Endereço", "Informações Gerais" etc.), no lugar do antigo
                     // par label/valor empilhado num grid.
                     const linha = (label, valor) => valor ? `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(String(valor))}</td></tr>` : '';
-                    // checkbox() — só desenha [X]/[ ] a partir do MESMO booleano
-                    // que já decidia o texto Sim/Não antes; não recalcula nada.
-                    const checkbox = (marcado) => `<span class="presta-doc-checkbox">${marcado ? 'X' : ''}</span>`;
 
                     // Cliente — nomes de campo atualizados junto com a reformulação
                     // da Etapa 3 (2026-08-26): tipo_pessoa/cpf/cnpj/tem_endereco/
@@ -10012,7 +10008,13 @@
                         servicosHtml = `<div class="presta-doc-descricao">${escapeHtml(e.desc_servicos)}</div>`;
                     }
 
-                    const materialTexto = e.material_incluso === 'Sim' ? 'Incluso no orçamento' : (e.material_incluso === 'Não' ? 'Por conta do cliente' : '');
+                    // Frases de Material/Nota Fiscal (2026-09-13, ajuste pedido pelo
+                    // usuário: em vez de checkbox SIM/NÃO, mostrar a resposta já
+                    // coletada como frase) — MESMO booleano de sempre
+                    // (e.material_incluso/e.nota_fiscal === 'Sim'/'Não', já
+                    // calculado pelo formulário), só muda o texto exibido.
+                    const materialTexto = e.material_incluso === 'Sim' ? 'Material incluso neste orçamento' : (e.material_incluso === 'Não' ? 'Material não incluso neste orçamento' : '');
+                    const notaFiscalTexto = e.nota_fiscal === 'Sim' ? 'Orçamento com emissão de nota fiscal' : (e.nota_fiscal === 'Não' ? 'Orçamento sem emissão de nota fiscal' : '');
 
                     // Layout em tabela formal (2026-09-13, reformulação pedida pelo
                     // usuário, referência: orçamento empresarial tradicional em
@@ -10060,12 +10062,11 @@
                         </div>
 
                         <table class="presta-doc-checkbox-tabela"><tbody><tr>
-                            <th>Material Incluso:</th>
-                            <td>${checkbox(e.material_incluso === 'Sim')} SIM&nbsp;&nbsp;&nbsp;${checkbox(e.material_incluso === 'Não')} NÃO</td>
+                            <th>Material:</th>
+                            <td>${escapeHtml(materialTexto)}</td>
                             <th>Nota Fiscal:</th>
-                            <td>${checkbox(e.nota_fiscal === 'Sim')} SIM&nbsp;&nbsp;&nbsp;${checkbox(e.nota_fiscal === 'Não')} NÃO</td>
+                            <td>${escapeHtml(notaFiscalTexto)}</td>
                         </tr></tbody></table>
-                        ${materialTexto ? `<div class="presta-doc-descricao" style="border-bottom:1px solid var(--pd-border);">Material: ${escapeHtml(materialTexto)}</div>` : ''}
                         ${e.especificar_material === 'Sim' && e.lista_material ? `<div class="presta-doc-descricao">${escapeHtml(e.lista_material)}</div>` : ''}
 
                         <div class="presta-doc-secao-titulo">Informações Gerais</div>
