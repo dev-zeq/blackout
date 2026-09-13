@@ -3489,7 +3489,7 @@ Conferindo a tabela de preços unitários por folha do pedido, cada valor de cad
 **Falta:** teste ao vivo logado no painel real com navegador — selecionar 12×18 Couchê Fino/Cartão na interface e conferir visualmente que os campos não aparecem mais bloqueados; este ambiente não tem navegador.
 
 
-## Orçamento de Prestação de Serviço — reformulação visual do PDF, formato empresarial em tabela (2026-09-13)
+## Orçamento de Prestação de Serviço — reformulação visual do PDF, formato empresarial em tabela (2026-09-13) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: reformular EXCLUSIVAMENTE o layout do PDF de "Orçamento de Prestação de Serviços" (módulo `TIPOS.PRESTACAO_SERVICO`), usando como referência um PDF real (anexado pelo usuário) — um orçamento empresarial tradicional em tabela, preto/branco/cinza, com cabeçalho logo+dados da empresa, faixas de título por seção, linhas de tabela pra Cliente/Endereço, checkboxes SIM/NÃO pra Material/Nota Fiscal, e rodapé com assinatura. Regra absoluta do pedido: não alterar nenhuma fórmula/cálculo/regra/dado — só a apresentação visual dos mesmos dados que já eram gerados.
 
@@ -3520,7 +3520,7 @@ Pedido: reformular EXCLUSIVAMENTE o layout do PDF de "Orçamento de Prestação 
 **Falta:** teste ao vivo logado no painel real com navegador/impressão (gerar o PDF de verdade e comparar visualmente com o modelo de referência); este ambiente não tem navegador. Preview enviado ao usuário como Artifact antes de publicar, aguardando confirmação visual.
 
 
-## Orçamento de Prestação de Serviço — texto de "Do Valor da Mão de Obra" (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — texto de "Do Valor da Mão de Obra" (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido de acompanhamento: incluir, na seção "DO VALOR DA MÃO DE OBRA", o texto do modelo de referência ("O Cliente pagará a Empresa... o Valor de... pelos serviços citados acima..."), com o valor ajustado dinamicamente pelos dados reais do sistema.
 
@@ -3539,7 +3539,7 @@ Pedido de acompanhamento: incluir, na seção "DO VALOR DA MÃO DE OBRA", o text
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview atualizado e reenviado ao usuário para validação antes de sair do rascunho.
 
 
-## Orçamento de Prestação de Serviço — Material/Nota Fiscal viram frase, sem checkbox (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — Material/Nota Fiscal viram frase, sem checkbox (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: em vez de mostrar quadradinhos [X] SIM/[ ] NÃO pra Material Incluso e Nota Fiscal, converter a resposta já existente em uma frase ("Material incluso neste orçamento"/"Material não incluso neste orçamento", "Orçamento com emissão de nota fiscal"/"Orçamento sem emissão de nota fiscal"), mantendo a seção no mesmo lugar do layout. Sem nova lógica, mesmos campos.
 
@@ -3560,7 +3560,7 @@ Pedido: em vez de mostrar quadradinhos [X] SIM/[ ] NÃO pra Material Incluso e N
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado ao usuário pra validação.
 
 
-## Orçamento de Prestação de Serviço — rótulos compactos nas tabelas de dados (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — rótulos compactos nas tabelas de dados (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido de esclarecimento: o ajuste anterior de Material/Nota Fiscal estava certo, mas o pedido real agora era outro — as células cinzas de rótulo (Cliente, Endereço, Forma de Pagamento, Prazo de Execução, Orçamento Válido Por) estavam largas demais (34%/42% fixo da linha); o rótulo deveria ocupar só o espaço do próprio texto, sobrando o resto da linha pro valor. Confirmado: quando não há telefone, a linha já nem aparece (comportamento existente, inalterado).
 
@@ -3579,7 +3579,7 @@ Pedido de esclarecimento: o ajuste anterior de Material/Nota Fiscal estava certo
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado ao usuário pra validação.
 
 
-## Orçamento de Prestação de Serviço — Prazo de Execução e Orçamento Válido Por lado a lado (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — Prazo de Execução e Orçamento Válido Por lado a lado (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: juntar Prazo de Execução e Orçamento Válido Por na mesma linha (2 colunas), mantendo Forma de Pagamento em linha própria — mais próximo do primeiro modelo, elimina linha desnecessária, sem mudar dados/regras.
 
@@ -3600,7 +3600,7 @@ Pedido: juntar Prazo de Execução e Orçamento Válido Por na mesma linha (2 co
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
 
 
-## Orçamento de Prestação de Serviço — data só no rodapé com a cidade (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — data só no rodapé com a cidade (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: remover a data que aparecia logo abaixo do título (repetia informação) e deixá-la só no rodapé, junto com a cidade, antes da assinatura — igual ao modelo de referência ("Balneário Camboriú, 04 de setembro de 2026").
 
@@ -3620,7 +3620,7 @@ Pedido: remover a data que aparecia logo abaixo do título (repetia informação
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
 
 
-## Orçamento de Prestação de Serviço — identidade tipográfica coesa (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — identidade tipográfica coesa (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: (1) aumentar e padronizar os 4 títulos principais (Orçamento de Prestação de Serviços, Descrição dos Serviços a Serem Realizados, Do Valor da Mão de Obra, Informações Gerais) com fonte/espaçamento coesos; (2) padronizar fonte/altura/espaçamento interno das células de dados (Cliente, Endereço, Material, Nota Fiscal, Forma de Pagamento, Prazo, Validade). Puramente visual — CSS.
 
@@ -3640,7 +3640,7 @@ Pedido: (1) aumentar e padronizar os 4 títulos principais (Orçamento de Presta
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
 
 
-## Orçamento de Prestação de Serviço — paleta monocromática (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — paleta monocromática (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: paleta 100% em tons de cinza — títulos em cinza mais escuro (chamam mais atenção), campos de informação em cinza bem mais claro, nada de verde ou qualquer outra cor. Puramente visual.
 
@@ -3666,7 +3666,7 @@ Pedido: paleta 100% em tons de cinza — títulos em cinza mais escuro (chamam m
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
 
 
-## Orçamento de Prestação de Serviço — moldura externa única, linha fina cinza escuro (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — moldura externa única, linha fina cinza escuro (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: uma moldura externa única em volta de todo o orçamento (do cabeçalho à assinatura), linha fina em cinza escuro, sem molduras separadas por seção. Puramente visual.
 
@@ -3687,7 +3687,7 @@ Pedido: uma moldura externa única em volta de todo o orçamento (do cabeçalho 
 **Falta:** teste ao vivo no navegador/impressão (este ambiente não tem um). Preview reenviado pra validação.
 
 
-## Orçamento de Prestação de Serviço — células de dados mais compactas (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — células de dados mais compactas (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: "Forma de Pagamento" ficava com muito espaço vazio/altura maior que os outros campos; padronizar altura, deixar padding/espaçamento compacto, sem tirar fonte/conteúdo. Prazo de Execução e Orçamento Válido Por continuam lado a lado.
 
@@ -3708,7 +3708,7 @@ Pedido: "Forma de Pagamento" ficava com muito espaço vazio/altura maior que os 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um, e a quebra real de linha só é visível renderizando). Preview reenviado pra validação.
 
 
-## Orçamento de Prestação de Serviço — Orçamento Válido Por mais compacto, mais espaço pro Prazo (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — Orçamento Válido Por mais compacto, mais espaço pro Prazo (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pedido: "Orçamento Válido Por" estava sendo empurrado pra direita, sobrando pouco espaço pra "Prazo de Execução"; ajustar só o espaço/posição (otimização de layout), sem mudar dados/regras.
 
@@ -3729,7 +3729,7 @@ Pedido: "Orçamento Válido Por" estava sendo empurrado pra direita, sobrando po
 **Falta:** teste ao vivo no navegador (o efeito de distribuição de colunas de tabela só é visível renderizando de verdade; este ambiente não tem navegador).
 
 
-## Orçamento de Prestação de Serviço — Forma de Pagamento até a borda direita (2026-09-13, ajuste)
+## Orçamento de Prestação de Serviço — Forma de Pagamento até a borda direita (2026-09-13, ajuste) — **PUBLICADO** (`main` `9e101af`)
 
 Pergunta do usuário: por que o campo de resposta de Forma de Pagamento não ia até o final da margem/borda lateral, impedindo aproveitar a largura total. Resposta + correção definitiva (a tentativa anterior com `colspan` não resolveu de forma garantida).
 
