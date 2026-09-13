@@ -3598,3 +3598,23 @@ Pedido: juntar Prazo de Execução e Orçamento Válido Por na mesma linha (2 co
 4. **Sem forma de pagamento** → a linha dupla aparece sozinha, sem linha vazia acima.
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — data só no rodapé com a cidade (2026-09-13, ajuste)
+
+Pedido: remover a data que aparecia logo abaixo do título (repetia informação) e deixá-la só no rodapé, junto com a cidade, antes da assinatura — igual ao modelo de referência ("Balneário Camboriú, 04 de setembro de 2026").
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()` (nova variável `cidadePrestador`) e a marcação do título/rodapé. Removida a classe CSS `.presta-doc-titulo-meta` (sem uso após a mudança, confirmado por grep).
+
+### O que mudou
+- Removida a linha `<div class="presta-doc-titulo-meta">{dataDoc}</div>` de baixo do título — a área do título agora só tem "Orçamento de Prestação de Serviços".
+- Nova constante `cidadePrestador = titleCase(e.empresa_cidade || '')` — **mesmo campo** que já formava `enderecoPrestador` (`e.empresa_cidade`, só existe quando `tem_empresa === 'Sim'`); nenhum campo novo, nenhuma invenção.
+- Rodapé: `<div class="presta-doc-rodape-data">` passou de só a data pra `{cidade}, {data}` quando há cidade cadastrada (empresa), ou só a data quando não há (autônomo sem empresa) — nunca inventa uma cidade que não existe nos dados.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado que a área do título não tem mais `presta-doc-titulo-meta` (data removida de lá).
+3. **Com empresa cadastrada** (empresa_cidade = "camboriú") → rodapé mostra "Camboriú, 4 de setembro de 2026", igual ao formato do modelo de referência.
+4. **Sem empresa (autônomo)** → rodapé mostra só "4 de setembro de 2026", sem cidade inventada.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.

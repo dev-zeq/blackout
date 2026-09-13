@@ -656,7 +656,6 @@
         .presta-doc-prestador-linha-row { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 11.5px; color: var(--pd-dim); margin-top: 4px; }
         .presta-doc-titulo-area { text-align: center; padding: 8px 10px; background: var(--pd-header-bg); border-bottom: 2px solid var(--pd-ink); }
         .presta-doc-titulo { font-size: 15px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--pd-accent); }
-        .presta-doc-titulo-meta { font-size: 10.5px; color: var(--pd-dim); margin-top: 3px; letter-spacing: 0.3px; }
         .presta-doc-secao-titulo { background: var(--pd-header-bg); text-align: center; font-size: 11.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--pd-ink); padding: 5px 8px; border-bottom: 1.5px solid var(--pd-ink); border-top: 1.5px solid var(--pd-ink); }
         .presta-doc-dados-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
         .presta-doc-dados-tabela th { width: 1%; white-space: nowrap; text-align: left; background: var(--pd-header-bg); font-weight: 800; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.4px; color: var(--pd-ink); padding: 6px 14px 6px 10px; border-right: 1px solid var(--pd-border); border-bottom: 1px solid var(--pd-border); }
@@ -9964,6 +9963,14 @@
                         return [base, estado].filter(Boolean).join('/');
                     };
                     const enderecoPrestador = enderecoDoc(e.empresa_endereco, e.empresa_complemento, e.empresa_bairro, e.empresa_cidade, e.empresa_estado);
+                    // Cidade do rodapé (2026-09-13, ajuste: data saiu de baixo do
+                    // título e passou a acompanhar a cidade no rodapé, igual ao
+                    // modelo de referência "Cidade, DD de mês de AAAA") — MESMO
+                    // campo que já formava enderecoPrestador acima (e.empresa_cidade,
+                    // só existe quando `tem_empresa === 'Sim'`); sem empresa
+                    // cadastrada, não há cidade coletada do prestador e o rodapé
+                    // mostra só a data (nenhum campo novo, nenhuma invenção).
+                    const cidadePrestador = titleCase(e.empresa_cidade || '');
 
                     // Número do orçamento removido do PDF (pedido do usuário) — só a
                     // data, por extenso em pt-BR ("26 de agosto de 2026").
@@ -10056,7 +10063,6 @@
 
                         <div class="presta-doc-titulo-area">
                             <div class="presta-doc-titulo">Orçamento de Prestação de Serviços</div>
-                            <div class="presta-doc-titulo-meta">${escapeHtml(dataDoc)}</div>
                         </div>
 
                         <table class="presta-doc-dados-tabela"><tbody>
@@ -10093,7 +10099,7 @@
                         <div class="presta-doc-descricao">${escapeHtml(e.observacao)}</div>` : ''}
 
                         <div class="presta-doc-rodape">
-                            <div class="presta-doc-rodape-data">${escapeHtml(dataDoc)}</div>
+                            <div class="presta-doc-rodape-data">${cidadePrestador ? `${escapeHtml(cidadePrestador)}, ` : ''}${escapeHtml(dataDoc)}</div>
                             <div class="presta-doc-assinatura-linha"></div>
                             <div class="presta-doc-assinatura-nome">${escapeHtml(titleCase(a.nome) || '')}</div>
                             ${a.ddd && a.numero ? `<div class="presta-doc-assinatura-tel">Fone: (${escapeHtml(a.ddd)}) ${escapeHtml(a.numero)}</div>` : ''}
