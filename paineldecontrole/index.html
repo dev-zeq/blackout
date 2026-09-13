@@ -10022,7 +10022,18 @@
                     // uma <tr> label|valor pro novo layout em tabela ("Cliente"/
                     // "Endereço", "Informações Gerais" etc.), no lugar do antigo
                     // par label/valor empilhado num grid.
-                    const linha = (label, valor) => valor ? `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(String(valor))}</td></tr>` : '';
+                    // colspanValor (2026-09-13, ajuste de espaço): quando esta
+                    // linha divide a tabela com linhaDupla() (Prazo de Execução +
+                    // Orçamento Válido Por, ver abaixo), o valor de "Forma de
+                    // Pagamento" — texto mais longo — estava "travando" a
+                    // largura da coluna 2 pra todas as linhas da tabela
+                    // (comportamento padrão de <table>: colunas compartilham
+                    // largura entre linhas), empurrando "Orçamento Válido Por"
+                    // pra direita. Com colspan, o valor de Forma de Pagamento
+                    // passa a ocupar as mesmas 3 colunas que "Prazo + Válido
+                    // Por" ocupam juntas, sem forçar nenhuma delas a ficar larga
+                    // — só reorganização visual, nenhum dado/regra muda.
+                    const linha = (label, valor, colspanValor) => valor ? `<tr><th>${escapeHtml(label)}</th><td${colspanValor ? ` colspan="${colspanValor}"` : ''}>${escapeHtml(String(valor))}</td></tr>` : '';
                     // linhaDupla() (2026-09-13, ajuste: Prazo de Execução e
                     // Orçamento Válido Por lado a lado, mesma linha) — mesma
                     // classe/CSS de linha() (.presta-doc-dados-tabela th já
@@ -10122,7 +10133,7 @@
 
                         <div class="presta-doc-secao-titulo">Informações Gerais</div>
                         <table class="presta-doc-dados-tabela"><tbody>
-                            ${linha('Forma de Pagamento', e.forma_pagamento)}
+                            ${linha('Forma de Pagamento', e.forma_pagamento, 3)}
                             ${linhaDupla('Prazo de Execução', e.dias_execucao ? `${e.dias_execucao} dias` : '', 'Orçamento válido por', e.validade_orcamento)}
                         </tbody></table>
 

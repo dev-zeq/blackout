@@ -3706,3 +3706,24 @@ Pedido: "Forma de Pagamento" ficava com muito espaço vazio/altura maior que os 
 2. `corpo()` executada com Forma de Pagamento de texto longo (quebra em 2 linhas) → estrutura/dados idênticos, só o CSS de alinhamento/padding mudou.
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um, e a quebra real de linha só é visível renderizando). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — Orçamento Válido Por mais compacto, mais espaço pro Prazo (2026-09-13, ajuste)
+
+Pedido: "Orçamento Válido Por" estava sendo empurrado pra direita, sobrando pouco espaço pra "Prazo de Execução"; ajustar só o espaço/posição (otimização de layout), sem mudar dados/regras.
+
+**Causa raiz:** "Forma de Pagamento" e a linha dupla "Prazo de Execução + Orçamento Válido Por" dividem a mesma `<table>`. Em HTML, colunas de uma tabela compartilham largura entre TODAS as linhas — como o valor de Forma de Pagamento é um texto mais longo, ele "travava" a largura da 2ª coluna da tabela inteira, forçando a célula "15 dias" (Prazo) a ficar tão larga quanto o texto de Forma de Pagamento, e empurrando "Orçamento Válido Por" (3ª/4ª colunas) mais pra direita/apertado.
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()`.
+
+### Correção
+- `linha()` ganhou um 3º parâmetro opcional `colspanValor` (retrocompatível — todas as outras chamadas, como Cliente/Endereço, continuam sem passar esse argumento e funcionam exatamente igual).
+- A chamada de Forma de Pagamento passou a usar `linha('Forma de Pagamento', e.forma_pagamento, 3)` — o valor agora ocupa as MESMAS 3 colunas que "Prazo + Válido Por" ocupam juntas (`colspan="3"`), em vez de ficar preso só na 2ª coluna. Isso libera as colunas de Prazo/Validade pra se ajustarem ao próprio conteúdo (curto), deixando "Orçamento Válido Por" mais compacto e mais à esquerda, com mais espaço sobrando pra "Prazo de Execução".
+- Nenhum dado, campo ou regra tocado — só a distribuição de colunas da tabela.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado no HTML gerado: `<td colspan="3">` na linha de Forma de Pagamento; linha de Prazo/Validade inalterada.
+3. Confirmado que a tabela de Cliente/Endereço (outra chamada de `linha()`, sem passar `colspanValor`) continua sem nenhum `colspan` — retrocompatibilidade OK.
+
+**Falta:** teste ao vivo no navegador (o efeito de distribuição de colunas de tabela só é visível renderizando de verdade; este ambiente não tem navegador).
