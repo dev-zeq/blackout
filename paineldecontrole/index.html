@@ -645,8 +645,14 @@
              mais atenção";
            --pd-label-bg  = cinza bem claro, fundo das células de rótulo
              (Cliente/Endereço/Material/etc.) — "campos de informação claros";
-           --pd-border    = cinza claro, só as linhas finas internas (a
-             moldura e os divisores fortes continuam em --pd-ink).
+           --pd-border    = cinza claro, só as linhas finas internas (os
+             divisores fortes entre seções continuam em --pd-ink);
+           --pd-frame     = cinza escuro dedicado à MOLDURA EXTERNA única
+             (2026-09-13, ajuste pedido: uma linha fina em volta de todo o
+             orçamento, do cabeçalho à assinatura — .presta-doc já é o único
+             elemento que envolve o documento inteiro, então já funcionava
+             como moldura única; nenhuma seção interna tem borda própria nas
+             4 laterais, só divisores de topo/base entre elas).
            Antes havia uma cor de destaque (--pd-accent) extraída da logo do
            cliente (ver extrairCorAccentLogo(), função inalterada) — deixou
            de ser aplicada neste documento (ver `corpo()`) pra garantir que
@@ -654,9 +660,9 @@
         .presta-doc {
             --pd-ink: #1a1a1a; --pd-text: #262626; --pd-dim: #6e6e6e;
             --pd-titulo-bg: #3a3a3a; --pd-titulo-texto: #f5f5f5;
-            --pd-label-bg: #f2f2f2; --pd-border: #d6d6d6;
+            --pd-label-bg: #f2f2f2; --pd-border: #d6d6d6; --pd-frame: #4d4d4d;
             background: #fff; color: var(--pd-text); font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
-            border: 1.5px solid var(--pd-ink); border-radius: 0; overflow: hidden;
+            border: 1px solid var(--pd-frame); border-radius: 0; overflow: hidden;
         }
         .presta-doc-header { display: flex; align-items: stretch; border-bottom: 2px solid var(--pd-ink); }
         .presta-doc-logo { width: 120px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 8px; border-right: 1.5px solid var(--pd-ink); }

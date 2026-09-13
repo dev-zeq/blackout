@@ -3664,3 +3664,24 @@ Pedido: paleta 100% em tons de cinza — títulos em cinza mais escuro (chamam m
 4. Estrutura/dados do HTML gerado idênticos às etapas anteriores — só as cores mudaram.
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — moldura externa única, linha fina cinza escuro (2026-09-13, ajuste)
+
+Pedido: uma moldura externa única em volta de todo o orçamento (do cabeçalho à assinatura), linha fina em cinza escuro, sem molduras separadas por seção. Puramente visual.
+
+**Verificação:** `.presta-doc` já era o único elemento que envolve o documento inteiro (cabeçalho, título, tabelas, valor, observações, rodapé/assinatura) e já tinha uma borda completa nas 4 laterais — nenhuma outra seção interna tem `border` nas 4 laterais (só divisores `border-top`/`border-bottom` entre seções, que não formam moldura própria). Confirmado por grep: nenhum outro seletor `.presta-doc-*` usa a propriedade `border` (shorthand de 4 lados). Ou seja, a estrutura de "moldura única" já existia — só precisava ajustar a espessura/cor.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS.
+
+### O que mudou
+- Nova variável `--pd-frame: #4d4d4d` (cinza escuro, dedicada só à moldura externa — antes a borda usava `--pd-ink`, compartilhada com divisores internos fortes).
+- `.presta-doc { border: 1px solid var(--pd-frame); }` — era `1.5px solid var(--pd-ink)`, agora mais fina (1px) e numa cor cinza-escuro própria, distinta do preto quase puro usado nos divisores internos.
+- Divisores internos entre seções (header, título, faixas de seção, tabela de checkbox) continuam em `--pd-ink`, inalterados — só a moldura externa mudou.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado por grep que só `.presta-doc` tem uma borda de 4 lados — nenhuma seção interna forma moldura própria.
+3. `corpo()` executada com dados de exemplo → estrutura/dados do HTML idênticos às etapas anteriores, só a cor/espessura da moldura mudou.
+
+**Falta:** teste ao vivo no navegador/impressão (este ambiente não tem um). Preview reenviado pra validação.
