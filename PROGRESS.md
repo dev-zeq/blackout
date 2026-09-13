@@ -3685,3 +3685,24 @@ Pedido: uma moldura externa única em volta de todo o orçamento (do cabeçalho 
 3. `corpo()` executada com dados de exemplo → estrutura/dados do HTML idênticos às etapas anteriores, só a cor/espessura da moldura mudou.
 
 **Falta:** teste ao vivo no navegador/impressão (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — células de dados mais compactas (2026-09-13, ajuste)
+
+Pedido: "Forma de Pagamento" ficava com muito espaço vazio/altura maior que os outros campos; padronizar altura, deixar padding/espaçamento compacto, sem tirar fonte/conteúdo. Prazo de Execução e Orçamento Válido Por continuam lado a lado.
+
+**Causa raiz:** células de tabela (`<th>`/`<td>`) usam `vertical-align: middle` por padrão do navegador quando não especificado. Como "Forma de Pagamento" tem um texto mais longo que às vezes quebra em 2 linhas, a linha da tabela cresce pra caber esse conteúdo — e o rótulo (texto curto, 1 linha) fica centralizado no meio dessa linha mais alta, sobrando espaço vazio acima/abaixo dele, dando a impressão de "célula muito alta" mesmo a altura sendo dirigida pelo próprio conteúdo.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS (`.presta-doc-dados-tabela th/td`, `.presta-doc-checkbox-tabela th/td`).
+
+### O que mudou
+- `vertical-align: top` adicionado (antes ausente, caindo no padrão `middle` do navegador) — rótulo e valor agora colam no topo da célula, eliminando o espaço vazio que sobrava quando uma linha ficava mais alta que as outras por causa de quebra de texto.
+- Padding vertical reduzido de 8px pra 6px (compacto, igual ao que já era antes da etapa de "identidade tipográfica"), `line-height` de 1,4 pra 1,35 — mesma fonte, só menos espaçamento morto.
+- Nenhuma mudança de fonte, conteúdo, dado ou regra — só as 2 propriedades de espaçamento/alinhamento acima, nas mesmas 2 tabelas que já compartilhavam esse CSS desde a etapa de padronização de fonte.
+- Prazo de Execução/Orçamento Válido Por continuam na mesma `<tr>` (`linhaDupla()`, inalterada) — não mexido.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `corpo()` executada com Forma de Pagamento de texto longo (quebra em 2 linhas) → estrutura/dados idênticos, só o CSS de alinhamento/padding mudou.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um, e a quebra real de linha só é visível renderizando). Preview reenviado pra validação.
