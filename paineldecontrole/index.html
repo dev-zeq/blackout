@@ -692,6 +692,14 @@
         .presta-doc-dados-tabela td { border-bottom: 1px solid var(--pd-border); border-right: 1px solid var(--pd-border); color: var(--pd-text); }
         .presta-doc-dados-tabela td:last-child { border-right: none; }
         .presta-doc-dados-tabela tr:last-child th, .presta-doc-dados-tabela tr:last-child td { border-bottom: none; }
+        /* --divisoria (2026-09-13) — devolve a linha divisória quando esta
+           <table> (só 1 linha) é seguida de OUTRA <table> da mesma seção
+           (ver "Informações Gerais": Forma de Pagamento e Prazo/Validade
+           viraram 2 tabelas independentes pra não compartilhar largura de
+           coluna entre si — ver comentário no HTML). Mais específica que a
+           regra de cima, então vence. */
+        .presta-doc-dados-tabela.presta-doc-dados-tabela--divisoria tr:last-child th,
+        .presta-doc-dados-tabela.presta-doc-dados-tabela--divisoria tr:last-child td { border-bottom: 1px solid var(--pd-border); }
         .presta-doc-descricao { font-size: 12.5px; line-height: 1.5; color: var(--pd-text); white-space: pre-line; padding: 10px 14px; border-bottom: 1.5px solid var(--pd-ink); }
         .presta-doc-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
         .presta-doc-tabela th { text-align: left; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--pd-ink); background: var(--pd-label-bg); padding: 6px 10px; border: 1px solid var(--pd-border); }
@@ -10022,18 +10030,7 @@
                     // uma <tr> label|valor pro novo layout em tabela ("Cliente"/
                     // "Endereço", "Informações Gerais" etc.), no lugar do antigo
                     // par label/valor empilhado num grid.
-                    // colspanValor (2026-09-13, ajuste de espaço): quando esta
-                    // linha divide a tabela com linhaDupla() (Prazo de Execução +
-                    // Orçamento Válido Por, ver abaixo), o valor de "Forma de
-                    // Pagamento" — texto mais longo — estava "travando" a
-                    // largura da coluna 2 pra todas as linhas da tabela
-                    // (comportamento padrão de <table>: colunas compartilham
-                    // largura entre linhas), empurrando "Orçamento Válido Por"
-                    // pra direita. Com colspan, o valor de Forma de Pagamento
-                    // passa a ocupar as mesmas 3 colunas que "Prazo + Válido
-                    // Por" ocupam juntas, sem forçar nenhuma delas a ficar larga
-                    // — só reorganização visual, nenhum dado/regra muda.
-                    const linha = (label, valor, colspanValor) => valor ? `<tr><th>${escapeHtml(label)}</th><td${colspanValor ? ` colspan="${colspanValor}"` : ''}>${escapeHtml(String(valor))}</td></tr>` : '';
+                    const linha = (label, valor) => valor ? `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(String(valor))}</td></tr>` : '';
                     // linhaDupla() (2026-09-13, ajuste: Prazo de Execução e
                     // Orçamento Válido Por lado a lado, mesma linha) — mesma
                     // classe/CSS de linha() (.presta-doc-dados-tabela th já
@@ -10070,6 +10067,13 @@
                     } else if (e.desc_servicos) {
                         servicosHtml = `<div class="presta-doc-descricao">${escapeHtml(e.desc_servicos)}</div>`;
                     }
+
+                    // 2026-09-13 (ajuste de espaço): só pra decidir se a tabela de
+                    // Forma de Pagamento precisa da linha divisória (--divisoria)
+                    // — sem ela, "Forma de Pagamento" ficaria sem borda embaixo
+                    // quando não há Prazo/Validade preenchidos (tabela seguinte
+                    // vazia), igual já acontecia antes desta mudança.
+                    const temPrazoOuValidade = !!(e.dias_execucao || e.validade_orcamento);
 
                     // Frases de Material/Nota Fiscal (2026-09-13, ajuste pedido pelo
                     // usuário: em vez de checkbox SIM/NÃO, mostrar a resposta já
@@ -10132,8 +10136,26 @@
                         ${e.especificar_material === 'Sim' && e.lista_material ? `<div class="presta-doc-descricao">${escapeHtml(e.lista_material)}</div>` : ''}
 
                         <div class="presta-doc-secao-titulo">Informações Gerais</div>
+                        <!-- 2026-09-13 (ajuste de espaço): Forma de Pagamento e a
+                             linha dupla (Prazo + Validade) viraram 2 <table>
+                             independentes — colunas de uma <table> compartilham
+                             largura entre TODAS as suas linhas; com as 2 num
+                             tabela só, o texto mais longo de Forma de Pagamento
+                             travava a largura das colunas de Prazo/Validade
+                             (mesmo usando colspan), impedindo o valor de Forma
+                             de Pagamento de esticar até a borda direita. Com
+                             tabelas separadas, cada uma calcula suas colunas só
+                             a partir do próprio conteúdo — Forma de Pagamento
+                             ocupa 100% da largura disponível, e Prazo/Validade
+                             ficam compactos, independente um do outro. A classe
+                             "--divisoria" só devolve a linha divisória entre as
+                             2 tabelas (que sumiria por padrão, já que cada uma
+                             passou a ter só 1 linha, tratada como "última" pela
+                             regra de bordas). Nenhum dado/campo/regra mudou. -->
+                        <table class="presta-doc-dados-tabela${temPrazoOuValidade ? ' presta-doc-dados-tabela--divisoria' : ''}"><tbody>
+                            ${linha('Forma de Pagamento', e.forma_pagamento)}
+                        </tbody></table>
                         <table class="presta-doc-dados-tabela"><tbody>
-                            ${linha('Forma de Pagamento', e.forma_pagamento, 3)}
                             ${linhaDupla('Prazo de Execução', e.dias_execucao ? `${e.dias_execucao} dias` : '', 'Orçamento válido por', e.validade_orcamento)}
                         </tbody></table>
 

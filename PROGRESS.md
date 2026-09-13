@@ -3727,3 +3727,30 @@ Pedido: "Orçamento Válido Por" estava sendo empurrado pra direita, sobrando po
 3. Confirmado que a tabela de Cliente/Endereço (outra chamada de `linha()`, sem passar `colspanValor`) continua sem nenhum `colspan` — retrocompatibilidade OK.
 
 **Falta:** teste ao vivo no navegador (o efeito de distribuição de colunas de tabela só é visível renderizando de verdade; este ambiente não tem navegador).
+
+
+## Orçamento de Prestação de Serviço — Forma de Pagamento até a borda direita (2026-09-13, ajuste)
+
+Pergunta do usuário: por que o campo de resposta de Forma de Pagamento não ia até o final da margem/borda lateral, impedindo aproveitar a largura total. Resposta + correção definitiva (a tentativa anterior com `colspan` não resolveu de forma garantida).
+
+**Causa raiz (explicada ao usuário):** em HTML, as colunas de uma `<table>` compartilham largura entre TODAS as suas linhas. Como "Forma de Pagamento" e a linha "Prazo de Execução + Orçamento Válido Por" estavam na MESMA tabela, e a linha de Prazo/Validade tem uma coluna extra (`<th>Orçamento válido por</th>`) com `width:1%` (rótulo compacto), essa coluna "travava" o cálculo de larguras pra tabela inteira de um jeito que não garantia o valor de Forma de Pagamento esticar até a borda direita — mesmo usando `colspan` (tentativa da etapa anterior), o resultado dependia de como cada navegador resolve a ambiguidade de colunas compartilhadas entre linhas de formatos diferentes.
+
+**Correção definitiva:** Forma de Pagamento e a linha de Prazo/Validade viraram **2 `<table>` independentes** — cada uma calcula suas próprias colunas só a partir do seu próprio conteúdo, sem nenhuma influência cruzada. Isso garante, de forma determinística (não depende de heurística de nenhum navegador), que:
+- Forma de Pagamento ocupa 100% da largura disponível, até a borda direita;
+- Prazo de Execução/Orçamento Válido Por continuam compactos e lado a lado, sem depender do tamanho do texto de Forma de Pagamento.
+
+**Arquivo:** só `paineldecontrole/index.html`, dentro de `TIPOS.PRESTACAO_SERVICO.corpo()` + 1 regra CSS nova (`--divisoria`).
+
+### Detalhes
+- Revertida a tentativa de `colspan` da etapa anterior (`linha()` voltou à assinatura original de 2 parâmetros).
+- Nova constante `temPrazoOuValidade` só decide se a linha divisória entre as 2 tabelas deve aparecer (evita uma linha "sobrando" no caso raro de não haver nem Prazo nem Validade preenchidos — mesmo comportamento de antes, testado).
+- Nova classe CSS `.presta-doc-dados-tabela--divisoria`: como cada tabela agora só tem 1 linha (tratada como "última" pela regra que remove a borda debaixo da última linha), essa classe devolve a linha divisória só na tabela de Forma de Pagamento, só quando a tabela de Prazo/Validade vai de fato aparecer depois dela.
+- Nenhum dado, campo, cálculo ou regra alterado — só a divisão em 2 tabelas e a regra de borda.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. **Caso normal** (Forma de Pagamento + Prazo + Validade preenchidos) → 2 `<table>` geradas corretamente, com a linha divisória entre elas.
+3. **Sem Forma de Pagamento** → 1ª tabela vazia (invisível), 2ª tabela (Prazo/Validade) intacta.
+4. **Sem Prazo nem Validade** (só Forma de Pagamento) → 1ª tabela SEM a classe `--divisoria` (sem linha sobrando), 2ª tabela vazia.
+
+**Falta:** teste ao vivo no navegador — o efeito de Forma de Pagamento esticar até a borda só é visível renderizando de verdade; este ambiente não tem navegador. Mas a solução (tabelas independentes) é uma garantia estrutural de HTML/CSS, não uma heurística sujeita a variação entre navegadores.
