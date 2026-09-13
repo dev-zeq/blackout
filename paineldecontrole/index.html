@@ -735,6 +735,12 @@
         @media print {
             @page presta-servico { size: A4 portrait; margin: 10mm; }
             #printArea .presta-servico-print { page: presta-servico; margin: -24px; }
+            /* Sem isso, o navegador some com background-color/fundos coloridos
+               na exportação pra PDF (window.print()) por padrão de economia de
+               tinta — a tela e a imagem (html2canvas) não são afetadas, só o
+               PDF. Mesmo fix já usado em .cv2-doc (currículo) acima; aqui só
+               pro Orçamento de Prestação de Serviço, sem tocar em mais nada. */
+            #printArea .presta-doc, #printArea .presta-doc * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
 
         /* Orçamento de Impressões — seletor de tipo (tema escuro do painel) e

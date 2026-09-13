@@ -3754,3 +3754,27 @@ Pergunta do usuário: por que o campo de resposta de Forma de Pagamento não ia 
 4. **Sem Prazo nem Validade** (só Forma de Pagamento) → 1ª tabela SEM a classe `--divisoria` (sem linha sobrando), 2ª tabela vazia.
 
 **Falta:** teste ao vivo no navegador — o efeito de Forma de Pagamento esticar até a borda só é visível renderizando de verdade; este ambiente não tem navegador. Mas a solução (tabelas independentes) é uma garantia estrutural de HTML/CSS, não uma heurística sujeita a variação entre navegadores.
+
+
+## Orçamento de Prestação de Serviço — cores/fundos sumindo na exportação para PDF (2026-09-13, correção)
+
+Pedido: corrigir só a exportação pra PDF — na tela e na imagem (JPG/PNG via html2canvas) o orçamento aparece com a paleta cinza/fundos/bordas corretos, mas o PDF saía quase todo branco, perdendo `background-color` de títulos, faixas de seção e células de rótulo. Layout, dados, fórmulas e paleta não podiam ser tocados — só a exportação.
+
+**Investigação (antes de alterar):**
+1. O PDF deste documento não usa nenhuma lib de PDF (jsPDF etc.) nem passa por Canvas — é gerado com `window.print()` do navegador (`imprimirDeclFormatada()`, chamada de "Imprimir" na tela do orçamento formatado), o usuário escolhe "Salvar como PDF" no diálogo de impressão do próprio navegador.
+2. A imagem (JPG) é um caminho totalmente separado, via `html2canvas` — por isso ela não é afetada pelo mesmo bug: `html2canvas` fotografa o DOM/CSS calculado, ignora as regras `@media print`.
+3. Causa raiz confirmada: navegadores, por padrão, **não imprimem `background-color`/`background`** (economia de tinta), a menos que o CSS marque explicitamente `-webkit-print-color-adjust: exact` / `print-color-adjust: exact` no elemento. O currículo (`.cv2-doc`) já tinha essa regra dentro do seu próprio `@media print` (linha ~570) — por isso o currículo nunca teve esse problema. O Orçamento de Prestação de Serviço (`.presta-doc`) nunca teve essa regra — o `@media print` dele só define `@page`/margem (linhas 735-738), nada sobre cor.
+4. Bordas (`border`) não são afetadas por essa política do navegador — só fundos (`background-color`) e cor de texto (`color`, quando o texto tiver baixo contraste automático) são descartados; por isso a moldura/divisórias sobreviviam parcialmente enquanto os fundos coloridos (títulos, faixas de seção, células de rótulo) sumiam.
+
+**Correção aplicada:** 1 regra CSS nova, dentro do `@media print` que já existia só pra este tipo de documento (`paineldecontrole/index.html`, ~linha 740):
+```css
+#printArea .presta-doc, #printArea .presta-doc * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+```
+Escopada por `#printArea .presta-doc` — só afeta a impressão/PDF deste documento específico, igual ao padrão já usado em `.cv2-doc`. Nenhuma outra classe, seletor, dado, cálculo ou layout tocado.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida (a mudança é só CSS, JS intocado).
+2. `git diff` conferido: 1 arquivo, 6 linhas adicionadas, nenhuma removida — só o bloco CSS acima.
+3. Confirmado por grep que `.presta-doc` só é usado dentro de `TIPOS.PRESTACAO_SERVICO.corpo()` (nenhum outro tipo de documento usa essa classe) — a correção não pode vazar pra Orçamento de Impressões, Currículos, Contratos, Declarações, Procurações ou Recibos.
+
+**Falta:** teste ao vivo no navegador (Tela → Imagem → PDF lado a lado) — este ambiente não tem navegador/impressora real pra confirmar visualmente. A causa raiz e a correção são bem documentadas (mesmo padrão já comprovado funcionando em `.cv2-doc`), mas o resultado final no PDF gerado pelo navegador do usuário ainda precisa de confirmação visual real.
