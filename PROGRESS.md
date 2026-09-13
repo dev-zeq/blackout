@@ -3638,3 +3638,29 @@ Pedido: (1) aumentar e padronizar os 4 títulos principais (Orçamento de Presta
 3. `corpo()` executada com dados de exemplo → HTML gerado idêntico em estrutura/dados às etapas anteriores (só o CSS mudou).
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
+
+
+## Orçamento de Prestação de Serviço — paleta monocromática (2026-09-13, ajuste)
+
+Pedido: paleta 100% em tons de cinza — títulos em cinza mais escuro (chamam mais atenção), campos de informação em cinza bem mais claro, nada de verde ou qualquer outra cor. Puramente visual.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS (variáveis `--pd-*` e os seletores de título/rótulo) + remoção do uso do recurso de cor extraída da logo dentro de `TIPOS.PRESTACAO_SERVICO.corpo()`. Nenhuma regra/fórmula/dado tocado.
+
+### Decisão tomada (avisada ao usuário antes de implementar)
+- O documento já tinha um recurso existente (`extrairCorAccentLogo()`, de uma etapa bem anterior) que extraía uma cor de destaque da logo do cliente e sobrescrevia `--pd-accent` — isso quebraria a exigência de "nada de outra cor" se o cliente tivesse uma logo colorida. Removida só a **aplicação** desse recurso neste documento (parou de chamar `extrairCorAccentLogo()` e de gerar o `style="--pd-accent:...` inline); a função em si (`extrairCorAccentLogo`) não foi alterada — só deixou de ser usada aqui, garantindo que o PDF fique sempre em cinza.
+
+### Nova paleta (variáveis em `.presta-doc`)
+- `--pd-ink` (cinza bem escuro, moldura e divisórias fortes): `#1a1a1a`.
+- `--pd-titulo-bg` / `--pd-titulo-texto` (fundo escuro + texto claro nos 4 títulos principais — geral e as 3 faixas de seção): `#3a3a3a` / `#f5f5f5`.
+- `--pd-label-bg` (fundo bem claro das células de rótulo — Cliente/Endereço/Material/Nota Fiscal/Forma de Pagamento/Prazo/Validade, e o cabeçalho da tabela de itens): `#f2f2f2`.
+- `--pd-border` (linhas finas internas, mais claras que antes pra dar uma hierarquia elegante): `#d6d6d6`.
+- `--pd-text`/`--pd-dim` ajustados pro mesmo espírito neutro: `#262626`/`#6e6e6e`.
+- Removida a variável `--pd-header-bg` (duplicada com o mesmo valor de `--pd-label-bg` após a renomeação) — todos os usos migrados pra `--pd-label-bg`.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Confirmado por grep que não sobra nenhuma referência funcional a `--pd-accent`/`corAccent`/`estiloAccent` (só comentários explicando a mudança).
+3. `corpo()` executada com `quer_logo: 'Sim'` e uma logo qualquer → gerado sem chamar extração de cor e sem nenhum `style="--pd-accent...` no HTML — documento sempre monocromático, mesmo com logo colorida.
+4. Estrutura/dados do HTML gerado idênticos às etapas anteriores — só as cores mudaram.
+
+**Falta:** teste ao vivo no navegador (este ambiente não tem um). Preview reenviado pra validação.
