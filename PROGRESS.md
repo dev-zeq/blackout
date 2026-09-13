@@ -3487,3 +3487,34 @@ Conferindo a tabela de preços unitários por folha do pedido, cada valor de cad
 7. **`git diff`**: só a tabela de preços (2 linhas de dados) e o texto/flag das opções do seletor — nenhuma função de cálculo tocada.
 
 **Falta:** teste ao vivo logado no painel real com navegador — selecionar 12×18 Couchê Fino/Cartão na interface e conferir visualmente que os campos não aparecem mais bloqueados; este ambiente não tem navegador.
+
+
+## Orçamento de Prestação de Serviço — reformulação visual do PDF, formato empresarial em tabela (2026-09-13)
+
+Pedido: reformular EXCLUSIVAMENTE o layout do PDF de "Orçamento de Prestação de Serviços" (módulo `TIPOS.PRESTACAO_SERVICO`), usando como referência um PDF real (anexado pelo usuário) — um orçamento empresarial tradicional em tabela, preto/branco/cinza, com cabeçalho logo+dados da empresa, faixas de título por seção, linhas de tabela pra Cliente/Endereço, checkboxes SIM/NÃO pra Material/Nota Fiscal, e rodapé com assinatura. Regra absoluta do pedido: não alterar nenhuma fórmula/cálculo/regra/dado — só a apresentação visual dos mesmos dados que já eram gerados.
+
+**Arquivo:** só `paineldecontrole/index.html`, só o CSS `.presta-doc-*` e a marcação HTML retornada por `TIPOS.PRESTACAO_SERVICO.corpo()` (o `return` no final da função). **Nenhuma linha da lógica de derivação de dados foi tocada** — `nomeCabecalho`, `docPrestadorLabel`/`docPrestador`, `enderecoPrestador`, `dataDoc`, `temLogo`/`corAccent`/`estiloAccent`, `clienteDocLabel`/`clienteDoc`/`clienteTelefone`/`clienteEnderecoLabel`/`clienteEndereco`, `servicosHtml` (itemizado vs. descrição livre), `materialTexto`, e todos os campos lidos direto de `e.*` (valor_total, material_incluso, nota_fiscal, forma_pagamento, dias_execucao, validade_orcamento, especificar_material/lista_material, tem_observacao/observacao) continuam exatamente como estavam, calculados do mesmo jeito, com os mesmos nomes.
+
+### O que mudou (só visual)
+- **CSS `.presta-doc`**: abandonado o cartão arredondado com sombra (`border-radius:14px; box-shadow`) — agora é uma caixa com borda reta preta (`border: 1.5px solid`), sem arredondamento, mais próxima de um documento formal impresso.
+- **Cabeçalho**: logo numa célula própria à esquerda com borda separadora; nome da empresa + endereço + linha com CNPJ/CPF e telefone lado a lado à direita — igual à estrutura do PDF de referência.
+- **Título**: faixa cinza (`--pd-header-bg`) centralizada com "Orçamento de Prestação de Serviços" — no lugar do título solto sem fundo.
+- **Dados do Cliente**: virou uma tabela linha-a-linha (`<table class="presta-doc-dados-tabela">`, uma `<tr>` por campo: Cliente/Documento/Telefone/Endereço) — no lugar do grid 2 colunas dentro de um cartão.
+- **Serviços**: a mesma `servicosHtml` de sempre (tabela itemizada OU descrição livre, lógica 100% inalterada) agora aparece direto sob uma faixa de seção "Descrição dos Serviços a Serem Realizados", sem o cartão arredondado ao redor; a tabela itemizada (`.presta-doc-tabela`) ganhou bordas em todas as células (visual de tabela formal) no lugar do cabeçalho colorido antigo.
+- **Valor**: nova faixa "Do Valor da Mão de Obra" com o mesmo `fmt(e.valor_total)` de sempre, num bloco com borda em vez do cartão com linha superior colorida.
+- **Material/Nota Fiscal**: virou checkboxes `[X] SIM [ ] NÃO`/`[ ] SIM [X] NÃO`, desenhados a partir EXATAMENTE dos mesmos booleanos que já decidiam o texto antes (`e.material_incluso === 'Sim'`, `e.nota_fiscal === 'Sim'`) — nova função `checkbox(marcado)`, só formatação, não recalcula nada. O texto descritivo antigo (`materialTexto`, ex. "Incluso no orçamento") foi mantido como linha auxiliar logo abaixo dos checkboxes, pra não perder informação que já existia.
+- **Informações Gerais**: também virou tabela linha-a-linha (Forma de Pagamento/Prazo de Execução/Validade), igual ao padrão do PDF de referência.
+- **Observações**: mantida, agora com faixa de seção própria em vez de cartão.
+- **Rodapé**: data + linha de assinatura + nome/telefone do responsável + nota discreta "Orçamento gerado digitalmente pelo sistema Blackout" (mantida, só reposicionada).
+- Removidas do CSS as classes que ficaram sem uso após a reformulação (`.presta-doc-content`, `.presta-doc-card`, `.presta-doc-card-titulo`, `.presta-doc-grid`, `.presta-doc-campo-label`, `.presta-doc-campo-valor`, `.presta-doc-total-linha/label/valor`) — conferido via grep que nada mais no arquivo referenciava essas classes.
+- Nova função de formatação `linha(label, valor)` (substitui `campo()` nas tabelas Cliente/Informações Gerais — mesma assinatura, só monta uma `<tr>` em vez de um par label/valor empilhado) e `checkbox(marcado)` — ambas só formatação, sem nenhum dado novo.
+- `corAccent`/`estiloAccent` (extração de cor da logo, já existente e inalterada) continua funcionando: sobrescreve `--pd-accent`, usado agora na cor do título da faixa central.
+
+### Testes (Node, fora do navegador — `corpo()` extraída do arquivo pós-mudança, com `extrairCorAccentLogo` mockada pra não depender de `<canvas>`)
+1. `node --check` no `<script>` inteiro → sintaxe válida.
+2. **Cenário PJ + itens + material/lista/observação** (dados parecidos com o PDF de referência): nome da empresa, CNPJ mascarado do prestador e do cliente, telefone, endereço, tabela de itens com os valores certos, valor total formatado, checkboxes de Material e Nota Fiscal marcados em SIM, lista de material, observação, forma de pagamento/prazo/validade, assinatura e rodapé — todos presentes e corretos no HTML gerado.
+3. **Cenário PF autônomo + descrição livre + sem endereço/telefone/observação**: nome do responsável (sem empresa), CPF sem máscara (regra inalterada — só CNPJ é mascarado), "Referência do local" no lugar de Endereço (regra `b.tem_endereco` inalterada), descrição livre com quebra de linha preservada, checkboxes de Material/Nota Fiscal em NÃO, seção Telefone e Observações corretamente OMITIDAS (mesma condicional de antes).
+4. **`git diff` revisado**: todas as linhas removidas são CSS ou HTML de apresentação — nenhuma linha de cálculo/derivação de dado foi tocada (conferido grep-eando por `const`/ternários removidos: só o antigo helper `campo()` e uma linha de template, ambos puramente de formatação).
+5. Conferido por `grep` que nenhuma classe CSS removida (`.presta-doc-card`, `.presta-doc-grid`, etc.) ainda é referenciada em algum outro lugar do arquivo.
+
+**Falta:** teste ao vivo logado no painel real com navegador/impressão (gerar o PDF de verdade e comparar visualmente com o modelo de referência); este ambiente não tem navegador. Preview enviado ao usuário como Artifact antes de publicar, aguardando confirmação visual.
