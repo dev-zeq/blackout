@@ -708,6 +708,19 @@
         @media (max-width: 480px) {
             .orc-cat-grid { grid-template-columns: 1fr; }
         }
+        /* Abas A4 / A3 / 12×18 (2026-09-13) — só troca a visibilidade do painel,
+           não recarrega nada; a lógica/cálculo de cada aba fica isolada em seu
+           próprio painel e funções JS próprias (ver orcTrocarAba, ORC_NOVOS_FORMATOS). */
+        .orc-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 14px; }
+        .orc-tab-btn { padding: 12px 6px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; }
+        .orc-tab-btn.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+        .orc-tab-panel { display: none; }
+        .orc-tab-panel.active { display: block; }
+        .orc-papel-block { border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+        .orc-papel-titulo { font-size: 13.5px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+        .orc-novo-preco { font-size: 12px; color: var(--text-dim); text-align: center; }
+        .orc-novo-total { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--text); text-align: right; }
+        .orc-novo-aviso { margin-top: 10px; font-size: 12px; color: var(--text-faint); font-style: italic; }
         .orc-card-vazio { padding: 32px 20px; text-align: center; color: var(--text-faint); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: 16px; margin-top: 16px; font-size: 13px; }
         .orc-doc { position: relative; background: #fff; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-top: 16px; padding: 28px 26px; }
         .orc-doc-header { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; border-bottom: 3px solid #16a34a; }
@@ -2906,6 +2919,13 @@
             <button class="back-btn" onclick="goHome()">← Menu</button>
             <div class="menu-title">🖨️ Orçamento de Impressões</div>
 
+            <div class="orc-tabs">
+                <button type="button" class="orc-tab-btn selected" id="orc_tab_btn_A4" onclick="orcTrocarAba('A4')">A4</button>
+                <button type="button" class="orc-tab-btn" id="orc_tab_btn_A3" onclick="orcTrocarAba('A3')">A3</button>
+                <button type="button" class="orc-tab-btn" id="orc_tab_btn_12x18" onclick="orcTrocarAba('12x18')">12×18</button>
+            </div>
+
+            <div class="orc-tab-panel active" id="orc_tab_A4">
             <div class="table-container" style="padding:20px;">
                 <div class="form-group">
                     <label>Categorias de impressão</label>
@@ -2969,6 +2989,18 @@
             <div class="actions" style="margin-top:16px;">
                 <button class="btn-primary" id="orc_btn_exportar" onclick="exportarOrcamento()" disabled>📤 Exportar Orçamento</button>
                 <button class="btn-secondary" id="orc_btn_whatsapp" onclick="enviarOrcamentoWhatsapp()" disabled>➡️ Enviar pelo WhatsApp</button>
+            </div>
+            </div>
+
+            <!-- A3 e 12×18 (2026-09-13) — painéis isolados da A4, sem card/exportação
+                 (não pedidos); conteúdo interno de cada bloco de papel é montado por
+                 orcRenderNovosFormatos() a partir de ORC_NOVOS_FORMATOS. -->
+            <div class="orc-tab-panel" id="orc_tab_A3">
+                <div class="table-container" style="padding:20px;" id="orc_tab_A3_lista"></div>
+            </div>
+
+            <div class="orc-tab-panel" id="orc_tab_12x18">
+                <div class="table-container" style="padding:20px;" id="orc_tab_12x18_lista"></div>
             </div>
         </div>
 
@@ -12708,6 +12740,116 @@
             }
         }
         window.enviarOrcamentoWhatsapp = enviarOrcamentoWhatsapp;
+
+        // ===== Orçamento de Impressões — abas A4 / A3 / 12×18 (2026-09-13) =====
+        // Extensão isolada: NADA acima deste bloco (ORC_PRECOS, orcPrecoImpressao,
+        // orcPrecoEncadernacao, orcValidar, orcCalcularCategorias, atualizarOrcamento,
+        // orcUltimoResultado, montarOrcStoryHtml, orcGerarCanvas, exportarOrcamento,
+        // enviarOrcamentoWhatsapp) foi tocado. A A4 continua com sua própria tabela de
+        // preços, seu próprio card/exportação/WhatsApp, sem nenhuma dependência deste
+        // bloco. Este bloco só acrescenta as abas A3 e 12×18, com config e funções
+        // próprias — reaproveita apenas o que já era genérico e não foi alterado:
+        // ORC_CATEGORIAS (Escritas/Imagens/Chapadas), orcMultiplicador() e fmt().
+
+        // Faixas de quantidade (mesma tabela pedida pra A3 Sulfite e A3 Couchê):
+        // 1–5 ×1,00 · 6–9 ×0,90 · 10–19 ×0,80 · 20–39 ×0,75 · 40+ ×0,70.
+        // Usa orcMultiplicador(tiers, paginas) — que escolhe o 1º tier cuja
+        // "paginas < limite" — por isso o limite de cada faixa é o começo da
+        // faixa seguinte (6, 10, 20, 40, Infinity), sem sobreposição.
+        const ORC_NOVO_FAIXAS_PADRAO = [[6, 1.00], [10, 0.90], [20, 0.80], [40, 0.75], [Infinity, 0.70]];
+
+        // formato → lista de papéis, cada um com seu próprio valor base (item 10 do
+        // pedido) e seus próprios multiplicadores de categoria. 12×18 fica com
+        // `categorias`/`faixas` = null de propósito: estrutura pronta, nenhum valor
+        // inventado — só é liberado pra cálculo quando esses valores forem definidos.
+        const ORC_NOVOS_FORMATOS = {
+            A3: [
+                { papel: 'Sulfite 75g', id: 'A3_Sulfite75g', categorias: { Escritas: 0.50, Imagens: 0.80, Chapadas: 1.00 }, faixas: ORC_NOVO_FAIXAS_PADRAO },
+                { papel: 'Couchê 200g', id: 'A3_Couche200g', categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 }, faixas: ORC_NOVO_FAIXAS_PADRAO },
+            ],
+            '12x18': [
+                { papel: 'Couchê Fino', id: '12x18_CoucheFino', categorias: { Escritas: null, Imagens: null, Chapadas: null }, faixas: null },
+                { papel: 'Couchê Cartão', id: '12x18_CoucheCartao', categorias: { Escritas: null, Imagens: null, Chapadas: null }, faixas: null },
+            ],
+        };
+        const ORC_NOVO_CAT_LABEL = { Escritas: '✍️ Escrita', Imagens: '🖼️ Imagem', Chapadas: '🎨 Chapada' };
+        const ORC_NOVO_FORMATO_LABEL = { A3: 'A3', '12x18': '12×18' };
+
+        function orcNovoBlocoHtml(formato, entry) {
+            const configurado = !!entry.faixas;
+            const categoriasHtml = ORC_CATEGORIAS.map(cat => `
+                <div class="orc-cat-box">
+                    <div class="orc-cat-titulo">${ORC_NOVO_CAT_LABEL[cat]}</div>
+                    <input type="number" id="orc_novo_qtd_${entry.id}_${cat}" min="0" step="1" inputmode="numeric" placeholder="Qtd. de folhas" ${configurado ? '' : 'disabled'} oninput="atualizarOrcamentoNovo('${formato}','${entry.id}')">
+                    <div class="orc-novo-preco" id="orc_novo_preco_${entry.id}_${cat}">—</div>
+                </div>`).join('');
+            return `
+                <div class="orc-papel-block">
+                    <div class="orc-papel-titulo">${ORC_NOVO_FORMATO_LABEL[formato]} — ${escapeHtml(entry.papel)}</div>
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label>Valor base (R$)</label>
+                        <input type="number" id="orc_novo_base_${entry.id}" min="0" step="0.01" inputmode="decimal" placeholder="${configurado ? 'Ex: 10,00' : 'Ainda não configurado'}" ${configurado ? '' : 'disabled'} oninput="atualizarOrcamentoNovo('${formato}','${entry.id}')">
+                    </div>
+                    <div class="orc-cat-grid">${categoriasHtml}</div>
+                    ${configurado
+                        ? `<div class="orc-novo-total" id="orc_novo_total_${entry.id}">Total: ${fmt(0)}</div>`
+                        : `<div class="orc-novo-aviso">Valores ainda não definidos para este papel — estrutura pronta pra receber a precificação quando for informada.</div>`}
+                </div>`;
+        }
+
+        function orcRenderNovosFormatos() {
+            for (const formato of Object.keys(ORC_NOVOS_FORMATOS)) {
+                const container = document.getElementById(`orc_tab_${formato}_lista`);
+                if (!container) continue;
+                container.innerHTML = ORC_NOVOS_FORMATOS[formato].map(entry => orcNovoBlocoHtml(formato, entry)).join('');
+            }
+        }
+        orcRenderNovosFormatos();
+
+        // Valor base × multiplicador da categoria × multiplicador da faixa de
+        // quantidade — nunca vira um "preço final gravado"; o resultado é
+        // recalculado do zero a cada alteração, então mudar o valor base
+        // recalcula tudo automaticamente (item 11 do pedido).
+        function orcCalcularNovo(formato, entryId) {
+            const entry = (ORC_NOVOS_FORMATOS[formato] || []).find(e => e.id === entryId);
+            if (!entry || !entry.faixas) return; // 12×18: sem valores definidos, nada a calcular ainda
+
+            const baseStr = document.getElementById(`orc_novo_base_${entry.id}`).value;
+            const base = baseStr === '' ? 0 : Number(baseStr);
+            let total = 0;
+            for (const cat of ORC_CATEGORIAS) {
+                const qtdStr = document.getElementById(`orc_novo_qtd_${entry.id}_${cat}`).value;
+                const qtd = qtdStr === '' ? 0 : Number(qtdStr);
+                const precoEl = document.getElementById(`orc_novo_preco_${entry.id}_${cat}`);
+                if (qtd > 0 && base > 0) {
+                    const preco = base * entry.categorias[cat] * orcMultiplicador(entry.faixas, qtd);
+                    precoEl.textContent = fmt(preco);
+                    total += preco;
+                } else {
+                    precoEl.textContent = '—';
+                }
+            }
+            const totalEl = document.getElementById(`orc_novo_total_${entry.id}`);
+            if (totalEl) totalEl.textContent = `Total: ${fmt(total)}`;
+        }
+        function atualizarOrcamentoNovo(formato, entryId) {
+            orcCalcularNovo(formato, entryId);
+        }
+        window.atualizarOrcamentoNovo = atualizarOrcamentoNovo;
+
+        // Troca de aba 100% visual (classe CSS), sem recarregar nada e sem
+        // limpar os campos das outras abas — só controla o que fica visível.
+        // A4 continua selecionada por padrão (classe "active"/"selected" já vem
+        // assim no HTML).
+        function orcTrocarAba(aba) {
+            for (const a of ['A4', 'A3', '12x18']) {
+                const painel = document.getElementById(`orc_tab_${a}`);
+                const btn = document.getElementById(`orc_tab_btn_${a}`);
+                if (painel) painel.classList.toggle('active', a === aba);
+                if (btn) btn.classList.toggle('selected', a === aba);
+            }
+        }
+        window.orcTrocarAba = orcTrocarAba;
 
         // ============ Simulador de Valores (2026-08-31) ============
         // Reproduz 1:1 o cálculo de parcelamento da aba "PAINEL DE CONTROLE" da

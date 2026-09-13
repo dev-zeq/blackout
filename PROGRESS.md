@@ -3311,3 +3311,34 @@ Pedido: o "Tipo de papel" ainda era 1 campo único compartilhado pelas 3 categor
 - Arquivo inteiro passa em `node --check` (sintaxe válida).
 
 **Publicado** (`main` `b04031e`) a pedido do usuário. **Falta:** só o teste ao vivo logado no painel real com navegador (selecionar papéis diferentes nas 3 caixas e conferir visualmente o card exportado); este ambiente não tem navegador.
+
+
+## Orçamento de Impressões — abas A4 / A3 / 12×18, com precificação isolada por formato (2026-09-13, 4ª etapa)
+
+Pedido: adicionar abas de formato (A4, A3, 12×18) na tela de Orçamento de Impressões, sem alterar a precificação da A4 de nenhuma forma. Cada aba nova (A3, 12×18) tem sua própria estrutura de papéis/categorias/valor base/faixas de quantidade, isolada da lógica A4.
+
+**Arquivo:** só `paineldecontrole/index.html`, só dentro do módulo `Orçamento de Impressões`. **Diff 100% aditivo** (`git diff` confirma zero linhas removidas) — nenhuma linha de CSS/HTML/JS da A4 foi tocada.
+
+### O que já existia (preservado, intocado)
+- `ORC_PRECOS`, `orcPrecoImpressao`, `orcPrecoEncadernacao`, `orcMultiplicador`, `orcValidar`, `orcCalcularCategorias`, `atualizarOrcamento`, `orcUltimoResultado`, `montarOrcStoryHtml`, `orcGerarCanvas`, `exportarOrcamento`, `enviarOrcamentoWhatsapp`, `ORC_CATEGORIAS`, `fmt`, `escapeHtml` — nenhuma dessas funções/constantes foi modificada. `orcMultiplicador` e `ORC_CATEGORIAS` foram só **reaproveitadas** (lidas, não alteradas) pela lógica nova.
+- Todo o HTML da A4 (grid de 3 categorias com papel próprio, encadernação, card final, botões Exportar/WhatsApp) ficou intacto, só envolvido por uma nova `<div class="orc-tab-panel active" id="orc_tab_A4">` sem mudar nenhum atributo/id interno.
+
+### O que foi adicionado
+- **Abas visuais** (`.orc-tabs`/`.orc-tab-btn`/`.orc-tab-panel`, novo CSS, não conflita com classes existentes): A4 | A3 | 12×18, acima do conteúdo do módulo. `orcTrocarAba(aba)` só faz `classList.toggle('active'/'selected')` nos painéis/botões — sem recarregar a página, sem limpar campos de outras abas. A4 continua selecionada por padrão (classe já vem assim no HTML).
+- **`ORC_NOVOS_FORMATOS`** — config isolada, formato → lista de papéis, cada um com `id`, `categorias` (multiplicador por Escritas/Imagens/Chapadas) e `faixas` (tiers de quantidade, reaproveitando o mesmo `orcMultiplicador` genérico da A4, sem alterá-lo):
+  - `A3 → Sulfite 75g` (×0,50 / ×0,80 / ×1,00) e `A3 → Couchê 200g` (×0,60 / ×0,85 / ×1,00), ambos com as faixas 1–5 ×1,00 · 6–9 ×0,90 · 10–19 ×0,80 · 20–39 ×0,75 · 40+ ×0,70 (exatamente as informadas no pedido).
+  - `12×18 → Couchê Fino` e `12×18 → Couchê Cartão` com `categorias`/`faixas` = `null` **de propósito** — nenhum valor foi inventado; a estrutura (papel, valor base, 3 categorias) já existe na tela, só com os campos desabilitados e um aviso "Valores ainda não definidos", pronta para ligar assim que os preços forem informados.
+- **Renderização:** `orcRenderNovosFormatos()` monta os blocos de papel (1 valor base + 3 caixas de categoria, mesmo padrão visual `.orc-cat-grid`/`.orc-cat-box` da A4) dentro de `#orc_tab_A3_lista`/`#orc_tab_12x18_lista`, a partir só da config acima.
+- **Cálculo (A3):** `orcCalcularNovo(formato, entryId)` → para cada categoria com página > 0 e valor base > 0: `valorBase × multiplicadorCategoria × orcMultiplicador(faixas, quantidade)` — nunca grava um preço fixo; qualquer alteração no valor base ou na quantidade recalcula tudo na hora (`oninput`). Categoria vazia mostra "—", sem exigir preenchimento (mesma filosofia da A4). Cada papel (Sulfite/Couchê) tem seu próprio campo de valor base, sem compartilhar entre si.
+- Nem A3 nem 12×18 mexem no card final/exportação/WhatsApp da A4 — não foi pedido; são exibições próprias (preço por categoria + total do papel), sem gerar imagem.
+
+### Testes (Node, fora do navegador — trecho `<script>` extraído do arquivo, `node --check` + funções isoladas)
+1. **`node --check`** no `<script>` inteiro do arquivo pós-mudança → sintaxe válida.
+2. **`git diff` só com inserções** (0 linhas removidas) → confirma que nenhum caractere da A4 foi tocado.
+3. **A3 Sulfite 75g**, valor base R$ 10,00, testado 1/5/6/9/10/19/20/39/40 folhas nas 3 categorias — bate exatamente com os exemplos do pedido: Escrita R$5,00 → R$4,50 → R$4,00 → R$3,75 → R$3,50 (faixas 1–5/6–9/10–19/20–39/40+, sem sobreposição: 5 na 1ª faixa, 6 e 9 na 2ª, 10 e 19 na 3ª, 20 e 39 na 4ª, 40 na 5ª). Imagem e Chapada testadas nas mesmas faixas (múltiplos de 0,80× e 1,00× respectivamente) — todos batendo.
+4. **A3 Couchê 200g**, mesma bateria de testes → Escrita R$6,00 → R$5,40 → R$4,80 → R$4,50 → R$4,20, batendo com os exemplos do pedido; Imagem e Chapada também conferidas nas 5 faixas.
+5. **Recalculo dinâmico** — mudar o valor base recalcula todas as categorias/faixas sem gravar preço fixo (fórmula sempre `base × multCategoria × multFaixa`, nunca um valor congelado).
+6. **12×18** — com `faixas: null`, a função de cálculo retorna sem calcular nada (guard `if (!entry.faixas) return`), campos de input renderizados `disabled` com aviso "Valores ainda não definidos" — nenhum valor inventado.
+7. **IDs únicos** — conferido que `orc_tab_A4`/`orc_tab_A3`/`orc_tab_12x18` (painéis) e `orc_tab_btn_A4`/`orc_tab_btn_A3`/`orc_tab_btn_12x18` (botões) não colidem entre si nem com nenhum id já existente na A4; `orcTrocarAba` só alterna essas classes, sem tocar em nenhum campo/valor.
+
+**Falta:** teste ao vivo logado no painel real com navegador — clicar fisicamente A4 → A3 → 12×18 → A4 e conferir visualmente que nenhuma aba vaza campo/valor pra outra, e preencher a A3 na interface real; este ambiente não tem navegador.
