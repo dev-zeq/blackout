@@ -2937,6 +2937,11 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>Quantidade de páginas (encadernação)</label>
+                    <input type="number" id="orc_paginas_encadernacao" min="0" step="1" inputmode="numeric" placeholder="Ex: 100" oninput="atualizarOrcamento()">
+                </div>
+
                 <div class="form-group" style="margin-bottom:6px;">
                     <label>Quantidade de encadernações</label>
                     <input type="number" id="orc_encadernacoes" min="0" step="1" inputmode="numeric" value="0" oninput="atualizarOrcamento()">
@@ -12403,6 +12408,12 @@
             const papel = document.getElementById('orc_papel').value;
             const encStr = document.getElementById('orc_encadernacoes').value;
             const encadernacoes = encStr === '' ? 0 : Number(encStr);
+            // Páginas da encadernação: campo PRÓPRIO, totalmente independente das
+            // 3 categorias de impressão — é exatamente o valor que orcPrecoEncadernacao()
+            // já recebia antes de existir a divisão em Escritas/Imagens/Chapadas.
+            // Nunca é a soma das categorias.
+            const paginasEncadStr = document.getElementById('orc_paginas_encadernacao').value;
+            const paginasEncadernacao = paginasEncadStr === '' ? 0 : Number(paginasEncadStr);
 
             const categorias = {};
             let totalPaginas = 0;
@@ -12419,7 +12430,9 @@
             if (!algumaPreenchida) return { ok: false, erro: 'Informe a quantidade de páginas em ao menos uma categoria (Escritas, Imagens ou Chapadas).' };
             if (!papel) return { ok: false, erro: 'Selecione o tipo de papel.' };
             if (encadernacoes < 0) return { ok: false, erro: 'Quantidade de encadernações não pode ser negativa.' };
-            return { ok: true, categorias, totalPaginas, papel, encadernacoes };
+            if (paginasEncadStr !== '' && paginasEncadernacao < 0) return { ok: false, erro: 'Quantidade de páginas da encadernação não pode ser negativa.' };
+            if (encadernacoes > 0 && paginasEncadernacao <= 0) return { ok: false, erro: 'Informe a quantidade de páginas para calcular a encadernação.' };
+            return { ok: true, categorias, totalPaginas, papel, encadernacoes, paginasEncadernacao };
         }
 
         // Aplica orcPrecoImpressao (mesma fórmula/tabela de sempre) a cada
@@ -12463,7 +12476,7 @@
             const btnWhatsapp = document.getElementById('orc_btn_whatsapp');
             const v = orcValidar();
             if (!v.ok) {
-                const tocado = ORC_CATEGORIAS.some(cat => document.getElementById(ORC_CAT_INPUT_ID[cat]).value) || document.getElementById('orc_papel').value;
+                const tocado = ORC_CATEGORIAS.some(cat => document.getElementById(ORC_CAT_INPUT_ID[cat]).value) || document.getElementById('orc_papel').value || document.getElementById('orc_paginas_encadernacao').value;
                 erroEl.textContent = tocado ? v.erro : '';
                 card.className = 'orc-card-vazio';
                 card.innerHTML = `<div class="empty-icon">🧮</div><div>Preencha os campos acima para calcular o orçamento.</div>`;
@@ -12474,7 +12487,9 @@
             }
             erroEl.textContent = '';
             const { pbTotal, corTotal, detalhes } = orcCalcularCategorias(v.papel, v.categorias);
-            const encad = orcPrecoEncadernacao(v.totalPaginas, v.encadernacoes);
+            // Encadernação independente das 3 categorias: usa v.paginasEncadernacao
+            // (campo próprio), nunca a soma de Escritas/Imagens/Chapadas.
+            const encad = orcPrecoEncadernacao(v.paginasEncadernacao, v.encadernacoes);
             const totalPB = pbTotal + encad;
             const totalCor = corTotal + encad;
             orcUltimoResultado = { v, pb: pbTotal, cor: corTotal, encad, totalPB, totalCor, detalhes };
