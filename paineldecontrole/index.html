@@ -12753,11 +12753,17 @@
         // chamada. A3 não tem distinção P&B/Colorido (o pedido só descreve 1
         // preço por categoria/quantidade), então pb e cor saem iguais — o card
         // final (inalterado) simplesmente mostra o mesmo valor nas 2 opções.
+        // Correção (2026-09-13, 6ª etapa): faltava multiplicar pela quantidade
+        // de folhas — a faixa de quantidade é só o multiplicador aplicado a
+        // cada folha, igual ao padrão já usado em orcPrecoImpressao (A4)
+        // logo acima ("paginas * orcMultiplicador(tabela, paginas)"). Sem essa
+        // multiplicação, "1 a 5 folhas" virava preço fixo (bug reportado:
+        // 3 folhas de Chapada A3 devolvia R$10,00 em vez de R$30,00).
         function orcPrecoA3(papel, categoria, paginas) {
             const cfg = ORC_PRECOS_A3[papel];
             const multCategoria = cfg?.categorias[categoria];
             if (multCategoria == null) return { pb: 0, cor: 0 };
-            const preco = cfg.base * multCategoria * orcMultiplicador(ORC_FAIXAS_QTD_A3, paginas);
+            const preco = paginas * cfg.base * multCategoria * orcMultiplicador(ORC_FAIXAS_QTD_A3, paginas);
             return { pb: preco, cor: preco };
         }
 

@@ -3373,3 +3373,25 @@ Pedido (revisão do usuário sobre a 4ª etapa): a A3/12×18 não podiam ser um 
 6. **`git diff`** revisado linha a linha: fora do bloco novo isolado, a única mudança em código pré-existente é a troca de nome de função dentro de `orcCalcularCategorias` (item 6 dos testes acima prova equivalência).
 
 **Falta:** teste ao vivo logado no painel real com navegador — clicar fisicamente nas abas, preencher A3 Sulfite/Couchê e conferir visualmente o card/exportação; este ambiente não tem navegador.
+
+
+## Orçamento de Impressões — correção: A3 não multiplicava pela quantidade de folhas (2026-09-13, 6ª etapa)
+
+Pedido: correção de bug reportado pelo usuário — a A3 estava tratando o multiplicador da faixa de quantidade como se fosse o preço final, ignorando a quantidade de folhas. Exemplo do próprio pedido: 3 folhas de Chapada A3 (valor-base R$10,00, multiplicador de categoria 1,00, faixa 1–5 = 1,00) deveria dar `3 × 10 × 1,00 × 1,00 = R$30,00`, mas a implementação anterior devolvia R$10,00 (só `base × multCategoria × multFaixa`, sem `× paginas`).
+
+**Arquivo:** só `paineldecontrole/index.html`, só a função `orcPrecoA3` (linha do cálculo — 1 linha alterada). Nada mais do módulo foi tocado; `orcPrecoImpressaoGeral`, `orcCalcularCategorias`, `ORC_PRECOS_A3`, `ORC_FAIXAS_QTD_A3`, e toda a lógica/dados da A4 permanecem exatamente como na etapa anterior.
+
+### Correção
+- Antes (bug): `const preco = cfg.base * multCategoria * orcMultiplicador(ORC_FAIXAS_QTD_A3, paginas);`
+- Agora (correto, mesmo padrão de `orcPrecoImpressao` da A4 — que já fazia `paginas * orcMultiplicador(tabela, paginas)`): `const preco = paginas * cfg.base * multCategoria * orcMultiplicador(ORC_FAIXAS_QTD_A3, paginas);`
+
+### Testes (Node, fora do navegador — trecho `<script>` extraído do arquivo pós-correção)
+1. **Regressão A4**: `orcPrecoImpressaoGeral` comparado com `orcPrecoImpressao` pra 3 papéis/categorias diferentes — resultado idêntico (a correção não tocou em nada da A4).
+2. **Todos os exemplos do prompt (A3 Sulfite, Chapada, base R$10,00)**: 3→R$30,00, 5→R$50,00, 6→R$54,00, 10→R$80,00, 20→R$150,00, 40→R$280,00 — todos batendo exatamente.
+3. **A3 Sulfite, Escrita**: 3 folhas → R$15,00 (não mais R$5,00), 6 folhas → R$27,00 — batendo com os exemplos do pedido.
+4. **A3 Couchê 200g, Escrita, 3 folhas**: com o valor-base real confirmado nesta implementação (R$13,00, não o R$10,00 usado como exemplo ilustrativo no prompt de correção) → R$23,40 (`3×13×0,60×1,00`) — a fórmula está correta; o valor absoluto difere do exemplo do prompt só porque o prompt usou R$10,00 genericamente pra ilustrar a matemática, enquanto o valor-base real da Couchê (confirmado com o usuário na etapa anterior) é R$13,00.
+5. **Crescimento dentro da faixa**: testadas as 10 quantidades pedidas (1,3,5,6,9,10,19,20,39,40) nas 3 categorias, Sulfite e Couchê — o preço cresce proporcionalmente à quantidade dentro de cada faixa (ex.: Sulfite Chapada: 1→R$10, 3→R$30, 5→R$50, todos na faixa ×1,00) e cai no início da faixa seguinte pelo desconto (6→R$54, não R$60, por causa do ×0,90), confirmando que a quantidade participa do cálculo e a faixa só ajusta o multiplicador por folha.
+6. **`node --check`** no `<script>` inteiro do arquivo pós-correção → sintaxe válida.
+7. **`git diff`**: 1 linha de código alterada (mais comentário explicativo) — confirma escopo mínimo e cirúrgico da correção.
+
+**Falta:** teste ao vivo logado no painel real com navegador; este ambiente não tem navegador.
