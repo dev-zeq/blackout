@@ -714,6 +714,9 @@
         .orc-cat-box input, .orc-cat-box select { width: 100%; box-sizing: border-box; padding: 12px 16px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 16px; font-family: inherit; }
         .orc-cat-box input:focus, .orc-cat-box select:focus { outline: none; border-color: var(--accent); }
         .orc-cat-box select { appearance: none; }
+        /* "Valor por folha" (2026-09-13) — só de uso interno do painel, nunca
+           aparece no orçamento do cliente (ver orcAtualizarValorPorFolha). */
+        .orc-cat-valor-folha { font-size: 11px; color: var(--text-faint); text-align: center; min-height: 14px; }
         @media (max-width: 480px) {
             .orc-cat-grid { grid-template-columns: 1fr; }
         }
@@ -2943,16 +2946,19 @@
                             <div class="orc-cat-titulo">✍️ Escritas</div>
                             <input type="number" id="orc_paginas_Escritas" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
                             <select id="orc_papel_Escritas" onchange="atualizarOrcamento()"></select>
+                            <div class="orc-cat-valor-folha" id="orc_valor_folha_Escritas"></div>
                         </div>
                         <div class="orc-cat-box">
                             <div class="orc-cat-titulo">🖼️ Imagens</div>
                             <input type="number" id="orc_paginas_Imagens" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
                             <select id="orc_papel_Imagens" onchange="atualizarOrcamento()"></select>
+                            <div class="orc-cat-valor-folha" id="orc_valor_folha_Imagens"></div>
                         </div>
                         <div class="orc-cat-box">
                             <div class="orc-cat-titulo">🎨 Chapadas</div>
                             <input type="number" id="orc_paginas_Chapadas" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
                             <select id="orc_papel_Chapadas" onchange="atualizarOrcamento()"></select>
+                            <div class="orc-cat-valor-folha" id="orc_valor_folha_Chapadas"></div>
                         </div>
                     </div>
                 </div>
@@ -12530,10 +12536,12 @@
                 btnExportar.disabled = true;
                 btnWhatsapp.disabled = true;
                 orcUltimoResultado = null;
+                orcAtualizarValorPorFolha([]);
                 return;
             }
             erroEl.textContent = '';
             const { pbTotal, corTotal, detalhes } = orcCalcularCategorias(v.categorias, v.papeis);
+            orcAtualizarValorPorFolha(detalhes);
             // Encadernação independente das 3 categorias: usa v.paginasEncadernacao
             // (campo próprio), nunca a soma de Escritas/Imagens/Chapadas.
             const encad = orcPrecoEncadernacao(v.paginasEncadernacao, v.encadernacoes);
@@ -12589,6 +12597,32 @@
             btnWhatsapp.disabled = false;
         }
         window.atualizarOrcamento = atualizarOrcamento;
+
+        // "Valor por folha" (2026-09-13, 8ª etapa) — informação de USO INTERNO
+        // do painel (nunca aparece no card/story/exportação/WhatsApp, que são
+        // montados só a partir de orcamentoCard/montarOrcStoryHtml, sem nenhuma
+        // referência a estes elementos). NÃO é uma fórmula nova: reaproveita
+        // exatamente `pb`/`cor`/`paginas` que orcCalcularCategorias (inalterada)
+        // já calculou pra cada categoria — só divide o total pela quantidade
+        // (valor total ÷ quantidade), como pedido. Categorias A3 (pb === cor,
+        // já que orcPrecoA3 não distingue P&B/Colorido) mostram 1 valor só;
+        // categorias A4 (pb e cor podem diferir) mostram os 2, sem inventar
+        // nenhum novo cálculo — são os mesmos pb/cor do card ao lado.
+        function orcAtualizarValorPorFolha(detalhes) {
+            const porCategoria = {};
+            for (const d of detalhes) porCategoria[d.categoria] = d;
+            for (const cat of ORC_CATEGORIAS) {
+                const el = document.getElementById(`orc_valor_folha_${cat}`);
+                if (!el) continue;
+                const d = porCategoria[cat];
+                if (!d || !d.paginas) { el.textContent = ''; continue; }
+                const pbPorFolha = d.pb / d.paginas;
+                const corPorFolha = d.cor / d.paginas;
+                el.textContent = Math.abs(pbPorFolha - corPorFolha) < 0.005
+                    ? `Valor por folha: ${fmt(pbPorFolha)}`
+                    : `Valor por folha: ${fmt(pbPorFolha)} (P&B) / ${fmt(corPorFolha)} (Cor)`;
+            }
+        }
 
         // Monta o miolo do "quadro" de story (1080×1920, 9:16) a partir do último
         // orçamento calculado — mesmos dados do card em tela, só que num layout

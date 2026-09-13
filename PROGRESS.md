@@ -3417,3 +3417,27 @@ Pedido: correção visual — os campos de quantidade/papel das 3 caixas (Escrit
 3. Conferido visualmente (leitura do CSS resultante) que os valores usados são idênticos, propriedade por propriedade, aos já usados pelos campos da A4 (`.form-group input, .form-group select`) — mesma cor de fundo (`var(--bg-elev)`), borda (`var(--border)`), raio (12px), texto (`var(--text)`), fonte e comportamento de foco (`var(--accent)`).
 
 **Falta:** teste ao vivo logado no painel real com navegador, comparando visualmente A4 × A3 × 12×18 lado a lado; este ambiente não tem navegador.
+
+
+## Orçamento de Impressões — "Valor por folha" (informação interna, 2026-09-13, 8ª etapa)
+
+Pedido: mostrar, dentro de cada caixa (Escritas/Imagens/Chapadas), o valor unitário efetivo (valor total ÷ quantidade) daquela configuração — só informação de USO INTERNO do painel (nunca no orçamento/card/PDF/WhatsApp enviado ao cliente), sem criar nenhuma fórmula nova, reaproveitando o resultado já calculado.
+
+**Arquivo:** só `paineldecontrole/index.html`, só dentro do módulo `Orçamento de Impressões`. **Diff 100% aditivo** (`git diff` confirma 0 linhas removidas) — nenhuma fórmula, valor-base, multiplicador, faixa, layout das caixas ou lógica de A4/A3/12×18 foi alterada.
+
+### Implementação
+- **HTML**: 1 `<div class="orc-cat-valor-folha" id="orc_valor_folha_Escritas/Imagens/Chapadas">` adicionado dentro de cada `.orc-cat-box`, logo abaixo do `<select>` de papel (mesmas 3 caixas reaproveitadas por A4/A3/12×18).
+- **CSS**: `.orc-cat-valor-folha` — texto pequeno (11px) e discreto (`var(--text-faint)`), centralizado, sem alterar nada do layout/tamanho das caixas já existentes.
+- **JS — `orcAtualizarValorPorFolha(detalhes)`** (nova, isolada): recebe o mesmo array `detalhes` que `orcCalcularCategorias` (inalterada) já produz — cada item já traz `pb`, `cor` e `paginas` daquela categoria, calculados pela fórmula de sempre (A4: `orcPrecoImpressao`; A3: `orcPrecoA3`, ambas inalteradas nesta etapa). A função só faz `pb / paginas` e `cor / paginas` — **nenhum cálculo de preço novo**, é sempre "valor total ÷ quantidade" usando o total que o card já exibe. Categoria sem páginas preenchidas → texto vazio (nada exibido). Como P&B e Colorido podem ser iguais (A3, que não distingue os dois) ou diferentes (A4), o texto mostra 1 valor só quando são iguais (`Valor por folha: R$X,XX`) ou os 2 quando diferem (`Valor por folha: R$X,XX (P&B) / R$Y,YY (Cor)`) — decisão de exibição, não de cálculo (nenhum número é inventado; ambos já vêm do `detalhes`).
+- **`atualizarOrcamento()`** (única função pré-existente tocada): 2 linhas adicionadas — chama `orcAtualizarValorPorFolha(detalhes)` no caminho de sucesso (mesmo `detalhes` que já monta o card) e `orcAtualizarValorPorFolha([])` no caminho de validação inválida (limpa os 3 textos). Nenhuma outra linha da função foi tocada; o card/story/exportação continuam exatamente iguais.
+- **Uso interno garantido por construção**: os elementos `orc_valor_folha_*` ficam só na área de formulário (`.orc-cat-box`, dentro de `#orcamentoCard`'s *irmão*, não dentro dele). O card (`orcamentoCard.innerHTML`) e o story (`montarOrcStoryHtml()`, usado por `orcGerarCanvas`/exportação/WhatsApp) são montados só com os templates HTML já existentes, sem nenhuma referência a estes elementos — não há como essa informação vazar pro cliente.
+
+### Testes (Node, fora do navegador — trecho `<script>` extraído do arquivo pós-mudança, DOM simulado)
+1. **`node --check`** no `<script>` inteiro → sintaxe válida.
+2. **Exemplo do próprio pedido**: A3 Sulfite 75g, Escritas, 500 folhas → `Valor por folha: R$ 3,50` (total do card R$1.750,00 ÷ 500 = R$3,50, faixa 40+ ×0,70); mudando pra 1.000 folhas → total R$3.500,00, valor por folha continua R$3,50 (mesma faixa 40+, proporcional confirmado).
+3. **Campo vazio**: sem páginas preenchidas → texto vazio (nada exibido), sem erro.
+4. **A4 (pb ≠ cor)**: Sulfite 75g, 20 páginas → `Valor por folha: R$ 0,60 (P&B) / R$ 1,25 (Cor)` — os 2 valores batem exatamente com os totais que o card já mostra pra P&B/Colorido divididos por 20.
+5. **Troca de aba**: ao trocar de A4 pra A3 sem reescolher o papel (resetado automaticamente, ver 5ª etapa), o "Valor por folha" também some — nunca mostra um valor desatualizado ou de outro formato.
+6. **`git diff`**: 100% aditivo (0 linhas removidas) — confirma que nenhuma fórmula/layout/valor pré-existente foi tocado.
+
+**Falta:** teste ao vivo logado no painel real com navegador — conferir visualmente o texto discreto dentro das caixas e confirmar que não aparece em nenhuma exportação; este ambiente não tem navegador.
