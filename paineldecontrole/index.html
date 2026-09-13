@@ -704,7 +704,7 @@
         .orc-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .orc-cat-box { border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         .orc-cat-titulo { font-size: 12.5px; font-weight: 700; color: var(--text-dim); text-align: center; }
-        .orc-cat-box input { width: 100%; box-sizing: border-box; }
+        .orc-cat-box input, .orc-cat-box select { width: 100%; box-sizing: border-box; }
         @media (max-width: 480px) {
             .orc-cat-grid { grid-template-columns: 1fr; }
         }
@@ -2908,31 +2908,43 @@
 
             <div class="table-container" style="padding:20px;">
                 <div class="form-group">
-                    <label>Tipo de papel</label>
-                    <select id="orc_papel" onchange="atualizarOrcamento()">
-                        <option value="">Selecione</option>
-                        <option value="Sulfite 75g">Sulfite 75g</option>
-                        <option value="A Laser 75g">A Laser 75g</option>
-                        <option value="P.Cartão">Papel Cartão</option>
-                        <option value="P.Foto">Papel Foto</option>
-                        <option value="P.Adesivo">Papel Adesivo</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Quantidade de páginas por categoria</label>
+                    <label>Categorias de impressão</label>
                     <div class="orc-cat-grid" id="orc_cat_grid">
                         <div class="orc-cat-box">
                             <div class="orc-cat-titulo">✍️ Escritas</div>
-                            <input type="number" id="orc_paginas_Escritas" min="0" step="1" inputmode="numeric" placeholder="Ex: 20" oninput="atualizarOrcamento()">
+                            <input type="number" id="orc_paginas_Escritas" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
+                            <select id="orc_papel_Escritas" onchange="atualizarOrcamento()">
+                                <option value="">Tipo de papel</option>
+                                <option value="Sulfite 75g">Sulfite 75g</option>
+                                <option value="A Laser 75g">A Laser 75g</option>
+                                <option value="P.Cartão">Papel Cartão</option>
+                                <option value="P.Foto">Papel Foto</option>
+                                <option value="P.Adesivo">Papel Adesivo</option>
+                            </select>
                         </div>
                         <div class="orc-cat-box">
                             <div class="orc-cat-titulo">🖼️ Imagens</div>
-                            <input type="number" id="orc_paginas_Imagens" min="0" step="1" inputmode="numeric" placeholder="Ex: 10" oninput="atualizarOrcamento()">
+                            <input type="number" id="orc_paginas_Imagens" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
+                            <select id="orc_papel_Imagens" onchange="atualizarOrcamento()">
+                                <option value="">Tipo de papel</option>
+                                <option value="Sulfite 75g">Sulfite 75g</option>
+                                <option value="A Laser 75g">A Laser 75g</option>
+                                <option value="P.Cartão">Papel Cartão</option>
+                                <option value="P.Foto">Papel Foto</option>
+                                <option value="P.Adesivo">Papel Adesivo</option>
+                            </select>
                         </div>
                         <div class="orc-cat-box">
                             <div class="orc-cat-titulo">🎨 Chapadas</div>
-                            <input type="number" id="orc_paginas_Chapadas" min="0" step="1" inputmode="numeric" placeholder="Ex: 5" oninput="atualizarOrcamento()">
+                            <input type="number" id="orc_paginas_Chapadas" min="0" step="1" inputmode="numeric" placeholder="Qtd. de páginas" oninput="atualizarOrcamento()">
+                            <select id="orc_papel_Chapadas" onchange="atualizarOrcamento()">
+                                <option value="">Tipo de papel</option>
+                                <option value="Sulfite 75g">Sulfite 75g</option>
+                                <option value="A Laser 75g">A Laser 75g</option>
+                                <option value="P.Cartão">Papel Cartão</option>
+                                <option value="P.Foto">Papel Foto</option>
+                                <option value="P.Adesivo">Papel Adesivo</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -12397,15 +12409,17 @@
         // Categorias independentes (2026-09-13): cada uma tem seu próprio campo
         // de "quantidade de páginas" e usa exatamente orcPrecoImpressao() (acima,
         // inalterada) com sua própria categoria — o valor final é a SOMA das
-        // categorias preenchidas. Papel e encadernação continuam únicos pro
-        // orçamento inteiro, exatamente como já funcionavam antes desta mudança.
+        // categorias preenchidas. Encadernação continua única pro orçamento
+        // inteiro, exatamente como já funcionava antes desta mudança.
+        // 2026-09-13 (2ª etapa): o "Tipo de papel" também passou a ser um campo
+        // PRÓPRIO por categoria (antes era 1 select único compartilhado pelas 3).
         const ORC_CATEGORIAS = ['Escritas', 'Imagens', 'Chapadas'];
         const ORC_CAT_INPUT_ID = { Escritas: 'orc_paginas_Escritas', Imagens: 'orc_paginas_Imagens', Chapadas: 'orc_paginas_Chapadas' };
+        const ORC_CAT_PAPEL_INPUT_ID = { Escritas: 'orc_papel_Escritas', Imagens: 'orc_papel_Imagens', Chapadas: 'orc_papel_Chapadas' };
 
         let orcUltimoResultado = null;
 
         function orcValidar() {
-            const papel = document.getElementById('orc_papel').value;
             const encStr = document.getElementById('orc_encadernacoes').value;
             const encadernacoes = encStr === '' ? 0 : Number(encStr);
             // Páginas da encadernação: campo PRÓPRIO, totalmente independente das
@@ -12416,38 +12430,47 @@
             const paginasEncadernacao = paginasEncadStr === '' ? 0 : Number(paginasEncadStr);
 
             const categorias = {};
+            const papeis = {};
             let totalPaginas = 0;
             let algumaPreenchida = false;
             for (const cat of ORC_CATEGORIAS) {
                 const str = document.getElementById(ORC_CAT_INPUT_ID[cat]).value;
                 const n = str === '' ? 0 : Number(str);
                 if (str !== '' && n < 0) return { ok: false, erro: 'Quantidade de páginas não pode ser negativa.' };
-                if (n > 0) algumaPreenchida = true;
+                const papelCat = document.getElementById(ORC_CAT_PAPEL_INPUT_ID[cat]).value;
+                // Só exige papel de quem tem páginas preenchidas — categoria vazia
+                // nunca obriga a escolher papel (item 5 do pedido).
+                if (n > 0) {
+                    algumaPreenchida = true;
+                    if (!papelCat) return { ok: false, erro: `Selecione o tipo de papel de ${cat}.` };
+                }
                 categorias[cat] = n > 0 ? n : 0;
+                papeis[cat] = papelCat;
                 totalPaginas += categorias[cat];
             }
 
             if (!algumaPreenchida) return { ok: false, erro: 'Informe a quantidade de páginas em ao menos uma categoria (Escritas, Imagens ou Chapadas).' };
-            if (!papel) return { ok: false, erro: 'Selecione o tipo de papel.' };
             if (encadernacoes < 0) return { ok: false, erro: 'Quantidade de encadernações não pode ser negativa.' };
             if (paginasEncadStr !== '' && paginasEncadernacao < 0) return { ok: false, erro: 'Quantidade de páginas da encadernação não pode ser negativa.' };
             if (encadernacoes > 0 && paginasEncadernacao <= 0) return { ok: false, erro: 'Informe a quantidade de páginas para calcular a encadernação.' };
-            return { ok: true, categorias, totalPaginas, papel, encadernacoes, paginasEncadernacao };
+            return { ok: true, categorias, papeis, totalPaginas, encadernacoes, paginasEncadernacao };
         }
 
         // Aplica orcPrecoImpressao (mesma fórmula/tabela de sempre) a cada
-        // categoria preenchida e soma os resultados — categoria vazia (0
-        // páginas) simplesmente não entra na soma, sem exigir preenchimento.
-        function orcCalcularCategorias(papel, categorias) {
+        // categoria preenchida, usando o papel PRÓPRIO daquela categoria, e soma
+        // os resultados — categoria vazia (0 páginas) simplesmente não entra na
+        // soma, sem exigir preenchimento.
+        function orcCalcularCategorias(categorias, papeis) {
             let pbTotal = 0, corTotal = 0;
             const detalhes = [];
             for (const cat of ORC_CATEGORIAS) {
                 const paginas = categorias[cat];
                 if (paginas > 0) {
+                    const papel = papeis[cat];
                     const { pb, cor } = orcPrecoImpressao(papel, cat, paginas);
                     pbTotal += pb;
                     corTotal += cor;
-                    detalhes.push({ categoria: cat, paginas, pb, cor });
+                    detalhes.push({ categoria: cat, paginas, papel, pb, cor });
                 }
             }
             return { pbTotal, corTotal, detalhes };
@@ -12461,12 +12484,24 @@
             return detalhes.map(d => d.categoria).join(' + ');
         }
 
+        // Texto do "Tipo de papel" no orçamento final: com 1 só categoria
+        // preenchida, é IDÊNTICO ao texto de antes (mesmo papel, mesma
+        // formatação). Com 2 ou 3, mostra os papéis distintos usados (sem
+        // repetir se todas as categorias preenchidas usarem o mesmo papel).
+        function orcLinhaPapel(detalhes) {
+            if (detalhes.length === 1) return escapeHtml(ORC_PAPEL_LABEL[detalhes[0].papel] || detalhes[0].papel);
+            const distintos = [...new Set(detalhes.map(d => ORC_PAPEL_LABEL[d.papel] || d.papel))];
+            return distintos.map(escapeHtml).join(' + ');
+        }
+
         // Linhas extras de detalhamento por categoria — só aparecem quando mais
         // de uma categoria foi preenchida (orçamento simples de 1 categoria
         // continua exatamente com as 4 linhas de sempre, sem nenhuma a mais).
+        // Inclui o papel de cada categoria, já que agora pode ser diferente
+        // entre elas.
         function orcLinhasExtraHtml(detalhes, prefixo) {
             if (detalhes.length <= 1) return '';
-            return detalhes.map(d => `<div><span>${d.categoria}</span><b>${d.paginas} fls</b></div>`).join('');
+            return detalhes.map(d => `<div><span>${d.categoria}</span><b>${d.paginas} fls — ${escapeHtml(ORC_PAPEL_LABEL[d.papel] || d.papel)}</b></div>`).join('');
         }
 
         function atualizarOrcamento() {
@@ -12476,7 +12511,7 @@
             const btnWhatsapp = document.getElementById('orc_btn_whatsapp');
             const v = orcValidar();
             if (!v.ok) {
-                const tocado = ORC_CATEGORIAS.some(cat => document.getElementById(ORC_CAT_INPUT_ID[cat]).value) || document.getElementById('orc_papel').value || document.getElementById('orc_paginas_encadernacao').value;
+                const tocado = ORC_CATEGORIAS.some(cat => document.getElementById(ORC_CAT_INPUT_ID[cat]).value || document.getElementById(ORC_CAT_PAPEL_INPUT_ID[cat]).value) || document.getElementById('orc_paginas_encadernacao').value;
                 erroEl.textContent = tocado ? v.erro : '';
                 card.className = 'orc-card-vazio';
                 card.innerHTML = `<div class="empty-icon">🧮</div><div>Preencha os campos acima para calcular o orçamento.</div>`;
@@ -12486,7 +12521,7 @@
                 return;
             }
             erroEl.textContent = '';
-            const { pbTotal, corTotal, detalhes } = orcCalcularCategorias(v.papel, v.categorias);
+            const { pbTotal, corTotal, detalhes } = orcCalcularCategorias(v.categorias, v.papeis);
             // Encadernação independente das 3 categorias: usa v.paginasEncadernacao
             // (campo próprio), nunca a soma de Escritas/Imagens/Chapadas.
             const encad = orcPrecoEncadernacao(v.paginasEncadernacao, v.encadernacoes);
@@ -12510,7 +12545,7 @@
                     <div class="orc-doc-detalhes-grid">
                         <div><span>Quantidade de páginas</span><b>${v.totalPaginas}</b></div>
                         <div><span>Tipo de impressão</span><b>${orcLinhaTipo(detalhes)}</b></div>
-                        <div><span>Tipo de papel</span><b>${escapeHtml(ORC_PAPEL_LABEL[v.papel] || v.papel)}</b></div>
+                        <div><span>Tipo de papel</span><b>${orcLinhaPapel(detalhes)}</b></div>
                         <div><span>Encadernações</span><b>${v.encadernacoes}</b></div>
                         ${orcLinhasExtraHtml(detalhes)}
                     </div>
@@ -12567,7 +12602,7 @@
                         <div class="orc-story-detalhes-grid">
                             <div><span>Quantidade de páginas</span><b>${v.totalPaginas}</b></div>
                             <div><span>Tipo de impressão</span><b>${orcLinhaTipo(detalhes)}</b></div>
-                            <div><span>Tipo de papel</span><b>${escapeHtml(ORC_PAPEL_LABEL[v.papel] || v.papel)}</b></div>
+                            <div><span>Tipo de papel</span><b>${orcLinhaPapel(detalhes)}</b></div>
                             <div><span>Encadernações</span><b>${v.encadernacoes}</b></div>
                             ${orcLinhasExtraHtml(detalhes)}
                         </div>

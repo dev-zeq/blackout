@@ -3277,3 +3277,37 @@ Pedido (revisão do usuário): na primeira versão das 3 tabelas independentes, 
 - Arquivo inteiro passa em `node --check` (sintaxe válida).
 
 **Publicado** (`main` `f2ae483`, junto com a estrutura de 3 tabelas acima, no mesmo merge) a pedido do usuário. **Falta:** só o teste ao vivo logado no painel real com navegador (preencher as 3 categorias + o campo de páginas da encadernação e conferir visualmente o card exportado); este ambiente não tem navegador.
+
+## Orçamento de Impressões — Tipo de papel individual por categoria (2026-09-13, 3ª etapa) — NÃO publicado
+
+Pedido: o "Tipo de papel" ainda era 1 campo único compartilhado pelas 3 categorias (Escritas/Imagens/Chapadas). Transformar em campo próprio dentro de cada categoria, permitindo, por exemplo, Escritas em Sulfite 75g + Imagens em Papel Foto + Chapadas em Cartão no mesmo orçamento. Encadernação não faz parte desta alteração.
+
+**Arquivo:** só `paineldecontrole/index.html`, só dentro do bloco `Orçamento de Impressões` (CSS `.orc-cat-box select`, os 3 `<select>` de papel na view `#viewOrcamento`, e `orcValidar()`/`orcCalcularCategorias()`/a exibição de "Tipo de papel" no card e no story).
+
+### Análise do que já existia (preservado)
+- `orcPrecoImpressao(papel, categoria, paginas)` — **não alterada**. Já recebia o papel como parâmetro; só mudou de onde esse parâmetro vem (antes: 1 select global; agora: o select da própria categoria).
+- `orcPrecoEncadernacao` e o fluxo de encadernação (campo próprio de páginas, `orc_paginas_encadernacao`, e quantidade de encadernações) — **intocados**, nenhuma referência ao papel das categorias entra nesse cálculo.
+- `ORC_PRECOS`/`ORC_PAPEL_LABEL` — inalteradas.
+
+### O que mudou
+- **Tela:** removido o `<select id="orc_papel">` único; adicionado um `<select>` de papel dentro de cada `.orc-cat-box` (`orc_papel_Escritas`/`orc_papel_Imagens`/`orc_papel_Chapadas`), com as mesmas 5 opções de sempre.
+- **`orcValidar()`:** lê o papel de cada categoria isoladamente; só exige papel preenchido na categoria que também tem páginas > 0 (categoria vazia nunca exige papel — regra preservada). Retorna `papeis` (mapa categoria→papel) em vez de um único `papel`.
+- **`orcCalcularCategorias(categorias, papeis)`:** para cada categoria com páginas > 0, chama `orcPrecoImpressao(papeis[cat], cat, paginas)` — o papel usado é sempre o da própria categoria, nunca um papel global. Resultado de cada categoria (`detalhes`) passou a carregar também o papel usado.
+- **Orçamento final:** estrutura/CSS idênticas às de antes. Com **só 1 categoria preenchida**, a linha "Tipo de papel" mostra exatamente o mesmo texto de antes (o papel daquela categoria). Com **2 ou 3 preenchidas**, a linha "Tipo de papel" mostra os papéis distintos usados (ex.: "Sulfite 75g + Papel Foto", sem repetir se todas usarem o mesmo papel) e as linhas extras de detalhamento (já existentes desde a etapa das 3 categorias) passaram a incluir o papel de cada categoria (ex.: "Escritas: 20 fls — Sulfite 75g").
+
+### Testes (Node, fora do navegador — funções extraídas literalmente do arquivo, DOM simulado)
+1. Escritas(20) + Sulfite 75g → valor idêntico a `orcPrecoImpressao('Sulfite 75g','Escritas',20)` isolado.
+2. Imagens(10) + P.Foto → idem.
+3. Chapadas(5) + P.Cartão → idem.
+4. Escritas(Sulfite) + Imagens(P.Foto), papéis diferentes → soma exata dos dois cálculos isolados, cada um com seu próprio papel.
+5. Escritas(Sulfite) + Chapadas(P.Cartão), papéis diferentes → soma exata.
+6. Imagens(P.Foto) + Chapadas(P.Cartão), papéis diferentes → soma exata.
+7. As 3 categorias, cada uma com um papel diferente → soma exata das três, cada uma com seu papel correto.
+8. Só Escritas preenchida (Imagens/Chapadas vazias) → resultado idêntico ao cálculo anterior à mudança (compatibilidade confirmada).
+9. Categoria preenchida sem selecionar papel (testado nas 3 categorias) → erro específico "Selecione o tipo de papel de {categoria}.", sem gerar orçamento.
+10. Todas as categorias vazias, formulário intocado → sem erro nenhum (nem exige papel).
+11. Encadernação testada separadamente (campo próprio de páginas + quantidade) → mesmo resultado de `orcPrecoEncadernacao` chamada isolada; as 4 faixas de preço conferidas uma a uma, sem alteração.
+12. Layout do orçamento final: com 1 categoria, HTML idêntico ao formato anterior (mesma linha "Tipo de papel", sem linhas extras); com 2+ categorias e papéis diferentes, linhas extras mostram papel por categoria e a linha "Tipo de papel" combina os papéis distintos — estrutura do documento (classes CSS, seções) inalterada.
+- Arquivo inteiro passa em `node --check` (sintaxe válida).
+
+**Falta:** teste ao vivo logado no painel real com navegador (selecionar papéis diferentes nas 3 caixas e conferir visualmente o card exportado); este ambiente não tem navegador.
