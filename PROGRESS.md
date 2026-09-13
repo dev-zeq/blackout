@@ -3461,3 +3461,29 @@ Pedido: confirmar que "Valor por folha" funciona em todas as categorias (Escrita
 5. Categoria não preenchida em qualquer aba → sempre vazio.
 
 **Falta:** teste ao vivo logado no painel real com navegador; este ambiente não tem navegador.
+
+
+## Orçamento de Impressões — cadastra a precificação do 12×18 (2026-09-13, 10ª etapa)
+
+Pedido: o 12×18 estava sendo tratado como "sem preço cadastrado" (opções `disabled` no seletor). Os preços já foram definidos pelo usuário e precisavam ser registrados na mesma estrutura já usada pela A3 — sem criar lógica nova.
+
+**Arquivo:** só `paineldecontrole/index.html`, só dentro do módulo `Orçamento de Impressões`. **Nenhuma função de cálculo foi alterada** — só dados adicionados a `ORC_PRECOS_A3` e a remoção do `disabled` das opções do 12×18. A4 e A3 continuam byte-a-byte iguais (confirmado por teste).
+
+### Análise antes de implementar
+Conferindo a tabela de preços unitários por folha do pedido, cada valor de cada faixa é exatamente `valorBase(1ª faixa) × multiplicadorDaFaixa` — a mesma fórmula `paginas × base × multCategoria × multFaixa` que `orcPrecoA3` já usa pra A3, com **as mesmíssimas 5 faixas de quantidade** (1–5/6–9/10–19/20–39/40+, multiplicadores 1,00/0,90/0,80/0,75/0,70). Dividindo o valor da faixa 1–5 de cada papel pela Chapada (multiplicador de categoria = 1,00, por convenção já usada nos outros papéis): descobri que os multiplicadores de categoria do 12×18 são **os mesmos da A3 Couchê 200g** (Escrita 0,60 / Imagem 0,85 / Chapada 1,00) — só o valor-base muda por papel (Fino R$12,00, Cartão R$15,00). Conferido multiplicando de volta cada uma das 5 faixas × 3 categorias × 2 papéis (30 combinações) contra a tabela do pedido — bateu exatamente em todas.
+
+### O que mudou
+- **`ORC_PRECOS_A3`**: adicionadas 2 entradas, no mesmo formato das já existentes — `'12×18 Couchê Fino': { base: 12.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } }` e `'12×18 Couchê Cartão': { base: 15.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } }`. Reaproveita a mesma `ORC_FAIXAS_QTD_A3` e a mesma função `orcPrecoA3` (nenhuma delas foi tocada) — o 12×18 passa a funcionar automaticamente, sem nenhuma linha de lógica nova.
+- **`ORC_PAPEL_OPCOES_POR_ABA['12x18']`**: removido `desabilitada: true` e o texto "(preço ainda não cadastrado)" das 2 opções — agora aparecem selecionáveis, iguais às opções de A3.
+- Comentários desatualizados (que diziam "12×18 ainda sem valores cadastrados") atualizados pra refletir a nova realidade.
+
+### Testes (Node, fora do navegador — trecho `<script>` extraído do arquivo pós-mudança, DOM simulado)
+1. `node --check` no `<script>` inteiro → sintaxe válida.
+2. **Bateria completa pedida**: 2 papéis (Couchê Fino/Couchê Cartão) × 3 categorias (Escrita/Imagem/Chapada) × 10 quantidades (1, 3, 5, 6, 9, 10, 19, 20, 39, 40) = 60 combinações — o valor por folha exibido (`fmt(total/quantidade)`) bate exatamente com a tabela do pedido em todos os 60 casos (conferido por comparação de string formatada, ex.: "11,48", "9,56", "8,93" idênticos aos da tabela).
+3. **Exemplo literal do pedido** (Chapada, Couchê Fino): 1→R$12,00, 3→R$36,00, 5→R$60,00, 6→R$64,80, 10→R$96,00, 20→R$180,00, 40→R$336,00 — todos batendo exatamente.
+4. **"Valor por folha"**: com Chapada/12×18 Couchê Fino/20 folhas → mostra `Valor por folha: R$9,00` e o total do card mostra R$180,00; mudando pra 40 folhas → `R$8,40` e total R$336,00 — exatamente como pedido no item 5.
+5. **Regressão A3**: `orcPrecoImpressaoGeral('A3 Sulfite 75g','Chapadas',3)` → R$30,00 (igual à etapa anterior); `orcPrecoImpressaoGeral('A3 Couchê 200g','Escritas',3)` → R$23,40 (igual).
+6. **Regressão A4**: `orcPrecoImpressaoGeral('Sulfite 75g','Escritas',20)` → R$12,00 (o mesmo de sempre).
+7. **`git diff`**: só a tabela de preços (2 linhas de dados) e o texto/flag das opções do seletor — nenhuma função de cálculo tocada.
+
+**Falta:** teste ao vivo logado no painel real com navegador — selecionar 12×18 Couchê Fino/Cartão na interface e conferir visualmente que os campos não aparecem mais bloqueados; este ambiente não tem navegador.

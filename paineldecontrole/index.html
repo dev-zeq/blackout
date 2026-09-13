@@ -12784,9 +12784,19 @@
         // valores fornecidos pelo usuário pra esta implementação (R$10,00 pra
         // Sulfite 75g, R$13,00 pra Couchê 200g). Nenhum outro valor foi
         // inventado.
+        // 2026-09-13 (10ª etapa): 12×18 cadastrado aqui também — mesma fórmula,
+        // mesmas faixas de quantidade, só um "papel" a mais no mesmo mapa.
+        // Valores conferidos: dividindo cada preço unitário da tabela do pedido
+        // (ex.: Fino/Chapada 1–5 = R$12,00) pelo multiplicador de faixa
+        // correspondente, o "valor-base" (faixa 1–5, mult 1,00) e os
+        // multiplicadores de categoria batem exatamente com os preços de TODAS
+        // as 5 faixas informadas — não é uma tabela nova, é o mesmo modelo
+        // base×categoria×faixa já usado pela A3, só com dados próprios do 12×18.
         const ORC_PRECOS_A3 = {
             'A3 Sulfite 75g': { base: 10.00, categorias: { Escritas: 0.50, Imagens: 0.80, Chapadas: 1.00 } },
             'A3 Couchê 200g': { base: 13.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } },
+            '12×18 Couchê Fino': { base: 12.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } },
+            '12×18 Couchê Cartão': { base: 15.00, categorias: { Escritas: 0.60, Imagens: 0.85, Chapadas: 1.00 } },
         };
         // Faixas de quantidade da A3 (mesma tabela pros 2 papéis, conforme
         // pedido): 1–5 ×1,00 · 6–9 ×0,90 · 10–19 ×0,80 · 20–39 ×0,75 · 40+
@@ -12816,9 +12826,10 @@
         }
 
         // Ponte única entre os formatos: papel de um dos 5 da A4 → delega pra
-        // orcPrecoImpressao (inalterada); papel de um dos 2 da A3 → usa
-        // orcPrecoA3; qualquer outro papel (12×18, ainda sem valores
-        // cadastrados, ou vazio) → sem preço, sem inventar nada.
+        // orcPrecoImpressao (inalterada); papel de um dos 4 cadastrados em
+        // ORC_PRECOS_A3 (A3 Sulfite/Couchê + 12×18 Couchê Fino/Cartão) → usa
+        // orcPrecoA3; qualquer outro papel (desconhecido ou vazio) → sem
+        // preço, sem inventar nada.
         function orcPrecoImpressaoGeral(papel, categoria, paginas) {
             if (ORC_PRECOS.pb[papel]) return orcPrecoImpressao(papel, categoria, paginas);
             if (ORC_PRECOS_A3[papel]) return orcPrecoA3(papel, categoria, paginas);
@@ -12826,9 +12837,8 @@
         }
 
         // Opções do <select> "Tipo de papel" de cada categoria, por aba. 12×18
-        // aparece com as 2 opções (Couchê Fino/Couchê Cartão) só pra mostrar a
-        // estrutura pronta, mas `disabled` — sem preço configurado, o usuário
-        // não consegue selecionar e gerar um orçamento com valor inventado.
+        // (10ª etapa) agora tem preço cadastrado em ORC_PRECOS_A3 — as opções
+        // deixaram de ser `disabled`, exatamente como A3.
         const ORC_PAPEL_OPCOES_POR_ABA = {
             A4: [
                 { valor: '', texto: 'Tipo de papel' },
@@ -12845,8 +12855,8 @@
             ],
             '12x18': [
                 { valor: '', texto: 'Tipo de papel' },
-                { valor: '12×18 Couchê Fino', texto: '12×18 Couchê Fino (preço ainda não cadastrado)', desabilitada: true },
-                { valor: '12×18 Couchê Cartão', texto: '12×18 Couchê Cartão (preço ainda não cadastrado)', desabilitada: true },
+                { valor: '12×18 Couchê Fino', texto: '12×18 Couchê Fino' },
+                { valor: '12×18 Couchê Cartão', texto: '12×18 Couchê Cartão' },
             ],
         };
 
