@@ -3865,3 +3865,34 @@ Pedido de acompanhamento, depois do usuário testar ao vivo: a barra de atalhos 
 3. Preview local (cópia temporária com só as bibliotecas externas substituídas por stubs locais, pra rodar sem depender de rede — apagada depois do teste) confirmou visualmente: sem faixa branca, pílulas em verde sóbrio, texto legível, rolagem horizontal preservada em viewport estreito (420px, simulando celular).
 
 **Publicado:** commit direto em `main` a pedido do usuário (ajuste visual, sem necessidade de nova revisão em PR).
+
+
+## Prestação de Serviço — corrige logo não atualizando após editar (2026-09-21)
+
+Pedido: investigar por que, ao editar uma Prestação de Serviço já salva, a logo não podia ser substituída/adicionada/removida — mesmo os outros campos editando normalmente. Pedido explícito pra investigar antes de mexer, comparando com o Currículo (onde a troca de foto na edição já funciona).
+
+**Investigação (sem alterar nada ainda):**
+1. O upload/seleção da logo (`prestador-form.html`, `receberLogoEscolhida()`/`renderCondLogo()`) usa base64 direto em `dados.especifico.logo_base64` (sem Supabase Storage, decisão de 2026-08-26). Testado isoladamente (Playwright, formulário embutido num iframe igual ao uso real, com `?editId=`): trocar a logo durante a edição **atualiza corretamente** `logoBase64` e o `registro` que é enviado ao painel via `postMessage` — o front-end do formulário está certo.
+2. A gravação no banco (`window.addEventListener('message', ...)` em `index.html` → `dbUpdate()` → Edge Function `db-write`, inspecionada direto no projeto Supabase via MCP) faz um `update(payload).match(match)` simples, sem filtro de campos, sem trigger nem CHECK na tabela `declaracoes_pendentes` (confirmado via `information_schema`). **A gravação em si sempre salvava a logo nova corretamente.**
+3. O problema real: `index.html` mantém **dois caches separados** — `prestadorPendentesCache` (usado pelos *cards* da lista, sempre recarregado por inteiro) e `declaracoesPendentesCache` (cache compartilhado que `abrirDeclFormatado()` usa pra desenhar o **documento formatado**, único lugar onde a logo aparece de fato). Em `loadPrestadorPendentes()`, a mesclagem desses dois caches só **adicionava** um registro em `declaracoesPendentesCache` quando o `id` ainda não existia lá — um registro **editado** (id já presente desde que a tela foi aberta) nunca era substituído, ficando com os dados de **antes da edição** pra sempre nesse cache (até um F5). Como a logo só aparece no documento formatado (que lê desse cache "congelado"), era o único lugar onde o problema ficava visível — os *cards* da lista, que usam o outro cache (sempre fresco), pareciam refletir a edição normalmente.
+4. Além disso, o handler que processa o salvamento da edição (`form-salvar-pedido`, ramo `declaracoes_pendentes`) só chamava `loadDeclaracoesPendentes()` — que **exclui de propósito** Prestação de Serviço (e Declarações/Procurações) da sua busca — sem nunca chamar `loadPrestadorPendentes()`, então nem essa mesclagem (já falha) rodava automaticamente depois de salvar.
+
+**Por que o Currículo nunca teve esse problema:** usa `loadCurriculos()`, uma função única que recarrega tudo do zero a cada chamada — sem divisão em caches nem lógica de "só adiciona se for novo".
+
+**Arquivo:** só `paineldecontrole/index.html`, 2 pontos:
+1. `loadPrestadorPendentes()`: a mesclagem em `declaracoesPendentesCache` passou de "só adiciona se o id não existir" pra "substitui se já existir, adiciona se não existir" (`findIndex` + substituição no índice, em vez de `Set` + `push` condicional).
+2. Handler `form-salvar-pedido` (ramo `declaracoes_pendentes`): passou a chamar `loadPrestadorPendentes()` junto com `loadDeclaracoesPendentes()` (`Promise.all`), garantindo que o cache seja atualizado logo após salvar, antes de reabrir o documento formatado.
+
+Nenhum formulário, upload, Storage, banco de dados, Declarações/Procurações (mesma falha lá, mas não reportada — deixado intocado por instrução explícita do usuário) ou layout foi tocado.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `git diff` conferido: só os 2 pontos acima alterados.
+3. Lógica de mesclagem corrigida extraída literalmente do arquivo (copiada, não reescrita) e testada em Node contra os 3 cenários pedidos + 1 regressão:
+   - Cenário 1 (sem logo → adiciona) → `quer_logo`/`logo_base64` aparecem corretamente no cache.
+   - Cenário 2 (com logo → substitui) → cache fica com a logo NOVA, não a antiga.
+   - Cenário 3 (com logo → edita outros campos, logo intocada) → logo original preservada, outro campo atualizado.
+   - Regressão: um registro totalmente novo (id nunca visto) continua sendo adicionado normalmente.
+4. Fluxo do formulário (upload/troca da logo dentro do iframe de edição, com `?editId=` e `postMessage` reais) testado à parte, em ambiente isolado (Playwright) — confirmado que o `registro` enviado ao painel já carregava a logo nova corretamente antes mesmo desta correção; o problema era só na exibição pós-salvamento, tratado aqui.
+
+**Falta:** confirmação do usuário testando ao vivo os 3 cenários no painel publicado.

@@ -8568,8 +8568,16 @@
                 // registros desse módulo também, senão "Formatar"/a ficha abrem
                 // vazios quando só essa view foi visitada na sessão. Mesmo
                 // cuidado de loadDeclProcPendentes() acima.
-                const idsJaNoCache = new Set(declaracoesPendentesCache.map(d => d.id));
-                prestadorPendentesCache.forEach(d => { if (!idsJaNoCache.has(d.id)) declaracoesPendentesCache.push(d); });
+                // 2026-09-21 (correção): antes só ADICIONAVA quando o id não
+                // existia no cache — um registro editado (id já presente, ex.:
+                // logo trocada) ficava com os dados antigos aqui pra sempre,
+                // mesmo já salvos certos no banco, porque nunca era substituído.
+                // Agora SUBSTITUI quando já existe, e adiciona quando é novo.
+                prestadorPendentesCache.forEach(d => {
+                    const idx = declaracoesPendentesCache.findIndex(x => x.id === d.id);
+                    if (idx === -1) declaracoesPendentesCache.push(d);
+                    else declaracoesPendentesCache[idx] = d;
+                });
                 renderPrestadorRows();
             } catch (error) {
                 console.error('❌ Erro ao carregar orçamentos de prestação de serviço:', error);
@@ -10419,7 +10427,12 @@
                     await dbUpdate(ev.data.table, registro, { id: ev.data.id });
                     fecharEdicaoFormulario();
                     if (ev.data.table === 'declaracoes_pendentes') {
-                        await loadDeclaracoesPendentes();
+                        // loadDeclaracoesPendentes() ignora de propósito os tipos de
+                        // Prestação de Serviço (ver comentário lá dentro) — sem
+                        // recarregar loadPrestadorPendentes() aqui, editar um desses
+                        // registros (ex.: trocar a logo) reabria o documento formatado
+                        // com o cache antigo, de antes da edição (2026-09-21, correção).
+                        await Promise.all([loadDeclaracoesPendentes(), loadPrestadorPendentes()]);
                         if (declFormatadoAtual && declFormatadoAtual.id === ev.data.id) abrirDeclFormatado(ev.data.id);
                     } else if (ev.data.table === 'curriculos') {
                         await loadCurriculos();
