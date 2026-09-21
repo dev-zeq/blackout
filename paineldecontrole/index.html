@@ -341,11 +341,12 @@
            só que agora no wrapper — o botão de Menu em si fica visualmente idêntico. */
         .topnav-row { display: flex; align-items: center; gap: 8px; margin: -10px 0 12px -8px; }
         .topnav-row .back-btn { margin: 0; flex-shrink: 0; }
-        .quicknav { display: flex; align-items: center; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 4px; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
-        .quicknav::-webkit-scrollbar { height: 4px; }
-        .quicknav::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
-        .quicknav-btn { flex-shrink: 0; white-space: nowrap; font-family: inherit; background: var(--accent-dim); border: 1px solid rgba(34,197,94,0.35); color: var(--accent-bright); font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: background .15s ease, color .15s ease; }
-        .quicknav-btn:hover { background: var(--accent); color: #05170c; }
+        .quicknav { display: flex; align-items: center; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 4px; -webkit-overflow-scrolling: touch; background: transparent; scrollbar-width: thin; scrollbar-color: rgba(34,197,94,0.35) transparent; }
+        .quicknav::-webkit-scrollbar { height: 4px; background: transparent; }
+        .quicknav::-webkit-scrollbar-track { background: transparent; }
+        .quicknav::-webkit-scrollbar-thumb { background: rgba(34,197,94,0.35); border-radius: 4px; }
+        .quicknav-btn { flex-shrink: 0; white-space: nowrap; font-family: inherit; background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.28); color: #86efac; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+        .quicknav-btn:hover { background: rgba(34,197,94,0.22); border-color: rgba(34,197,94,0.5); color: var(--accent-bright); }
         .back-btn:active { color: var(--accent-bright); }
         .link-list { }
         .link-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; font-size: 14px; color: var(--text); }

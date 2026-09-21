@@ -3844,3 +3844,24 @@ Pedido: dentro de um módulo (ex.: Emissão de Recibos), trocar pra outro módul
 3. Conferido visualmente no diff que `openView`/`openSubPanel` só ganharam a chamada de `renderQuickNav` no fim — todo o corpo anterior de cada função (troca de `active`, `loadX()`, `scrollToSection`, etc.) ficou exatamente igual.
 
 **Falta:** teste ao vivo no navegador — clicar em cada atalho de dentro de cada módulo, e conferir a rolagem horizontal em tela estreita (mobile); este ambiente não tem navegador.
+
+
+## Painel Principal — barra de atalhos rápidos: visual mais sóbrio (2026-09-21, ajuste)
+
+Pedido de acompanhamento, depois do usuário testar ao vivo: a barra de atalhos (ver seção acima) tinha uma faixa branca chamativa aparecendo embaixo dos botões. Pedido: manter a rolagem horizontal funcionando, mas deixar essa área transparente/integrada ao fundo escuro, com os atalhos em verde mais sóbrio e texto legível — sem tocar nos atalhos, na ordem ou nas funções.
+
+**Causa raiz:** a barra de rolagem (`.quicknav`) usava `var(--border-strong)` (`rgba(255,255,255,0.14)`, branco translúcido) como cor do "polegar" da rolagem, e não definia explicitamente a cor da trilha (`track`) nem do fundo — em navegadores que não usam rolagem "overlay" (comum em Android/alguns desktops), isso aparecia como uma faixa clara sob os botões.
+
+**Arquivo:** só `paineldecontrole/index.html`, só CSS (`.quicknav`, `.quicknav-btn`).
+
+### O que mudou
+- `.quicknav`: fundo explícito `transparent`; trilha da rolagem (`::-webkit-scrollbar-track` e `scrollbar-color` no Firefox) também `transparent`; o "polegar" da rolagem passou de branco translúcido (`var(--border-strong)`) pra verde sóbrio (`rgba(34,197,94,0.35)`), mesma família de cor já usada no resto do painel.
+- `.quicknav-btn`: fundo mais discreto (`rgba(34,197,94,0.10)`, antes `var(--accent-dim)` ≈ 0.12 — praticamente igual, só ligeiramente mais sóbrio), borda mais suave (`0.28` de opacidade, antes `0.35`), texto em verde mais suave (`#86efac`, antes `var(--accent-bright)` que é usado nos títulos/destaques do painel). Hover continua destacando (fundo mais forte, borda mais visível, texto no verde de destaque).
+- Rolagem horizontal (`overflow-x: auto`) e tudo mais (ordem dos atalhos, `renderQuickNav`, `quickNavGo`, `openView`/`openSubPanel`) **inalterados** — só cor/transparência.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `git diff` conferido: só as 2 regras CSS (`.quicknav`/`.quicknav-btn`) alteradas — nenhuma linha de JS, HTML ou outro seletor tocada.
+3. Preview local (cópia temporária com só as bibliotecas externas substituídas por stubs locais, pra rodar sem depender de rede — apagada depois do teste) confirmou visualmente: sem faixa branca, pílulas em verde sóbrio, texto legível, rolagem horizontal preservada em viewport estreito (420px, simulando celular).
+
+**Publicado:** commit direto em `main` a pedido do usuário (ajuste visual, sem necessidade de nova revisão em PR).
