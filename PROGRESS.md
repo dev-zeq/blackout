@@ -3822,3 +3822,25 @@ Pedido: aumentar a fonte do nome da empresa, endereço, CNPJ/CPF e telefone no c
 2. `git diff` conferido: só os 3 seletores de fonte do cabeçalho alterados.
 
 **Falta:** teste ao vivo no navegador (este ambiente não tem um).
+
+
+## Painel Principal — barra de atalhos rápidos entre módulos (2026-09-21)
+
+Pedido: dentro de um módulo (ex.: Emissão de Recibos), trocar pra outro módulo (ex.: Currículo, Detran, Contratos) exigia voltar ao Menu Principal antes. Pedido explícito: manter o botão "← Menu" 100% como está, e adicionar do lado dele uma barra de atalhos de 1 clique pros demais módulos, sem tocar em nenhuma função, cálculo, formulário, Supabase ou layout interno dos módulos.
+
+**Como o painel funciona (investigado antes de mexer):** é uma SPA de arquivo único (`paineldecontrole/index.html`, `<script type="module">`) — "módulos" são `<div class="view">` que ganham/perdem a classe `active` via `openView(view)` (módulos com backend/Supabase) ou `openSubPanel(key)` (sub-painéis de links externos: Exames, Boletos, Detran, Prefeitura, Antecedentes, Cartões, Telefonia, Água/Luz). O botão "← Menu" (`goHome()`) aparece em 12 lugares, sempre como `<button class="back-btn" onclick="goHome()">← Menu</button>` idêntico.
+
+**Arquivo:** só `paineldecontrole/index.html`.
+
+### O que mudou
+- **CSS** (perto de `.back-btn`): novo `.topnav-row` (wrapper flex que reproduz o mesmo offset negativo que `.back-btn` tinha sozinho, então o botão Menu continua no mesmo lugar visual de antes) + `.quicknav`/`.quicknav-btn` (barra com rolagem horizontal, sem quebrar linha — `overflow-x:auto`, `flex-shrink:0` nos botões — pra caber muitos módulos sem estourar o cabeçalho). Cores reaproveitam as variáveis já existentes (`--accent`, `--accent-bright`, `--accent-dim`, `--border-strong`) — nenhuma cor nova.
+- **HTML:** os 12 `<button class="back-btn" onclick="goHome()">← Menu</button>` (idênticos, um por view) passaram a ficar dentro de `<div class="topnav-row">`, com um `<div class="quicknav" data-quicknav></div>` vazio ao lado — populado em runtime, não no HTML estático.
+- **JS:** `QUICKNAV_ITEMS` (novo array, só metadados — id/label/kind/target) lista os módulos com `openView` (Recibos, Orçamento Impressões, Simulador, Currículo, Declarações, Contratos, Prestação de Serviço, Financeiro, Movimentação Financeira, Resumo Financeiro) e os sub-painéis com `openSubPanel` (Exames, Boletos, Detran, Prefeitura, Antecedentes, Cartões Lojas, Telefonia/Internet, Água/Luz). `renderQuickNav(currentId)` preenche todo `[data-quicknav]` da página com os itens, **exceto o módulo atual** (não repete, conforme pedido). `quickNavGo(id)` (exportada em `window.quickNavGo`, mesmo padrão de `window.handleMenuClick`/`window.openSubPanel` já usado no arquivo) só chama `openView()`/`openSubPanel()` — as MESMAS funções que o Menu Principal já usava, sem rota nova. `openView()` e `openSubPanel()` ganharam 1 linha cada, chamando `renderQuickNav(...)` no fim, depois de tudo que já faziam — nenhuma linha removida ou reordenada dentro delas.
+- Nenhum dado, cálculo, query Supabase, formulário ou função de módulo tocados — só navegação.
+
+### Testes (Node, fora do navegador)
+1. `node --check` no `<script type="module">` inteiro pós-mudança (extraído do arquivo) → sintaxe válida.
+2. Confirmado por grep: as 12 ocorrências de `class="back-btn" onclick="goHome()"` viraram `class="topnav-row"` com o back-btn intacto dentro — nenhuma sobrou fora do wrapper, nenhuma duplicada.
+3. Conferido visualmente no diff que `openView`/`openSubPanel` só ganharam a chamada de `renderQuickNav` no fim — todo o corpo anterior de cada função (troca de `active`, `loadX()`, `scrollToSection`, etc.) ficou exatamente igual.
+
+**Falta:** teste ao vivo no navegador — clicar em cada atalho de dentro de cada módulo, e conferir a rolagem horizontal em tela estreita (mobile); este ambiente não tem navegador.
