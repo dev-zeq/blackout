@@ -3865,3 +3865,55 @@ Pedido de acompanhamento, depois do usuário testar ao vivo: a barra de atalhos 
 3. Preview local (cópia temporária com só as bibliotecas externas substituídas por stubs locais, pra rodar sem depender de rede — apagada depois do teste) confirmou visualmente: sem faixa branca, pílulas em verde sóbrio, texto legível, rolagem horizontal preservada em viewport estreito (420px, simulando celular).
 
 **Publicado:** commit direto em `main` a pedido do usuário (ajuste visual, sem necessidade de nova revisão em PR).
+
+
+## Prestação de Serviço — corrige logo não atualizando após editar (2026-09-21)
+
+Pedido: investigar por que, ao editar uma Prestação de Serviço já salva, a logo não podia ser substituída/adicionada/removida — mesmo os outros campos editando normalmente. Pedido explícito pra investigar antes de mexer, comparando com o Currículo (onde a troca de foto na edição já funciona).
+
+**Investigação (sem alterar nada ainda):**
+1. O upload/seleção da logo (`prestador-form.html`, `receberLogoEscolhida()`/`renderCondLogo()`) usa base64 direto em `dados.especifico.logo_base64` (sem Supabase Storage, decisão de 2026-08-26). Testado isoladamente (Playwright, formulário embutido num iframe igual ao uso real, com `?editId=`): trocar a logo durante a edição **atualiza corretamente** `logoBase64` e o `registro` que é enviado ao painel via `postMessage` — o front-end do formulário está certo.
+2. A gravação no banco (`window.addEventListener('message', ...)` em `index.html` → `dbUpdate()` → Edge Function `db-write`, inspecionada direto no projeto Supabase via MCP) faz um `update(payload).match(match)` simples, sem filtro de campos, sem trigger nem CHECK na tabela `declaracoes_pendentes` (confirmado via `information_schema`). **A gravação em si sempre salvava a logo nova corretamente.**
+3. O problema real: `index.html` mantém **dois caches separados** — `prestadorPendentesCache` (usado pelos *cards* da lista, sempre recarregado por inteiro) e `declaracoesPendentesCache` (cache compartilhado que `abrirDeclFormatado()` usa pra desenhar o **documento formatado**, único lugar onde a logo aparece de fato). Em `loadPrestadorPendentes()`, a mesclagem desses dois caches só **adicionava** um registro em `declaracoesPendentesCache` quando o `id` ainda não existia lá — um registro **editado** (id já presente desde que a tela foi aberta) nunca era substituído, ficando com os dados de **antes da edição** pra sempre nesse cache (até um F5). Como a logo só aparece no documento formatado (que lê desse cache "congelado"), era o único lugar onde o problema ficava visível — os *cards* da lista, que usam o outro cache (sempre fresco), pareciam refletir a edição normalmente.
+4. Além disso, o handler que processa o salvamento da edição (`form-salvar-pedido`, ramo `declaracoes_pendentes`) só chamava `loadDeclaracoesPendentes()` — que **exclui de propósito** Prestação de Serviço (e Declarações/Procurações) da sua busca — sem nunca chamar `loadPrestadorPendentes()`, então nem essa mesclagem (já falha) rodava automaticamente depois de salvar.
+
+**Por que o Currículo nunca teve esse problema:** usa `loadCurriculos()`, uma função única que recarrega tudo do zero a cada chamada — sem divisão em caches nem lógica de "só adiciona se for novo".
+
+**Arquivo:** só `paineldecontrole/index.html`, 2 pontos:
+1. `loadPrestadorPendentes()`: a mesclagem em `declaracoesPendentesCache` passou de "só adiciona se o id não existir" pra "substitui se já existir, adiciona se não existir" (`findIndex` + substituição no índice, em vez de `Set` + `push` condicional).
+2. Handler `form-salvar-pedido` (ramo `declaracoes_pendentes`): passou a chamar `loadPrestadorPendentes()` junto com `loadDeclaracoesPendentes()` (`Promise.all`), garantindo que o cache seja atualizado logo após salvar, antes de reabrir o documento formatado.
+
+Nenhum formulário, upload, Storage, banco de dados, Declarações/Procurações (mesma falha lá, mas não reportada — deixado intocado por instrução explícita do usuário) ou layout foi tocado.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. `git diff` conferido: só os 2 pontos acima alterados.
+3. Lógica de mesclagem corrigida extraída literalmente do arquivo (copiada, não reescrita) e testada em Node contra os 3 cenários pedidos + 1 regressão:
+   - Cenário 1 (sem logo → adiciona) → `quer_logo`/`logo_base64` aparecem corretamente no cache.
+   - Cenário 2 (com logo → substitui) → cache fica com a logo NOVA, não a antiga.
+   - Cenário 3 (com logo → edita outros campos, logo intocada) → logo original preservada, outro campo atualizado.
+   - Regressão: um registro totalmente novo (id nunca visto) continua sendo adicionado normalmente.
+4. Fluxo do formulário (upload/troca da logo dentro do iframe de edição, com `?editId=` e `postMessage` reais) testado à parte, em ambiente isolado (Playwright) — confirmado que o `registro` enviado ao painel já carregava a logo nova corretamente antes mesmo desta correção; o problema era só na exibição pós-salvamento, tratado aqui.
+
+**Falta:** confirmação do usuário testando ao vivo os 3 cenários no painel publicado.
+
+
+## Painel Principal — corrige barra de atalhos/conteúdo duplicados nos sub-painéis (2026-09-21)
+
+Pedido: investigar por que, ao entrar num sub-painel (ex. Detran) vindo de outro módulo (ex. Recibos) pela nova barra de atalhos, a tela mostrava DUAS barras de atalhos e o conteúdo de Recibos aparecendo junto com o de Detran. Pedido explícito pra investigar a causa antes de corrigir, sem esconder com CSS.
+
+**Investigação:**
+- A duplicação não é um bug na barra de atalhos em si — é `.view.active` de DUAS views diferentes ao mesmo tempo (cada `.view` tem seu próprio `.topnav-row` com Menu+barra, então 2 views ativas = 2 barras + os 2 conteúdos sobrepostos).
+- Causa: `openSubPanel()` (função que abre Detran/Prefeitura/Exames/Boletos/Antecedentes/Cartões/Telefonia/Água-Luz) só desliga (`classList.remove('active')`) 4 views: `viewHome`, `viewCaixa`, `viewTermos`, `viewPlanejamento`. Essa lista nunca foi atualizada conforme novos módulos foram criados — falta `viewFinanceiro`, `viewDeclProc`, `viewCurriculo`, `viewRecibo`, `viewOrcamento`, `viewSimulador`, `viewPrestador`, `viewMovFin`. Em comparação, `openView()` (usada pelos módulos "normais") já desliga todas as views, incluindo `viewSub` — está completa e correta.
+- **Bug pré-existente, não causado pela barra de atalhos** — só nunca tinha aparecido porque, antes da barra, um sub-painel só era aberto a partir do Menu Principal (`viewHome`), a única view que `openSubPanel()` já desligava. A barra de atalhos foi a primeira forma de pular direto de QUALQUER módulo (ex. Recibos) pra um sub-painel — e como a view de origem não estava na lista de "desligar", ela ficava ativa junto com a nova.
+
+**Arquivo:** só `paineldecontrole/index.html`, função `openSubPanel()`.
+
+### O que mudou
+- Adicionadas as 8 chamadas `classList.remove('active')` que faltavam (`viewFinanceiro`, `viewDeclProc`, `viewCurriculo`, `viewRecibo`, `viewOrcamento`, `viewSimulador`, `viewPrestador`, `viewMovFin`), igualando `openSubPanel()` ao que `openView()` já fazia. Nenhuma outra linha, função, formulário, cálculo ou módulo tocado.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Preview local (Playwright, bibliotecas externas trocadas por stubs locais — apagada depois do teste): reproduzido o bug relatado (Recibos → Detran pela barra) ANTES da correção não foi necessário reproduzir à parte — a causa já estava clara pela leitura do código; testada a correção percorrendo Recibos → Detran → Currículo → Prefeitura → Contratos → Financeiro → Boletos → Recibos, sempre pela barra de atalhos (pior caso: nunca passando pelo Menu Principal entre eles). Em cada parada, conferido via DOM que existe exatamente **1** `.view.active` e **1** `.topnav-row` visível — sem exceção nos 8 saltos testados.
+
+**Falta:** confirmação do usuário testando ao vivo no painel publicado.
