@@ -3896,3 +3896,24 @@ Nenhum formulário, upload, Storage, banco de dados, Declarações/Procurações
 4. Fluxo do formulário (upload/troca da logo dentro do iframe de edição, com `?editId=` e `postMessage` reais) testado à parte, em ambiente isolado (Playwright) — confirmado que o `registro` enviado ao painel já carregava a logo nova corretamente antes mesmo desta correção; o problema era só na exibição pós-salvamento, tratado aqui.
 
 **Falta:** confirmação do usuário testando ao vivo os 3 cenários no painel publicado.
+
+
+## Painel Principal — corrige barra de atalhos/conteúdo duplicados nos sub-painéis (2026-09-21)
+
+Pedido: investigar por que, ao entrar num sub-painel (ex. Detran) vindo de outro módulo (ex. Recibos) pela nova barra de atalhos, a tela mostrava DUAS barras de atalhos e o conteúdo de Recibos aparecendo junto com o de Detran. Pedido explícito pra investigar a causa antes de corrigir, sem esconder com CSS.
+
+**Investigação:**
+- A duplicação não é um bug na barra de atalhos em si — é `.view.active` de DUAS views diferentes ao mesmo tempo (cada `.view` tem seu próprio `.topnav-row` com Menu+barra, então 2 views ativas = 2 barras + os 2 conteúdos sobrepostos).
+- Causa: `openSubPanel()` (função que abre Detran/Prefeitura/Exames/Boletos/Antecedentes/Cartões/Telefonia/Água-Luz) só desliga (`classList.remove('active')`) 4 views: `viewHome`, `viewCaixa`, `viewTermos`, `viewPlanejamento`. Essa lista nunca foi atualizada conforme novos módulos foram criados — falta `viewFinanceiro`, `viewDeclProc`, `viewCurriculo`, `viewRecibo`, `viewOrcamento`, `viewSimulador`, `viewPrestador`, `viewMovFin`. Em comparação, `openView()` (usada pelos módulos "normais") já desliga todas as views, incluindo `viewSub` — está completa e correta.
+- **Bug pré-existente, não causado pela barra de atalhos** — só nunca tinha aparecido porque, antes da barra, um sub-painel só era aberto a partir do Menu Principal (`viewHome`), a única view que `openSubPanel()` já desligava. A barra de atalhos foi a primeira forma de pular direto de QUALQUER módulo (ex. Recibos) pra um sub-painel — e como a view de origem não estava na lista de "desligar", ela ficava ativa junto com a nova.
+
+**Arquivo:** só `paineldecontrole/index.html`, função `openSubPanel()`.
+
+### O que mudou
+- Adicionadas as 8 chamadas `classList.remove('active')` que faltavam (`viewFinanceiro`, `viewDeclProc`, `viewCurriculo`, `viewRecibo`, `viewOrcamento`, `viewSimulador`, `viewPrestador`, `viewMovFin`), igualando `openSubPanel()` ao que `openView()` já fazia. Nenhuma outra linha, função, formulário, cálculo ou módulo tocado.
+
+### Testes
+1. `node --check` no `<script>` inteiro pós-mudança → sintaxe válida.
+2. Preview local (Playwright, bibliotecas externas trocadas por stubs locais — apagada depois do teste): reproduzido o bug relatado (Recibos → Detran pela barra) ANTES da correção não foi necessário reproduzir à parte — a causa já estava clara pela leitura do código; testada a correção percorrendo Recibos → Detran → Currículo → Prefeitura → Contratos → Financeiro → Boletos → Recibos, sempre pela barra de atalhos (pior caso: nunca passando pelo Menu Principal entre eles). Em cada parada, conferido via DOM que existe exatamente **1** `.view.active` e **1** `.topnav-row` visível — sem exceção nos 8 saltos testados.
+
+**Falta:** confirmação do usuário testando ao vivo no painel publicado.

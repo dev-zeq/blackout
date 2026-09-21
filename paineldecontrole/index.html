@@ -4598,6 +4598,21 @@
             document.getElementById('viewCaixa').classList.remove('active');
             document.getElementById('viewTermos').classList.remove('active');
             document.getElementById('viewPlanejamento').classList.remove('active');
+            // 2026-09-21 (correção): faltavam aqui os módulos criados depois desta
+            // função (Recibos, Orçamento, Simulador, Currículo, Declarações,
+            // Prestador, Financeiro, Movimentação Financeira) — igual a openView()
+            // já faz. Sem isso, entrar num sub-painel (ex. Detran) vindo de um
+            // desses módulos pela barra de atalhos deixava a view anterior "active"
+            // ao mesmo tempo, duplicando o Menu/barra e mostrando os dois conteúdos
+            // sobrepostos.
+            document.getElementById('viewFinanceiro').classList.remove('active');
+            document.getElementById('viewDeclProc').classList.remove('active');
+            document.getElementById('viewCurriculo').classList.remove('active');
+            document.getElementById('viewRecibo').classList.remove('active');
+            document.getElementById('viewOrcamento').classList.remove('active');
+            document.getElementById('viewSimulador').classList.remove('active');
+            document.getElementById('viewPrestador').classList.remove('active');
+            document.getElementById('viewMovFin').classList.remove('active');
             document.getElementById('subTitle').textContent = panel.title;
             document.getElementById('subLinks').innerHTML = panel.items.map(item => {
                 // URL efetiva = a que o usuário salvou na central de Links Web
