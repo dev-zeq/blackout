@@ -3917,3 +3917,19 @@ Pedido: investigar por que, ao entrar num sub-painel (ex. Detran) vindo de outro
 2. Preview local (Playwright, bibliotecas externas trocadas por stubs locais — apagada depois do teste): reproduzido o bug relatado (Recibos → Detran pela barra) ANTES da correção não foi necessário reproduzir à parte — a causa já estava clara pela leitura do código; testada a correção percorrendo Recibos → Detran → Currículo → Prefeitura → Contratos → Financeiro → Boletos → Recibos, sempre pela barra de atalhos (pior caso: nunca passando pelo Menu Principal entre eles). Em cada parada, conferido via DOM que existe exatamente **1** `.view.active` e **1** `.topnav-row` visível — sem exceção nos 8 saltos testados.
 
 **Falta:** confirmação do usuário testando ao vivo no painel publicado.
+
+
+## Financeiro — RESET COMPLETO do histórico (2026-10-01)
+
+Pedido: zerar todo o histórico financeiro e reiniciar do zero, preservando estrutura e demais módulos. Análise feita antes (somente leitura), escopo confirmado pelo usuário, **sem backup** (escolha explícita do usuário — irreversível).
+
+**Como o financeiro é armazenado:** `contas.saldo = saldo_inicial + Σ(lancamentos.valor)`, mantido pelo trigger `trg_lancamentos_saldo`. Quase tudo vive em `lancamentos` (inclusive aberturas/fechamentos de caixa — tipos `ABERTURA`/`FECHAMENTO` — e Troca por Pix — tipo `TROCA_PIX`; `pix_recebidos` estava vazia). Tabelas antigas (`entries`, `pix_recebidos`, `sangria`, `retiradas`, `grafica_despesas`, `fechamentos_caixa`, `fechamentos_mensais`) já estavam com 0 registros.
+
+**Executado (1 transação, direto no banco, com checagem interna que reverteria se divergisse):**
+- `DELETE FROM lancamentos` → **238 registros removidos**.
+- `UPDATE contas SET saldo_inicial = 0, saldo = 0` nas 6 contas (Sicredi, PagSeguro, Cofre de Notas, Cofre de Moedas, Fundo de Caixa, Caixa da Loja). Contas continuam cadastradas.
+- Saldos antes: Sicredi -1.887,10 · PagSeguro 167,54 · Cofre Notas 81,00 · Cofre Moedas 43,75 · Fundo de Caixa 160,00 · Caixa da Loja 4.820,00.
+
+**Preservado:** `recibos` (2), `despesas_fixas` (5), `planejamento_config`, currículos, declarações/contratos, pessoas, ativos, respostas rápidas, Storage, Edge Functions, triggers, funções e todo o código. Nenhum código nem estrutura de banco alterados. Nenhum lançamento de abertura/saldo anterior criado.
+
+**Falta:** usuário abrir o painel e conferir visualmente Financeiro/Caixa/Relatórios zerados.
