@@ -128,7 +128,11 @@ const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
 const ESTADOS_CIVIS = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União Estável'];
 const CONDICOES = ['Pai', 'Mãe', 'Tutor(a) ou guardião(ã) legal', 'Outro responsável legal'];
 const CONDICOES_COM_DESC = ['Outro responsável legal'];
-const TIPOS_DOC_MENOR = ['CPF', 'Certidão de nascimento', 'Carteira de identidade (RG)', 'Carteira de Identidade Nacional (CIN)', 'RNM / CRNM (registro migratório)', 'Passaporte', 'Outro documento'];
+// Documentos do menor: lista de blocos { uid, tipo, numero, pais, validade, nome, compl } — cada bloco é
+// independente; os campos abertos dependem do tipo (CAMPOS_DOC).
+const TIPOS_DOC_MENOR = ['CPF', 'RG ou CIN', 'Certidão de nascimento', 'RNM/CRNM', 'Passaporte', 'Outro documento'];
+const ROTULO_TIPO_DOC = { 'RNM/CRNM': 'RNM/CRNM — documento de identificação migratória' };
+const CAMPOS_DOC = { 'CPF': ['numero'], 'RG ou CIN': ['numero'], 'Certidão de nascimento': ['numero', 'compl'], 'RNM/CRNM': ['numero', 'validade'], 'Passaporte': ['numero', 'pais', 'validade'], 'Outro documento': ['nome', 'numero', 'compl'] };
 const ACOMPANHAMENTOS = [
     ['pai', 'Acompanhado pelo pai'], ['mae', 'Acompanhado pela mãe'],
     ['familiar', 'Acompanhado por outro familiar'], ['amigo', 'Acompanhado por amigo da família'],
@@ -159,7 +163,7 @@ function novaPessoa(prefixo, extra) {
 const s = {
     autorizantes: [],
     menor: { uid: 'menor', nome: '', genero: '', nasc: '', cpf: '', nat_tipo: 'Brasil', nat_cidade: '', nat_uf: '', nat_pais: '' },
-    docs: [], // documentos do menor (exceto CPF): { uid, tipo, numero, descricao, ativo }
+    docs: [], // documentos do menor (ver TIPOS_DOC_MENOR)
     acomp_tipo: '', acomp_desc: '', acompanhantes: [], emergencia: [],
     rec_tem: '', rec_modo: '', rec:  { nome: '', doc: '', tel_ddd: '', tel_num: '', cidade: '', uf: '', parentesco: '', parentesco_desc: '', endereco: '' },
     viagem: { origem_cidade: '', origem_uf: '', destino_cidade: '', destino_uf: '', saida: '', retorno: '', finalidade: '' },
@@ -204,7 +208,7 @@ function setPath(o, path, v) {
 function campo(label, path, opts = {}) {
     const v = getPath(s, path) ?? '';
     const marc = opts.obrig === false ? ' <span style="font-weight:400;color:var(--text-faint)">(opcional)</span>' : ' *';
-    const idc = 'f_' + path.replace(/\W/g, '_'); // ids terminados em cpf/cep recebem a máscara (assets/campo-documentos.js)
+    const idc = opts.id || ('f_' + path.replace(/\W/g, '_')); // ids terminados em cpf/cep recebem a máscara (assets/campo-documentos.js)
     let ctl;
     if (opts.select) {
         ctl = `<select id="${idc}" data-p="${path}" ${opts.re ? 'data-re="1"' : ''}><option value="">Selecione</option>${opts.select.map(o => `<option value="${esc(o)}" ${v === o ? 'selected' : ''}>${o === '__outro__' ? 'Outro bairro' : esc(o)}</option>`).join('')}</select>`;
@@ -399,6 +403,65 @@ function errosEtapa1() {
     return e;
 }
 
+// ---------- Documentos do menor ----------
+const docVazio = (d) => !d.tipo && !(d.numero || d.pais || d.validade || d.nome || d.compl);
+const docTemDados = (d) => !!(d.numero || d.pais || d.validade || d.nome || d.compl);
+const novoDoc = (tipo) => ({ uid: novoUid('doc'), tipo: tipo || '', numero: '', pais: '', validade: '', nome: '', compl: '' });
+function docRotulo(d) { return d.tipo === 'Outro documento' && (d.nome || '').trim() ? d.nome.trim() : (d.tipo || 'Documento'); }
+// s.menor.cpf espelha o 1º documento CPF (compatível com o restante do sistema: dados.pessoa_b.cpf)
+function docsSync() { const c = s.docs.find(d => d.tipo === 'CPF' && (d.numero || '').trim()); s.menor.cpf = c ? c.numero.trim() : ''; }
+function docsNormalizar() { // estados antigos (rascunho/edição): CPF separado + { ativo, descricao } e nomes de tipo antigos
+    const mapa = { 'Carteira de identidade (RG)': 'RG ou CIN', 'Carteira de Identidade Nacional (CIN)': 'RG ou CIN', 'RNM / CRNM (registro migratório)': 'RNM/CRNM' };
+    const novos = [];
+    (s.docs || []).forEach(d => {
+        if (d.ativo === false) return;
+        const n = Object.assign({ uid: '', tipo: '', numero: '', pais: '', validade: '', nome: '', compl: '' }, d); delete n.ativo; if (!n.uid) n.uid = novoUid('doc');
+        if (mapa[n.tipo]) n.tipo = mapa[n.tipo];
+        if (n.descricao !== undefined) { if (n.tipo === 'Outro documento' && !n.nome) n.nome = n.descricao; delete n.descricao; }
+        novos.push(n);
+    });
+    if (s.menor && (s.menor.cpf || '').trim() && !novos.some(d => d.tipo === 'CPF')) novos.unshift(Object.assign(novoDoc('CPF'), { numero: s.menor.cpf.trim() }));
+    s.docs = novos; docsSync();
+}
+function docLimparIncompativeis(d, novoTipo) {
+    const ok = CAMPOS_DOC[novoTipo] || [];
+    ['numero', 'pais', 'validade', 'nome', 'compl'].forEach(c => { if (!ok.includes(c)) d[c] = ''; });
+}
+function docPerderia(d, novoTipo) { const ok = CAMPOS_DOC[novoTipo] || []; return ['numero', 'pais', 'validade', 'nome', 'compl'].some(c => d[c] && !ok.includes(c)); }
+function docBlocoHtml(d, i) {
+    const b = `docs.${i}`;
+    let h = `<div class="person-block"><h3><span>Documento ${i + 1}${d.tipo ? ' — ' + esc(docRotulo(d)) : ''}</span><button type="button" class="btn-link" data-remover-doc="${i}">Remover</button></h3>
+        <div class="field"><label>Tipo de documento *</label><select data-doc-tipo-sel="${i}"><option value="">Selecione o tipo</option>${TIPOS_DOC_MENOR.map(t => `<option value="${esc(t)}" ${d.tipo === t ? 'selected' : ''}>${esc(ROTULO_TIPO_DOC[t] || t)}</option>`).join('')}</select></div>`;
+    switch (d.tipo) {
+        case 'CPF': h += campo('Número do CPF', `${b}.numero`, { ph: '000.000.000-00', id: `f_docs_${i}_numero_cpf` }); break;
+        case 'RG ou CIN': h += campo('Número do documento', `${b}.numero`); break;
+        case 'Certidão de nascimento': h += campo('Matrícula ou número da certidão', `${b}.numero`, { hint: 'Conforme o documento apresentado.' }) + campo('Dados adicionais', `${b}.compl`, { obrig: false, ph: 'Cartório, livro, folha, termo… (se constar)' }); break;
+        case 'RNM/CRNM': h += campo('Número do documento', `${b}.numero`) + campo('Data de validade', `${b}.validade`, { type: 'date', obrig: false, hint: 'Se o documento tiver validade.' }); break;
+        case 'Passaporte': h += campo('Número do passaporte', `${b}.numero`) + campo('País emissor', `${b}.pais`) + campo('Data de validade', `${b}.validade`, { type: 'date', obrig: false, hint: 'Se constar no passaporte.' }); break;
+        case 'Outro documento': h += campo('Nome ou tipo do documento', `${b}.nome`) + campo('Número ou identificação', `${b}.numero`) + campo('Informações complementares', `${b}.compl`, { obrig: false }); break;
+    }
+    return h + `</div>`;
+}
+function errosDocs() {
+    const e = [], docs = s.docs;
+    if (!docs.length) return ['Menor: informe ao menos um documento de identificação'];
+    docs.forEach((d, i) => {
+        const r = (m) => e.push(`Documento ${i + 1}${d.tipo ? ' (' + docRotulo(d) + ')' : ''}: ${m}`);
+        if (docVazio(d)) { r('bloco em branco — preencha ou remova'); return; }
+        if (!d.tipo) { r('escolha o tipo de documento'); return; }
+        const num = (d.numero || '').trim();
+        if (d.tipo === 'Outro documento' && !(d.nome || '').trim()) r('informe o nome ou tipo do documento');
+        if (!num) r('informe o número');
+        else if (d.tipo === 'CPF') { const dc = soDigitos(num); if (dc.length < 11) r('CPF incompleto (11 dígitos)'); else if (!cpfOk(num)) r('CPF inválido'); }
+        if (d.tipo === 'Passaporte' && !(d.pais || '').trim()) r('informe o país emissor');
+        if (d.validade && !dataValida(d.validade)) r('data de validade inválida');
+    });
+    const cpfs = docs.filter(d => d.tipo === 'CPF').map(d => soDigitos(d.numero)).filter(Boolean);
+    if (new Set(cpfs).size !== cpfs.length) e.push('Menor: o mesmo CPF foi informado mais de uma vez');
+    return e;
+}
+const docsInformados = () => s.docs.filter(d => d.tipo && (d.numero || '').trim());
+
 // ---------- ETAPA 2 — menor ----------
 function stepMenor() {
     const m = s.menor;
@@ -415,21 +478,12 @@ function stepMenor() {
         <div class="radio-group">${['Masculino', 'Feminino', 'Prefiro não informar'].map(g => pill('f_menor_genero', g, m.genero === g, g, 'menor.genero')).join('')}</div></div>
     ${campoNasc('Data de nascimento', 'menor.nasc')}
     <div class="field"><label>Idade (calculada automaticamente)</label><input type="text" id="f_menor_idade" readonly value="${idade === null || idade < 0 ? '' : idade + (idade === 1 ? ' ano' : ' anos')}" placeholder="Preencha a data de nascimento"></div>
-    ${campo('CPF', 'menor.cpf', { ph: '000.000.000-00', obrig: false, hint: 'Só se o menor possuir. Não é necessário inventar número.' })}
-    <div class="sec-title">Documentos do menor</div>
-    <div class="field"><label>Quais documentos de identificação o menor possui? *</label>
-        <div class="check-group">${TIPOS_DOC_MENOR.map(t => {
-            if (t === 'CPF') return `<label class="radio-pill"><input type="checkbox" disabled ${soDigitos(m.cpf) ? 'checked' : ''}><span class="pill-label" title="Marcado automaticamente quando o CPF é preenchido acima">CPF</span></label>`;
-            const marcado = s.docs.some(d => d.tipo === t && d.ativo);
-            return `<label class="radio-pill"><input type="checkbox" data-doc-tipo="${esc(t)}" ${marcado ? 'checked' : ''}><span class="pill-label">${esc(t)}</span></label>`;
-        }).join('')}</div></div>`;
-    s.docs.forEach((d, i) => {
-        if (!d.ativo) return;
-        h += `<div class="person-block"><h3><span>${esc(d.tipo)}</span><button type="button" class="btn-link" data-remover-doc="${i}">Remover</button></h3>
-            ${campo('Número do documento', `docs.${i}.numero`)}
-            ${d.tipo === 'Outro documento' ? campo('Qual documento?', `docs.${i}.descricao`) : ''}</div>`;
-    });
-    h += `<button type="button" class="btn-sec" id="btnAddDoc">+ Adicionar outro documento</button>`;
+    <div class="sec-title">Documentos pessoais do menor</div>
+    <div class="field"><label>Qual documento de identificação o menor possui? *</label>
+        <div class="check-group">${TIPOS_DOC_MENOR.map(t => `<label class="radio-pill"><input type="checkbox" data-doc-tipo="${esc(t)}" ${s.docs.some(d => d.tipo === t) ? 'checked' : ''}><span class="pill-label">${esc(ROTULO_TIPO_DOC[t] || t)}</span></label>`).join('')}</div>
+        <div class="hint">Selecione um ou vários. Para outro documento do mesmo tipo (ou de tipo diferente), use "+ Adicionar outro documento".</div></div>`;
+    s.docs.forEach((d, i) => { h += docBlocoHtml(d, i); });
+    h += `<div id="docMsg" class="error-msg"></div><button type="button" class="btn-sec" id="btnAddDoc">+ Adicionar outro documento</button>`;
     return h + navHtml();
 }
 function errosEtapa2() {
@@ -440,13 +494,7 @@ function errosEtapa2() {
     else if (!m.nat_pais.trim()) e.push('Menor: país de nascimento');
     { const en = nascErro(m); if (en) e.push('Menor: ' + en.replace(/\.$/, ''));
       else if (idadeEm(m.nasc, hojeISO()) >= 18) e.push('Menor: esta autorização é só para menores de 18 anos'); }
-    if (m.cpf.trim() && !cpfOk(m.cpf)) e.push('Menor: CPF inválido');
-    const temDoc = soDigitos(m.cpf) || s.docs.some(d => d.ativo && (d.numero || '').trim());
-    if (!temDoc) e.push('Menor: informe ao menos um documento de identificação com número');
-    s.docs.forEach(d => {
-        if (d.ativo && !(d.numero || '').trim()) e.push(`Menor: número do documento (${d.tipo})`);
-        if (d.ativo && d.tipo === 'Outro documento' && !(d.descricao || '').trim()) e.push('Menor: descreva o "outro documento"');
-    });
+    docsSync(); e.push(...errosDocs());
     const cpfsAut = s.autorizantes.map(p => soDigitos(p.cpf)).filter(Boolean);
     if (soDigitos(m.cpf) && cpfsAut.includes(soDigitos(m.cpf))) e.push('Menor: o CPF não pode ser igual ao de um autorizante');
     return e;
@@ -622,8 +670,8 @@ function calcularAlertas() {
     if (dataValida(v.saida) && v.saida < hojeISO()) a.push('A data de saída informada já passou.');
     if (dataValida(v.saida) && dataValida(v.retorno) && dataValida(s.validade.inicio) && dataValida(s.validade.fim) && (s.validade.inicio > v.saida || s.validade.fim < v.retorno)) a.push('O período de validade não cobre todas as datas da viagem informada.');
     if (['Ônibus', 'Avião'].includes(s.transp.tipo)) a.push(`Transporte por ${s.transp.tipo === 'Avião' ? 'avião' : 'ônibus'}: verificar as exigências de documentos e de autorização da própria empresa de transporte.`);
-    const temDoc = soDigitos(m.cpf) || s.docs.some(d => d.ativo && (d.numero || '').trim());
-    if (!temDoc) a.push('Nenhum documento do menor informado.');
+    if (!docsInformados().length) a.push('Nenhum documento do menor informado.');
+    docsInformados().forEach(d => { if (d.validade && dataValida(d.validade) && (d.validade < hojeISO() || (dataValida(v.retorno) && d.validade < v.retorno))) a.push(`${docRotulo(d)} do menor ${d.validade < hojeISO() ? 'está vencido' : 'vence antes do retorno da viagem'} (validade ${fmtData(d.validade)}).`); });
     s.autorizantes.forEach((p, i) => { if (!(p.rg_num || '').trim()) a.push(`Autorizante ${i + 1}: documento de identidade não informado (apenas CPF).`); });
     return a;
 }
@@ -644,8 +692,7 @@ function linhasResumo() {
         ['Nome', m.nome], ['Nacionalidade', nacFinal('menor')],
         ['Naturalidade', m.nat_tipo === 'Brasil' ? `${m.nat_cidade}/${m.nat_uf}` : `${m.nat_pais}${m.nat_cidade ? ' — ' + m.nat_cidade : ''}`],
         ['Gênero', m.genero || 'Não informado'], ['Nascimento', `${fmtData(m.nasc)}${idade !== null && idade >= 0 ? ' (' + idade + ' anos)' : ''}`],
-        ['CPF', mascaraDoc(m.cpf, 'cpf') || 'Não possui / não informado'],
-        ...s.docs.filter(d => d.ativo).map(d => [d.tipo === 'Outro documento' && d.descricao ? d.descricao : d.tipo, mascaraDoc(d.numero)]),
+        ...docsInformados().map(d => [docRotulo(d), mascaraDoc(d.numero, d.tipo === 'CPF' ? 'cpf' : '') + (d.pais ? ` — ${d.pais}` : '') + (d.validade ? ` (validade ${fmtData(d.validade)})` : '')]),
     ]]);
     const ac = acompanhantesAtivos();
     const linhasAc = [['Como viajará', (ACOMPANHAMENTOS.find(x => x[0] === s.acomp_tipo) || ['', ''])[1] + (s.acomp_desc ? ` — ${s.acomp_desc}` : '')]];
@@ -773,7 +820,7 @@ document.addEventListener('input', (ev) => {
     const t = ev.target;
     if (t.dataset && t.dataset.nasc) { nascDigitar(t); return; }
     if (t.dataset && t.dataset.p && t.type !== 'radio' && t.type !== 'checkbox') {
-        setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p);
+        setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p); if (t.dataset.p.startsWith('docs.')) docsSync();
         if (t.dataset.p === 'menor.nasc') atualizarIdade();
     }
     if (stepIndex === 4) refrescarResumo();
@@ -782,7 +829,7 @@ document.addEventListener('change', (ev) => {
     const t = ev.target;
     if (t.dataset && t.dataset.p) {
         if (t.type === 'radio') { if (!t.checked) return; setPath(s, t.dataset.p, t.value); }
-        else { setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p); }
+        else { setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p); if (t.dataset.p.startsWith('docs.')) docsSync(); }
         if (t.dataset.p === 'acomp_tipo') ajustarAcompanhantes();
         if (/^acompanhantes\.\d+\.ref$/.test(t.dataset.p)) { const p = getPath(s, t.dataset.p.replace(/\.ref$/, '')); const a = s.autorizantes.find(x => x.uid === p.ref); if (a && !p.parentesco && ['Pai', 'Mãe'].includes(a.condicao)) p.parentesco = a.condicao; }
         if (t.dataset.p === 'rec_tem' && t.value !== 'Sim') { s.rec_modo = ''; }
@@ -799,12 +846,18 @@ document.addEventListener('change', (ev) => {
         } else while (s.autorizantes.length < n) s.autorizantes.push(novaPessoa('aut'));
         render(); return;
     }
-    if (t.dataset && t.dataset.docTipo) {
-        const tipo = t.dataset.docTipo;
-        const ex = s.docs.find(d => d.tipo === tipo);
-        if (t.checked) { if (ex) ex.ativo = true; else s.docs.push({ uid: novoUid('doc'), tipo, numero: '', descricao: '', ativo: true }); }
-        else s.docs.forEach(d => { if (d.tipo === tipo) d.ativo = false; });
-        render(); return;
+    if (t.dataset && t.dataset.docTipoSel !== undefined) { // mudar o tipo de um bloco
+        const d = s.docs[Number(t.dataset.docTipoSel)], novo = t.value;
+        if (!d || d.tipo === novo) return;
+        if (docPerderia(d, novo) && !confirm('Trocar o tipo apaga os dados que não existem no novo tipo de documento. Continuar?')) { render(); return; }
+        docLimparIncompativeis(d, novo); d.tipo = novo; docsSync(); render(); return;
+    }
+    if (t.dataset && t.dataset.docTipo) { // botões de tipo: marcar adiciona um bloco; desmarcar remove os blocos desse tipo
+        const tipo = t.dataset.docTipo, blocos = s.docs.filter(d => d.tipo === tipo);
+        if (t.checked) { if (!blocos.length) { const vazio = s.docs.find(docVazio); if (vazio) vazio.tipo = tipo; else s.docs.push(novoDoc(tipo)); } }
+        else if (blocos.some(docTemDados) && !confirm(`Remover o(s) documento(s) "${tipo}" e os dados preenchidos?`)) { render(); return; }
+        else s.docs = s.docs.filter(d => d.tipo !== tipo);
+        docsSync(); render(); return;
     }
     if (t.id === 'f_confirmacao') { s.confirmacao = t.checked; refrescarResumo(); }
     if (stepIndex === 4) refrescarResumo();
@@ -815,8 +868,11 @@ document.addEventListener('click', (ev) => {
     const d = t.dataset || {};
     if (d.removerAut !== undefined) { if (confirm('Remover este autorizante?')) { s.autorizantes.splice(Number(d.removerAut), 1); render(); } return; }
     if (t.id === 'btnAddAut') { if (s.autorizantes.length < MAX_AUTORIZANTES) s.autorizantes.push(novaPessoa('aut')); render(); return; }
-    if (d.removerDoc !== undefined) { s.docs.splice(Number(d.removerDoc), 1); render(); return; }
-    if (t.id === 'btnAddDoc') { s.docs.push({ uid: novoUid('doc'), tipo: 'Outro documento', numero: '', descricao: '', ativo: true }); render(); return; }
+    if (d.removerDoc !== undefined) { const i = Number(d.removerDoc); if (docTemDados(s.docs[i]) && !confirm('Remover este documento e os dados preenchidos?')) return; s.docs.splice(i, 1); docsSync(); render(); return; }
+    if (t.id === 'btnAddDoc') {
+        if (s.docs.some(docVazio)) { const m = document.getElementById('docMsg'); if (m) { m.textContent = 'Já existe um documento em branco: escolha o tipo e preencha (ou remova) antes de adicionar outro.'; m.style.display = 'block'; } return; }
+        s.docs.push(novoDoc('')); render(); return;
+    }
     if (d.removerEmerg !== undefined) { s.emergencia.splice(Number(d.removerEmerg), 1); render(); return; }
     if (t.id === 'btnAddEmerg') { s.emergencia.push({ nome: '', parentesco: '', tel_ddd: '', tel_num: '' }); render(); return; }
     if (d.goto !== undefined) { stepIndex = Number(d.goto); render(); window.scrollTo(0, 0); return; }
@@ -852,6 +908,7 @@ function aplicarEstado(salvo, salvoNac) {
     if (s.autorizantes && s.autorizantes.length > MAX_AUTORIZANTES) s.autorizantes.length = MAX_AUTORIZANTES;
     if (s.acompanhantes && s.acompanhantes.length > 1) s.acompanhantes.length = 1;
     if (s.acomp_tipo === 'ambos') s.acomp_tipo = '';
+    docsNormalizar();
     Object.keys(nac).forEach(k => delete nac[k]);
     Object.assign(nac, salvoNac || {});
 }
@@ -889,9 +946,8 @@ function montarRegistro() {
         if (acs.length && s.rec_modo === 'mesma') { recebedor = { mesma_pessoa_do_acompanhante: 1 }; }
         else recebedor = { nome: s.rec.nome.trim(), documento: s.rec.doc.trim() || null, telefone: window.Telefone.formatar(s.rec, 'tel'), cidade: s.rec.cidade.trim(), estado: s.rec.uf, parentesco: s.rec.parentesco, parentesco_descricao: s.rec.parentesco_desc || null, endereco: s.rec.endereco.trim() || null };
     }
-    const docs = [];
-    if (m.cpf.trim()) docs.push({ tipo: 'CPF', numero: m.cpf.trim() });
-    s.docs.filter(d => d.ativo && d.numero.trim()).forEach(d => docs.push({ tipo: d.tipo, numero: d.numero.trim(), descricao: d.descricao || null }));
+    docsSync();
+    const docs = docsInformados().map(d => ({ tipo: d.tipo, numero: d.numero.trim(), pais_emissor: (d.pais || '').trim() || null, validade: d.validade || null, nome: d.tipo === 'Outro documento' ? (d.nome || '').trim() : null, complemento: (d.compl || '').trim() || null }));
     const t = s.transp;
     return {
         tipo_contrato: TIPO,
@@ -979,7 +1035,7 @@ async function iniciar() {
     if (headerP) headerP.textContent = 'Corrija os dados abaixo e salve as alterações.';
     render();
 }
-window.__test = { s, nac, montarRegistro, calcularAlertas, validadores, aplicarEstado, get stepIndex() { return stepIndex; }, set stepIndex(v) { stepIndex = v; }, render, novaPessoa, novoAcomp, ajustarAcompanhantes, idadeEm };
+window.__test = { s, nac, novoDoc, errosDocs, docsSync, montarRegistro, calcularAlertas, validadores, aplicarEstado, get stepIndex() { return stepIndex; }, set stepIndex(v) { stepIndex = v; }, render, novaPessoa, novoAcomp, ajustarAcompanhantes, idadeEm };
 iniciar();
 </script>
 </body>
