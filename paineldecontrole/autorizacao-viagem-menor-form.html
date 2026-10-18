@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Autorização de Viagem para Menor — Blackout</title>
+<style>
+    :root {
+        --bg: #05170c;
+        --surface: #0c1f14;
+        --surface-2: #0f2818;
+        --border: rgba(255,255,255,0.08);
+        --text: #eafff1;
+        --text-dim: #8fa89a;
+        --text-faint: #5c7568;
+        --accent: #22c55e;
+        --accent-bright: #4ade80;
+        --accent-dim: rgba(34,197,94,0.12);
+        --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #0a2415 0%, var(--bg) 55%); color: var(--text);
+        padding: 24px 16px 60px;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 22px; }
+    .header .logo { width: 52px; height: 52px; margin: 0 auto 10px; }
+    .header h1 { font-size: 19px; margin: 0 0 4px; }
+    .header p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+    .progress-track { height: 5px; background: var(--surface); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); border-radius: 10px; transition: width .25s ease; }
+    .step-label { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-bright); margin-bottom: 18px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 22px 18px; }
+    .card h2 { font-size: 15px; margin: 0 0 16px; color: var(--text); }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+    .field .hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+    input[type=text], input[type=tel], input[type=email], input[type=date], input[type=time], input[type=number], select, textarea {
+        width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); color: var(--text); font-size: 14.5px; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .radio-group, .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-pill { flex: 1 1 auto; min-width: 90px; }
+    .radio-pill input { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-pill .pill-label {
+        display: block; text-align: center; padding: 11px 10px; border-radius: 12px; border: 1px solid var(--border);
+        background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .12s;
+    }
+    .radio-pill input:checked + .pill-label { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-bright); }
+    .nav-row { display: flex; gap: 10px; margin-top: 22px; }
+    .btn { flex: 1; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn-next { background: linear-gradient(135deg, var(--accent-bright), var(--accent)); color: #05170c; box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
+    .btn-back { background: var(--surface-2); color: var(--text-dim); flex: 0 0 90px; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .error-msg { color: var(--danger); font-size: 12px; margin-top: 10px; display: none; }
+    .review-item { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+    .review-item .rk { color: var(--text-dim); }
+    .review-item .rv { color: var(--text); text-align: right; font-weight: 600; }
+    .success-box { text-align: center; padding: 40px 10px; }
+    .success-box .check { width: 64px; height: 64px; margin: 0 auto 18px; }
+    .success-box h2 { font-size: 18px; margin-bottom: 8px; }
+    .success-box p { color: var(--text-dim); font-size: 13.5px; }
+    .person-block { border: 1px solid var(--border); border-radius: 16px; padding: 16px 14px 4px; margin-bottom: 16px; background: rgba(255,255,255,0.015); }
+    .person-block h3 { font-size: 13.5px; margin: 0 0 14px; color: var(--accent-bright); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .row2 { display: flex; gap: 10px; } .row2 > .field { flex: 1; min-width: 0; }
+    .btn-sec { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .btn-sec:hover { border-color: var(--accent); color: var(--accent-bright); }
+    .btn-link { background: none; border: none; color: var(--danger); font-size: 12px; cursor: pointer; padding: 0; font-family: inherit; }
+    .sec-title { font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-dim); margin: 20px 0 10px; }
+    .alert-box { border: 1px solid rgba(251,191,36,.45); background: rgba(251,191,36,.08); color: #fde68a; border-radius: 14px; padding: 12px 14px; font-size: 12.5px; margin: 14px 0; line-height: 1.45; }
+    .alert-box b { display: block; margin-bottom: 6px; } .alert-box ul { margin: 0; padding-left: 18px; }
+    .pend-box { border: 1px solid rgba(248,113,113,.45); background: rgba(248,113,113,.08); color: #fecaca; border-radius: 14px; padding: 12px 14px; font-size: 12.5px; margin: 14px 0; }
+    .pend-box ul { margin: 6px 0 0; padding-left: 18px; }
+    .info-note { font-size: 12px; color: var(--text-dim); background: var(--accent-dim); border-radius: 12px; padding: 10px 12px; margin-bottom: 16px; line-height: 1.45; }
+    .review-sec { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 4px; }
+    .review-sec h3 { font-size: 13px; margin: 0; color: var(--accent-bright); }
+    .confirm-row { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; color: var(--text-dim); line-height: 1.45; margin-top: 16px; }
+    .confirm-row input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
+    input[readonly] { opacity: .75; }
+    .draft-bar { font-size: 12px; background: var(--accent-dim); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    @media (max-width: 380px) { .card { padding: 18px 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="46" fill="#05170c" stroke="#22C55E" stroke-width="4"/>
+            <g fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round">
+                <path d="M 50 10 A 40 40 0 1 1 12 60"/>
+            </g>
+            <polygon points="50,8 42,22 58,22" fill="#22C55E"/>
+            <text x="50" y="66" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="40" fill="white">B</text>
+        </svg>
+        <h1>Autorização de Viagem para Menor</h1>
+        <p>Autorização de viagem nacional (dentro do Brasil) para menor de 18 anos. Preencha os dados em 5 etapas.</p>
+    </div>
+
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="step-label" id="stepLabel"></div>
+
+    <div class="card" id="cardArea"></div>
+</div>
+
+
+
+<script src="assets/campo-nacionalidade.js"></script>
+<script src="assets/campo-telefone.js"></script>
+<script src="assets/campo-documentos.js"></script>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const TIPO = 'AUTORIZACAO_VIAGEM_MENOR';
+const RASCUNHO_KEY = 'blackout_autorizacao_viagem_menor_rascunho_v1';
+const RASCUNHO_VALIDADE_MS = 7 * 24 * 3600 * 1000;
+
+const ESTADOS_BR = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+const ESTADOS_CIVIS = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União Estável'];
+const CONDICOES = ['Pai', 'Mãe', 'Tutor(a) ou guardião(ã) legal', 'Outro responsável legal'];
+const CONDICOES_COM_DESC = ['Outro responsável legal'];
+const TIPOS_DOC_MENOR = ['CPF', 'Certidão de nascimento', 'Carteira de identidade (RG)', 'Carteira de Identidade Nacional (CIN)', 'RNM / CRNM (registro migratório)', 'Passaporte', 'Outro documento'];
+const ACOMPANHAMENTOS = [
+    ['pai', 'Acompanhado pelo pai'], ['mae', 'Acompanhado pela mãe'], ['ambos', 'Acompanhado por ambos os pais'],
+    ['familiar', 'Acompanhado por outro familiar'], ['amigo', 'Acompanhado por amigo da família'],
+    ['desacompanhado', 'Viajando desacompanhado'], ['outro', 'Outro'],
+];
+const PARENTESCOS = ['Pai', 'Mãe', 'Avô', 'Avó', 'Bisavô', 'Bisavó', 'Irmão', 'Irmã', 'Tio', 'Tia', 'Primo', 'Prima', 'Padrasto', 'Madrasta', 'Outro familiar', 'Amigo da família', 'Pessoa sem parentesco familiar', 'Outro'];
+const PARENTESCOS_COM_DESC = ['Outro familiar', 'Amigo da família', 'Outro'];
+const PARENTESCOS_FAMILIARES = ['Pai', 'Mãe', 'Avô', 'Avó', 'Bisavô', 'Bisavó', 'Irmão', 'Irmã', 'Tio', 'Tia', 'Primo', 'Prima', 'Padrasto', 'Madrasta'];
+const TRANSPORTES = ['Ônibus', 'Avião', 'Veículo próprio', 'Veículo de terceiros (carona)', 'Outro meio de transporte'];
+const VALIDADES = ['Somente para a viagem informada', 'Para viagens de ida e retorno dentro do período informado', 'Para múltiplas viagens durante um período determinado'];
+const TEXTO_CONFIRMACAO = 'Declaro que as informações fornecidas são verdadeiras e que possuo legitimidade para prestar estas informações e solicitar a elaboração do documento, conforme minha condição legal.';
+
+// ---------- Estado ----------
+let UID = 0;
+const novoUid = (p) => p + (++UID);
+const nac = {}; // nacionalidades (campo compartilhado assets/campo-nacionalidade.js), chave "<uid>_nacionalidade"
+function iniciarNac(uid) { if (nac[uid + '_nacionalidade'] === undefined) { nac[uid + '_nacionalidade'] = 'Brasileiro(a)'; nac[uid + '_nacionalidade_outro'] = ''; } }
+function novaPessoa(prefixo, extra) {
+    const p = Object.assign({
+        uid: novoUid(prefixo), nome: '', estado_civil: '', nasc: '', cpf: '', rg_num: '', rg_org: '', rg_uf: '',
+        cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', tel_ddd: '', tel_num: '',
+    }, extra || {});
+    iniciarNac(p.uid);
+    return p;
+}
+const s = {
+    autorizantes: [],
+    menor: { uid: 'menor', nome: '', genero: '', nasc: '', cpf: '', nat_tipo: 'Brasil', nat_cidade: '', nat_uf: '', nat_pais: '' },
+    docs: [], // documentos do menor (exceto CPF): { uid, tipo, numero, descricao, ativo }
+    acomp_tipo: '', acomp_desc: '', acompanhantes: [], emergencia: [],
+    rec_tem: '', rec_modo: '', rec_ref: '', rec: { nome: '', doc: '', tel_ddd: '', tel_num: '', cidade: '', uf: '', parentesco: '', parentesco_desc: '', endereco: '' },
+    viagem: { origem_cidade: '', origem_uf: '', destino_cidade: '', destino_uf: '', saida: '', retorno: '', finalidade: '' },
+    transp: { tipo: '', empresa: '', companhia: '', proprio_do_autorizante: '', condutor: '', proprietario: '', carona_nome: '', carona_tel_ddd: '', carona_tel_num: '', outro_desc: '' },
+    validade: { tipo: '', inicio: '', fim: '', obs: '' },
+    confirmacao: false,
+};
+iniciarNac('menor');
+s.autorizantes.push(novaPessoa('aut'));
+
+let stepIndex = 0;
+let editMode = false, editId = null;
+let mostrarDocs = false;
+const ROTULOS_ETAPAS = ['Quem autoriza', 'Dados do menor', 'Acompanhante', 'Viagem e transporte', 'Validade e conferência'];
+
+// ---------- Utilidades ----------
+function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pill(name, value, checked, label, path, re, tipo) {
+    const id = name + '_' + String(value).replace(/\W/g, '');
+    return `<label class="radio-pill"><input type="${tipo || 'radio'}" name="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''} ${path ? `data-p="${path}"` : ''} ${re ? 'data-re="1"' : ''}><span class="pill-label">${esc(label || value)}</span></label>`;
+}
+function getPath(o, path) { return path.split('.').reduce((a, k) => (a == null ? a : a[k]), o); }
+function setPath(o, path, v) {
+    const ks = path.split('.'); let a = o;
+    for (let i = 0; i < ks.length - 1; i++) a = a[ks[i]];
+    a[ks[ks.length - 1]] = v;
+}
+// Campo de texto/select/data ligado a um caminho do estado (grava a cada digitação, então voltar/avançar
+// e adicionar/remover pessoas nunca perde o que já foi preenchido).
+function campo(label, path, opts = {}) {
+    const v = getPath(s, path) ?? '';
+    const marc = opts.obrig === false ? ' <span style="font-weight:400;color:var(--text-faint)">(opcional)</span>' : ' *';
+    const idc = 'f_' + path.replace(/\W/g, '_'); // ids terminados em cpf/cep recebem a máscara (assets/campo-documentos.js)
+    let ctl;
+    if (opts.select) {
+        ctl = `<select id="${idc}" data-p="${path}" ${opts.re ? 'data-re="1"' : ''}><option value="">Selecione</option>${opts.select.map(o => `<option value="${esc(o)}" ${v === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+    } else if (opts.textarea) {
+        ctl = `<textarea id="${idc}" data-p="${path}" placeholder="${esc(opts.ph || '')}">${esc(v)}</textarea>`;
+    } else {
+        ctl = `<input type="${opts.type || 'text'}" id="${idc}" data-p="${path}" value="${esc(v)}" ${opts.ph ? `placeholder="${esc(opts.ph)}"` : ''} ${opts.readonly ? 'readonly' : ''} ${opts.max ? `max="${opts.max}"` : ''} ${opts.type === 'date' ? 'max="9999-12-31"' : ''}>`;
+    }
+    return `<div class="field"><label for="${idc}">${esc(label)}${marc}</label>${ctl}${opts.hint ? `<div class="hint">${esc(opts.hint)}</div>` : ''}</div>`;
+}
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function dataValida(iso) { return /^\d{4}-\d{2}-\d{2}$/.test(iso || '') && !isNaN(new Date(iso + 'T00:00:00').getTime()) && new Date(iso + 'T00:00:00').toISOString().slice(0, 10) === iso; }
+function idadeEm(nascISO, refISO) {
+    if (!dataValida(nascISO) || !dataValida(refISO)) return null;
+    const n = new Date(nascISO + 'T00:00:00'), r = new Date(refISO + 'T00:00:00');
+    let a = r.getFullYear() - n.getFullYear();
+    if (r.getMonth() < n.getMonth() || (r.getMonth() === n.getMonth() && r.getDate() < n.getDate())) a--;
+    return a;
+}
+function fmtData(iso) { return dataValida(iso) ? iso.split('-').reverse().join('/') : ''; }
+const soDigitos = (v) => String(v || '').replace(/\D/g, '');
+function cpfOk(v) { return window.Documentos.cpfValido(v); }
+function mascaraDoc(v, tipo) { // exibição reduzida (privacidade): só os últimos dígitos
+    const d = soDigitos(v); if (!d) return '';
+    if (mostrarDocs) return tipo === 'cpf' ? window.Documentos.mascarar(v, 'cpf') : v;
+    if (tipo === 'cpf' && d.length === 11) return `•••.•••.${d.slice(6, 9)}-••`;
+    return '•'.repeat(Math.max(0, String(v).length - 3)) + String(v).slice(-3);
+}
+const nacFinal = (uid) => window.Nacionalidade.final(nac, uid + '_nacionalidade');
+
+// ---------- Blocos de campos reutilizados ----------
+function blocoPessoa(p, base, cfg) {
+    // base = caminho no estado (ex.: "autorizantes.0"); cfg.* liga/desliga partes
+    const u = p.uid;
+    let h = campo('Nome completo', `${base}.nome`);
+    h += window.Nacionalidade.campoHtml(nac, u + '_nacionalidade');
+    if (cfg.estadoCivil) h += campo('Estado civil', `${base}.estado_civil`, { select: ESTADOS_CIVIS });
+    h += campo('Data de nascimento', `${base}.nasc`, { type: 'date' });
+    h += campo('CPF', `${base}.cpf`, { ph: '000.000.000-00', obrig: cfg.cpfObrig !== false, hint: cfg.hintDoc });
+    h += `<div class="row2">${campo(cfg.rgLabel || 'Documento de identidade (nº)', `${base}.rg_num`, { obrig: cfg.rgObrig === true })}${campo('Órgão emissor', `${base}.rg_org`, { obrig: false, ph: 'SSP' })}</div>`;
+    h += campo('UF do documento', `${base}.rg_uf`, { select: ESTADOS_BR, obrig: false });
+    if (cfg.endereco) {
+        h += `<div class="sec-title">Endereço</div>`;
+        h += campo('CEP', `${base}.cep`, { ph: '00000-000', obrig: false });
+        h += `<div class="row2">${campo('Endereço (rua, avenida…)', `${base}.rua`)}${campo('Número', `${base}.numero`, { ph: 's/nº se não houver' })}</div>`;
+        h += campo('Complemento', `${base}.complemento`, { obrig: false });
+        h += campo('Bairro', `${base}.bairro`);
+        h += `<div class="row2">${campo('Cidade', `${base}.cidade`)}${campo('Estado (UF)', `${base}.uf`, { select: ESTADOS_BR })}</div>`;
+    } else if (cfg.cidadeUf) {
+        h += `<div class="row2">${campo('Cidade', `${base}.cidade`)}${campo('Estado (UF)', `${base}.uf`, { select: ESTADOS_BR })}</div>`;
+    }
+    h += window.Telefone.campoHtml(p, 'tel', u + '_tel', 'Telefone celular', cfg.telObrig !== false);
+    return h;
+}
+// erros de uma pessoa (lista de mensagens)
+function errosPessoa(p, rotulo, cfg) {
+    const e = [];
+    const r = (m) => e.push(`${rotulo}: ${m}`);
+    if (!p.nome.trim()) r('nome completo');
+    if (!nacFinal(p.uid)) r('nacionalidade');
+    if (cfg.estadoCivil && !p.estado_civil) r('estado civil');
+    if (!dataValida(p.nasc)) r('data de nascimento válida');
+    else {
+        const idade = idadeEm(p.nasc, hojeISO());
+        if (idade < 0) r('data de nascimento no futuro');
+        else if (cfg.adulto && idade < 18) r('deve ter 18 anos ou mais');
+    }
+    if (p.cpf.trim() && !cpfOk(p.cpf)) r('CPF inválido');
+    if (cfg.cpfObrig !== false && !p.cpf.trim() && !(p.rg_num || '').trim()) r('informe o CPF ou o documento de identidade');
+    if (cfg.rgObrig && !(p.rg_num || '').trim()) r('documento de identidade (nº)');
+    if (cfg.endereco) {
+        if (!p.rua.trim()) r('endereço'); if (!p.numero.trim()) r('número do endereço');
+        if (!p.bairro.trim()) r('bairro'); if (!p.cidade.trim()) r('cidade'); if (!p.uf) r('estado (UF)');
+    } else if (cfg.cidadeUf) { if (!p.cidade.trim()) r('cidade'); if (!p.uf) r('estado (UF)'); }
+    const et = window.Telefone.validar(p, 'tel', cfg.telObrig !== false); if (et) r(et.replace(/\.$/, ''));
+    return e;
+}
+const CFG_AUT = { estadoCivil: true, endereco: true, adulto: true, rgLabel: 'Documento de identidade (nº)' };
+const CFG_ACOMP = { estadoCivil: false, endereco: true, adulto: true, hintDoc: 'Informe o CPF ou o documento de identidade.' };
+
+// ---------- ETAPA 1 — autorizantes ----------
+function stepAutorizantes() {
+    const n = s.autorizantes.length;
+    let h = `<h2>Dados de quem autoriza a viagem</h2>
+    <div class="info-note">Este formulário é para viagens <b>nacionais</b> (dentro do Brasil) de criança ou adolescente menor de 18 anos. Quem precisa autorizar (um ou ambos os responsáveis) depende de cada caso — informe aqui todas as pessoas que vão assinar a autorização.</div>
+    <div class="field"><label>Quantas pessoas participarão desta autorização como autorizantes? *</label>
+        <div class="radio-group">${[1, 2, 3].map(k => `<label class="radio-pill"><input type="radio" name="f_qtd_aut" value="${k}" ${n === k ? 'checked' : ''} data-qtd="1"><span class="pill-label">${k}</span></label>`).join('')}</div>
+        <div class="hint">Para mais de 3, use "Adicionar outro autorizante" abaixo.</div></div>`;
+    s.autorizantes.forEach((p, i) => {
+        const base = `autorizantes.${i}`;
+        h += `<div class="person-block"><h3><span>Autorizante ${i + 1}</span>${i > 0 ? `<button type="button" class="btn-link" data-remover-aut="${i}">Remover</button>` : ''}</h3>
+        ${blocoPessoa(p, base, CFG_AUT)}
+        <div class="field"><label>Qual é a relação desta pessoa com o menor? *</label>
+            <div class="radio-group">${CONDICOES.map(c => pill(`f_cond_${p.uid}`, c, p.condicao === c, c, `${base}.condicao`, true)).join('')}</div></div>
+        ${CONDICOES_COM_DESC.includes(p.condicao) ? campo('Descreva a condição em que autoriza', `${base}.condicao_desc`, { ph: 'Ex.: guardião por decisão judicial' }) : ''}
+        </div>`;
+    });
+    if (n < 5) h += `<button type="button" class="btn-sec" id="btnAddAut">+ Adicionar outro autorizante</button>`;
+    return h + navHtml();
+}
+function errosEtapa1() {
+    let e = [];
+    s.autorizantes.forEach((p, i) => {
+        e = e.concat(errosPessoa(p, `Autorizante ${i + 1}`, CFG_AUT));
+        if (!p.condicao) e.push(`Autorizante ${i + 1}: relação com o menor`);
+        else if (CONDICOES_COM_DESC.includes(p.condicao) && !(p.condicao_desc || '').trim()) e.push(`Autorizante ${i + 1}: descreva a condição em que autoriza`);
+    });
+    const cpfs = s.autorizantes.map(p => soDigitos(p.cpf)).filter(Boolean);
+    if (new Set(cpfs).size !== cpfs.length) e.push('Há autorizantes com o mesmo CPF');
+    return e;
+}
+
+// ---------- ETAPA 2 — menor ----------
+function stepMenor() {
+    const m = s.menor;
+    const idade = idadeEm(m.nasc, hojeISO());
+    let h = `<h2>Dados pessoais do menor</h2>
+    ${campo('Nome completo', 'menor.nome')}
+    ${window.Nacionalidade.campoHtml(nac, 'menor_nacionalidade')}
+    <div class="field"><label>Naturalidade (onde nasceu) *</label>
+        <div class="radio-group">${pill('f_nat_tipo', 'Brasil', m.nat_tipo === 'Brasil', 'Nasceu no Brasil', 'menor.nat_tipo', true)}${pill('f_nat_tipo', 'Outro país', m.nat_tipo === 'Outro país', 'Nasceu em outro país', 'menor.nat_tipo', true)}</div></div>
+    ${m.nat_tipo === 'Brasil'
+        ? `<div class="row2">${campo('Cidade', 'menor.nat_cidade')}${campo('UF', 'menor.nat_uf', { select: ESTADOS_BR })}</div>`
+        : `${campo('País', 'menor.nat_pais')}${campo('Cidade', 'menor.nat_cidade', { obrig: false })}`}
+    <div class="field"><label>Gênero <span style="font-weight:400;color:var(--text-faint)">(opcional)</span></label>
+        <div class="radio-group">${['Masculino', 'Feminino', 'Prefiro não informar'].map(g => pill('f_menor_genero', g, m.genero === g, g, 'menor.genero')).join('')}</div></div>
+    ${campo('Data de nascimento', 'menor.nasc', { type: 'date' })}
+    <div class="field"><label>Idade (calculada automaticamente)</label><input type="text" id="f_menor_idade" readonly value="${idade === null || idade < 0 ? '' : idade + (idade === 1 ? ' ano' : ' anos')}" placeholder="Preencha a data de nascimento"></div>
+    ${campo('CPF', 'menor.cpf', { ph: '000.000.000-00', obrig: false, hint: 'Só se o menor possuir. Não é necessário inventar número.' })}
+    <div class="sec-title">Documentos do menor</div>
+    <div class="field"><label>Quais documentos de identificação o menor possui? *</label>
+        <div class="check-group">${TIPOS_DOC_MENOR.map(t => {
+            if (t === 'CPF') return `<label class="radio-pill"><input type="checkbox" disabled ${soDigitos(m.cpf) ? 'checked' : ''}><span class="pill-label" title="Marcado automaticamente quando o CPF é preenchido acima">CPF</span></label>`;
+            const marcado = s.docs.some(d => d.tipo === t && d.ativo);
+            return `<label class="radio-pill"><input type="checkbox" data-doc-tipo="${esc(t)}" ${marcado ? 'checked' : ''}><span class="pill-label">${esc(t)}</span></label>`;
+        }).join('')}</div></div>`;
+    s.docs.forEach((d, i) => {
+        if (!d.ativo) return;
+        h += `<div class="person-block"><h3><span>${esc(d.tipo)}</span><button type="button" class="btn-link" data-remover-doc="${i}">Remover</button></h3>
+            ${campo('Número do documento', `docs.${i}.numero`)}
+            ${d.tipo === 'Outro documento' ? campo('Qual documento?', `docs.${i}.descricao`) : ''}</div>`;
+    });
+    h += `<button type="button" class="btn-sec" id="btnAddDoc">+ Adicionar outro documento</button>`;
+    return h + navHtml();
+}
+function errosEtapa2() {
+    const m = s.menor, e = [];
+    if (!m.nome.trim()) e.push('Menor: nome completo');
+    if (!nacFinal('menor')) e.push('Menor: nacionalidade');
+    if (m.nat_tipo === 'Brasil') { if (!m.nat_cidade.trim() || !m.nat_uf) e.push('Menor: naturalidade (cidade e UF)'); }
+    else if (!m.nat_pais.trim()) e.push('Menor: país de nascimento');
+    if (!dataValida(m.nasc)) e.push('Menor: data de nascimento válida');
+    else {
+        const idade = idadeEm(m.nasc, hojeISO());
+        if (idade < 0) e.push('Menor: data de nascimento no futuro');
+        else if (idade >= 18) e.push('Menor: esta autorização é só para menores de 18 anos');
+    }
+    if (m.cpf.trim() && !cpfOk(m.cpf)) e.push('Menor: CPF inválido');
+    const temDoc = soDigitos(m.cpf) || s.docs.some(d => d.ativo && (d.numero || '').trim());
+    if (!temDoc) e.push('Menor: informe ao menos um documento de identificação com número');
+    s.docs.forEach(d => {
+        if (d.ativo && !(d.numero || '').trim()) e.push(`Menor: número do documento (${d.tipo})`);
+        if (d.ativo && d.tipo === 'Outro documento' && !(d.descricao || '').trim()) e.push('Menor: descreva o "outro documento"');
+    });
+    const cpfsAut = s.autorizantes.map(p => soDigitos(p.cpf)).filter(Boolean);
+    if (soDigitos(m.cpf) && cpfsAut.includes(soDigitos(m.cpf))) e.push('Menor: o CPF não pode ser igual ao de um autorizante');
+    return e;
+}
+
+// ---------- ETAPA 3 — acompanhante / responsável durante a viagem ----------
+const novoAcomp = (par) => novaPessoa('acp', { parentesco: par || '', parentesco_desc: '', ref: '' });
+const PRESET_PARENTESCO = { pai: ['Pai'], mae: ['Mãe'], ambos: ['Pai', 'Mãe'], familiar: [''], amigo: ['Amigo da família'], outro: [''] };
+function ajustarAcompanhantes() {
+    const need = PRESET_PARENTESCO[s.acomp_tipo] || [];
+    const fixo = ['pai', 'mae', 'ambos'].includes(s.acomp_tipo);
+    need.forEach((par, i) => {
+        if (!s.acompanhantes[i]) s.acompanhantes[i] = novoAcomp(par);
+        else if (fixo || (s.acomp_tipo === 'amigo' && !s.acompanhantes[i].parentesco)) s.acompanhantes[i].parentesco = par;
+    });
+    if (fixo && s.acompanhantes.length > need.length) s.acompanhantes.length = need.length;
+}
+const acompanhantesAtivos = () => (s.acomp_tipo && s.acomp_tipo !== 'desacompanhado') ? s.acompanhantes : [];
+function rotuloAutorizante(p, i) { return `Autorizante ${i + 1}${p.nome.trim() ? ' — ' + p.nome.trim() : ''}`; }
+function selectParentescoHtml(base, obj) {
+    return `<div class="field"><label>Qual é o parentesco ou a relação com o menor? *</label>
+        <div class="radio-group">${PARENTESCOS.map(x => pill(`f_par_${base.replace(/\W/g, '_')}`, x, obj.parentesco === x, x, `${base}.parentesco`, true)).join('')}</div></div>
+        ${PARENTESCOS_COM_DESC.includes(obj.parentesco) ? campo('Descreva o parentesco ou a relação com o menor', `${base}.parentesco_desc`) : ''}`;
+}
+function stepAcompanhante() {
+    let h = `<h2>Acompanhante ou responsável durante a viagem</h2>
+    <div class="field"><label>Como o menor realizará a viagem? *</label>
+        <div class="radio-group">${ACOMPANHAMENTOS.map(([k, t]) => pill('f_acomp_tipo', k, s.acomp_tipo === k, t, 'acomp_tipo', true)).join('')}</div></div>`;
+    if (s.acomp_tipo === 'outro') h += campo('Descreva como o menor viajará', 'acomp_desc', { ph: 'Ex.: acompanhado pela equipe de um evento' });
+    const fixo = ['pai', 'mae', 'ambos'].includes(s.acomp_tipo);
+    acompanhantesAtivos().forEach((p, i) => {
+        const base = `acompanhantes.${i}`;
+        h += `<div class="person-block"><h3><span>Acompanhante ${i + 1}${fixo ? ' — ' + esc(p.parentesco) : ''}</span>${(!fixo && i > 0) ? `<button type="button" class="btn-link" data-remover-acomp="${i}">Remover</button>` : ''}</h3>
+        <div class="field"><label>Esta pessoa é um dos autorizantes?</label>
+            <select data-p="${base}.ref" data-re="1"><option value="">Não — preencher os dados desta pessoa</option>${s.autorizantes.map((a, k) => `<option value="${a.uid}" ${p.ref === a.uid ? 'selected' : ''}>${esc(rotuloAutorizante(a, k))}</option>`).join('')}</select>
+            <div class="hint">Se for a mesma pessoa, os dados dela não precisam ser digitados de novo.</div></div>`;
+        if (!p.ref) h += blocoPessoa(p, base, CFG_ACOMP);
+        if (!fixo) h += selectParentescoHtml(base, p);
+        h += `</div>`;
+    });
+    if (acompanhantesAtivos().length && !fixo) h += `<button type="button" class="btn-sec" id="btnAddAcomp">+ Adicionar outro acompanhante</button>`;
+    if (s.acomp_tipo === 'desacompanhado') {
+        if (!s.emergencia.length) s.emergencia.push({ nome: '', parentesco: '', tel_ddd: '', tel_num: '' });
+        h += `<div class="sec-title">Contatos de emergência</div><div class="info-note">O menor viajará sem acompanhante: não é preciso informar um acompanhante, mas indique quem pode ser contatado durante a viagem.</div>`;
+        s.emergencia.forEach((c, i) => {
+            h += `<div class="person-block"><h3><span>Contato ${i + 1}</span>${i > 0 ? `<button type="button" class="btn-link" data-remover-emerg="${i}">Remover</button>` : ''}</h3>
+            ${campo('Nome completo', `emergencia.${i}.nome`)}${campo('Parentesco ou relação', `emergencia.${i}.parentesco`, { obrig: false })}
+            ${window.Telefone.campoHtml(c, 'tel', `emerg${i}_tel`, 'Telefone celular', true)}</div>`;
+        });
+        h += `<button type="button" class="btn-sec" id="btnAddEmerg">+ Adicionar outro contato</button>`;
+    }
+    if (s.acomp_tipo) {
+        h += `<div class="sec-title">Recebimento no destino</div>
+        <div class="field"><label>O menor será recebido por outra pessoa no destino? *</label>
+            <div class="radio-group">${['Sim', 'Não'].map(v => pill('f_rec_tem', v, s.rec_tem === v, v, 'rec_tem', true)).join('')}</div></div>`;
+        if (s.rec_tem === 'Sim') {
+            const acs = acompanhantesAtivos();
+            if (acs.length) h += `<div class="field"><div class="radio-group">${pill('f_rec_modo', 'mesma', s.rec_modo === 'mesma', 'A mesma pessoa que acompanha o menor', 'rec_modo', true)}${pill('f_rec_modo', 'outra', s.rec_modo === 'outra', 'Outra pessoa', 'rec_modo', true)}</div></div>`;
+            if (acs.length > 1 && s.rec_modo === 'mesma') h += `<div class="field"><label>Qual acompanhante? *</label><select data-p="rec_ref"><option value="">Selecione</option>${acs.map((a, k) => `<option value="${a.uid}" ${s.rec_ref === a.uid ? 'selected' : ''}>Acompanhante ${k + 1}${a.nome.trim() ? ' — ' + esc(a.nome.trim()) : ''}</option>`).join('')}</select></div>`;
+            if (!acs.length || s.rec_modo === 'outra') {
+                h += `<div class="person-block"><h3><span>Pessoa que receberá o menor</span></h3>
+                ${campo('Nome completo', 'rec.nome')}${campo('CPF ou documento de identificação', 'rec.doc', { obrig: false, hint: 'Quando disponível.' })}
+                ${window.Telefone.campoHtml(s.rec, 'tel', 'rec_tel', 'Telefone celular', true)}
+                <div class="row2">${campo('Cidade', 'rec.cidade')}${campo('UF', 'rec.uf', { select: ESTADOS_BR })}</div>
+                ${selectParentescoHtml('rec', s.rec)}
+                ${campo('Endereço de recebimento', 'rec.endereco', { obrig: false, hint: 'Só se for diferente do endereço informado antes.' })}</div>`;
+            }
+        }
+    }
+    return h + navHtml();
+}
+function errosEtapa3() {
+    const e = [];
+    if (!s.acomp_tipo) { e.push('Como o menor realizará a viagem'); return e; }
+    if (s.acomp_tipo === 'outro' && !s.acomp_desc.trim()) e.push('Descreva como o menor viajará');
+    const acs = acompanhantesAtivos();
+    if (s.acomp_tipo !== 'desacompanhado') {
+        if (!acs.length) e.push('Informe ao menos um acompanhante');
+        acs.forEach((p, i) => {
+            const r = `Acompanhante ${i + 1}`;
+            if (!p.ref) e.push(...errosPessoa(p, r, CFG_ACOMP));
+            if (!p.parentesco && !(p.ref && ['Pai', 'Mãe'].includes((s.autorizantes.find(a => a.uid === p.ref) || {}).condicao))) e.push(`${r}: parentesco ou relação com o menor`);
+            if (PARENTESCOS_COM_DESC.includes(p.parentesco) && !(p.parentesco_desc || '').trim()) e.push(`${r}: descreva o parentesco ou a relação`);
+        });
+    } else {
+        s.emergencia.forEach((c, i) => {
+            if (!c.nome.trim()) e.push(`Contato de emergência ${i + 1}: nome`);
+            const et = window.Telefone.validar(c, 'tel', true); if (et) e.push(`Contato de emergência ${i + 1}: ${et.replace(/\.$/, '')}`);
+        });
+    }
+    if (!s.rec_tem) e.push('Informe se o menor será recebido por outra pessoa no destino');
+    else if (s.rec_tem === 'Sim') {
+        if (acs.length && !s.rec_modo) e.push('Recebimento: escolha "a mesma pessoa que acompanha" ou "outra pessoa"');
+        if (acs.length > 1 && s.rec_modo === 'mesma' && !s.rec_ref) e.push('Recebimento: escolha qual acompanhante receberá o menor');
+        if (!acs.length || s.rec_modo === 'outra') {
+            const r = s.rec;
+            if (!r.nome.trim()) e.push('Recebimento: nome da pessoa');
+            const et = window.Telefone.validar(r, 'tel', true); if (et) e.push(`Recebimento: ${et.replace(/\.$/, '')}`);
+            if (!r.cidade.trim() || !r.uf) e.push('Recebimento: cidade e UF');
+            if (!r.parentesco) e.push('Recebimento: parentesco ou relação com o menor');
+            else if (PARENTESCOS_COM_DESC.includes(r.parentesco) && !(r.parentesco_desc || '').trim()) e.push('Recebimento: descreva o parentesco ou a relação');
+        }
+    }
+    return e;
+}
+
+// ---------- ETAPA 4 — origem, destino e transporte ----------
+function stepViagem() {
+    const t = s.transp;
+    let h = `<h2>Origem, destino e meio de transporte</h2>
+    <div class="info-note">Viagem <b>nacional</b>. Para viagens ao exterior este formulário não se aplica.</div>
+    <div class="row2">${campo('Cidade de origem', 'viagem.origem_cidade')}${campo('UF de origem', 'viagem.origem_uf', { select: ESTADOS_BR })}</div>
+    <div class="row2">${campo('Cidade de destino', 'viagem.destino_cidade')}${campo('UF de destino', 'viagem.destino_uf', { select: ESTADOS_BR })}</div>
+    <div class="row2">${campo('Data prevista de saída', 'viagem.saida', { type: 'date' })}${campo('Data prevista de retorno', 'viagem.retorno', { type: 'date' })}</div>
+    ${campo('Finalidade da viagem', 'viagem.finalidade', { obrig: false, ph: 'Ex.: visita a familiares, férias' })}
+    <div class="field"><label>Meio de transporte *</label>
+        <div class="radio-group">${TRANSPORTES.map(x => pill('f_transp', x, t.tipo === x, x, 'transp.tipo', true)).join('')}</div></div>`;
+    if (t.tipo === 'Ônibus') h += campo('Nome da empresa de transporte', 'transp.empresa');
+    if (t.tipo === 'Avião') h += campo('Nome da companhia aérea', 'transp.companhia');
+    if (t.tipo === 'Veículo próprio') {
+        h += `<div class="field"><label>O veículo pertence ao responsável que está autorizando a viagem? *</label>
+            <div class="radio-group">${['Sim', 'Não'].map(v => pill('f_veic_aut', v, t.proprio_do_autorizante === v, v, 'transp.proprio_do_autorizante', true)).join('')}</div></div>`
+            + campo('Nome do condutor', 'transp.condutor')
+            + (t.proprio_do_autorizante === 'Não' ? campo('Nome do proprietário do veículo', 'transp.proprietario', { obrig: false }) : '');
+    }
+    if (t.tipo === 'Veículo de terceiros (carona)') {
+        h += campo('Nome do motorista', 'transp.carona_nome') + window.Telefone.campoHtml(t, 'carona_tel', 'carona_tel', 'Telefone do motorista', false);
+    }
+    if (t.tipo === 'Outro meio de transporte') h += campo('Informe o meio de transporte utilizado', 'transp.outro_desc', { textarea: true, ph: 'Detalhes para identificar o transporte' });
+    return h + navHtml();
+}
+function errosEtapa4() {
+    const v = s.viagem, t = s.transp, e = [];
+    if (!v.origem_cidade.trim() || !v.origem_uf) e.push('Origem: cidade e UF');
+    if (!v.destino_cidade.trim() || !v.destino_uf) e.push('Destino: cidade e UF');
+    if (!dataValida(v.saida)) e.push('Data prevista de saída');
+    if (!dataValida(v.retorno)) e.push('Data prevista de retorno');
+    else if (dataValida(v.saida) && v.retorno < v.saida) e.push('A data de retorno deve ser igual ou posterior à data de saída');
+    if (!t.tipo) e.push('Meio de transporte');
+    if (t.tipo === 'Ônibus' && !t.empresa.trim()) e.push('Nome da empresa de transporte');
+    if (t.tipo === 'Avião' && !t.companhia.trim()) e.push('Nome da companhia aérea');
+    if (t.tipo === 'Veículo próprio') {
+        if (!t.proprio_do_autorizante) e.push('Informe se o veículo pertence ao responsável que autoriza');
+        if (!t.condutor.trim()) e.push('Nome do condutor');
+    }
+    if (t.tipo === 'Veículo de terceiros (carona)') {
+        if (!t.carona_nome.trim()) e.push('Nome do motorista');
+        const et = window.Telefone.validar(t, 'carona_tel', false); if (et) e.push('Telefone do motorista: ' + et.replace(/\.$/, ''));
+    }
+    if (t.tipo === 'Outro meio de transporte' && !t.outro_desc.trim()) e.push('Informe o meio de transporte utilizado');
+    return e;
+}
+
+// ---------- Verificações que pedem conferência (avisos, não bloqueiam) ----------
+function calcularAlertas() {
+    const a = [];
+    const m = s.menor, v = s.viagem, ac = acompanhantesAtivos();
+    const ref = dataValida(v.saida) ? v.saida : hojeISO();
+    const idade = idadeEm(m.nasc, ref);
+    if (idade !== null && idade >= 18) a.push('Pela data de nascimento, o jovem terá 18 anos ou mais na data da viagem — a autorização pode não ser necessária.');
+    if (idade !== null && idade < 16) a.push('Menor de 16 anos: verificar as regras do ECA (art. 83) para viagens para fora da comarca de residência — necessidade de autorização, comprovação do parentesco do acompanhante e reconhecimento de firma.');
+    if (idade !== null && idade >= 16 && idade < 18) a.push('Adolescente de 16 ou 17 anos: conferir se a empresa de transporte ou o destino exige autorização formal mesmo assim.');
+    if (dataValida(m.nasc) && dataValida(s.validade.fim) && idadeEm(m.nasc, s.validade.fim) >= 18 && idade < 18) a.push('O menor completa 18 anos antes do fim da validade informada.');
+    if (s.acomp_tipo === 'desacompanhado') a.push('Menor viajando desacompanhado: verificar exigências legais (inclusive possível autorização judicial ou notarial) e as regras da empresa de transporte antes de emitir o documento.');
+    if (s.acomp_tipo === 'desacompanhado' && s.rec_tem !== 'Sim') a.push('Menor desacompanhado sem pessoa indicada para recebê-lo no destino.');
+    ac.forEach((p, i) => {
+        const par = p.parentesco || ((s.autorizantes.find(x => x.uid === p.ref) || {}).condicao) || '';
+        const nome = `Acompanhante ${i + 1}`;
+        if (par && !PARENTESCOS_FAMILIARES.includes(par)) a.push(`${nome} (${par}): sem vínculo familiar direto informado — verificar necessidade de autorização expressa com firma reconhecida e/ou autorização judicial.`);
+        else if (par && !['Pai', 'Mãe'].includes(par)) a.push(`${nome} (${par}): conferir a comprovação documental do parentesco com o menor.`);
+    });
+    if (s.autorizantes.length === 1) a.push('Apenas um responsável autorizando: verificar, conforme o caso concreto (guarda, poder familiar, documentos do menor), se a autorização do outro responsável é exigida.');
+    s.autorizantes.forEach((p, i) => { if (['Tutor(a) ou guardião(ã) legal', 'Outro responsável legal'].includes(p.condicao)) a.push(`Autorizante ${i + 1} (${p.condicao}): comprovar a guarda ou tutela formal.`); });
+    if (s.validade.tipo === VALIDADES[2]) a.push('Múltiplas viagens: usar somente se compatível com a situação e com as regras aplicáveis; verificar o limite legal de validade antes da emissão.');
+    if (dataValida(s.validade.inicio) && dataValida(s.validade.fim) && idadeEm(s.validade.inicio, s.validade.fim) >= 2) a.push('Validade superior a 2 anos: verificar o limite de prazo aplicável antes da emissão.');
+    if (dataValida(v.saida) && v.saida < hojeISO()) a.push('A data de saída informada já passou.');
+    if (dataValida(v.saida) && dataValida(v.retorno) && dataValida(s.validade.inicio) && dataValida(s.validade.fim) && (s.validade.inicio > v.saida || s.validade.fim < v.retorno)) a.push('O período de validade não cobre todas as datas da viagem informada.');
+    if (['Ônibus', 'Avião'].includes(s.transp.tipo)) a.push(`Transporte por ${s.transp.tipo === 'Avião' ? 'avião' : 'ônibus'}: verificar as exigências de documentos e de autorização da própria empresa de transporte.`);
+    const temDoc = soDigitos(m.cpf) || s.docs.some(d => d.ativo && (d.numero || '').trim());
+    if (!temDoc) a.push('Nenhum documento do menor informado.');
+    s.autorizantes.forEach((p, i) => { if (!(p.rg_num || '').trim()) a.push(`Autorizante ${i + 1}: documento de identidade não informado (apenas CPF).`); });
+    return a;
+}
+
+// ---------- ETAPA 5 — validade, condições e conferência ----------
+function linhasResumo() {
+    const L = []; // [secao, indiceEtapa, [[rotulo, valor]...]]
+    L.push(['Quem autoriza', 0, s.autorizantes.flatMap((p, i) => [
+        [`Autorizante ${i + 1}`, `${p.nome} — ${p.condicao}${p.condicao_desc ? ' (' + p.condicao_desc + ')' : ''}`],
+        ['Nacionalidade / estado civil', `${nacFinal(p.uid)} / ${p.estado_civil}`],
+        ['Nascimento', fmtData(p.nasc)], ['CPF', mascaraDoc(p.cpf, 'cpf') || '—'],
+        ['Identidade', p.rg_num ? `${mascaraDoc(p.rg_num)} ${p.rg_org} ${p.rg_uf}`.trim() : '—'],
+        ['Endereço', `${p.rua}, ${p.numero}${p.complemento ? ', ' + p.complemento : ''} — ${p.bairro}, ${p.cidade}/${p.uf}${p.cep ? ' — CEP ' + p.cep : ''}`],
+        ['Telefone', window.Telefone.formatar(p, 'tel') || '—'],
+    ])]);
+    const m = s.menor, idade = idadeEm(m.nasc, hojeISO());
+    L.push(['Menor', 1, [
+        ['Nome', m.nome], ['Nacionalidade', nacFinal('menor')],
+        ['Naturalidade', m.nat_tipo === 'Brasil' ? `${m.nat_cidade}/${m.nat_uf}` : `${m.nat_pais}${m.nat_cidade ? ' — ' + m.nat_cidade : ''}`],
+        ['Gênero', m.genero || 'Não informado'], ['Nascimento', `${fmtData(m.nasc)}${idade !== null && idade >= 0 ? ' (' + idade + ' anos)' : ''}`],
+        ['CPF', mascaraDoc(m.cpf, 'cpf') || 'Não possui / não informado'],
+        ...s.docs.filter(d => d.ativo).map(d => [d.tipo === 'Outro documento' && d.descricao ? d.descricao : d.tipo, mascaraDoc(d.numero)]),
+    ]]);
+    const ac = acompanhantesAtivos();
+    const linhasAc = [['Como viajará', (ACOMPANHAMENTOS.find(x => x[0] === s.acomp_tipo) || ['', ''])[1] + (s.acomp_desc ? ` — ${s.acomp_desc}` : '')]];
+    ac.forEach((p, i) => {
+        const base = p.ref ? (s.autorizantes.find(x => x.uid === p.ref) || p) : p;
+        linhasAc.push([`Acompanhante ${i + 1}`, `${base.nome} — ${p.parentesco || (base.condicao || '')}${p.parentesco_desc ? ' (' + p.parentesco_desc + ')' : ''}${p.ref ? ' (mesma pessoa que autoriza)' : ''}`]);
+        linhasAc.push(['CPF', mascaraDoc(base.cpf, 'cpf') || '—'], ['Telefone', window.Telefone.formatar(base, 'tel') || '—']);
+    });
+    if (s.acomp_tipo === 'desacompanhado') s.emergencia.forEach((c, i) => linhasAc.push([`Contato de emergência ${i + 1}`, `${c.nome}${c.parentesco ? ' (' + c.parentesco + ')' : ''} — ${window.Telefone.formatar(c, 'tel')}`]));
+    if (s.rec_tem === 'Sim') {
+        if (ac.length && s.rec_modo === 'mesma') { const a = ac.find(x => x.uid === s.rec_ref) || ac[0]; linhasAc.push(['Recebido no destino por', `${(a.ref ? (s.autorizantes.find(x => x.uid === a.ref) || a) : a).nome} (acompanhante)`]); }
+        else linhasAc.push(['Recebido no destino por', `${s.rec.nome} — ${s.rec.parentesco}${s.rec.parentesco_desc ? ' (' + s.rec.parentesco_desc + ')' : ''}, ${window.Telefone.formatar(s.rec, 'tel')}, ${s.rec.cidade}/${s.rec.uf}`]);
+    } else linhasAc.push(['Recebido por outra pessoa no destino', 'Não']);
+    L.push(['Acompanhante', 2, linhasAc]);
+    const v = s.viagem, t = s.transp;
+    const det = { 'Ônibus': t.empresa, 'Avião': t.companhia, 'Veículo próprio': `condutor ${t.condutor}${t.proprio_do_autorizante ? '; do autorizante: ' + t.proprio_do_autorizante : ''}`, 'Veículo de terceiros (carona)': `motorista ${t.carona_nome}`, 'Outro meio de transporte': t.outro_desc }[t.tipo] || '';
+    L.push(['Viagem e transporte', 3, [
+        ['Origem → destino', `${v.origem_cidade}/${v.origem_uf} → ${v.destino_cidade}/${v.destino_uf}`],
+        ['Saída / retorno', `${fmtData(v.saida)} → ${fmtData(v.retorno)}`], ['Finalidade', v.finalidade || '—'],
+        ['Transporte', `${t.tipo}${det ? ' — ' + det : ''}`],
+    ]]);
+    return L;
+}
+function errosEtapa5() {
+    const e = [], v = s.validade;
+    if (!v.tipo) e.push('Validade da autorização');
+    if (!dataValida(v.inicio)) e.push('Data inicial de validade');
+    if (!dataValida(v.fim)) e.push('Data final de validade');
+    else if (dataValida(v.inicio) && v.fim < v.inicio) e.push('A data final de validade deve ser igual ou posterior à inicial');
+    if (!s.confirmacao) e.push('Confirmação de veracidade e legitimidade');
+    return e;
+}
+function resumoHtml() {
+    const sec = linhasResumo().map(([titulo, idx, linhas]) => `<div class="review-sec"><h3>${esc(titulo)}</h3><button type="button" class="btn-link" style="color:var(--accent-bright)" data-goto="${idx}">Editar</button></div>`
+        + linhas.map(([k, val]) => `<div class="review-item"><span class="rk">${esc(k)}</span><span class="rv">${esc(val)}</span></div>`).join('')).join('');
+    const alertas = calcularAlertas();
+    const todosErros = [...errosEtapa1(), ...errosEtapa2(), ...errosEtapa3(), ...errosEtapa4(), ...errosEtapa5()];
+    return `<div class="sec-title">Conferência final</div>
+    <div style="text-align:right;margin-bottom:6px"><button type="button" class="btn-sec" id="btnMostrarDocs" style="padding:6px 10px;font-size:12px">${mostrarDocs ? 'Ocultar documentos' : 'Mostrar documentos completos'}</button></div>
+    ${sec}
+    ${alertas.length ? `<div class="alert-box"><b>⚠️ Pontos que pedem conferência antes de emitir o documento</b><ul>${alertas.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div style="margin-top:8px;font-size:11.5px;opacity:.85">Estes avisos não impedem o envio. O documento particular gerado não garante, por si só, o embarque.</div></div>` : ''}
+    ${todosErros.length ? `<div class="pend-box"><b>Campos obrigatórios ausentes ou a corrigir</b><ul>${todosErros.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}`;
+}
+function stepValidade() {
+    const v = s.validade;
+    let h = `<h2>Validade, condições e conferência</h2>
+    <div class="field"><label>Qual será a validade desta autorização? *</label>
+        <div class="radio-group" style="flex-direction:column">${VALIDADES.map(x => pill('f_valid', x, v.tipo === x, x, 'validade.tipo')).join('')}</div></div>
+    <div class="row2">${campo('Data inicial de validade', 'validade.inicio', { type: 'date' })}${campo('Data final de validade', 'validade.fim', { type: 'date' })}</div>
+    ${(dataValida(s.viagem.saida) && dataValida(s.viagem.retorno)) ? `<button type="button" class="btn-sec" id="btnUsarDatasViagem" style="margin:-6px 0 14px">Usar as datas da viagem</button>` : ''}
+    ${campo('Observações sobre condições ou limitações', 'validade.obs', { textarea: true, obrig: false })}
+    <div id="resumoArea">${resumoHtml()}</div>
+    <label class="confirm-row"><input type="checkbox" id="f_confirmacao" ${s.confirmacao ? 'checked' : ''}><span>${esc(TEXTO_CONFIRMACAO)}</span></label>
+    <div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" id="btnSubmit">${editMode ? 'Salvar alterações' : 'Enviar autorização'}</button></div>
+    <p style="text-align:center;margin-top:12px"><a href="#" id="btnRascunho" style="color:var(--text-faint);font-size:12.5px">Salvar rascunho neste aparelho</a></p>
+    ${editMode ? `<p style="text-align:center; margin-top:10px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
+    return h;
+}
+
+// ---------- Navegação / renderização ----------
+const steps = [stepAutorizantes, stepMenor, stepAcompanhante, stepViagem, stepValidade];
+const validadores = [errosEtapa1, errosEtapa2, errosEtapa3, errosEtapa4, errosEtapa5];
+function navHtml() {
+    return `<div id="errorMsg" class="error-msg"></div>
+    <div class="nav-row">${stepIndex > 0 ? '<button class="btn btn-back" onclick="window.__goBack()">Voltar</button>' : ''}<button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>
+    <p style="text-align:center;margin-top:12px"><a href="#" id="btnRascunho" style="color:var(--text-faint);font-size:12.5px">Salvar rascunho neste aparelho</a></p>
+    ${editMode ? `<p style="text-align:center; margin-top:10px;"><a href="#" onclick="window.__cancelarEdicao(); return false;" style="color:var(--text-faint); font-size:12.5px;">Cancelar edição</a></p>` : ''}`;
+}
+let rascunhoOferecido = null;
+function render() {
+    const y = window.scrollY;
+    document.getElementById('progressFill').style.width = Math.round((stepIndex / (steps.length - 1)) * 100) + '%';
+    document.getElementById('stepLabel').textContent = `Etapa ${stepIndex + 1} de ${steps.length} — ${ROTULOS_ETAPAS[stepIndex]}`;
+    let banner = '';
+    if (rascunhoOferecido && stepIndex === 0 && !editMode) banner = `<div class="draft-bar"><span>Há um rascunho salvo neste aparelho (${esc(rascunhoOferecido.quando)}).</span><span><button type="button" class="btn-sec" id="btnContinuarRascunho" style="padding:6px 10px;font-size:12px">Continuar</button> <button type="button" class="btn-link" id="btnDescartarRascunho">Descartar</button></span></div>`;
+    document.getElementById('cardArea').innerHTML = banner + steps[stepIndex]();
+    window.scrollTo(0, y);
+}
+function showError(msg) { const el = document.getElementById('errorMsg'); if (el) { el.textContent = msg; el.style.display = 'block'; } }
+function goNext() {
+    const erros = validadores[stepIndex]();
+    if (erros.length) { showError('Corrija: ' + erros.slice(0, 4).join('; ') + (erros.length > 4 ? ` (e mais ${erros.length - 4})` : '') + '.'); return; }
+    if (stepIndex < steps.length - 1) { stepIndex++; render(); window.scrollTo(0, 0); }
+}
+function goBack() { if (stepIndex > 0) { stepIndex--; render(); window.scrollTo(0, 0); } }
+window.__goNext = goNext; window.__goBack = goBack;
+function refrescarResumo() { const el = document.getElementById('resumoArea'); if (el) el.innerHTML = resumoHtml(); }
+function atualizarIdade() {
+    const el = document.getElementById('f_menor_idade'); if (!el) return;
+    const i = idadeEm(s.menor.nasc, hojeISO());
+    el.value = (i === null || i < 0) ? '' : i + (i === 1 ? ' ano' : ' anos');
+}
+
+// ---------- Eventos (delegação: nada se perde ao redesenhar uma etapa) ----------
+document.addEventListener('input', (ev) => {
+    const t = ev.target;
+    if (t.dataset && t.dataset.p && t.type !== 'radio' && t.type !== 'checkbox') {
+        setPath(s, t.dataset.p, t.value);
+        if (t.dataset.p === 'menor.nasc') atualizarIdade();
+    }
+    if (stepIndex === 4) refrescarResumo();
+});
+document.addEventListener('change', (ev) => {
+    const t = ev.target;
+    if (t.dataset && t.dataset.p) {
+        if (t.type === 'radio') { if (!t.checked) return; setPath(s, t.dataset.p, t.value); }
+        else setPath(s, t.dataset.p, t.value);
+        if (t.dataset.p === 'acomp_tipo') ajustarAcompanhantes();
+        if (/^acompanhantes\.\d+\.ref$/.test(t.dataset.p)) { const p = getPath(s, t.dataset.p.replace(/\.ref$/, '')); const a = s.autorizantes.find(x => x.uid === p.ref); if (a && !p.parentesco && ['Pai', 'Mãe'].includes(a.condicao)) p.parentesco = a.condicao; }
+        if (t.dataset.p === 'rec_tem' && t.value !== 'Sim') { s.rec_modo = ''; }
+        if (t.dataset.re) render(); else if (stepIndex === 4) refrescarResumo();
+        if (t.dataset.p === 'menor.nasc') atualizarIdade();
+        return;
+    }
+    if (t.dataset && t.dataset.qtd) {
+        const n = Number(t.value);
+        if (n < s.autorizantes.length) {
+            const perdidos = s.autorizantes.slice(n);
+            if (perdidos.some(p => p.nome.trim() || p.cpf.trim()) && !confirm('Remover os autorizantes extras e os dados já preenchidos deles?')) { render(); return; }
+            s.autorizantes.length = n;
+        } else while (s.autorizantes.length < n) s.autorizantes.push(novaPessoa('aut'));
+        render(); return;
+    }
+    if (t.dataset && t.dataset.docTipo) {
+        const tipo = t.dataset.docTipo;
+        const ex = s.docs.find(d => d.tipo === tipo);
+        if (t.checked) { if (ex) ex.ativo = true; else s.docs.push({ uid: novoUid('doc'), tipo, numero: '', descricao: '', ativo: true }); }
+        else s.docs.forEach(d => { if (d.tipo === tipo) d.ativo = false; });
+        render(); return;
+    }
+    if (t.id === 'f_confirmacao') { s.confirmacao = t.checked; refrescarResumo(); }
+    if (stepIndex === 4) refrescarResumo();
+});
+document.addEventListener('click', (ev) => {
+    const t = ev.target.closest ? ev.target.closest('button, a') : null;
+    if (!t) return;
+    const d = t.dataset || {};
+    if (d.removerAut !== undefined) { if (confirm('Remover este autorizante?')) { s.autorizantes.splice(Number(d.removerAut), 1); render(); } return; }
+    if (t.id === 'btnAddAut') { s.autorizantes.push(novaPessoa('aut')); render(); return; }
+    if (d.removerDoc !== undefined) { s.docs.splice(Number(d.removerDoc), 1); render(); return; }
+    if (t.id === 'btnAddDoc') { s.docs.push({ uid: novoUid('doc'), tipo: 'Outro documento', numero: '', descricao: '', ativo: true }); render(); return; }
+    if (d.removerAcomp !== undefined) { if (confirm('Remover este acompanhante?')) { s.acompanhantes.splice(Number(d.removerAcomp), 1); render(); } return; }
+    if (t.id === 'btnAddAcomp') { s.acompanhantes.push(novoAcomp('')); render(); return; }
+    if (d.removerEmerg !== undefined) { s.emergencia.splice(Number(d.removerEmerg), 1); render(); return; }
+    if (t.id === 'btnAddEmerg') { s.emergencia.push({ nome: '', parentesco: '', tel_ddd: '', tel_num: '' }); render(); return; }
+    if (d.goto !== undefined) { stepIndex = Number(d.goto); render(); window.scrollTo(0, 0); return; }
+    if (t.id === 'btnMostrarDocs') { mostrarDocs = !mostrarDocs; refrescarResumo(); return; }
+    if (t.id === 'btnUsarDatasViagem') { s.validade.inicio = s.viagem.saida; s.validade.fim = s.viagem.retorno; render(); return; }
+    if (t.id === 'btnRascunho') { ev.preventDefault(); salvarRascunho(); return; }
+    if (t.id === 'btnContinuarRascunho') { restaurarRascunho(); return; }
+    if (t.id === 'btnDescartarRascunho') { limparRascunho(); rascunhoOferecido = null; render(); return; }
+    if (t.id === 'btnSubmit') { submitForm(); return; }
+});
+
+// ---------- Rascunho (salvar e retomar) ----------
+// Fica só neste aparelho/navegador (localStorage), expira em 7 dias e é apagado ao enviar.
+function salvarRascunho() {
+    try {
+        localStorage.setItem(RASCUNHO_KEY, JSON.stringify({ t: Date.now(), step: stepIndex, s, nac, UID }));
+        showError('Rascunho salvo neste aparelho (vale por 7 dias).');
+        const el = document.getElementById('errorMsg'); if (el) el.style.color = 'var(--accent-bright)';
+    } catch (e) { showError('Não foi possível salvar o rascunho neste navegador.'); }
+}
+function lerRascunho() {
+    try {
+        const r = JSON.parse(localStorage.getItem(RASCUNHO_KEY) || 'null');
+        if (!r || !r.s || Date.now() - r.t > RASCUNHO_VALIDADE_MS) { if (r) limparRascunho(); return null; }
+        return r;
+    } catch (e) { return null; }
+}
+function limparRascunho() { try { localStorage.removeItem(RASCUNHO_KEY); } catch (e) {} }
+function aplicarEstado(salvo, salvoNac) {
+    Object.keys(s).forEach(k => delete s[k]);
+    Object.assign(s, salvo);
+    Object.keys(nac).forEach(k => delete nac[k]);
+    Object.assign(nac, salvoNac || {});
+}
+function restaurarRascunho() {
+    const r = lerRascunho(); if (!r) return;
+    aplicarEstado(r.s, r.nac); UID = Math.max(UID, r.UID || 0); stepIndex = r.step || 0;
+    rascunhoOferecido = null; render();
+}
+
+// ---------- Envio ----------
+function pessoaSaida(p) {
+    return {
+        nome: p.nome.trim(), nacionalidade: nacFinal(p.uid), estado_civil: p.estado_civil || null, data_nascimento: p.nasc || null,
+        cpf: p.cpf.trim() || null, rg: p.rg_num.trim() || null, rg_orgao: p.rg_org.trim() || null, rg_uf: p.rg_uf || null,
+        cep: p.cep.trim() || null, rua: p.rua.trim(), numero: p.numero.trim(), complemento: p.complemento.trim() || null,
+        bairro: p.bairro.trim(), cidade: p.cidade.trim(), estado: p.uf,
+        endereco: [p.rua.trim() + (p.numero.trim() ? ', ' + p.numero.trim() : ''), p.complemento.trim()].filter(Boolean).join(', '),
+        telefone: window.Telefone.formatar(p, 'tel') || null,
+    };
+}
+function montarRegistro() {
+    const m = s.menor;
+    const idade = idadeEm(m.nasc, hojeISO());
+    const aut = s.autorizantes.map(p => Object.assign(pessoaSaida(p), { condicao: p.condicao, condicao_descricao: p.condicao_desc || null }));
+    const ac = acompanhantesAtivos().map((p, i) => {
+        const orig = p.ref ? s.autorizantes.find(x => x.uid === p.ref) : null;
+        const idxAut = orig ? s.autorizantes.indexOf(orig) + 1 : null;
+        return Object.assign(pessoaSaida(orig || p), { parentesco: p.parentesco || (orig && orig.condicao) || null, parentesco_descricao: p.parentesco_desc || null, mesma_pessoa_do_autorizante: idxAut });
+    });
+    const acs = acompanhantesAtivos();
+    let recebedor = null;
+    if (s.rec_tem === 'Sim') {
+        if (acs.length && s.rec_modo === 'mesma') { const a = acs.find(x => x.uid === s.rec_ref) || acs[0]; recebedor = { mesma_pessoa_do_acompanhante: acs.indexOf(a) + 1 }; }
+        else recebedor = { nome: s.rec.nome.trim(), documento: s.rec.doc.trim() || null, telefone: window.Telefone.formatar(s.rec, 'tel'), cidade: s.rec.cidade.trim(), estado: s.rec.uf, parentesco: s.rec.parentesco, parentesco_descricao: s.rec.parentesco_desc || null, endereco: s.rec.endereco.trim() || null };
+    }
+    const docs = [];
+    if (m.cpf.trim()) docs.push({ tipo: 'CPF', numero: m.cpf.trim() });
+    s.docs.filter(d => d.ativo && d.numero.trim()).forEach(d => docs.push({ tipo: d.tipo, numero: d.numero.trim(), descricao: d.descricao || null }));
+    const t = s.transp;
+    return {
+        tipo_contrato: TIPO,
+        dados: {
+            pessoa_a: aut[0],
+            pessoa_b: { nome: m.nome.trim(), nacionalidade: nacFinal('menor'), data_nascimento: m.nasc, cpf: m.cpf.trim() || null, genero: m.genero || null },
+            especifico: {
+                formulario: 'AUTORIZACAO_VIAGEM_MENOR', versao: 1, escopo: 'viagem nacional',
+                autorizantes: aut,
+                menor: { nome: m.nome.trim(), nacionalidade: nacFinal('menor'), genero: m.genero || null, data_nascimento: m.nasc, idade_no_cadastro: idade,
+                    naturalidade: m.nat_tipo === 'Brasil' ? { cidade: m.nat_cidade.trim(), uf: m.nat_uf } : { pais: m.nat_pais.trim(), cidade: m.nat_cidade.trim() || null }, documentos: docs },
+                acompanhamento: { tipo: s.acomp_tipo, descricao: s.acomp_desc.trim() || null, acompanhantes: ac, recebedor_no_destino: recebedor,
+                    contatos_emergencia: s.acomp_tipo === 'desacompanhado' ? s.emergencia.map(c => ({ nome: c.nome.trim(), parentesco: c.parentesco.trim() || null, telefone: window.Telefone.formatar(c, 'tel') })) : [] },
+                viagem: { origem: { cidade: s.viagem.origem_cidade.trim(), uf: s.viagem.origem_uf }, destino: { cidade: s.viagem.destino_cidade.trim(), uf: s.viagem.destino_uf }, saida: s.viagem.saida, retorno: s.viagem.retorno, finalidade: s.viagem.finalidade.trim() || null },
+                transporte: { tipo: t.tipo, empresa: t.empresa.trim() || null, companhia: t.companhia.trim() || null, veiculo_do_autorizante: t.proprio_do_autorizante || null, condutor: t.condutor.trim() || null, proprietario: t.proprietario.trim() || null,
+                    motorista_carona: t.carona_nome.trim() || null, telefone_motorista: window.Telefone.formatar(t, 'carona_tel') || null, outro: t.outro_desc.trim() || null },
+                validade: { tipo: s.validade.tipo, inicio: s.validade.inicio, fim: s.validade.fim, observacoes: s.validade.obs.trim() || null },
+                confirmacao: { texto: TEXTO_CONFIRMACAO, aceita: !!s.confirmacao, registrada_em: new Date().toISOString() },
+                alertas_conferencia: calcularAlertas(),
+                // estado bruto do formulário: garante que a edição reabra exatamente como foi preenchido
+                form_state: { s, nac, UID },
+            },
+        },
+    };
+}
+async function submitForm() {
+    const erros = [...errosEtapa1(), ...errosEtapa2(), ...errosEtapa3(), ...errosEtapa4(), ...errosEtapa5()];
+    if (erros.length) { showError('Ainda há campos a corrigir: veja a lista acima.'); return; }
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    const registro = montarRegistro();
+    if (editMode) { avisarPai({ type: 'form-salvar-pedido', table: 'declaracoes_pendentes', id: editId, registro }); return; }
+    const { error } = await supabase.from('declaracoes_pendentes').insert(registro);
+    if (error) {
+        showError('Não deu pra enviar agora. Tenta de novo em alguns segundos — se persistir, chama a gente pelo WhatsApp.');
+        btn.disabled = false; btn.textContent = 'Enviar autorização';
+        return;
+    }
+    limparRascunho();
+    document.getElementById('cardArea').innerHTML = `
+        <div class="success-box">
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+            <h2>Dados recebidos!</h2>
+            <p>Seus dados foram recebidos. Nossa equipe vai conferir as informações e orientar sobre a documentação necessária para o embarque.</p>
+        </div>`;
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('stepLabel').textContent = 'Concluído';
+}
+window.addEventListener('message', (ev) => {
+    if (ev.origin !== window.location.origin) return;
+    if (!ev.data || ev.data.type !== 'form-salvar-resultado') return;
+    const btn = document.getElementById('btnSubmit');
+    if (ev.data.ok) {
+        document.getElementById('cardArea').innerHTML = `<div class="success-box"><svg class="check" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg><h2>Alterações salvas!</h2><p>A autorização foi atualizada.</p></div>`;
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('stepLabel').textContent = 'Concluído';
+    } else {
+        showError(ev.data.error || 'Não deu pra salvar agora. Tenta de novo em alguns segundos.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
+    }
+});
+
+// ---------- Modo de edição (protocolo padrão dos formulários) ----------
+function avisarPai(msg) { if (window.parent && window.parent !== window) window.parent.postMessage(msg, window.location.origin); }
+function cancelarEdicao() { avisarPai({ type: 'form-editar-cancelado' }); if (window.parent === window) history.back(); }
+window.__cancelarEdicao = cancelarEdicao;
+async function iniciar() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('editId');
+    if (!id) {
+        const r = lerRascunho();
+        if (r) { const d = new Date(r.t); rascunhoOferecido = { quando: d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }; }
+        render(); return;
+    }
+    editMode = true; editId = id;
+    document.getElementById('cardArea').innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Carregando autorização…</p>';
+    const { data, error } = await supabase.from('declaracoes_pendentes').select('*').eq('id', id).single();
+    const fs = data && data.dados && data.dados.especifico && data.dados.especifico.form_state;
+    if (error || !data || data.tipo_contrato !== TIPO || !fs || !fs.s) {
+        document.getElementById('cardArea').innerHTML = `<h2>Não foi possível abrir esta autorização</h2><p style="color:var(--text-dim); font-size:13px;">O registro não foi encontrado ou não é desse tipo.</p>`;
+        return;
+    }
+    aplicarEstado(fs.s, fs.nac); UID = Math.max(UID, fs.UID || 0);
+    const headerP = document.querySelector('.header p');
+    if (headerP) headerP.textContent = 'Corrija os dados abaixo e salve as alterações.';
+    render();
+}
+window.__test = { s, nac, montarRegistro, calcularAlertas, validadores, aplicarEstado, get stepIndex() { return stepIndex; }, set stepIndex(v) { stepIndex = v; }, render, novaPessoa, novoAcomp, ajustarAcompanhantes, idadeEm };
+iniciar();
+</script>
+</body>
+</html>

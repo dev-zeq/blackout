@@ -3983,3 +3983,25 @@ Pedido: criar o campo, lado a lado com "Declarações", só como estrutura visua
 
 ### Testes (Playwright, painel com Supabase stubado)
 360, 420, 820 e 1280 px: os dois tiles na mesma linha, lado a lado, mesmo tamanho/borda, sem rolagem horizontal, sem erro de JS; clicar em "Procurações e Autorizações" não abre nada; "Declarações" continua abrindo `viewDeclProc` (barra de atalhos com 17 itens). Conferido em screenshot.
+
+
+## Procurações e Autorizações — formulário "Autorização de Viagem para Menor" (2026-10-18)
+
+**Escopo desta fase:** formulário de coleta + validação + lista/ficha no painel. **Não** gera o documento jurídico final (modelo a definir depois) e é só para viagem **nacional**.
+
+### ⚠️ Pendência de banco (obrigatória antes de usar em produção)
+A tabela `declaracoes_pendentes` tem a CHECK `declaracoes_pendentes_tipo_contrato_check` (ver seção dos contratos acima), que só aceita tipos conhecidos. O novo tipo `AUTORIZACAO_VIAGEM_MENOR` precisa ser incluído, senão o envio do formulário falha com "violates check constraint" (o formulário mostra a mensagem de erro amigável). Esta sessão **não tinha permissão** no Supabase para ler/alterar a constraint, então **não foi aplicada**. Passos: (1) conferir a definição atual: `select pg_get_constraintdef(oid) from pg_constraint where conname='declaracoes_pendentes_tipo_contrato_check';` (2) `drop constraint` + `add constraint` recriando com **todos os valores atuais + 'AUTORIZACAO_VIAGEM_MENOR'**.
+
+### Arquivos
+- `paineldecontrole/autorizacao-viagem-menor-form.html` (novo): 5 etapas — (1) autorizantes (1 a 5, pai/mãe/tutor/outro, CPF/CEP/telefone com máscara), (2) menor (idade automática, documentos múltiplos, naturalidade), (3) acompanhante (7 modos; acompanhante pode ser reaproveitado de um autorizante sem redigitar; desacompanhado → contatos de emergência; recebimento no destino), (4) origem/destino/datas + transporte condicional (ônibus/avião/veículo próprio/carona/outro), (5) validade (3 tipos, datas explícitas), confirmação registrada e conferência final com "Editar" por seção, pendências e avisos.
+- `assets/campo-telefone.js` (novo, reutilizável): DDD + número, mesmo comportamento do currículo (8/9 dígitos, "9" automático) + máscara. `assets/campo-documentos.js` (novo): máscaras CPF/CNPJ/CEP + `Documentos.cpfValido()` (dígitos verificadores). Reusa `assets/campo-nacionalidade.js`.
+- `paineldecontrole/index.html`: tile "Procurações e Autorizações" ativado (`action` → `viewProcAut`, badge de pendentes), view nova com link do formulário + lista (ficha com documentos **mascarados por padrão**, editar via iframe do protocolo padrão, marcar processada, excluir), `PROCAUT_TIPOS_TODOS` (exclui o tipo da lista/contagem de Contratos), atalho na barra, `openView/openSubPanel/goHome` atualizados. Declarações, Contratos e demais módulos não foram alterados.
+
+### Dados salvos (`declaracoes_pendentes`, `tipo_contrato='AUTORIZACAO_VIAGEM_MENOR'`)
+`dados.pessoa_a` = 1º autorizante, `dados.pessoa_b` = menor (para busca/lista), `dados.especifico` = tudo normalizado (autorizantes, menor, acompanhamento, viagem, transporte, validade, confirmação com data/hora, `alertas_conferencia`) + `form_state` (estado bruto, usado só para reabrir na edição). Rascunho ("Salvar rascunho neste aparelho"): só `localStorage` do aparelho, expira em 7 dias, apagado ao enviar.
+
+### Verificações (avisos que não bloqueiam; texto cauteloso, sem afirmar suficiência do documento)
+Menor de 16 (ECA art. 83), 16–17, 18+ na data da viagem, desacompanhado (+ sem recebedor), acompanhante sem vínculo familiar / parentesco a comprovar, só 1 autorizante, tutor/guardião (comprovar guarda), múltiplas viagens, validade > 2 anos, saída no passado, validade não cobrindo a viagem, empresa de transporte (ônibus/avião), documento do menor/autorizante ausente. Bloqueios: campos obrigatórios, CPF inválido (dígito verificador), telefone inválido, autorizante/acompanhante < 18, menor ≥ 18, retorno < saída, validade final < inicial, confirmação não marcada.
+
+### Testes (Playwright, Supabase simulado)
+Fluxo completo pela interface (digitando, máscaras, adicionar autorizante sem perder dados, documentos múltiplos, ambos os pais com 1 reaproveitado, validações por etapa, resumo com documentos ocultos/mostrados, rascunho, envio). 5 cenários de combinações (mãe+pai acompanha/ônibus; pai e mãe reaproveitados/avião/recebedor = acompanhante; mãe+guardião/amigo/veículo próprio de terceiro/recebedor outra pessoa/múltiplas viagens; desacompanhado/carona/menor estrangeiro com RNM+passaporte+outro doc; outro meio de transporte/primo): sem erros, round-trip de edição idêntico. Negativos (CPF inválido, telefone, menor 25 anos, retorno < saída). Painel: tile + badge, view, lista, ficha com máscara, iframe de edição, Contratos não lista o tipo, atalhos sem views duplicadas. **Falta:** aplicar a migration, testar ao vivo (envio real/edição) e revisão jurídica dos textos de aviso.

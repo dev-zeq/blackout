@@ -2696,6 +2696,27 @@
             </div>
         </div>
 
+        <!-- Procurações e Autorizações (2026-10-18) — módulo novo, independente de
+             Declarações: link do formulário + lista dos pedidos recebidos
+             (tabela `declaracoes_pendentes`, tipos de PROCAUT_TIPOS_TODOS).
+             Primeiro serviço: Autorização de Viagem para Menor. Para novos
+             serviços: acrescentar o tipo em PROCAUT_TIPOS_TODOS, o formulário em
+             PROCAUT_LINKS e o rótulo em TIPO_CONTRATO_LABELS. A geração do
+             documento final ainda não existe (modelo a definir). -->
+        <div class="view" id="viewProcAut">
+            <div class="topnav-row"><button class="back-btn" onclick="goHome()">← Menu</button><div class="quicknav" data-quicknav></div></div>
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>📜 Procurações e Autorizações</h3>
+                    <span class="table-count" id="procAutCount">0 registros</span>
+                </div>
+                <div id="procAutLinkRows"></div>
+                <div id="procAutRows">
+                    <div class="empty-state"><div class="empty-icon">📭</div><div>Carregando...</div></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Prestação de Serviço (2026-08-26, pedido do usuário) — módulo nativo
              novo que substitui o Google Forms "Orçamento" usado antes pela loja.
              Mesmo padrão visual/funcional de viewDeclProc/viewTermos (link-row +
@@ -3853,7 +3874,7 @@
             // loadPrestadorPendentes() adicionado aqui (2026-08-26) em vez de uma
             // assinatura de realtime nova — a tabela declaracoes_pendentes já está
             // coberta por esta mesma assinatura, mesmo cuidado documentado acima.
-            assinarRealtimeTabela('declaracoes_pendentes', () => { loadDeclaracoesPendentes(); loadPendingCounts(); loadDeclProcPendentes(); loadPrestadorPendentes(); loadHistoricoContratos(); histDeclProc.load(); histPrestador.load(); },
+            assinarRealtimeTabela('declaracoes_pendentes', () => { loadDeclaracoesPendentes(); loadPendingCounts(); loadDeclProcPendentes(); loadProcAutPendentes(); loadPrestadorPendentes(); loadHistoricoContratos(); histDeclProc.load(); histPrestador.load(); },
                 (row) => notificarNovoRegistro(`Chegou uma nova solicitação — ${TIPO_CONTRATO_LABELS[row?.tipo_contrato] || 'documento'}`));
             // assinatura realtime de `contratos` removida com o Histórico (2026-08-30).
             assinarRealtimeTabela('recibos', () => { loadRecibos(); });
@@ -4312,11 +4333,10 @@
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
             // Declarações e o novo "Procurações e Autorizações" ficam lado a lado
             // (mesma linha na grade de 3 e de 4 colunas). Este último é só a
-            // estrutura visual (2026-10-18): sem `action`, o renderMenu() já o
-            // desenha como tile "Em breve". Para ativar no futuro, basta
-            // acrescentar `action` (ex.: { type: 'view', view: '...' }) aqui.
+            // estrutura visual (2026-10-18); ativado em 2026-10-18 com o primeiro
+            // serviço (Autorização de Viagem para Menor) — ver viewProcAut.
             { icon: 'declaracao', label: 'Declarações', action: { type: 'view', view: 'declProc' }, badgeKey: 'declProc' },
-            { icon: 'procuracao', label: 'Procurações e Autorizações' },
+            { icon: 'procuracao', label: 'Procurações e Autorizações', action: { type: 'view', view: 'procAut' }, badgeKey: 'procAut' },
             { icon: 'contratos', label: 'Contratos', action: { type: 'view', view: 'termos' }, badgeKey: 'termos' },
             // Novo módulo nativo (2026-08-26, pedido do usuário) — substitui o
             // Google Forms "Orçamento" que a loja usava antes (ver
@@ -4447,6 +4467,7 @@
             { id: 'view:simulador', label: 'Simulador', kind: 'view', target: 'simulador' },
             { id: 'view:curriculo', label: 'Currículo', kind: 'view', target: 'curriculo' },
             { id: 'view:declProc', label: 'Declarações', kind: 'view', target: 'declProc' },
+            { id: 'view:procAut', label: 'Procurações e Autorizações', kind: 'view', target: 'procAut' },
             { id: 'view:termos', label: 'Contratos', kind: 'view', target: 'termos' },
             { id: 'view:prestador', label: 'Prest. Serviço', kind: 'view', target: 'prestador' },
             { id: 'view:financeiro', label: 'Financeiro', kind: 'view', target: 'financeiro' },
@@ -4480,12 +4501,12 @@
         }
         window.quickNavGo = quickNavGo;
 
-        let viewsInitialized = { caixa: false, termos: false, recibo: false, declProc: false, prestador: false, financeiro: false, movfin: false };
+        let viewsInitialized = { caixa: false, termos: false, recibo: false, declProc: false, procAut: false, prestador: false, financeiro: false, movfin: false };
 
         // Contagem de itens pendentes pra mostrar como bolinha vermelha nos cards
         // do menu (Currículo, Contratos, Declarações e Procurações, Prestação de
         // Serviço) — atualizada em loadPendingCounts().
-        let pendingCounts = { curriculo: 0, termos: 0, declProc: 0, prestador: 0 };
+        let pendingCounts = { curriculo: 0, termos: 0, declProc: 0, procAut: 0, prestador: 0 };
 
         function renderMenu() {
             const grid = document.getElementById('menuGrid');
@@ -4502,7 +4523,7 @@
 
         async function loadPendingCounts() {
             try {
-                const [curriculosRes, declRes, declProcRes, prestadorRes] = await Promise.all([
+                const [curriculosRes, declRes, declProcRes, prestadorRes, procAutRes] = await Promise.all([
                     supabase.from('curriculos').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
                     // Só conta pendentes que NÃO são Declaração/Procuração nem
                     // Prestação de Serviço — esses já têm o próprio badge (declProcRes/
@@ -4510,13 +4531,15 @@
                     // pendentes eram contados duas vezes, uma no menu Contratos e
                     // outra no menu de origem (Declarações e Procurações,
                     // Prestação de Serviço).
-                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').not('tipo_contrato', 'in', `(${[...DECL_PROC_TIPOS_TODOS, ...PRESTADOR_TIPOS_TODOS].join(',')})`),
+                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').not('tipo_contrato', 'in', `(${[...DECL_PROC_TIPOS_TODOS, ...PRESTADOR_TIPOS_TODOS, ...PROCAUT_TIPOS_TODOS].join(',')})`),
                     supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').in('tipo_contrato', DECL_PROC_TIPOS_TODOS),
                     // Novo módulo "Prestação de Serviço" (2026-08-26) — badge próprio,
                     // igual ao padrão de declProcRes acima. Ver PRESTADOR_TIPOS_TODOS.
                     supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').in('tipo_contrato', PRESTADOR_TIPOS_TODOS),
+                    // Módulo "Procurações e Autorizações" — badge próprio (ver PROCAUT_TIPOS_TODOS).
+                    supabase.from('declaracoes_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE').in('tipo_contrato', PROCAUT_TIPOS_TODOS),
                 ]);
-                pendingCounts = { curriculo: curriculosRes.count || 0, termos: declRes.count || 0, declProc: declProcRes.count || 0, prestador: prestadorRes.count || 0 };
+                pendingCounts = { curriculo: curriculosRes.count || 0, termos: declRes.count || 0, declProc: declProcRes.count || 0, procAut: procAutRes.count || 0, prestador: prestadorRes.count || 0 };
                 renderMenu();
             } catch (error) {
                 console.error('❌ Erro ao carregar contagem de pendentes:', error);
@@ -4568,6 +4591,7 @@
             document.getElementById('viewFinanceiro').classList.toggle('active', view === 'financeiro');
             document.getElementById('viewTermos').classList.toggle('active', view === 'termos');
             document.getElementById('viewDeclProc').classList.toggle('active', view === 'declProc');
+            document.getElementById('viewProcAut').classList.toggle('active', view === 'procAut');
             document.getElementById('viewCurriculo').classList.toggle('active', view === 'curriculo');
             document.getElementById('viewPlanejamento').classList.toggle('active', view === 'planejamento');
             document.getElementById('viewRecibo').classList.toggle('active', view === 'recibo');
@@ -4583,6 +4607,7 @@
                 if (view === 'caixa') { loadData(); loadPix(); loadSaidas(); loadResumo(); loadFechamento(); }
                 else if (view === 'termos') { loadDeclaracoesPendentes(); loadHistoricoContratos(); }
                 else if (view === 'declProc') { selecionarCategoriaDeclProc('declaracoes'); histDeclProc.load(); }
+                else if (view === 'procAut') { renderProcAutLinks(); loadProcAutPendentes(); }
                 else if (view === 'curriculo') loadCurriculos();
                 else if (view === 'recibo') loadRecibos();
                 else if (view === 'prestador') { loadPrestadorPendentes(); histPrestador.load(); }
@@ -4614,6 +4639,7 @@
             // sobrepostos.
             document.getElementById('viewFinanceiro').classList.remove('active');
             document.getElementById('viewDeclProc').classList.remove('active');
+            document.getElementById('viewProcAut').classList.remove('active');
             document.getElementById('viewCurriculo').classList.remove('active');
             document.getElementById('viewRecibo').classList.remove('active');
             document.getElementById('viewOrcamento').classList.remove('active');
@@ -4855,6 +4881,7 @@
             document.getElementById('viewFinanceiro').classList.remove('active');
             document.getElementById('viewTermos').classList.remove('active');
             document.getElementById('viewDeclProc').classList.remove('active');
+            document.getElementById('viewProcAut').classList.remove('active');
             document.getElementById('viewSub').classList.remove('active');
             document.getElementById('viewCurriculo').classList.remove('active');
             document.getElementById('viewPlanejamento').classList.remove('active');
@@ -7635,6 +7662,7 @@
             DECLARACAO_UNIAO_ESTAVEL: '💍 Declaração de União Estável',
             PROCURACAO_DETRAN: '🚓 Procuração Detran',
             PROCURACAO_SIMPLES: '📜 Procuração Simples',
+            AUTORIZACAO_VIAGEM_MENOR: '✈️ Autorização de Viagem para Menor',
             TERMO_RESPONSABILIDADE_VEICULO: '🚗 Termo de Responsabilidade de Veículo',
             CV_VEICULO_VISTA: '🚗 Compra e Venda de Veículo — à vista',
             CV_VEICULO_PRAZO_ENTRADA: '🚗 Compra e Venda de Veículo — a prazo c/ entrada',
@@ -7668,6 +7696,7 @@
             DECLARACAO_UNIAO_ESTAVEL: 'declaracao-uniao-estavel-form.html',
             PROCURACAO_SIMPLES: 'procuracao-simples-form.html',
             PROCURACAO_DETRAN: 'procuracao-detran-form.html',
+            AUTORIZACAO_VIAGEM_MENOR: 'autorizacao-viagem-menor-form.html',
             TERMO_RESPONSABILIDADE_VEICULO: 'termo-responsabilidade-veiculo-form.html',
             PRESTACAO_SERVICO: 'prestador-form.html',
         };
@@ -7748,7 +7777,7 @@
                     .from('declaracoes_pendentes')
                     .select('id, tipo_contrato, dados, status, data_pedido')
                     .eq('status', 'PENDENTE')
-                    .not('tipo_contrato', 'in', `(${[...DECL_PROC_TIPOS_TODOS, ...PRESTADOR_TIPOS_TODOS].join(',')})`)
+                    .not('tipo_contrato', 'in', `(${[...DECL_PROC_TIPOS_TODOS, ...PRESTADOR_TIPOS_TODOS, ...PROCAUT_TIPOS_TODOS].join(',')})`)
                     .order('data_pedido', { ascending: false });
 
                 if (error) throw new Error(error.message);
@@ -7759,7 +7788,7 @@
                 // itens que loadDeclProcPendentes()/loadPrestadorPendentes() já
                 // tiverem mesclado aqui antes, só substitui a fatia de contratos que
                 // esta função é responsável por manter atualizada.
-                const outrosJaNoCache = declaracoesPendentesCache.filter(d => DECL_PROC_TIPOS_TODOS.includes(d.tipo_contrato) || PRESTADOR_TIPOS_TODOS.includes(d.tipo_contrato));
+                const outrosJaNoCache = declaracoesPendentesCache.filter(d => DECL_PROC_TIPOS_TODOS.includes(d.tipo_contrato) || PRESTADOR_TIPOS_TODOS.includes(d.tipo_contrato) || PROCAUT_TIPOS_TODOS.includes(d.tipo_contrato));
                 declaracoesPendentesCache = [...contratosPendentes, ...outrosJaNoCache];
 
                 document.getElementById('declPendCount').textContent = contratosPendentes.length + ' registro' + (contratosPendentes.length !== 1 ? 's' : '');
@@ -8218,6 +8247,9 @@
         // o mesmo pedido pendente duas vezes). Só um tipo hoje; array por
         // consistência com o padrão já usado, caso o módulo ganhe variações depois.
         const PRESTADOR_TIPOS_TODOS = ['PRESTACAO_SERVICO'];
+        // Módulo "Procurações e Autorizações" (2026-10-18): mesmo papel dos arrays acima —
+        // exclui esses tipos da lista de Contratos e do badge dele.
+        const PROCAUT_TIPOS_TODOS = ['AUTORIZACAO_VIAGEM_MENOR'];
 
         // Modelos em branco em PDF arquivado (2026-08-26, pedido do usuário) —
         // troca o "renderizar uma imagem de declaração em branco" (modal HTML,
@@ -8530,6 +8562,146 @@
             }
         }
         window.declProcExcluir = declProcExcluir;
+
+        // ===== Módulo "Procurações e Autorizações" (2026-10-18) =====
+        // Lista de pedidos recebidos (declaracoes_pendentes) + ficha + editar. Não
+        // gera o documento final (modelo jurídico ainda a definir). Dados pessoais de
+        // menores: documentos aparecem mascarados por padrão (botão "Mostrar").
+        const PROCAUT_LINKS = [
+            { label: '✈️ Link — Autorização de Viagem para Menor', url: 'autorizacao-viagem-menor-form.html' },
+        ];
+        let procAutCache = [];
+        let procAutFichaId = null, procAutMostrarDocs = false;
+        function renderProcAutLinks() {
+            const el = document.getElementById('procAutLinkRows');
+            if (!el) return;
+            el.innerHTML = PROCAUT_LINKS.map(item => `<div class="link-row"><span>${item.label}</span>${linkFormAcoesHtml(item.url)}</div>`).join('');
+        }
+        function procAutMask(v, tipo) {
+            const d = String(v || '').replace(/\D/g, '');
+            if (!d) return '';
+            if (procAutMostrarDocs) return String(v);
+            if (tipo === 'cpf' && d.length === 11) return `•••.•••.${d.slice(6, 9)}-••`;
+            return '•'.repeat(Math.max(0, String(v).length - 3)) + String(v).slice(-3);
+        }
+        function renderProcAutRows() {
+            const container = document.getElementById('procAutRows');
+            if (!container) return;
+            document.getElementById('procAutCount').textContent = procAutCache.length + ' registro' + (procAutCache.length !== 1 ? 's' : '');
+            if (procAutCache.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Nenhum pedido pendente</div></div>';
+                return;
+            }
+            container.innerHTML = procAutCache.map(d => {
+                const e = (d.dados && d.dados.especifico) || {};
+                const dataFmt = d.data_pedido ? new Date(d.data_pedido).toLocaleDateString('pt-BR') : '-';
+                const menor = (d.dados && d.dados.pessoa_b && d.dados.pessoa_b.nome) || '-';
+                const v = e.viagem || {};
+                const rota = v.origem ? `${v.origem.cidade}/${v.origem.uf} → ${v.destino.cidade}/${v.destino.uf}` : '';
+                const nAlertas = (e.alertas_conferencia || []).length;
+                return `<div class="curriculo-card">
+                    <div class="curriculo-card-body">
+                        <div class="curriculo-info" style="cursor:pointer;" onclick="openProcAutFicha('${d.id}')">
+                            <b>${TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato}</b>
+                            <span class="subtext">👦 Menor: ${escapeHtml(menor)}</span>
+                            ${rota ? `<span class="subtext">🧭 ${escapeHtml(rota)}${v.saida ? ' · ' + escapeHtml(v.saida.split('-').reverse().join('/')) : ''}</span>` : ''}
+                            ${nAlertas ? `<span class="subtext" style="color:#fbbf24;">⚠️ ${nAlertas} ponto${nAlertas > 1 ? 's' : ''} de conferência</span>` : ''}
+                            <span class="subtext">📅 ${dataFmt}</span>
+                        </div>
+                        <div class="curriculo-acoes">
+                            <button class="btn-delete" onclick="openProcAutFicha('${d.id}')" title="Ver dados">👁️</button>
+                            <button class="btn-delete" onclick="procAutEditar('${d.id}')" title="Editar">✏️</button>
+                            <button class="btn-delete" onclick="procAutMarcarProcessada('${d.id}')" title="Marcar como processada">✅</button>
+                            <button class="btn-delete" onclick="procAutExcluir('${d.id}')" title="Excluir">🗑️</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        async function loadProcAutPendentes() {
+            const container = document.getElementById('procAutRows');
+            if (!container) return;
+            try {
+                const { data, error } = await supabase
+                    .from('declaracoes_pendentes')
+                    .select('id, tipo_contrato, dados, status, data_pedido')
+                    .eq('status', 'PENDENTE')
+                    .in('tipo_contrato', PROCAUT_TIPOS_TODOS)
+                    .order('data_pedido', { ascending: false });
+                if (error) throw new Error(error.message);
+                procAutCache = data || [];
+                renderProcAutRows();
+                if (procAutFichaId && document.getElementById('fichaCurriculoModal').classList.contains('active')) openProcAutFicha(procAutFichaId, true);
+            } catch (error) {
+                console.error('❌ Erro ao carregar autorizações pendentes:', error);
+                container.innerHTML = `<div class="empty-state" style="color:#ef4444;">⚠️ ${escapeHtml(error.message)}</div>`;
+            }
+        }
+        window.loadProcAutPendentes = loadProcAutPendentes;
+        function procAutFichaHtml(d) {
+            const e = (d.dados && d.dados.especifico) || {};
+            const linha = (k, v) => (v === null || v === undefined || v === '') ? '' : `<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><span style="color:var(--text-dim)">${escapeHtml(k)}</span><span style="text-align:right;color:var(--text)">${escapeHtml(v)}</span></div>`;
+            const sec = (t, inner) => `<h4 style="margin:16px 0 6px;color:var(--accent-bright);font-size:13px;">${t}</h4>${inner}`;
+            const pessoa = (p) => linha('Nome', p.nome) + linha('Nacionalidade', p.nacionalidade) + linha('Estado civil', p.estado_civil) + linha('Nascimento', p.data_nascimento ? p.data_nascimento.split('-').reverse().join('/') : '')
+                + linha('CPF', procAutMask(p.cpf, 'cpf')) + linha('Identidade', p.rg ? `${procAutMask(p.rg)} ${p.rg_orgao || ''} ${p.rg_uf || ''}`.trim() : '')
+                + linha('Endereço', p.rua ? `${p.endereco}, ${p.bairro}, ${p.cidade}/${p.estado}${p.cep ? ' — CEP ' + p.cep : ''}` : (p.cidade ? `${p.cidade}/${p.estado}` : '')) + linha('Telefone', p.telefone);
+            let h = `<div style="text-align:right;"><button type="button" class="btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="procAutFichaToggleDocs()">${procAutMostrarDocs ? '🙈 Ocultar documentos' : '👁️ Mostrar documentos completos'}</button></div>`;
+            (e.autorizantes || []).forEach((p, i) => { h += sec(`Autorizante ${i + 1} — ${escapeHtml(p.condicao || '')}${p.condicao_descricao ? ' (' + escapeHtml(p.condicao_descricao) + ')' : ''}`, pessoa(p)); });
+            const m = e.menor || {};
+            h += sec('Menor', linha('Nome', m.nome) + linha('Nacionalidade', m.nacionalidade) + linha('Gênero', m.genero)
+                + linha('Nascimento', m.data_nascimento ? m.data_nascimento.split('-').reverse().join('/') + (m.idade_no_cadastro != null ? ` (${m.idade_no_cadastro} anos no cadastro)` : '') : '')
+                + linha('Naturalidade', m.naturalidade ? (m.naturalidade.uf ? `${m.naturalidade.cidade}/${m.naturalidade.uf}` : `${m.naturalidade.pais}${m.naturalidade.cidade ? ' — ' + m.naturalidade.cidade : ''}`) : '')
+                + (m.documentos || []).map(x => linha(x.descricao || x.tipo, procAutMask(x.numero, x.tipo === 'CPF' ? 'cpf' : ''))).join(''));
+            const ac = e.acompanhamento || {};
+            const tiposAc = { pai: 'Acompanhado pelo pai', mae: 'Acompanhado pela mãe', ambos: 'Acompanhado por ambos os pais', familiar: 'Acompanhado por outro familiar', amigo: 'Acompanhado por amigo da família', desacompanhado: 'Viajando desacompanhado', outro: 'Outro' };
+            h += sec('Acompanhamento', linha('Como viaja', (tiposAc[ac.tipo] || ac.tipo) + (ac.descricao ? ' — ' + ac.descricao : '')));
+            (ac.acompanhantes || []).forEach((p, i) => { h += sec(`Acompanhante ${i + 1} — ${escapeHtml(p.parentesco || '')}${p.parentesco_descricao ? ' (' + escapeHtml(p.parentesco_descricao) + ')' : ''}`, (p.mesma_pessoa_do_autorizante ? linha('Mesma pessoa que', `Autorizante ${p.mesma_pessoa_do_autorizante}`) : '') + pessoa(p)); });
+            (ac.contatos_emergencia || []).forEach((c, i) => { h += sec(`Contato de emergência ${i + 1}`, linha('Nome', c.nome) + linha('Parentesco', c.parentesco) + linha('Telefone', c.telefone)); });
+            const r = ac.recebedor_no_destino;
+            h += sec('Recebimento no destino', r ? (r.mesma_pessoa_do_acompanhante ? linha('Recebido por', `Acompanhante ${r.mesma_pessoa_do_acompanhante}`) : linha('Nome', r.nome) + linha('Documento', procAutMask(r.documento)) + linha('Telefone', r.telefone) + linha('Cidade/UF', `${r.cidade}/${r.estado}`) + linha('Relação', r.parentesco + (r.parentesco_descricao ? ' (' + r.parentesco_descricao + ')' : '')) + linha('Endereço', r.endereco)) : linha('Recebido por outra pessoa', 'Não'));
+            const v = e.viagem || {}, t = e.transporte || {};
+            h += sec('Viagem', linha('Origem', v.origem ? `${v.origem.cidade}/${v.origem.uf}` : '') + linha('Destino', v.destino ? `${v.destino.cidade}/${v.destino.uf}` : '')
+                + linha('Saída', v.saida ? v.saida.split('-').reverse().join('/') : '') + linha('Retorno', v.retorno ? v.retorno.split('-').reverse().join('/') : '') + linha('Finalidade', v.finalidade));
+            h += sec('Transporte', linha('Meio', t.tipo) + linha('Empresa', t.empresa) + linha('Companhia aérea', t.companhia) + linha('Veículo do autorizante', t.veiculo_do_autorizante) + linha('Condutor', t.condutor) + linha('Proprietário', t.proprietario) + linha('Motorista (carona)', t.motorista_carona) + linha('Telefone do motorista', t.telefone_motorista) + linha('Outro', t.outro));
+            const va = e.validade || {};
+            h += sec('Validade', linha('Tipo', va.tipo) + linha('Início', va.inicio ? va.inicio.split('-').reverse().join('/') : '') + linha('Fim', va.fim ? va.fim.split('-').reverse().join('/') : '') + linha('Observações', va.observacoes));
+            const cf = e.confirmacao || {};
+            h += sec('Confirmação', linha('Declaração de veracidade', cf.aceita ? 'Aceita' : 'Não registrada') + linha('Registrada em', cf.registrada_em ? new Date(cf.registrada_em).toLocaleString('pt-BR') : ''));
+            if ((e.alertas_conferencia || []).length) h += `<div style="margin-top:16px;border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.08);color:#fde68a;border-radius:12px;padding:10px 12px;font-size:12.5px;"><b>⚠️ Pontos de conferência antes de emitir</b><ul style="margin:6px 0 0;padding-left:18px;">${e.alertas_conferencia.map(a => `<li>${escapeHtml(a)}</li>`).join('')}</ul></div>`;
+            return h;
+        }
+        function openProcAutFicha(id, manter) {
+            const d = procAutCache.find(x => x.id === id);
+            if (!d) return;
+            if (!manter) procAutMostrarDocs = false;
+            procAutFichaId = id;
+            document.getElementById('fichaTitulo').textContent = (TIPO_CONTRATO_LABELS[d.tipo_contrato] || d.tipo_contrato) + ' (pendente)';
+            document.getElementById('fichaConteudo').innerHTML = procAutFichaHtml(d);
+            document.getElementById('fichaCurriculoModal').classList.add('active');
+        }
+        function procAutFichaToggleDocs() { procAutMostrarDocs = !procAutMostrarDocs; if (procAutFichaId) openProcAutFicha(procAutFichaId, true); }
+        function procAutEditar(id) {
+            const d = procAutCache.find(x => x.id === id);
+            if (!d) return;
+            abrirEdicaoFormulario(EDICAO_FORMULARIO[d.tipo_contrato] + '?editId=' + encodeURIComponent(id));
+        }
+        async function procAutMarcarProcessada(id) {
+            try {
+                await dbUpdate('declaracoes_pendentes', { status: 'PROCESSADO', processado_em: new Date().toISOString() }, { id });
+                await loadProcAutPendentes();
+                loadPendingCounts();
+            } catch (error) { alert('Erro: ' + error.message); }
+        }
+        async function procAutExcluir(id) {
+            if (!confirm('Excluir este registro pendente? Essa ação não pode ser desfeita.')) return;
+            try {
+                await dbDelete('declaracoes_pendentes', { id });
+                await loadProcAutPendentes();
+                loadPendingCounts();
+            } catch (error) { alert('Erro ao excluir: ' + error.message); }
+        }
+        window.openProcAutFicha = openProcAutFicha; window.procAutFichaToggleDocs = procAutFichaToggleDocs; window.procAutEditar = procAutEditar;
+        window.procAutMarcarProcessada = procAutMarcarProcessada; window.procAutExcluir = procAutExcluir;
 
         // ===== Módulo "Prestação de Serviço" (2026-08-26, pedido do usuário) =====
         // Substitui o Google Forms "Orçamento" que a loja usava antes — módulo
@@ -10465,7 +10637,7 @@
                         // recarregar loadPrestadorPendentes() aqui, editar um desses
                         // registros (ex.: trocar a logo) reabria o documento formatado
                         // com o cache antigo, de antes da edição (2026-09-21, correção).
-                        await Promise.all([loadDeclaracoesPendentes(), loadPrestadorPendentes()]);
+                        await Promise.all([loadDeclaracoesPendentes(), loadPrestadorPendentes(), loadProcAutPendentes()]);
                         if (declFormatadoAtual && declFormatadoAtual.id === ev.data.id) abrirDeclFormatado(ev.data.id);
                     } else if (ev.data.table === 'curriculos') {
                         await loadCurriculos();
@@ -13687,6 +13859,7 @@
             if (document.getElementById('viewCaixa').classList.contains('active')) { loadData(); loadPix(); loadSaidas(); loadResumo(); }
             else if (document.getElementById('viewTermos').classList.contains('active')) { loadDeclaracoesPendentes(); loadHistoricoContratos(); }
             else if (document.getElementById('viewDeclProc').classList.contains('active')) { loadDeclProcPendentes(); histDeclProc.load(); }
+            else if (document.getElementById('viewProcAut').classList.contains('active')) { loadProcAutPendentes(); }
             else if (document.getElementById('viewPrestador').classList.contains('active')) { loadPrestadorPendentes(); histPrestador.load(); }
             else if (document.getElementById('viewCurriculo').classList.contains('active')) { loadCurriculos(); }
             else if (document.getElementById('viewPlanejamento').classList.contains('active')) loadPlanejamento();
