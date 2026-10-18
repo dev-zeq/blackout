@@ -444,6 +444,18 @@
                #printArea .doc-formatado-print p acima), não um respiro maior. */
             .locacao-assinaturas-print { margin-top: 8px; text-align: center; }
             .locacao-assinaturas-print p { margin: 0; }
+            /* Autorização de Viagem para Menor (2026-10-18) — uma folha A4, preto e
+               branco, fonte de corpo 9,5pt. Escopado só por .aut-viagem-print. */
+            @page aut-viagem { size: A4 portrait; margin: 10mm 12mm; }
+            #printArea .aut-viagem-print { page: aut-viagem; }
+            #printArea .aut-viagem-print .av-doc { max-width: none; margin: 0; padding: 0; background: #fff; color: #000; box-shadow: none; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.3; }
+            #printArea .aut-viagem-print .av-doc h1 { font-size: 12.5pt; line-height: 1.25; }
+            #printArea .aut-viagem-print .av-doc h2 { font-size: 8.5pt; margin: 6px 0 2px; }
+            #printArea .aut-viagem-print .av-doc p { font-size: 9.5pt; line-height: 1.3; margin: 2px 0; text-align: justify; }
+            #printArea .aut-viagem-print .av-doc .av-pessoa { text-align: left; }
+            #printArea .aut-viagem-print .av-doc .av-grid { font-size: 9.5pt; }
+            #printArea .aut-viagem-print .av-doc .av-ass { font-size: 9pt; }
+            #printArea .aut-viagem-print .av-nao-imprimir { display: none !important; }
         }
         /* ===== Padrão visual único das Declarações (tela) =====
            Referência: Declaração de Residência. Título, corpo, entrelinha,
@@ -459,6 +471,27 @@
         .decl-doc .decl-doc-fecho { margin-top: 72px; text-align: center; }
         .decl-doc .decl-doc-fecho p { text-align: center; }
         .decl-doc .decl-doc-data { font-size: 16.5px; }
+
+        /* Autorização de Viagem para Menor (2026-10-18) — "folha" clara (papel),
+           preto e branco, igual na tela e na impressão (regras de impressão em
+           @media print acima). Só apresentação. */
+        .av-doc { font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; font-size: 9.5pt; line-height: 1.3; max-width: 190mm; margin: 0 auto; padding: 10mm 12mm; border-radius: 6px; }
+        .av-doc h1.av-titulo { font-size: 12.5pt; text-align: center; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.25; margin: 0 0 5px; color: #000; }
+        .av-doc hr { border: 0; border-top: 0.6pt solid #000; margin: 0 0 6px; }
+        .av-doc h2 { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.6px; margin: 6px 0 2px; padding-bottom: 1px; border-bottom: 0.4pt solid #777; color: #000; }
+        .av-doc p { margin: 2px 0; text-align: justify; font-size: 9.5pt; line-height: 1.3; color: #000; }
+        .av-doc .av-pessoa { text-align: left; }
+        .av-doc .av-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 14px; font-size: 9.5pt; }
+        .av-doc .av-cheia { grid-column: 1 / -1; }
+        .av-doc .av-local { margin-top: 6px; }
+        .av-doc .av-fecho { break-inside: avoid; page-break-inside: avoid; }
+        .av-doc .av-assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; margin-top: 4px; }
+        .av-doc .av-assinaturas.av-ass3 { grid-template-columns: 1fr 1fr 1fr; gap: 0 18px; }
+        .av-doc .av-ass { font-size: 9pt; line-height: 1.25; padding-top: 22px; break-inside: avoid; page-break-inside: avoid; }
+        .av-doc .av-ass .av-linha { border-top: 0.7pt solid #000; margin-bottom: 2px; }
+        .av-doc .av-ass span { font-size: 8.5pt; }
+        .av-nao-imprimir { background: #fff7e0; border: 1px solid #e0a800; color: #5c3b00; border-radius: 8px; padding: 8px 10px; margin: 0 0 10px; font-size: 9pt; line-height: 1.35; }
+        .av-nao-imprimir ul { margin: 4px 0; padding-left: 16px; }
 
         /* .cv-header* removido com o "Formatado com IA" (2026-08-30) — o Formatado
            por template usa .cv2-* logo abaixo. */
@@ -8610,6 +8643,7 @@
                         </div>
                         <div class="curriculo-acoes">
                             <button class="btn-delete" onclick="openProcAutFicha('${d.id}')" title="Ver dados">👁️</button>
+                            <button class="btn-delete" onclick="abrirDeclFormatado('${d.id}')" title="Gerar documento (minuta para imprimir ou salvar em PDF)">📄</button>
                             <button class="btn-delete" onclick="procAutEditar('${d.id}')" title="Editar">✏️</button>
                             <button class="btn-delete" onclick="procAutMarcarProcessada('${d.id}')" title="Marcar como processada">✅</button>
                             <button class="btn-delete" onclick="procAutExcluir('${d.id}')" title="Excluir">🗑️</button>
@@ -8630,6 +8664,9 @@
                     .order('data_pedido', { ascending: false });
                 if (error) throw new Error(error.message);
                 procAutCache = data || [];
+                // abrirDeclFormatado() lê de declaracoesPendentesCache (cache compartilhado) —
+                // mescla os registros daqui, substituindo os já existentes (edição recente).
+                procAutCache.forEach(d => { const i = declaracoesPendentesCache.findIndex(x => x.id === d.id); if (i >= 0) declaracoesPendentesCache[i] = d; else declaracoesPendentesCache.push(d); });
                 renderProcAutRows();
                 if (procAutFichaId && document.getElementById('fichaCurriculoModal').classList.contains('active')) openProcAutFicha(procAutFichaId, true);
             } catch (error) {
@@ -9252,6 +9289,163 @@
             });
         }
 
+        // ===== AUTORIZAÇÃO DE VIAGEM NACIONAL DE MENOR (2026-10-18) — modelo do documento =====
+        // Monta a minuta a partir de dados.especifico gravado por
+        // autorizacao-viagem-menor-form.html (autorizantes, menor, acompanhamento, viagem,
+        // transporte, validade, alertas_conferencia). Só preenche com o que foi informado:
+        // campo vazio some (nada de rótulo sem valor). Uma folha A4, preto e branco.
+        // Esta minuta não garante embarque: o aviso de conferência aparece só na tela.
+        function avData(iso) { return /^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? iso.split('-').reverse().join('/') : ''; }
+        function avJuntar(itens) {
+            const l = itens.filter(Boolean);
+            return l.length <= 1 ? (l[0] || '') : l.slice(0, -1).join(', ') + ' e ' + l[l.length - 1];
+        }
+        function avCondicao(a) {
+            if (a.condicao === 'Pai') return 'pai';
+            if (a.condicao === 'Mãe') return 'mãe';
+            if (a.condicao === 'Outro responsável legal') { const t = (a.condicao_descricao || 'responsável legal').trim(); return t.charAt(0).toLowerCase() + t.slice(1); }
+            return 'tutor(a) ou guardião(ã) legal';
+        }
+        function avParentesco(p) {
+            const par = p.parentesco || '', desc = (p.parentesco_descricao || '').trim();
+            if (par === 'Outro familiar' || par === 'Outro') return desc || par.toLowerCase();
+            if (par === 'Amigo da família') return 'amigo(a) da família' + (desc ? ` (${desc})` : '');
+            if (par === 'Pessoa sem parentesco familiar') return 'pessoa sem parentesco familiar';
+            return par.toLowerCase();
+        }
+        function avEnderecoPessoa(p) {
+            const rua = [p.endereco, p.bairro].filter(Boolean).join(', ');
+            const cid = [p.cidade, p.estado].filter(Boolean).join('/');
+            return [rua, cid].filter(Boolean).join(', ') + (p.cep ? ` — CEP ${p.cep}` : '');
+        }
+        function avIdentidade(p) {
+            if (!p.rg) return '';
+            const emissor = [p.rg_orgao, p.rg_uf].filter(Boolean).join('/');
+            return `identidade nº ${p.rg}${emissor ? ' (' + emissor + ')' : ''}`;
+        }
+        function avPessoaHtml(p, rotulo, opts) {
+            opts = opts || {};
+            const fem = rotulo === 'mãe';
+            const sabeGenero = rotulo === 'mãe' || rotulo === 'pai';
+            const nac = p.nacionalidade ? (sabeGenero ? flexGenero(p.nacionalidade, fem) : p.nacionalidade) : '';
+            const ec = p.estado_civil ? (sabeGenero ? flexGenero(p.estado_civil, fem) : p.estado_civil) : '';
+            const l2 = [
+                [nac, ec, p.profissao].filter(Boolean).join(', '),
+                p.cpf ? `CPF nº ${p.cpf}` : '',
+                avIdentidade(p),
+                avEnderecoPessoa(p) ? (opts.semResidente ? avEnderecoPessoa(p) : 'residente em ' + avEnderecoPessoa(p)) : '',
+                p.telefone ? `tel. ${p.telefone}` : '',
+            ].filter(Boolean).join(' · ');
+            return `<p class="av-pessoa"><b>${escapeHtml(titleCase(p.nome || ''))}</b>${rotulo ? ' — ' + escapeHtml(rotulo) : ''}${l2 ? '<br>' + escapeHtml(l2) : ''}</p>`;
+        }
+        function avTextoTransporte(t) {
+            switch (t.tipo) {
+                case 'Ônibus': return 'ônibus' + (t.empresa ? ` da empresa ${t.empresa}` : '');
+                case 'Avião': return 'avião' + (t.companhia ? `, pela companhia aérea ${t.companhia}` : '');
+                case 'Veículo próprio': return 'veículo particular' + (t.condutor ? `, conduzido por ${t.condutor}` : '')
+                    + (t.proprietario ? `, de propriedade de ${t.proprietario}` : (t.veiculo_do_autorizante === 'Sim' ? ', de propriedade de quem autoriza' : ''));
+                case 'Veículo de terceiros (carona)': return 'carona em veículo de terceiros' + (t.motorista_carona ? `, conduzido por ${t.motorista_carona}` : '');
+                default: return (t.outro || t.tipo || '').trim();
+            }
+        }
+        function montarAutorizacaoViagem(d) {
+            const e = (d.dados && d.dados.especifico) || {};
+            const auts = e.autorizantes || [], m = e.menor || {}, ac = e.acompanhamento || {}, v = e.viagem || {}, t = e.transporte || {}, va = e.validade || {};
+            const acs = ac.tipo === 'desacompanhado' ? [] : (ac.acompanhantes || []);
+            const fem = m.genero === 'Feminino', masc = m.genero === 'Masculino';
+            const oMenor = fem ? 'a menor' : masc ? 'o menor' : 'o(a) menor';
+            const nascido = fem ? 'nascida' : masc ? 'nascido' : 'nascido(a)';
+            const plural = auts.length > 1;
+            const rotulos = auts.map(avCondicao);
+            let h = '';
+            // 1. Quem autoriza
+            h += `<h2>Qualificação de quem autoriza</h2>` + auts.map((a, i) => avPessoaHtml(a, rotulos[i])).join('');
+            // 2. Menor
+            const docsMenor = (m.documentos || []).map(x => `${(x.descricao || x.tipo)} nº ${x.numero}`).join('; ');
+            const natMenor = m.naturalidade ? (m.naturalidade.uf ? `${m.naturalidade.cidade}/${m.naturalidade.uf}` : [m.naturalidade.cidade, m.naturalidade.pais].filter(Boolean).join(', ')) : '';
+            h += `<h2>Dados do menor</h2><p class="av-pessoa"><b>${escapeHtml(titleCase(m.nome || ''))}</b><br>${escapeHtml([
+                m.data_nascimento ? `nascimento: ${avData(m.data_nascimento)}` : '', m.nacionalidade ? `nacionalidade: ${(fem || masc) ? flexGenero(m.nacionalidade, fem) : m.nacionalidade}` : '', natMenor ? `natural de ${natMenor}` : '', docsMenor,
+            ].filter(Boolean).join(' · '))}</p>`;
+            // 3. Acompanhante / responsável durante a viagem
+            h += `<h2>Acompanhante e responsável durante a viagem</h2>`;
+            if (acs.length) {
+                h += acs.map(p => p.mesma_pessoa_do_autorizante
+                    ? `<p class="av-pessoa"><b>${escapeHtml(titleCase(p.nome || ''))}</b> — relação: ${escapeHtml(avParentesco(p) || avCondicao(auts[p.mesma_pessoa_do_autorizante - 1] || {}))} <i>(mesma pessoa que autoriza; dados acima)</i></p>`
+                    : avPessoaHtml(p, avParentesco(p) ? 'relação: ' + avParentesco(p) : '', { semResidente: true })).join('');
+            } else {
+                h += `<p>O menor viajará <b>desacompanhado</b>; não há acompanhante designado.</p>`;
+                (ac.contatos_emergencia || []).forEach(c => { h += `<p class="av-pessoa">Contato de emergência: <b>${escapeHtml(titleCase(c.nome || ''))}</b>${c.parentesco ? ' (' + escapeHtml(c.parentesco) + ')' : ''}${c.telefone ? ' · tel. ' + escapeHtml(c.telefone) : ''}</p>`; });
+            }
+            const rec = ac.recebedor_no_destino;
+            if (rec) {
+                if (rec.mesma_pessoa_do_acompanhante) {
+                    const a = acs[rec.mesma_pessoa_do_acompanhante - 1];
+                    if (a) h += `<p>No destino, o menor será recebido pelo(a) mesmo(a) acompanhante, ${escapeHtml(titleCase(a.nome || ''))}.</p>`;
+                } else {
+                    h += `<p class="av-pessoa">No destino, o menor será recebido por <b>${escapeHtml(titleCase(rec.nome || ''))}</b>${avParentesco(rec) ? ' (' + escapeHtml(avParentesco(rec)) + ')' : ''}${rec.documento ? ', documento ' + escapeHtml(rec.documento) : ''}${rec.telefone ? ', tel. ' + escapeHtml(rec.telefone) : ''}${rec.cidade ? ', ' + escapeHtml(rec.cidade + (rec.estado ? '/' + rec.estado : '')) : ''}${rec.endereco ? ', ' + escapeHtml(rec.endereco) : ''}.</p>`;
+                }
+            }
+            // 4. Texto principal
+            const sujeito = plural
+                ? `Nós, ${avJuntar(auts.map(a => titleCase(a.nome || '')))}, na condição de ${avJuntar(rotulos)}, autorizamos`
+                : `Eu, ${titleCase((auts[0] || {}).nome || '')}, na condição de ${rotulos[0] || 'responsável legal'}, autorizo`;
+            const trecho = [v.origem ? `de ${v.origem.cidade}/${v.origem.uf}` : '', v.destino ? `para ${v.destino.cidade}/${v.destino.uf}` : ''].filter(Boolean).join(' ');
+            const periodo = v.saida && v.retorno ? `, no período de ${avData(v.saida)} a ${avData(v.retorno)}` : (v.saida ? `, com saída em ${avData(v.saida)}` : '');
+            const usando = avTextoTransporte(t) ? `, utilizando ${avTextoTransporte(t)}` : '';
+            let fraseAc;
+            if (acs.length) {
+                const um = acs.length === 1;
+                const lista = acs.map(p => um
+                    ? `${titleCase(p.nome || '')}${p.cpf ? ', CPF ' + p.cpf : ''}${avParentesco(p) ? ', com quem possui relação de ' + avParentesco(p) : ''}`
+                    : `${titleCase(p.nome || '')} (${[p.cpf ? 'CPF ' + p.cpf : '', avParentesco(p) ? 'relação: ' + avParentesco(p) : ''].filter(Boolean).join('; ')})`);
+                fraseAc = `, ${fem ? 'acompanhada' : masc ? 'acompanhado' : 'acompanhado(a)'} por ${avJuntar(lista)}`;
+            } else fraseAc = `. ${fem ? 'A menor viajará desacompanhada' : masc ? 'O menor viajará desacompanhado' : 'O(A) menor viajará desacompanhado(a)'}`;
+            h += `<h2>Autorização</h2><p>${escapeHtml(`${sujeito} ${oMenor} ${titleCase(m.nome || '')}, ${nascido} em ${avData(m.data_nascimento)}, a realizar a viagem nacional ${trecho}${periodo}${usando}${fraseAc}.`)}</p>`;
+            // 5. Responsabilidade
+            const nA = acs.length;
+            if (nA) {
+                const o = nA > 1 ? 'os acompanhantes' : 'o acompanhante', fica = nA > 1 ? 'ficam' : 'fica', pode = nA > 1 ? 'poderão' : 'poderá';
+                h += `<h2>Responsabilidade e cuidados com o menor</h2>
+                <p>Durante o período autorizado, ${o} ${fica} responsáve${nA > 1 ? 'is' : 'l'} por zelar pela segurança, integridade física, bem-estar e cuidados cotidianos do menor, acompanhando-o durante o trajeto e adotando as providências necessárias para sua proteção.</p>
+                <p>${o.charAt(0).toUpperCase() + o.slice(1)} ${pode} prestar informações sobre o menor, contatar os pais ou responsáveis legais e buscar atendimento médico ou hospitalar quando necessário, especialmente em situações de urgência ou emergência, observadas as normas aplicáveis e os protocolos da instituição de saúde.</p>
+                <p>Sempre que possível, os pais ou responsáveis legais deverão ser comunicados sobre ocorrências relevantes. Esta autorização não transfere a guarda legal do menor, não substitui os consentimentos exigidos para procedimentos médicos específicos e não concede poderes gerais para praticar atos jurídicos, financeiros ou outros atos em nome dos pais ou responsáveis.</p>`;
+            } else {
+                h += `<h2>Responsabilidade e cuidados com o menor</h2>
+                <p>Como o menor viajará sem acompanhante, os pais ou responsáveis legais permanecem responsáveis por seu deslocamento e por sua recepção no destino${rec ? ', conforme indicado acima' : ''}, devendo manter-se disponíveis nos telefones informados para contato durante todo o trajeto.</p>
+                <p>Esta autorização não transfere a guarda legal do menor, não substitui os consentimentos exigidos para procedimentos médicos específicos e não concede poderes gerais para praticar atos jurídicos, financeiros ou outros atos em nome dos pais ou responsáveis.</p>`;
+            }
+            // 6. Transporte e validade
+            const linhas = [];
+            const L = (k, val, cheia) => { if (val) linhas.push(`<div${cheia ? ' class="av-cheia"' : ''}><b>${escapeHtml(k)}:</b> ${escapeHtml(val)}</div>`); };
+            L('Meio de transporte', t.tipo);
+            L('Empresa de transporte', t.tipo === 'Ônibus' ? t.empresa : '');
+            L('Companhia aérea', t.tipo === 'Avião' ? t.companhia : '');
+            if (t.tipo === 'Veículo próprio') { L('Condutor', t.condutor); L('Proprietário do veículo', t.proprietario || (t.veiculo_do_autorizante === 'Sim' ? 'quem autoriza' : '')); }
+            if (t.tipo === 'Veículo de terceiros (carona)') { L('Motorista', t.motorista_carona); L('Telefone do motorista', t.telefone_motorista); }
+            if (t.tipo === 'Outro meio de transporte') L('Detalhes', t.outro);
+            L('Trajeto', v.origem && v.destino ? `${v.origem.cidade}/${v.origem.uf} → ${v.destino.cidade}/${v.destino.uf}` : '');
+            L('Data de saída', avData(v.saida)); L('Retorno previsto', avData(v.retorno)); L('Finalidade', v.finalidade);
+            let validadeTxt = '';
+            if (va.inicio && va.fim) {
+                if (va.tipo && va.tipo.startsWith('Somente')) validadeTxt = `de ${avData(va.inicio)} até ${avData(va.fim)}, exclusivamente para a viagem de ${v.origem ? v.origem.cidade + '/' + v.origem.uf : ''} a ${v.destino ? v.destino.cidade + '/' + v.destino.uf : ''} aqui descrita`;
+                else if (va.tipo && va.tipo.includes('múltiplas')) validadeTxt = `de ${avData(va.inicio)} até ${avData(va.fim)}, para múltiplas viagens realizadas nesse período`;
+                else validadeTxt = `de ${avData(va.inicio)} até ${avData(va.fim)}, para viagens de ida e retorno realizadas nesse período`;
+            }
+            L('Validade da autorização', validadeTxt, true); L('Observações', va.observacoes, true);
+            h += `<h2>Transporte e validade</h2><div class="av-grid">${linhas.join('')}</div>`;
+            // 7. Local, data e assinaturas
+            const local = (auts[0] && auts[0].cidade) ? `${auts[0].cidade}${auts[0].estado ? '/' + auts[0].estado : ''}` : '________________';
+            h += `<div class="av-fecho"><p class="av-local">${escapeHtml(local)}, ____ de __________________ de ______.</p><div class="av-assinaturas${auts.length + acs.filter(p => !p.mesma_pessoa_do_autorizante).length > 4 ? ' av-ass3' : ''}">`;
+            const idxAcAut = new Set(acs.filter(p => p.mesma_pessoa_do_autorizante).map(p => p.mesma_pessoa_do_autorizante));
+            auts.forEach((a, i) => { h += `<div class="av-ass"><div class="av-linha"></div>${escapeHtml(titleCase(a.nome || ''))}<br>CPF ${escapeHtml(a.cpf || '—')}<br><span>${escapeHtml(avCondicao(a).charAt(0).toUpperCase() + avCondicao(a).slice(1))} — autorizante${idxAcAut.has(i + 1) ? ' e acompanhante, ciente das responsabilidades' : ''}</span></div>`; });
+            acs.filter(p => !p.mesma_pessoa_do_autorizante).forEach(p => { h += `<div class="av-ass"><div class="av-linha"></div>${escapeHtml(titleCase(p.nome || ''))}<br>CPF ${escapeHtml(p.cpf || '—')}<br><span>Acompanhante — ciente das responsabilidades</span></div>`; });
+            h += `</div></div>`;
+            // 8. Conferência antes de emitir (só na tela; não sai impresso)
+            const alertas = e.alertas_conferencia || [];
+            h = `<div class="av-nao-imprimir"><b>⚠️ Conferir antes de emitir</b><ul>${alertas.map(a => `<li>${escapeHtml(a)}</li>`).join('')}</ul><div>Esta é uma minuta gerada a partir das informações do formulário. Confira a legitimidade de quem autoriza, as exigências aplicáveis à idade do menor e ao tipo de acompanhamento, e se há necessidade de documentação adicional (inclusive exigências da empresa de transporte, reconhecimento de firma ou autorização judicial). O documento <b>não garante</b> embarque em todos os casos.</div></div>` + h;
+            return h;
+        }
+
         const TIPOS = {
             // ===== Declaração de Trabalho unificada (2026-08-30) =====
             // Um formulário só (declaracao-trabalho-form.html) com 3 cenários:
@@ -9644,6 +9838,18 @@
                     out += assinatura(outorgante);
                     return out;
                 }
+            },
+
+            // Autorização de Viagem para Menor (2026-10-18) — modelo próprio de uma
+            // folha A4 em preto e branco (ver montarAutorizacaoViagem). Sem revisão
+            // por IA: o documento tem dados pessoais de menores e não deve sair do sistema.
+            AUTORIZACAO_VIAGEM_MENOR: {
+                titulo: 'AUTORIZAÇÃO DE VIAGEM NACIONAL DE MENOR E RESPONSABILIDADE DURANTE O TRAJETO',
+                docLayout: 'autviagem',
+                semRevisaoIA: true,
+                papeis: ['pessoa_a', 'pessoa_b'],
+                foro: 'parte_1',
+                corpo(d) { return montarAutorizacaoViagem(d); }
             },
 
             // Ver COMPRA-VENDA-REF.md §2.1. Testemunha nasceu duplicada
@@ -10544,7 +10750,7 @@
         async function montarContrato(d) {
             const cfg = TIPOS[d.tipo_contrato];
             const titulo = cfg ? cfg.titulo : 'DECLARAÇÃO';
-            const dadosRevisados = await revisarTextoDocumento(d);
+            const dadosRevisados = (cfg && cfg.semRevisaoIA) ? (d.dados || {}) : await revisarTextoDocumento(d);
             // await aqui (2026-08-26) só porque TIPOS.PRESTACAO_SERVICO.corpo()
             // agora é async (extrai cor da logo antes de montar o HTML, ver
             // extrairCorAccentLogo()) — `await` sobre um valor que já é uma
@@ -10565,6 +10771,9 @@
             // União Estável) — padrão visual único definido só no CSS (.decl-doc):
             // título, corpo, entrelinha, largura útil e fecho. corpo() devolve só
             // <p> simples + fechoDeclaracao(); nada de estilo inline por tipo.
+            if (cfg && cfg.docLayout === 'autviagem') {
+                return `<div class="av-doc"><h1 class="av-titulo">${titulo}</h1><hr>${corpo}</div>`;
+            }
             if (cfg && cfg.docLayout === 'declaracao') {
                 return `<div class="decl-doc"><h1 class="decl-doc-titulo">${titulo}</h1>${corpo}</div>`;
             }
@@ -10674,7 +10883,8 @@
             // mesmo mecanismo de classe/@page própria da Locação, só que pra
             // aproveitar melhor a folha A4 (margem menor) em vez de aumentar.
             const ehPrestador = declFormatadoAtual && declFormatadoAtual.tipo === 'PRESTACAO_SERVICO';
-            const classeExtra = ehLocacao ? ' locacao-imovel-print' : ehPrestador ? ' presta-servico-print' : '';
+            const ehAutViagem = declFormatadoAtual && declFormatadoAtual.tipo === 'AUTORIZACAO_VIAGEM_MENOR';
+            const classeExtra = ehLocacao ? ' locacao-imovel-print' : ehPrestador ? ' presta-servico-print' : ehAutViagem ? ' aut-viagem-print' : '';
             document.getElementById('printArea').innerHTML = `<div class="doc-formatado-print${classeExtra}">${document.getElementById('declFormatadoConteudo').innerHTML}</div>`;
             setTimeout(() => window.print(), 100);
         }

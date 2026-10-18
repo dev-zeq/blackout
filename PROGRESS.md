@@ -4005,3 +4005,18 @@ Menor de 16 (ECA art. 83), 16–17, 18+ na data da viagem, desacompanhado (+ sem
 
 ### Testes (Playwright, Supabase simulado)
 Fluxo completo pela interface (digitando, máscaras, adicionar autorizante sem perder dados, documentos múltiplos, ambos os pais com 1 reaproveitado, validações por etapa, resumo com documentos ocultos/mostrados, rascunho, envio). 5 cenários de combinações (mãe+pai acompanha/ônibus; pai e mãe reaproveitados/avião/recebedor = acompanhante; mãe+guardião/amigo/veículo próprio de terceiro/recebedor outra pessoa/múltiplas viagens; desacompanhado/carona/menor estrangeiro com RNM+passaporte+outro doc; outro meio de transporte/primo): sem erros, round-trip de edição idêntico. Negativos (CPF inválido, telefone, menor 25 anos, retorno < saída). Painel: tile + badge, view, lista, ficha com máscara, iframe de edição, Contratos não lista o tipo, atalhos sem views duplicadas. **Falta:** aplicar a migration, testar ao vivo (envio real/edição) e revisão jurídica dos textos de aviso.
+
+
+## Autorização de Viagem para Menor — modelo do documento (2026-10-18)
+
+Documento gerado a partir de `dados.especifico` (ver seção anterior), botão **📄** em cada pedido da lista de "Procurações e Autorizações" → mesma tela de documento formatado das Declarações (Editar / Imprimir; PDF = "salvar como PDF" do diálogo de impressão).
+
+**`paineldecontrole/index.html`:** `montarAutorizacaoViagem(d)` + helpers `av*` (antes de `TIPOS`), `TIPOS.AUTORIZACAO_VIAGEM_MENOR` (`docLayout:'autviagem'`, `semRevisaoIA:true`), ramo novo em `montarContrato()`, classe `aut-viagem-print` em `imprimirDeclFormatada()`, CSS `.av-doc` (tela e `@media print`, `@page aut-viagem` 10×12 mm). **Sem revisão por IA** (`semRevisaoIA`): o texto do documento contém dados de menores e não é enviado à Edge Function `documento-revisao`. Nada dos outros tipos foi alterado (a revisão por IA e os layouts existentes seguem iguais para eles).
+**Formulário:** novo campo opcional "Profissão" do autorizante (entra na qualificação "se informada").
+
+**Conteúdo:** título + linha; qualificação de cada autorizante (nacionalidade/estado civil flexionados por pai/mãe, profissão, CPF, identidade, endereço, telefone, condição); dados do menor (só documentos informados); acompanhante(s) (ou "viajará desacompanhado" + contatos de emergência/recebedor, sem inventar acompanhante); texto principal adaptado (singular "Eu…autorizo" / plural "Nós…autorizamos"; "acompanhado por…" só se houver acompanhante; transporte descrito por tipo); responsabilidade (3 parágrafos do pedido; versão adaptada sem acompanhante); transporte e validade (única viagem cita o trajeto; múltiplas viagens usa redação própria); local/data em branco + uma linha de assinatura por autorizante e por acompanhante (acompanhante que também autoriza assina uma vez, "ciente das responsabilidades"; ≥5 assinaturas usam 3 colunas). Preto e branco, sem logo/rodapé.
+**Conferência (só na tela, não imprime):** caixa âmbar com os `alertas_conferencia` + aviso de que a minuta não garante embarque.
+
+### Testes (Playwright + PDF real pelo caminho de impressão do painel)
+6 cenários (incl. 3 autorizantes + 2 acompanhantes, desacompanhado, guardião, veículo de terceiros, múltiplas viagens): PDF A4 de **1 página** em 5; o caso extremo (5 assinaturas) fica em 2 páginas, com local/data + assinaturas juntos na 2ª (sem cortar nada). Aviso não aparece no PDF; Edge Function de IA não chamada (0). Texto principal conferido nos PDFs.
+**Falta:** revisão jurídica do texto, migration do tipo no banco (seção anterior) e teste ao vivo.

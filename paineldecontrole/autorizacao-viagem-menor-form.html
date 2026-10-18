@@ -145,7 +145,7 @@ const nac = {}; // nacionalidades (campo compartilhado assets/campo-nacionalidad
 function iniciarNac(uid) { if (nac[uid + '_nacionalidade'] === undefined) { nac[uid + '_nacionalidade'] = 'Brasileiro(a)'; nac[uid + '_nacionalidade_outro'] = ''; } }
 function novaPessoa(prefixo, extra) {
     const p = Object.assign({
-        uid: novoUid(prefixo), nome: '', estado_civil: '', nasc: '', cpf: '', rg_num: '', rg_org: '', rg_uf: '',
+        uid: novoUid(prefixo), nome: '', estado_civil: '', profissao: '', nasc: '', cpf: '', rg_num: '', rg_org: '', rg_uf: '',
         cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', tel_ddd: '', tel_num: '',
     }, extra || {});
     iniciarNac(p.uid);
@@ -225,6 +225,7 @@ function blocoPessoa(p, base, cfg) {
     let h = campo('Nome completo', `${base}.nome`);
     h += window.Nacionalidade.campoHtml(nac, u + '_nacionalidade');
     if (cfg.estadoCivil) h += campo('Estado civil', `${base}.estado_civil`, { select: ESTADOS_CIVIS });
+    if (cfg.profissao) h += campo('Profissão', `${base}.profissao`, { obrig: false });
     h += campo('Data de nascimento', `${base}.nasc`, { type: 'date' });
     h += campo('CPF', `${base}.cpf`, { ph: '000.000.000-00', obrig: cfg.cpfObrig !== false, hint: cfg.hintDoc });
     h += `<div class="row2">${campo(cfg.rgLabel || 'Documento de identidade (nº)', `${base}.rg_num`, { obrig: cfg.rgObrig === true })}${campo('Órgão emissor', `${base}.rg_org`, { obrig: false, ph: 'SSP' })}</div>`;
@@ -265,7 +266,7 @@ function errosPessoa(p, rotulo, cfg) {
     const et = window.Telefone.validar(p, 'tel', cfg.telObrig !== false); if (et) r(et.replace(/\.$/, ''));
     return e;
 }
-const CFG_AUT = { estadoCivil: true, endereco: true, adulto: true, rgLabel: 'Documento de identidade (nº)' };
+const CFG_AUT = { estadoCivil: true, profissao: true, endereco: true, adulto: true, rgLabel: 'Documento de identidade (nº)' };
 const CFG_ACOMP = { estadoCivil: false, endereco: true, adulto: true, hintDoc: 'Informe o CPF ou o documento de identidade.' };
 
 // ---------- ETAPA 1 — autorizantes ----------
@@ -741,7 +742,7 @@ function restaurarRascunho() {
 // ---------- Envio ----------
 function pessoaSaida(p) {
     return {
-        nome: p.nome.trim(), nacionalidade: nacFinal(p.uid), estado_civil: p.estado_civil || null, data_nascimento: p.nasc || null,
+        nome: p.nome.trim(), nacionalidade: nacFinal(p.uid), estado_civil: p.estado_civil || null, profissao: (p.profissao || '').trim() || null, data_nascimento: p.nasc || null,
         cpf: p.cpf.trim() || null, rg: p.rg_num.trim() || null, rg_orgao: p.rg_org.trim() || null, rg_uf: p.rg_uf || null,
         cep: p.cep.trim() || null, rua: p.rua.trim(), numero: p.numero.trim(), complemento: p.complemento.trim() || null,
         bairro: p.bairro.trim(), cidade: p.cidade.trim(), estado: p.uf,
