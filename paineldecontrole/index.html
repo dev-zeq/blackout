@@ -8687,7 +8687,8 @@
             h += sec('Menor', linha('Nome', m.nome) + linha('Nacionalidade', m.nacionalidade) + linha('Gênero', m.genero)
                 + linha('Nascimento', m.data_nascimento ? m.data_nascimento.split('-').reverse().join('/') + (m.idade_no_cadastro != null ? ` (${m.idade_no_cadastro} anos no cadastro)` : '') : '')
                 + linha('Naturalidade', m.naturalidade ? (m.naturalidade.uf ? `${m.naturalidade.cidade}/${m.naturalidade.uf}` : `${m.naturalidade.pais}${m.naturalidade.cidade ? ' — ' + m.naturalidade.cidade : ''}`) : '')
-                + (m.documentos || []).map(x => linha(x.descricao || x.tipo, procAutMask(x.numero, x.tipo === 'CPF' ? 'cpf' : ''))).join(''));
+                + (m.documentos || []).map(x => linha((x.tipo === 'Outro documento' && (x.nome || x.descricao)) ? (x.nome || x.descricao) : x.tipo,
+                    procAutMask(x.numero, x.tipo === 'CPF' ? 'cpf' : '') + [x.pais_emissor ? ' — ' + x.pais_emissor : '', x.validade ? ' (validade ' + x.validade.split('-').reverse().join('/') + ')' : '', x.complemento ? ' · ' + x.complemento : ''].join(''))).join(''));
             const ac = e.acompanhamento || {};
             const tiposAc = { pai: 'Acompanhado pelo pai', mae: 'Acompanhado pela mãe', familiar: 'Acompanhado por outro familiar', amigo: 'Acompanhado por amigo da família', desacompanhado: 'Viajando desacompanhado', outro: 'Outro' };
             h += sec('Acompanhamento', linha('Como viaja', (tiposAc[ac.tipo] || ac.tipo) + (ac.descricao ? ' — ' + ac.descricao : '')));
@@ -9361,7 +9362,11 @@
             // 1. Quem autoriza
             h += `<h2>Qualificação de quem autoriza</h2>` + auts.map((a, i) => avPessoaHtml(a, rotulos[i])).join('');
             // 2. Menor
-            const docsMenor = (m.documentos || []).map(x => `${(x.descricao || x.tipo)} nº ${x.numero}`).join('; ');
+            const docsMenor = (m.documentos || []).map(x => {
+                const rot = (x.tipo === 'Outro documento' && (x.nome || x.descricao)) ? (x.nome || x.descricao) : x.tipo;
+                const extra = [x.pais_emissor ? `emitido por ${x.pais_emissor}` : '', x.validade ? `validade ${avData(x.validade)}` : '', x.complemento || ''].filter(Boolean).join(', ');
+                return `${rot} nº ${x.numero}${extra ? ' (' + extra + ')' : ''}`;
+            }).join('; ');
             const natMenor = m.naturalidade ? (m.naturalidade.uf ? `${m.naturalidade.cidade}/${m.naturalidade.uf}` : [m.naturalidade.cidade, m.naturalidade.pais].filter(Boolean).join(', ')) : '';
             h += `<h2>Dados do menor</h2><p class="av-pessoa"><b>${escapeHtml(titleCase(m.nome || ''))}</b><br>${escapeHtml([
                 m.data_nascimento ? `nascimento: ${avData(m.data_nascimento)}` : '', m.nacionalidade ? `nacionalidade: ${(fem || masc) ? flexGenero(m.nacionalidade, fem) : m.nacionalidade}` : '', natMenor ? `natural de ${natMenor}` : '', docsMenor,
