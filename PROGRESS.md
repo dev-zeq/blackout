@@ -3917,3 +3917,22 @@ Pedido: investigar por que, ao entrar num sub-painel (ex. Detran) vindo de outro
 2. Preview local (Playwright, bibliotecas externas trocadas por stubs locais — apagada depois do teste): reproduzido o bug relatado (Recibos → Detran pela barra) ANTES da correção não foi necessário reproduzir à parte — a causa já estava clara pela leitura do código; testada a correção percorrendo Recibos → Detran → Currículo → Prefeitura → Contratos → Financeiro → Boletos → Recibos, sempre pela barra de atalhos (pior caso: nunca passando pelo Menu Principal entre eles). Em cada parada, conferido via DOM que existe exatamente **1** `.view.active` e **1** `.topnav-row` visível — sem exceção nos 8 saltos testados.
 
 **Falta:** confirmação do usuário testando ao vivo no painel publicado.
+
+
+## Declarações e Procurações — máscara de CPF/CNPJ nos documentos e formulários (2026-10-18)
+
+Pedido: CPF (`000.000.000-00`) e CNPJ (`00.000.000/0000-00`) saíam sem pontuação em Declarações/Procurações quando o dado estava só com dígitos; Contratos já estavam certos e não podiam ser alterados.
+
+**Causa:** nenhum formulário de Declaração/Procuração mascarava o campo, e os layouts em `index.html` imprimiam `p.cpf`/`empresa_cnpj` do jeito que veio do banco. (Só o Orçamento de Prestação de Serviço já usava `formatarCNPJDoc()`.)
+
+### O que mudou
+- `paineldecontrole/index.html`: novo `formatarCPFDoc()` (mesma regra do `formatarCNPJDoc()`: só mascara com exatamente 11/14 dígitos, senão devolve o valor como veio) e `pessoaCpfFmt()` (cópia rasa com CPF formatado — não altera o dado salvo). Aplicados em: `qualificar()`, `assinatura()`, Trabalho (CNPJ da empresa e CPF do funcionário), Residência (CPF do locatário/coabitante), União Estável (via `qualificar`), Termo de Responsabilidade de Veículo (partes + testemunhas), Procuração Simples e Detran (outorgante/outorgado). `qualificarCV`, `qualificarTermo` e `blocoAssinaturasDuasColunas` (compartilhados com Contratos) **não foram alterados**; nenhum tipo de contrato foi tocado.
+- Formulários `declaracao-residencia`, `declaracao-trabalho`, `declaracao-uniao-estavel`, `procuracao-simples`, `procuracao-detran`, `termo-responsabilidade-veiculo`: bloco `<script>` no fim (idêntico nos 6) que mascara ao digitar e ao recuperar valor completo na edição (ids terminados em `cpf`/`cnpj`), não mexe em valor com dígitos a mais, e bloqueia o "Avançar" com aviso quando o campo preenchido tem quantidade errada de dígitos. Campo vazio continua valendo como antes (obrigatoriedade inalterada).
+- `declaracao-autonomo-form.html` é só redirecionamento (vai pro de Trabalho).
+
+### Testes (Node/Playwright)
+1. `node --check` do `<script type="module">` → OK.
+2. Renderização real dos `corpo()` extraídos do arquivo, para Autônomo, Trabalho (4 cenários), Residência (2), União Estável, Termo Veículo, Procuração Simples e Detran, com dados só dígitos, já formatados e inválidos: todo CPF/CNPJ de 11/14 dígitos sai mascarado, sem duplicar pontuação; inválidos saem como vieram.
+3. Playwright nos 6 formulários: digitar sem pontuação, digitar já formatado, CNPJ, valor recuperado, parcial (`123.456`), bloqueio do Avançar com 3 dígitos → todos OK, sem erro de JS.
+
+**Falta:** conferir ao vivo no painel publicado (visualização, impressão, PDF e edição de registros antigos).

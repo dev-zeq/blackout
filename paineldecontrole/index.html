@@ -8702,7 +8702,7 @@
                 p.nacionalidade ? escapeHtml(flexGenero(p.nacionalidade, fem)) : null,
                 p.estado_civil ? escapeHtml(flexGenero(p.estado_civil, fem)) : null,
                 p.profissao ? escapeHtml(p.profissao) : null,
-                `portador${g(p.genero, '', 'a')} do CPF nº ${escapeHtml(p.cpf)}` + (p.rg ? `, RG nº ${escapeHtml(p.rg)}` : ''),
+                `portador${g(p.genero, '', 'a')} do CPF nº ${escapeHtml(formatarCPFDoc(p.cpf))}` + (p.rg ? `, RG nº ${escapeHtml(p.rg)}` : ''),
             ].filter(Boolean);
             let texto = partes.join(', ');
             if (p.endereco) {
@@ -8711,7 +8711,7 @@
             return texto;
         }
         function assinatura(p) {
-            return `<p style="margin-top:36px;">_________________________________________<br>${escapeHtml(titleCase(p.nome))}<br>CPF: ${escapeHtml(p.cpf)}</p>`;
+            return `<p style="margin-top:36px;">_________________________________________<br>${escapeHtml(titleCase(p.nome))}<br>CPF: ${escapeHtml(formatarCPFDoc(p.cpf))}</p>`;
         }
         // Fecho padrão das Declarações: data + assinatura(s), centralizado e com
         // respiro proporcional (posição vertical vem de .decl-doc-fecho no CSS).
@@ -9003,6 +9003,17 @@
             if (d.length !== 14) return v;
             return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
         }
+        // Máscara de CPF (000.000.000-00) — mesma regra do CNPJ acima: só aplica
+        // com exatamente 11 dígitos; qualquer outra coisa volta como veio.
+        // Usada só em Declarações, Procurações e Termo de Responsabilidade de
+        // Veículo (formulário público); Contratos continuam como estavam.
+        function formatarCPFDoc(v) {
+            const d = String(v || '').replace(/\D/g, '');
+            if (d.length !== 11) return v;
+            return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
+        }
+        // Cópia rasa da pessoa com o CPF formatado (não altera o dado salvo).
+        function pessoaCpfFmt(p) { return p ? Object.assign({}, p, { cpf: formatarCPFDoc(p.cpf) }) : p; }
         // Extrai uma cor de destaque a partir da logo (pedido do usuário: "usar
         // suas cores como referência visual") — média das cores da imagem,
         // ignorando pixels quase-brancos/quase-transparentes (senão o fundo
@@ -9127,7 +9138,7 @@
                         const empEnd = e.empresa_endereco
                             ? `situada na ${escapeHtml(e.empresa_endereco)}, bairro ${escapeHtml(e.empresa_bairro || '')}, na cidade de ${escapeHtml(e.empresa_cidade || '')}/${escapeHtml(e.empresa_estado || '')}, `
                             : '';
-                        let corpo = `<p>Eu, ${qualificar(a)}, proprietári${g(a.genero, 'o', 'a')} da empresa <b>${empNome}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${empEnd}DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha em minha empresa exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                        let corpo = `<p>Eu, ${qualificar(a)}, proprietári${g(a.genero, 'o', 'a')} da empresa <b>${empNome}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(formatarCNPJDoc(e.empresa_cnpj))}` : ''}, ${empEnd}DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(formatarCPFDoc(f.cpf))}` : ''}, trabalha em minha empresa exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                         if (e.informar_renda === 'SIM' && e.renda_mensal) {
                             corpo += `<p>Declaro, ainda, que o(a) referido(a) funcionário(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                         }
@@ -9144,7 +9155,7 @@
                     // endereço de local de trabalho.
                     if (e.cenario === 'CONTRATANTE') {
                         const f = dados.pessoa_b || {};
-                        let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(f.cpf)}` : ''}, trabalha para mim, exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                        let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins de comprovação de trabalho e a quem possa interessar, que o(a) Sr(a). <b>${escapeHtml(titleCase(f.nome || ''))}</b>${f.rg ? `, portador(a) do RG nº ${escapeHtml(f.rg)}` : ''}${f.cpf ? `, inscrito(a) no CPF nº ${escapeHtml(formatarCPFDoc(f.cpf))}` : ''}, trabalha para mim, exercendo a função de <b>${escapeHtml(funcao)}</b>, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                         if (e.informar_renda === 'SIM' && e.renda_mensal) {
                             corpo += `<p>Declaro, ainda, que o(a) referido(a) trabalhador(a) percebe salário mensal de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                         }
@@ -9156,7 +9167,7 @@
                     // Cenário VINCULO (e registros antigos sem `cenario`): o próprio
                     // trabalhador declara o vínculo — redação em 1ª pessoa dele,
                     // idêntica à de antes da unificação.
-                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(funcao)}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(e.empresa_cnpj)}` : ''}, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
+                    let corpo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que exerço a função de <b>${escapeHtml(funcao)}</b> na empresa <b>${escapeHtml(e.empresa_nome || '')}</b>${e.empresa_cnpj ? `, inscrita no CNPJ sob o nº ${escapeHtml(formatarCNPJDoc(e.empresa_cnpj))}` : ''}, ${escapeHtml(dias)}, no horário das ${escapeHtml(hIni)} às ${escapeHtml(hFim)} horas.</p>`;
                     if (e.informar_renda === 'SIM' && e.renda_mensal) {
                         corpo += `<p>Declaro ainda que aufiro renda mensal média de R$ ${escapeHtml(String(e.renda_mensal))}.</p>`;
                     }
@@ -9198,7 +9209,7 @@
                             escapeHtml(titleCase(p.nome)),
                             p.nacionalidade ? escapeHtml(flexGenero(p.nacionalidade, fem)) : null,
                             p.estado_civil ? escapeHtml(flexGenero(p.estado_civil, fem)) : null,
-                            `portador${g(p.genero, '', 'a')} do CPF nº ${escapeHtml(p.cpf)}`,
+                            `portador${g(p.genero, '', 'a')} do CPF nº ${escapeHtml(formatarCPFDoc(p.cpf))}`,
                         ].filter(Boolean).join(', ');
                     }
                     let miolo;
@@ -9237,7 +9248,7 @@
                     } else {
                         miolo = `<p>Eu, ${qualificar(a)}, DECLARO, para os devidos fins e a quem possa interessar, que sou residente e domiciliad${g(a.genero, 'o', 'a')} no endereço acima qualificado.</p>`;
                         if (b && b.nome) {
-                            miolo += `<p>Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(titleCase(b.nome))}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(b.cpf)}` : ''}.</p>`;
+                            miolo += `<p>Declaro ainda que resido no mesmo endereço em companhia de ${escapeHtml(titleCase(b.nome))}${b.cpf ? `, portador${g(b.genero, '', 'a')} do CPF nº ${escapeHtml(formatarCPFDoc(b.cpf))}` : ''}.</p>`;
                         }
                         miolo += `<p>Por ser expressão da verdade, firmo a presente declaração para que produza os efeitos legais.</p>`;
                     }
@@ -9347,8 +9358,8 @@
                 foro: 'parte_1',
                 corpo(d) {
                     const dadosRow = d.dados || {};
-                    const prop = dadosRow.pessoa_a || {};
-                    const resp = dadosRow.pessoa_b || {};
+                    const prop = pessoaCpfFmt(dadosRow.pessoa_a || {});
+                    const resp = pessoaCpfFmt(dadosRow.pessoa_b || {});
                     const especifico = dadosRow.especifico || {};
                     const ativo = especifico.veiculo || {};
                     const foro = resolverForo(this, { pessoa_a: prop, pessoa_b: resp }, especifico);
@@ -9385,8 +9396,8 @@
                     out += blocoAssinaturasDuasColunas(
                         [{ nome: prop.nome, label: 'Proprietário do Veículo' }, { nome: resp.nome, label: 'Responsável pelo Veículo' }],
                         [
-                            { nome: especifico.testemunha_1_nome, cpf: especifico.testemunha_1_cpf },
-                            { nome: especifico.testemunha_2_nome, cpf: especifico.testemunha_2_cpf },
+                            { nome: especifico.testemunha_1_nome, cpf: formatarCPFDoc(especifico.testemunha_1_cpf) },
+                            { nome: especifico.testemunha_2_nome, cpf: formatarCPFDoc(especifico.testemunha_2_cpf) },
                         ]
                     );
                     return out;
@@ -9409,8 +9420,8 @@
                     const especifico = dadosRow.especifico || {};
 
                     let out = '';
-                    out += `<p>${qualificarCV(outorgante, 'Outorgante')}</p>`;
-                    out += `<p>${qualificarCV(outorgado, 'Outorgado')}</p>`;
+                    out += `<p>${qualificarCV(pessoaCpfFmt(outorgante), 'Outorgante')}</p>`;
+                    out += `<p>${qualificarCV(pessoaCpfFmt(outorgado), 'Outorgado')}</p>`;
                     out += `<h3>PODERES</h3>`;
                     out += `<p>Pelo presente instrumento particular de procuração, o OUTORGANTE nomeia e constitui como seu bastante procurador o OUTORGADO acima qualificado, a quem confere amplos e gerais poderes para representá-lo perante ${escapeHtml(especifico.instituicao_nome || '')}, na cidade de ${escapeHtml(especifico.instituicao_cidade || '')}/${escapeHtml(especifico.instituicao_estado || '')}, podendo praticar todos os atos necessários ao fiel cumprimento deste mandato, assinar requerimentos e documentos, prestar informações, retirar e entregar documentos, e representar o OUTORGANTE em tudo o mais que se fizer necessário perante a instituição acima referida.</p>`;
                     out += `<h3>PRAZO DE VALIDADE</h3>`;
@@ -9437,8 +9448,8 @@
                     const ativo = especifico.veiculo || {};
 
                     let out = '';
-                    out += `<p>${qualificarCV(outorgante, 'Outorgante')}</p>`;
-                    out += `<p>${qualificarCV(outorgado, 'Outorgado')}</p>`;
+                    out += `<p>${qualificarCV(pessoaCpfFmt(outorgante), 'Outorgante')}</p>`;
+                    out += `<p>${qualificarCV(pessoaCpfFmt(outorgado), 'Outorgado')}</p>`;
 
                     out += `<h3>DADOS DO VEÍCULO</h3>`;
                     out += `<p>Tipo de Veículo: ${up(ativo.tipo)}&nbsp;&nbsp;&nbsp;Marca: ${up(ativo.fabricante)}&nbsp;&nbsp;&nbsp;Modelo: ${up(ativo.modelo)}<br>`
