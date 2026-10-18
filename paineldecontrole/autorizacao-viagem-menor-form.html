@@ -456,8 +456,8 @@ function docLimparIncompativeis(d, novoTipo) {
 function docPerderia(d, novoTipo) { const ok = CAMPOS_DOC[novoTipo] || []; return ['numero', 'pais', 'validade', 'nome', 'compl'].some(c => d[c] && !ok.includes(c)); }
 function docBlocoHtml(d, i) {
     const b = `docs.${i}`;
-    let h = `<div class="person-block"><h3><span>Documento ${i + 1}${d.tipo ? ' — ' + esc(docRotulo(d)) : ''}</span><button type="button" class="btn-link" data-remover-doc="${i}">Remover</button></h3>
-        <div class="field"><label>Tipo de documento *</label><select data-doc-tipo-sel="${i}"><option value="">Selecione o tipo</option>${TIPOS_DOC_MENOR.map(t => `<option value="${esc(t)}" ${d.tipo === t ? 'selected' : ''}>${esc(ROTULO_TIPO_DOC[t] || t)}</option>`).join('')}</select></div>`;
+    let h = `<div class="person-block"><h3><span>Documento ${i + 1}${d.tipo ? ' — ' + esc(docRotulo(d)) : ''}</span>${(s.docs.length > 1 || docTemDados(d)) ? `<button type="button" class="btn-link" data-remover-doc="${i}">Remover</button>` : ''}</h3>
+        <div class="field"><label>Selecione o tipo de documento *</label><select data-doc-tipo-sel="${i}"><option value="">Selecione</option>${TIPOS_DOC_MENOR.map(t => `<option value="${esc(t)}" ${d.tipo === t ? 'selected' : ''}>${esc(ROTULO_TIPO_DOC[t] || t)}</option>`).join('')}</select></div>`;
     switch (d.tipo) {
         case 'CPF': h += campo('Número do CPF', `${b}.numero`, { ph: '000.000.000-00', id: `f_docs_${i}_numero_cpf` }).replace(/<\/div>$/, `<div class="hint" id="f_docs_${i}_cpfaviso" style="color:#fbbf24">${esc(cpfAviso(d.numero))}</div></div>`); break;
         case 'RG ou CIN': h += campo('Número do documento', `${b}.numero`); break;
@@ -469,11 +469,10 @@ function docBlocoHtml(d, i) {
     return h + `</div>`;
 }
 function errosDocs() {
-    const e = [], docs = s.docs;
+    const e = [], docs = s.docs.filter(d => !docVazio(d)); // blocos totalmente em branco são ignorados
     if (!docs.length) return ['Menor: informe ao menos um documento de identificação'];
-    docs.forEach((d, i) => {
-        const r = (m) => e.push(`Documento ${i + 1}${d.tipo ? ' (' + docRotulo(d) + ')' : ''}: ${m}`);
-        if (docVazio(d)) { r('bloco em branco — preencha ou remova'); return; }
+    docs.forEach((d) => {
+        const r = (m) => e.push(`Documento ${s.docs.indexOf(d) + 1}${d.tipo ? ' (' + docRotulo(d) + ')' : ''}: ${m}`);
         if (!d.tipo) { r('escolha o tipo de documento'); return; }
         const num = (d.numero || '').trim();
         if (d.tipo === 'Outro documento' && !(d.nome || '').trim()) r('informe o nome ou tipo do documento');
@@ -513,10 +512,8 @@ function stepMenor() {
         <div class="radio-group">${['Masculino', 'Feminino', 'Prefiro não informar'].map(g => pill('f_menor_genero', g, m.genero === g, g, 'menor.genero')).join('')}</div></div>
     ${campoNascSelect('Data de nascimento', 'menor.nasc')}
     <div class="field"><label>Idade (calculada automaticamente)</label><input type="text" id="f_menor_idade" readonly value="${idade === null || idade < 0 ? '' : idade + (idade === 1 ? ' ano' : ' anos')}" placeholder="Preencha a data de nascimento"></div>
-    <div class="sec-title">Documentos pessoais do menor</div>
-    <div class="field"><label>Qual documento de identificação o menor possui? *</label>
-        <div class="check-group">${TIPOS_DOC_MENOR.map(t => `<label class="radio-pill"><input type="checkbox" data-doc-tipo="${esc(t)}" ${s.docs.some(d => d.tipo === t) ? 'checked' : ''}><span class="pill-label">${esc(ROTULO_TIPO_DOC[t] || t)}</span></label>`).join('')}</div>
-        <div class="hint">Selecione um ou vários. Para outro documento do mesmo tipo (ou de tipo diferente), use "+ Adicionar outro documento".</div></div>`;
+    <div class="sec-title">Documentos pessoais do menor</div>`;
+    if (!s.docs.length) s.docs.push(novoDoc('')); // sempre começa com 1 bloco (só o campo de seleção do tipo)
     s.docs.forEach((d, i) => { h += docBlocoHtml(d, i); });
     h += `<div id="docMsg" class="error-msg"></div><button type="button" class="btn-sec" id="btnAddDoc">+ Adicionar outro documento</button>`;
     return h + navHtml();
@@ -903,13 +900,6 @@ document.addEventListener('change', (ev) => {
         if (!d || d.tipo === novo) return;
         if (docPerderia(d, novo) && !confirm('Trocar o tipo apaga os dados que não existem no novo tipo de documento. Continuar?')) { render(); return; }
         docLimparIncompativeis(d, novo); d.tipo = novo; docsSync(); render(); return;
-    }
-    if (t.dataset && t.dataset.docTipo) { // botões de tipo: marcar adiciona um bloco; desmarcar remove os blocos desse tipo
-        const tipo = t.dataset.docTipo, blocos = s.docs.filter(d => d.tipo === tipo);
-        if (t.checked) { if (!blocos.length) { const vazio = s.docs.find(docVazio); if (vazio) vazio.tipo = tipo; else s.docs.push(novoDoc(tipo)); } }
-        else if (blocos.some(docTemDados) && !confirm(`Remover o(s) documento(s) "${tipo}" e os dados preenchidos?`)) { render(); return; }
-        else s.docs = s.docs.filter(d => d.tipo !== tipo);
-        docsSync(); render(); return;
     }
     if (t.id === 'f_confirmacao') { s.confirmacao = t.checked; refrescarResumo(); }
     if (stepIndex === 4) refrescarResumo();
