@@ -275,7 +275,7 @@ const CFG_ACOMP = { estadoCivil: false, endereco: true, adulto: true, hintDoc: '
 function stepAutorizantes() {
     const n = s.autorizantes.length;
     let h = `<h2>Dados de quem autoriza a viagem</h2>
-    <div class="info-note">Este formulário é para viagens <b>nacionais</b> (dentro do Brasil) de criança ou adolescente menor de 18 anos. Quem precisa autorizar (um ou ambos os responsáveis) depende de cada caso — informe aqui todas as pessoas que vão assinar a autorização.</div>
+    <div class="info-note">Este formulário destina-se à preparação de autorizações de viagem nacionais (dentro do Brasil) ou internacionais (para outros países) de crianças e adolescentes menores de 18 anos. As exigências de autorização variam conforme o destino, a idade do menor, seus acompanhantes e a situação dos responsáveis legais. Informe todas as pessoas que participarão da autorização e assinarão o documento, conforme o caso.</div>
     <div class="field"><label>Quantas pessoas participarão desta autorização como autorizantes? *</label>
         <div class="radio-group">${[1, 2].map(k => `<label class="radio-pill"><input type="radio" name="f_qtd_aut" value="${k}" ${n === k ? 'checked' : ''} data-qtd="1"><span class="pill-label">${k}</span></label>`).join('')}</div>
         <div class="hint">No máximo 2 autorizantes.</div></div>`;
