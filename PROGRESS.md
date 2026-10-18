@@ -4042,3 +4042,13 @@ Todos os campos de **data de nascimento** do formulário (autorizantes, menor, a
 **Regras:** só números (letras/barras são ignoradas), maxlength 2/2/4, pula pro próximo campo ao completar; data incompleta, inexistente (ex.: 31/02), ano < 1900 ou futura → mensagem clara abaixo do campo (ao sair do campo) e no bloqueio do "Avançar"; valores preservados ao voltar/avançar e em rascunho/edição (registros antigos só com data ISO reabrem preenchidos).
 **Formato interno inalterado:** `data_nascimento` continua `AAAA-MM-DD` em `dados.*`; documento e conferência mostram `DD/MM/AAAA`.
 **Testes (Playwright):** digitação com lixo/máscara, 31/02, mês 13, ano incompleto, futura, válida; 360 px sem estouro; idade automática; preservação ao voltar; estado antigo (ISO); fluxo completo até o envio; os 5 cenários de combinações; PDFs em 1 página.
+
+
+## Autorização de Viagem — documentos e endereço dos autorizantes, etapa 1 (2026-10-18)
+Só os **autorizantes** (etapa 1) foram alterados; o bloco do acompanhante (etapa 3) continua como estava (com RG + órgão/UF e CEP) por estar fora do pedido.
+- **CPF** obrigatório e validado (vazio → "CPF (obrigatório)"; menos de 11 dígitos → "CPF incompleto"; dígito verificador errado → "CPF inválido"). Antes bastava CPF **ou** RG.
+- **RG** opcional, só o número, sem máscara (aceita qualquer formato); campos Órgão emissor e UF do documento removidos. Não é exigido para avançar.
+- **CEP removido** (campo e validação) — não é mais salvo para autorizantes.
+- **Endereço padrão**: Rua/logradouro + Número (aceita S/N) na mesma linha, Complemento (opcional), **Cidade** (mesma lista dos contratos/declarações: Camboriú, Balneário Camboriú, Itapema, Itajaí, "Outra"), **Bairro** (lista por cidade + "Outro bairro" → campo livre) e **UF**. Cidade da lista define SC automaticamente (campo UF some, igual aos outros formulários); "Outra" libera cidade/bairro em texto e pede a UF (lista oficial das 26 siglas + DF). Nada é preenchido automaticamente. Registros/rascunhos antigos (texto livre) reabrem derivando a seleção a partir de cidade/bairro/UF salvos.
+- Formato salvo e documento inalterados (`rua`, `numero`, `complemento`, `bairro`, `cidade`, `estado`; `cep`/`rg_orgao`/`rg_uf` ficam `null` nos autorizantes). O RG sai no documento como "identidade nº X" (sem órgão/UF).
+**Testes (Playwright):** CPF vazio/incompleto/inválido/válido; com e sem RG; com e sem complemento; S/N; cidade da lista (bairro em lista, UF oculta = SC) e "Outro bairro"; cidade "Outra" (+UF com 27 opções); preservação ao voltar; 360 px sem estouro; fluxo completo até o envio, 5 combinações, nascimento, limites, painel e PDFs de 1 página sem regressão.

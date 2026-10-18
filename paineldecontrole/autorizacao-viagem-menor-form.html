@@ -175,6 +175,18 @@ let editMode = false, editId = null;
 let mostrarDocs = false;
 const ROTULOS_ETAPAS = ['Quem autoriza', 'Dados do menor', 'Acompanhante', 'Viagem e transporte', 'Validade e conferência'];
 
+// ---------- Cidade/bairro (mesma lista e comportamento dos formulários de contratos/declarações) ----------
+// Cidades da região com bairro em lista; "Outra" libera cidade e bairro livres. Cidades da lista
+// definem o estado como SC (campo UF some); "Outra" pede a UF.
+const CIDADES_BAIRROS = {
+    'Camboriú': ['Areias', 'Cedro', 'Centro', 'Conde Vila Verde', 'Lídia Duarte', 'Monte Alegre', 'Rio Pequeno', 'Santa Regina', 'São Francisco de Assis', 'Tabuleiro', 'Várzea do Ranchinho'],
+    'Balneário Camboriú': ['Ariribá', 'Barra', 'Barra Norte', 'Barra Sul', 'Centro', 'Estados', 'Estaleiro', 'Estaleirinho', 'Interpraias', 'Jardim Iate Clube', 'Laranjeiras', 'Municípios', 'Nações', 'Nova Esperança', 'Pioneiros', 'Praia dos Amores', 'São Judas', 'Vila Real'],
+    'Itapema': ['Alto do São Bento', 'Andorinha', 'Canto da Praia', 'Casa Branca', 'Castelo Branco', 'Centro', 'Ilhota', 'Meia Praia', 'Morretes', 'Sertãozinho', 'Tabuleiro dos Oliveiras', 'Várzea'],
+    'Itajaí': ['Centro', 'Cabeçudas', 'Praia Brava', 'Fazenda', 'Cordeiros', 'São Vicente', 'Barra do Rio', 'Dom Bosco', 'São João', 'Espinheiros', 'Ressacada', 'Salseiros', 'Vila Operária', 'Murta', 'Rio Bonito'],
+};
+const CIDADES_OPTS = [...Object.keys(CIDADES_BAIRROS), 'Outra'];
+const CIDADES_SC = ['Camboriú', 'Balneário Camboriú', 'Itapema', 'Itajaí'];
+
 // ---------- Utilidades ----------
 function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function pill(name, value, checked, label, path, re, tipo) {
@@ -195,7 +207,7 @@ function campo(label, path, opts = {}) {
     const idc = 'f_' + path.replace(/\W/g, '_'); // ids terminados em cpf/cep recebem a máscara (assets/campo-documentos.js)
     let ctl;
     if (opts.select) {
-        ctl = `<select id="${idc}" data-p="${path}" ${opts.re ? 'data-re="1"' : ''}><option value="">Selecione</option>${opts.select.map(o => `<option value="${esc(o)}" ${v === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+        ctl = `<select id="${idc}" data-p="${path}" ${opts.re ? 'data-re="1"' : ''}><option value="">Selecione</option>${opts.select.map(o => `<option value="${esc(o)}" ${v === o ? 'selected' : ''}>${o === '__outro__' ? 'Outro bairro' : esc(o)}</option>`).join('')}</select>`;
     } else if (opts.textarea) {
         ctl = `<textarea id="${idc}" data-p="${path}" placeholder="${esc(opts.ph || '')}">${esc(v)}</textarea>`;
     } else {
@@ -258,6 +270,38 @@ function mascaraDoc(v, tipo) { // exibição reduzida (privacidade): só os últ
 }
 const nacFinal = (uid) => window.Nacionalidade.final(nac, uid + '_nacionalidade');
 
+// Endereço padrão (cidade/bairro/UF) de uma pessoa: p.cid_sel / bai_sel / cidade_outra / bairro_outro /
+// uf_sel guardam o que foi escolhido na tela; p.cidade, p.bairro e p.uf guardam o valor final
+// (é o que validações, resumo e documento usam).
+function enderecoDerivar(p) {
+    if (p.cid_sel !== undefined) return;
+    const c = p.cidade || '', b = p.bairro || '';
+    if (CIDADES_BAIRROS[c]) { p.cid_sel = c; if ((CIDADES_BAIRROS[c] || []).includes(b)) { p.bai_sel = b; p.bairro_outro = ''; } else { p.bai_sel = b ? '__outro__' : ''; p.bairro_outro = b; } p.cidade_outra = ''; }
+    else { p.cid_sel = c ? 'Outra' : ''; p.cidade_outra = c; p.bai_sel = ''; p.bairro_outro = b; }
+    p.uf_sel = CIDADES_BAIRROS[c] ? '' : (p.uf || '');
+}
+function enderecoSincronizar(p) {
+    const lista = !!CIDADES_BAIRROS[p.cid_sel];
+    p.cidade = p.cid_sel === 'Outra' ? (p.cidade_outra || '').trim() : (p.cid_sel || '');
+    p.bairro = (p.cid_sel === 'Outra' || p.bai_sel === '__outro__') ? (p.bairro_outro || '').trim() : (p.bai_sel || '');
+    p.uf = lista ? 'SC' : (p.uf_sel || '');
+}
+function enderecoPadraoHtml(p, base) {
+    enderecoDerivar(p);
+    let h = `<div class="sec-title">Endereço</div>`;
+    h += `<div class="row2"><div style="flex:2;min-width:0">${campo('Rua ou logradouro', `${base}.rua`, { ph: 'Rua, avenida, travessa…' })}</div><div style="flex:1;min-width:0">${campo('Número', `${base}.numero`, { ph: 'Ex.: 123 ou S/N' })}</div></div>`;
+    h += campo('Complemento', `${base}.complemento`, { obrig: false, ph: 'Apto, bloco, casa, fundos…' });
+    h += campo('Cidade', `${base}.cid_sel`, { select: CIDADES_OPTS, re: true });
+    if (p.cid_sel === 'Outra') {
+        h += campo('Qual cidade?', `${base}.cidade_outra`);
+        h += `<div class="row2">${campo('Bairro', `${base}.bairro_outro`)}${campo('Estado (UF)', `${base}.uf_sel`, { select: ESTADOS_BR })}</div>`;
+    } else if (p.cid_sel) {
+        h += campo('Bairro', `${base}.bai_sel`, { select: [...CIDADES_BAIRROS[p.cid_sel], '__outro__'].map(x => x), re: true, rotulosOutro: true });
+        if (p.bai_sel === '__outro__') h += campo('Qual bairro?', `${base}.bairro_outro`);
+    }
+    return h;
+}
+
 // ---------- Blocos de campos reutilizados ----------
 function blocoPessoa(p, base, cfg) {
     // base = caminho no estado (ex.: "autorizantes.0"); cfg.* liga/desliga partes
@@ -268,9 +312,16 @@ function blocoPessoa(p, base, cfg) {
     if (cfg.profissao) h += campo('Profissão', `${base}.profissao`, { obrig: false });
     h += campoNasc('Data de nascimento', `${base}.nasc`);
     h += campo('CPF', `${base}.cpf`, { ph: '000.000.000-00', obrig: cfg.cpfObrig !== false, hint: cfg.hintDoc });
-    h += `<div class="row2">${campo(cfg.rgLabel || 'Documento de identidade (nº)', `${base}.rg_num`, { obrig: cfg.rgObrig === true })}${campo('Órgão emissor', `${base}.rg_org`, { obrig: false, ph: 'SSP' })}</div>`;
-    h += campo('UF do documento', `${base}.rg_uf`, { select: ESTADOS_BR, obrig: false });
-    if (cfg.endereco) {
+    if (cfg.rgSimples) {
+        // RG opcional, só o número (sem órgão emissor/UF), sem máscara fixa
+        h += campo('RG', `${base}.rg_num`, { obrig: false, ph: 'Número do documento' });
+    } else {
+        h += `<div class="row2">${campo(cfg.rgLabel || 'Documento de identidade (nº)', `${base}.rg_num`, { obrig: cfg.rgObrig === true })}${campo('Órgão emissor', `${base}.rg_org`, { obrig: false, ph: 'SSP' })}</div>`;
+        h += campo('UF do documento', `${base}.rg_uf`, { select: ESTADOS_BR, obrig: false });
+    }
+    if (cfg.enderecoPadrao) {
+        h += enderecoPadraoHtml(p, base);
+    } else if (cfg.endereco) {
         h += `<div class="sec-title">Endereço</div>`;
         h += campo('CEP', `${base}.cep`, { ph: '00000-000', obrig: false });
         h += `<div class="row2">${campo('Endereço (rua, avenida…)', `${base}.rua`)}${campo('Número', `${base}.numero`, { ph: 's/nº se não houver' })}</div>`;
@@ -292,17 +343,28 @@ function errosPessoa(p, rotulo, cfg) {
     if (cfg.estadoCivil && !p.estado_civil) r('estado civil');
     { const en = nascErro(p); if (en) r(en.replace(/\.$/, '').replace(/^A data/, 'data').replace(/^Essa data/, 'data').replace(/^Data/, 'data').replace(/^Informe a data/, 'data').replace(/^Ano/, 'ano'));
       else if (cfg.adulto && idadeEm(p.nasc, hojeISO()) < 18) r('deve ter 18 anos ou mais'); }
-    if (p.cpf.trim() && !cpfOk(p.cpf)) r('CPF inválido');
-    if (cfg.cpfObrig !== false && !p.cpf.trim() && !(p.rg_num || '').trim()) r('informe o CPF ou o documento de identidade');
+    if (cfg.cpfObrigatorio) {
+        const dc = soDigitos(p.cpf);
+        if (!dc) r('CPF (obrigatório)'); else if (dc.length < 11) r('CPF incompleto (11 dígitos)'); else if (!cpfOk(p.cpf)) r('CPF inválido');
+    } else {
+        if (p.cpf.trim() && !cpfOk(p.cpf)) r('CPF inválido');
+        if (cfg.cpfObrig !== false && !p.cpf.trim() && !(p.rg_num || '').trim()) r('informe o CPF ou o documento de identidade');
+    }
     if (cfg.rgObrig && !(p.rg_num || '').trim()) r('documento de identidade (nº)');
-    if (cfg.endereco) {
+    if (cfg.enderecoPadrao) {
+        enderecoDerivar(p); enderecoSincronizar(p);
+        if (!p.rua.trim()) r('rua ou logradouro'); if (!p.numero.trim()) r('número (use S/N se não houver)');
+        if (!p.cid_sel) r('cidade'); else if (p.cid_sel === 'Outra' && !p.cidade) r('nome da cidade');
+        if (!p.bairro) r('bairro');
+        if (p.cid_sel === 'Outra' && !p.uf) r('estado (UF)');
+    } else if (cfg.endereco) {
         if (!p.rua.trim()) r('endereço'); if (!p.numero.trim()) r('número do endereço');
         if (!p.bairro.trim()) r('bairro'); if (!p.cidade.trim()) r('cidade'); if (!p.uf) r('estado (UF)');
     } else if (cfg.cidadeUf) { if (!p.cidade.trim()) r('cidade'); if (!p.uf) r('estado (UF)'); }
     const et = window.Telefone.validar(p, 'tel', cfg.telObrig !== false); if (et) r(et.replace(/\.$/, ''));
     return e;
 }
-const CFG_AUT = { estadoCivil: true, profissao: true, endereco: true, adulto: true, rgLabel: 'Documento de identidade (nº)' };
+const CFG_AUT = { estadoCivil: true, profissao: true, endereco: true, enderecoPadrao: true, rgSimples: true, cpfObrigatorio: true, adulto: true };
 const CFG_ACOMP = { estadoCivil: false, endereco: true, adulto: true, hintDoc: 'Informe o CPF ou o documento de identidade.' };
 
 // ---------- ETAPA 1 — autorizantes ----------
@@ -700,11 +762,18 @@ function nascDigitar(t) {
     if (stepIndex === 4) refrescarResumo();
 }
 document.addEventListener('focusout', (ev) => { const t = ev.target; if (t.dataset && t.dataset.nasc) nascAtualizarMsg(t.dataset.nasc.split('|')[0]); });
+const RE_END = /^(.+)\.(cid_sel|cidade_outra|bai_sel|bairro_outro|uf_sel)$/;
+function aposAlterarEndereco(path) {
+    const m = RE_END.exec(path); if (!m) return;
+    const p = getPath(s, m[1]);
+    if (m[2] === 'cid_sel') { p.bai_sel = ''; p.bairro_outro = ''; p.cidade_outra = ''; p.uf_sel = ''; }
+    enderecoSincronizar(p);
+}
 document.addEventListener('input', (ev) => {
     const t = ev.target;
     if (t.dataset && t.dataset.nasc) { nascDigitar(t); return; }
     if (t.dataset && t.dataset.p && t.type !== 'radio' && t.type !== 'checkbox') {
-        setPath(s, t.dataset.p, t.value);
+        setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p);
         if (t.dataset.p === 'menor.nasc') atualizarIdade();
     }
     if (stepIndex === 4) refrescarResumo();
@@ -713,7 +782,7 @@ document.addEventListener('change', (ev) => {
     const t = ev.target;
     if (t.dataset && t.dataset.p) {
         if (t.type === 'radio') { if (!t.checked) return; setPath(s, t.dataset.p, t.value); }
-        else setPath(s, t.dataset.p, t.value);
+        else { setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p); }
         if (t.dataset.p === 'acomp_tipo') ajustarAcompanhantes();
         if (/^acompanhantes\.\d+\.ref$/.test(t.dataset.p)) { const p = getPath(s, t.dataset.p.replace(/\.ref$/, '')); const a = s.autorizantes.find(x => x.uid === p.ref); if (a && !p.parentesco && ['Pai', 'Mãe'].includes(a.condicao)) p.parentesco = a.condicao; }
         if (t.dataset.p === 'rec_tem' && t.value !== 'Sim') { s.rec_modo = ''; }
@@ -794,10 +863,12 @@ function restaurarRascunho() {
 
 // ---------- Envio ----------
 function pessoaSaida(p) {
+    const aut = String(p.uid).startsWith('aut'); // autorizante: RG só número, sem CEP, endereço padrão
+    if (aut) { enderecoDerivar(p); enderecoSincronizar(p); }
     return {
         nome: p.nome.trim(), nacionalidade: nacFinal(p.uid), estado_civil: p.estado_civil || null, profissao: (p.profissao || '').trim() || null, data_nascimento: p.nasc || null,
-        cpf: p.cpf.trim() || null, rg: p.rg_num.trim() || null, rg_orgao: p.rg_org.trim() || null, rg_uf: p.rg_uf || null,
-        cep: p.cep.trim() || null, rua: p.rua.trim(), numero: p.numero.trim(), complemento: p.complemento.trim() || null,
+        cpf: p.cpf.trim() || null, rg: p.rg_num.trim() || null, rg_orgao: aut ? null : (p.rg_org.trim() || null), rg_uf: aut ? null : (p.rg_uf || null),
+        cep: aut ? null : (p.cep.trim() || null), rua: p.rua.trim(), numero: p.numero.trim(), complemento: p.complemento.trim() || null,
         bairro: p.bairro.trim(), cidade: p.cidade.trim(), estado: p.uf,
         endereco: [p.rua.trim() + (p.numero.trim() ? ', ' + p.numero.trim() : ''), p.complemento.trim()].filter(Boolean).join(', '),
         telefone: window.Telefone.formatar(p, 'tel') || null,
