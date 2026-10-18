@@ -4024,3 +4024,9 @@ Documento gerado a partir de `dados.especifico` (ver seção anterior), botão *
 
 ### Limite de pessoas (2026-10-18, pedido do usuário)
 Máximo de **2 autorizantes e 1 acompanhante**: formulário só oferece 1 ou 2 autorizantes (botão de adicionar some ao chegar em 2), sem "adicionar acompanhante"/remover, e a opção "Acompanhado por ambos os pais" foi **retirada** (exigiria 2 acompanhantes; o pai/mãe que acompanha e também autoriza continua possível, reaproveitando os dados). Rascunhos/registros antigos acima do limite são truncados ao abrir. O modelo do documento foi simplificado para singular (1 acompanhante), sem a grade de 3 colunas de assinatura: todos os cenários de teste cabem em **1 página A4**.
+
+
+## Estado de publicação (2026-10-18) — PR #17 mesclado em `main`
+Publicados juntos: renomeação "Declarações", tile e módulo "Procurações e Autorizações", formulário **Autorização de Viagem para Menor** (máx. 2 autorizantes e 1 acompanhante) e o **modelo do documento**. Próximo passo é o teste ao vivo; alterações pedidas depois entram como novos commits.
+**Antes de testar o envio:** aplicar a migration da CHECK `declaracoes_pendentes_tipo_contrato_check` incluindo `AUTORIZACAO_VIAGEM_MENOR` (ver seção "Pendência de banco" acima) — sem isso o formulário mostra erro ao enviar.
+**Checklist do teste ao vivo:** (1) card "Procurações e Autorizações" ao lado de Declarações; (2) abrir o link do formulário e preencher as 5 etapas (máscaras, 1/2 autorizantes, acompanhante, desacompanhado); (3) "Salvar rascunho" e retomar; (4) enviar e ver o pedido na lista (badge); (5) 👁️ ficha (documentos mascarados), ✏️ editar, 📄 gerar documento, imprimir/salvar PDF em 1 página; (6) conferir que Declarações e Contratos seguem normais.
