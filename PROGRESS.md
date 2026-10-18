@@ -3950,3 +3950,16 @@ Pedido: trocar o campo de texto de Nacionalidade (etapa 1 de 5) pelos mesmos bot
 - Playwright (Supabase stubado): 4 opções → payload enviado com a nacionalidade certa; Outra abre o campo, vazio bloqueia ("Informe a nacionalidade."), trocar para outra opção remove o campo, voltar preserva o texto; edição reabre Haitiano(a) marcado e "Argentino(a)" como Outra + texto.
 - Renderização do `corpo()` real + PDF (Playwright/pdftotext): brasileiro, venezuelana, haitiano, argentino, colombiana — prévia e PDF idênticos e flexionados pelo gênero.
 - **Falta:** conferir ao vivo no painel publicado.
+
+
+## Nacionalidade em botões — padrão único para todos os formulários (2026-10-18)
+
+Pedido: todos os campos de nacionalidade dos formulários existentes viram botões (Brasileiro(a), Venezuelano(a), Haitiano(a), Outra nacionalidade → campo obrigatório "Informe a nacionalidade"), e os formulários novos devem seguir o mesmo padrão.
+
+**Solução compartilhada:** `paineldecontrole/assets/campo-nacionalidade.js` (`window.Nacionalidade`: `campoHtml`, `ler`, `final`, `validar`, `carregar`; troca de botão por delegação de eventos, sem bind). O cabeçalho do arquivo traz o passo a passo para formulário novo — **todo formulário novo com nacionalidade deve usar esse arquivo, não reimplementar**.
+
+**Migrados:** declaracao-residencia (declarante + locatário, os helpers locais foram removidos), declaracao-trabalho, declaracao-uniao-estavel (A e B), procuracao-simples (outorgante/outorgado), procuracao-detran, termo-responsabilidade-veiculo (proprietário/responsável). **Já eram botões, não alterados:** contrato-form (padrão de referência) e curriculo-form (usa "Outra Nacionalidade" com naturalidade própria). `declaracao-autonomo-form` é só redirecionamento. O formato salvo não mudou (string simples em `nacionalidade`), então `index.html` não foi tocado.
+
+### Testes (Playwright, Supabase stubado)
+Fluxo completo até o envio, escolhendo Brasileiro/Venezuelano/Haitiano/Outra ("Argentino(a)") em todas as pessoas: residência, união estável, procuração simples, procuração Detran e termo de veículo → payload correto. Trabalho: botões, campo some/aparece, bloqueio com campo vazio e reabertura na edição (Venezuelano marcado; texto livre reabre como Outra) OK; o envio completo do Trabalho não foi automatizado (etapas de dias/horários), mas o campo passa pela mesma função dos demais.
+**Falta:** conferir ao vivo no painel publicado.
