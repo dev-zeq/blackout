@@ -3936,3 +3936,17 @@ Pedido: CPF (`000.000.000-00`) e CNPJ (`00.000.000/0000-00`) saíam sem pontuaç
 3. Playwright nos 6 formulários: digitar sem pontuação, digitar já formatado, CNPJ, valor recuperado, parcial (`123.456`), bloqueio do Avançar com 3 dígitos → todos OK, sem erro de JS.
 
 **Falta:** conferir ao vivo no painel publicado (visualização, impressão, PDF e edição de registros antigos).
+
+
+## Declaração de Residência — nacionalidade em botões na etapa 1 (2026-10-18)
+
+Pedido: trocar o campo de texto de Nacionalidade (etapa 1 de 5) pelos mesmos botões do `contrato-form.html` (Brasileiro(a), Venezuelano(a), Haitiano(a), Outra nacionalidade), com campo "Informe a nacionalidade" obrigatório ao escolher Outra.
+
+**Arquivo:** só `paineldecontrole/declaracao-residencia-form.html` (mesma lógica do contrato: `nacionalidadeFinal()`, `nacionalidadeCampoHtml()`, `renderCondNacionalidade()`; estado `nacionalidade_outro`). O valor salvo continua sendo uma string simples em `dados.pessoa_a.nacionalidade` (ex. `Haitiano(a)` ou o texto digitado), então `index.html` (prévia/impressão/PDF, via `qualificar()`/`flexGenero()`) **não foi alterado**. Na edição, valor salvo fora da lista reabre como "Outra nacionalidade" + texto.
+
+**Fora do escopo (inalterado):** o campo de nacionalidade do locatário (etapa 2, `f_pd_nacionalidade`) segue como texto.
+
+### Testes
+- Playwright (Supabase stubado): 4 opções → payload enviado com a nacionalidade certa; Outra abre o campo, vazio bloqueia ("Informe a nacionalidade."), trocar para outra opção remove o campo, voltar preserva o texto; edição reabre Haitiano(a) marcado e "Argentino(a)" como Outra + texto.
+- Renderização do `corpo()` real + PDF (Playwright/pdftotext): brasileiro, venezuelana, haitiano, argentino, colombiana — prévia e PDF idênticos e flexionados pelo gênero.
+- **Falta:** conferir ao vivo no painel publicado.

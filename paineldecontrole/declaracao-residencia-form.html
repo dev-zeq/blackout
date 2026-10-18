@@ -95,7 +95,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const s = {
-    nome: '', cpf: '', genero: '', estado_civil: '', nacionalidade: 'Brasileiro(a)',
+    nome: '', cpf: '', genero: '', estado_civil: '', nacionalidade: 'Brasileiro(a)', nacionalidade_outro: '',
     rua: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado: '',
     // A opção "Declaração para mim" foi retirada (2026-09-01, pedido do
     // usuário) — o formulário só atende mais o caso "para terceiros"
@@ -115,6 +115,25 @@ function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 function pill(name, value, checked, label) {
     const id = name + '_' + value.replace(/\W/g, '');
     return `<label class="radio-pill"><input type="radio" name="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''}><span class="pill-label" for="${id}">${esc(label || value)}</span></label>`;
+}
+// Nacionalidade do declarante (etapa 1) — mesmo padrão do contrato-form.html:
+// 3 botões + "Outra nacionalidade", que abre o campo de texto obrigatório.
+const NACIONALIDADES_PADRAO = ['Brasileiro(a)', 'Venezuelano(a)', 'Haitiano(a)'];
+function nacionalidadeFinal() { return s.nacionalidade === 'Outra' ? (s.nacionalidade_outro || '').trim() : s.nacionalidade; }
+function nacionalidadeCampoHtml() {
+    return `<div class="field"><label>Nacionalidade *</label>
+        <div class="radio-group">
+            ${NACIONALIDADES_PADRAO.map(n => pill('f_nacionalidade', n, s.nacionalidade === n)).join('')}
+            ${pill('f_nacionalidade', 'Outra', s.nacionalidade === 'Outra', 'Outra nacionalidade')}
+        </div>
+    </div><div id="cond_nacionalidade"></div>`;
+}
+function renderCondNacionalidade() {
+    const el = document.getElementById('cond_nacionalidade');
+    if (!el) return;
+    el.innerHTML = s.nacionalidade === 'Outra' ? `<div class="field"><label>Informe a nacionalidade *</label><input type="text" id="f_nacionalidade_outro" value="${esc(s.nacionalidade_outro)}"></div>` : '';
+    const inp = document.getElementById('f_nacionalidade_outro');
+    if (inp) inp.addEventListener('input', () => { s.nacionalidade_outro = inp.value; });
 }
 function estadoOptions(selected) {
     return ESTADOS_BR.map(u => `<option value="${u}" ${selected === u ? 'selected' : ''}>${u}</option>`).join('');
@@ -258,7 +277,7 @@ function stepDados() {
     <div class="field"><label>Estado civil *</label>
         <select id="f_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
-    <div class="field"><label>Nacionalidade *</label><input type="text" id="f_nacionalidade" value="${esc(s.nacionalidade)}"></div>
+    ${nacionalidadeCampoHtml()}
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row">${stepIndex > 0 ? '<button class="btn btn-back" onclick="window.__goBack()">Voltar</button>' : ''}<button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -330,6 +349,7 @@ function validateCurrentStep() {
     const fn = steps[stepIndex];
     if (fn === stepDados) {
         if (!s.nome || !s.cpf || !s.genero || !s.estado_civil || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
+        if (!nacionalidadeFinal()) return 'Informe a nacionalidade.';
         return null;
     }
     if (fn === stepLocatario) {
@@ -351,7 +371,8 @@ function saveCurrentStep() {
     if (fn === stepDados) {
         s.nome = val('f_nome'); s.cpf = val('f_cpf');
         s.genero = checkedVal('f_genero'); s.estado_civil = val('f_estado_civil');
-        s.nacionalidade = val('f_nacionalidade');
+        s.nacionalidade = checkedVal('f_nacionalidade');
+        s.nacionalidade_outro = s.nacionalidade === 'Outra' ? val('f_nacionalidade_outro') : '';
         return;
     }
     if (fn === stepLocatario) {
@@ -374,6 +395,8 @@ function saveCurrentStep() {
 function bindStepEvents() {
     const selCidade = document.getElementById('f_cidade');
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstado(); });
+    document.querySelectorAll('input[name="f_nacionalidade"]').forEach(r => r.addEventListener('change', () => { s.nacionalidade = r.value; renderCondNacionalidade(); }));
+    renderCondNacionalidade();
     renderCondCidade();
     renderCondEstado();
     const btnSubmit = document.getElementById('btnSubmit');
@@ -388,7 +411,7 @@ async function submitForm() {
     const dados = {
         pessoa_a: {
             nome: s.nome, cpf: s.cpf, genero: s.genero,
-            estado_civil: s.estado_civil, nacionalidade: s.nacionalidade,
+            estado_civil: s.estado_civil, nacionalidade: nacionalidadeFinal(),
             endereco: enderecoFinal(), rua: s.rua || null, complemento: s.complemento || null,
             bairro: bairroFinal(), cidade: cidadeFinal(), estado: estadoFinal(),
         },
@@ -494,7 +517,10 @@ function carregarParaEdicao(row) {
     const a = dados.pessoa_a || {};
     const especifico = dados.especifico || {};
     s.nome = a.nome || ''; s.cpf = a.cpf || ''; s.genero = a.genero || '';
-    s.estado_civil = a.estado_civil || ''; s.nacionalidade = a.nacionalidade || 'Brasileiro(a)';
+    s.estado_civil = a.estado_civil || '';
+    if (!a.nacionalidade) { s.nacionalidade = 'Brasileiro(a)'; s.nacionalidade_outro = ''; }
+    else if (NACIONALIDADES_PADRAO.includes(a.nacionalidade)) { s.nacionalidade = a.nacionalidade; s.nacionalidade_outro = ''; }
+    else { s.nacionalidade = 'Outra'; s.nacionalidade_outro = a.nacionalidade; }
     carregarEnderecoSolto(a.rua, a.numero, a.complemento, a.endereco);
     carregarCidadeBairro(a.cidade, a.bairro);
     s.estado = a.estado || '';
