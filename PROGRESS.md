@@ -3971,3 +3971,15 @@ Pedido: só nomenclatura visual. `paineldecontrole/index.html`, 4 textos: card d
 
 ### Testes (Playwright, painel com Supabase stubado)
 Menu mostra "Declarações" (e nenhum "Declarações e Procurações"); clique abre `viewDeclProc`; abas Declarações/Procurações presentes e a de Procurações lista Procuração Simples/Detran; barra de atalhos com 17 itens; sem erros de JS. Não rodou ao vivo.
+
+
+## Menu — novo tile "Procurações e Autorizações" (2026-10-18)
+
+Pedido: criar o campo, lado a lado com "Declarações", só como estrutura visual (sem formulário, link, tela, banco).
+
+**Arquivo:** só `paineldecontrole/index.html`. Novo item em `MENU_ITEMS` **sem `action`** (+ ícone `procuracao` no mesmo estilo) — o `renderMenu()` já desenha item sem ação como tile "Em breve" (opacidade reduzida, clique não faz nada): é o padrão nativo de placeholder do painel. **Para ativar no futuro:** acrescentar `action` nesse item (ex.: `{ type: 'view', view: '...' }`) e criar a view/formulários então. Não entrou na barra de atalhos (`QUICKNAV_ITEMS`) por não ter função ainda.
+
+**Ordem:** a grade tem 3 colunas (4 no desktop) e "Declarações" estava na 3ª coluna, então o novo tile cairia na linha de baixo. Para ficarem **na mesma linha** nas duas grades, "Tirar Fundo" e "Declarações" trocaram de lugar (só a ordem; nenhum tile alterado/renomeado/removido).
+
+### Testes (Playwright, painel com Supabase stubado)
+360, 420, 820 e 1280 px: os dois tiles na mesma linha, lado a lado, mesmo tamanho/borda, sem rolagem horizontal, sem erro de JS; clicar em "Procurações e Autorizações" não abre nada; "Declarações" continua abrindo `viewDeclProc` (barra de atalhos com 17 itens). Conferido em screenshot.

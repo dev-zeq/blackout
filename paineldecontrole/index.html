@@ -4260,6 +4260,7 @@
         const ICONS = {
             curriculo: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="9.3" r="2.3"/><path d="M8.3 15.2c.8-1.7 2-2.5 3.7-2.5s2.9.8 3.7 2.5"/><line x1="8" y1="18" x2="16" y2="18"/></svg>`,
             declaracao: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><line x1="8" y1="13" x2="15" y2="13"/><line x1="8" y1="16.5" x2="12.5" y2="16.5"/></svg>`,
+            procuracao: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><path d="M8 17c1.2-2.2 2.2-2.2 3 0 .6 1.4 1.6 1.4 2.5-.5"/><line x1="8" y1="12" x2="15" y2="12"/></svg>`,
             tirarfundo: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><circle cx="6.2" cy="6.2" r="2.4"/><circle cx="6.2" cy="17.8" r="2.4"/><line x1="8.4" y1="7.7" x2="20" y2="19"/><line x1="8.4" y1="16.3" x2="20" y2="5"/></svg>`,
             contratos: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="4" y="5" width="12" height="15" rx="1.5" opacity=".45"/><rect x="8" y="3" width="12" height="15" rx="1.5"/><line x1="11" y1="8" x2="17" y2="8"/><line x1="11" y1="12" x2="17" y2="12"/></svg>`,
             exames: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 14v2a5 5 0 0 0 10 0v-2.3"/><circle cx="20" cy="12.7" r="1.5"/></svg>`,
@@ -4308,8 +4309,14 @@
             // handleMenuClick, que chama movFinTela() logo após openView('movfin').
             { icon: 'trocapix', label: 'Troca por Pix', action: { type: 'view', view: 'movfin', tela: 'troca-pix' }, desc: 'Abre direto o Envio de Pix (Movimentação Financeira): informe o valor e o sistema calcula a taxa e o total, com o cartão de pré-visualização para o cliente.' },
             { icon: 'curriculo', label: 'Currículo', action: { type: 'view', view: 'curriculo' }, badgeKey: 'curriculo' },
-            { icon: 'declaracao', label: 'Declarações', action: { type: 'view', view: 'declProc' }, badgeKey: 'declProc' },
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
+            // Declarações e o novo "Procurações e Autorizações" ficam lado a lado
+            // (mesma linha na grade de 3 e de 4 colunas). Este último é só a
+            // estrutura visual (2026-10-18): sem `action`, o renderMenu() já o
+            // desenha como tile "Em breve". Para ativar no futuro, basta
+            // acrescentar `action` (ex.: { type: 'view', view: '...' }) aqui.
+            { icon: 'declaracao', label: 'Declarações', action: { type: 'view', view: 'declProc' }, badgeKey: 'declProc' },
+            { icon: 'procuracao', label: 'Procurações e Autorizações' },
             { icon: 'contratos', label: 'Contratos', action: { type: 'view', view: 'termos' }, badgeKey: 'termos' },
             // Novo módulo nativo (2026-08-26, pedido do usuário) — substitui o
             // Google Forms "Orçamento" que a loja usava antes (ver
