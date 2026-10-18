@@ -127,7 +127,7 @@ const CONDICOES = ['Pai', 'Mãe', 'Tutor(a) ou guardião(ã) legal', 'Outro resp
 const CONDICOES_COM_DESC = ['Outro responsável legal'];
 const TIPOS_DOC_MENOR = ['CPF', 'Certidão de nascimento', 'Carteira de identidade (RG)', 'Carteira de Identidade Nacional (CIN)', 'RNM / CRNM (registro migratório)', 'Passaporte', 'Outro documento'];
 const ACOMPANHAMENTOS = [
-    ['pai', 'Acompanhado pelo pai'], ['mae', 'Acompanhado pela mãe'], ['ambos', 'Acompanhado por ambos os pais'],
+    ['pai', 'Acompanhado pelo pai'], ['mae', 'Acompanhado pela mãe'],
     ['familiar', 'Acompanhado por outro familiar'], ['amigo', 'Acompanhado por amigo da família'],
     ['desacompanhado', 'Viajando desacompanhado'], ['outro', 'Outro'],
 ];
@@ -136,6 +136,8 @@ const PARENTESCOS_COM_DESC = ['Outro familiar', 'Amigo da família', 'Outro'];
 const PARENTESCOS_FAMILIARES = ['Pai', 'Mãe', 'Avô', 'Avó', 'Bisavô', 'Bisavó', 'Irmão', 'Irmã', 'Tio', 'Tia', 'Primo', 'Prima', 'Padrasto', 'Madrasta'];
 const TRANSPORTES = ['Ônibus', 'Avião', 'Veículo próprio', 'Veículo de terceiros (carona)', 'Outro meio de transporte'];
 const VALIDADES = ['Somente para a viagem informada', 'Para viagens de ida e retorno dentro do período informado', 'Para múltiplas viagens durante um período determinado'];
+// Limites do modelo do documento: no máximo 2 autorizantes e 1 acompanhante.
+const MAX_AUTORIZANTES = 2;
 const TEXTO_CONFIRMACAO = 'Declaro que as informações fornecidas são verdadeiras e que possuo legitimidade para prestar estas informações e solicitar a elaboração do documento, conforme minha condição legal.';
 
 // ---------- Estado ----------
@@ -156,7 +158,7 @@ const s = {
     menor: { uid: 'menor', nome: '', genero: '', nasc: '', cpf: '', nat_tipo: 'Brasil', nat_cidade: '', nat_uf: '', nat_pais: '' },
     docs: [], // documentos do menor (exceto CPF): { uid, tipo, numero, descricao, ativo }
     acomp_tipo: '', acomp_desc: '', acompanhantes: [], emergencia: [],
-    rec_tem: '', rec_modo: '', rec_ref: '', rec: { nome: '', doc: '', tel_ddd: '', tel_num: '', cidade: '', uf: '', parentesco: '', parentesco_desc: '', endereco: '' },
+    rec_tem: '', rec_modo: '', rec:  { nome: '', doc: '', tel_ddd: '', tel_num: '', cidade: '', uf: '', parentesco: '', parentesco_desc: '', endereco: '' },
     viagem: { origem_cidade: '', origem_uf: '', destino_cidade: '', destino_uf: '', saida: '', retorno: '', finalidade: '' },
     transp: { tipo: '', empresa: '', companhia: '', proprio_do_autorizante: '', condutor: '', proprietario: '', carona_nome: '', carona_tel_ddd: '', carona_tel_num: '', outro_desc: '' },
     validade: { tipo: '', inicio: '', fim: '', obs: '' },
@@ -275,8 +277,8 @@ function stepAutorizantes() {
     let h = `<h2>Dados de quem autoriza a viagem</h2>
     <div class="info-note">Este formulário é para viagens <b>nacionais</b> (dentro do Brasil) de criança ou adolescente menor de 18 anos. Quem precisa autorizar (um ou ambos os responsáveis) depende de cada caso — informe aqui todas as pessoas que vão assinar a autorização.</div>
     <div class="field"><label>Quantas pessoas participarão desta autorização como autorizantes? *</label>
-        <div class="radio-group">${[1, 2, 3].map(k => `<label class="radio-pill"><input type="radio" name="f_qtd_aut" value="${k}" ${n === k ? 'checked' : ''} data-qtd="1"><span class="pill-label">${k}</span></label>`).join('')}</div>
-        <div class="hint">Para mais de 3, use "Adicionar outro autorizante" abaixo.</div></div>`;
+        <div class="radio-group">${[1, 2].map(k => `<label class="radio-pill"><input type="radio" name="f_qtd_aut" value="${k}" ${n === k ? 'checked' : ''} data-qtd="1"><span class="pill-label">${k}</span></label>`).join('')}</div>
+        <div class="hint">No máximo 2 autorizantes.</div></div>`;
     s.autorizantes.forEach((p, i) => {
         const base = `autorizantes.${i}`;
         h += `<div class="person-block"><h3><span>Autorizante ${i + 1}</span>${i > 0 ? `<button type="button" class="btn-link" data-remover-aut="${i}">Remover</button>` : ''}</h3>
@@ -286,7 +288,7 @@ function stepAutorizantes() {
         ${CONDICOES_COM_DESC.includes(p.condicao) ? campo('Descreva a condição em que autoriza', `${base}.condicao_desc`, { ph: 'Ex.: guardião por decisão judicial' }) : ''}
         </div>`;
     });
-    if (n < 5) h += `<button type="button" class="btn-sec" id="btnAddAut">+ Adicionar outro autorizante</button>`;
+    if (n < MAX_AUTORIZANTES) h += `<button type="button" class="btn-sec" id="btnAddAut">+ Adicionar outro autorizante</button>`;
     return h + navHtml();
 }
 function errosEtapa1() {
@@ -360,15 +362,15 @@ function errosEtapa2() {
 
 // ---------- ETAPA 3 — acompanhante / responsável durante a viagem ----------
 const novoAcomp = (par) => novaPessoa('acp', { parentesco: par || '', parentesco_desc: '', ref: '' });
-const PRESET_PARENTESCO = { pai: ['Pai'], mae: ['Mãe'], ambos: ['Pai', 'Mãe'], familiar: [''], amigo: ['Amigo da família'], outro: [''] };
+const PRESET_PARENTESCO = { pai: ['Pai'], mae: ['Mãe'], familiar: [''], amigo: ['Amigo da família'], outro: [''] };
 function ajustarAcompanhantes() {
     const need = PRESET_PARENTESCO[s.acomp_tipo] || [];
-    const fixo = ['pai', 'mae', 'ambos'].includes(s.acomp_tipo);
+    const fixo = ['pai', 'mae'].includes(s.acomp_tipo);
     need.forEach((par, i) => {
         if (!s.acompanhantes[i]) s.acompanhantes[i] = novoAcomp(par);
         else if (fixo || (s.acomp_tipo === 'amigo' && !s.acompanhantes[i].parentesco)) s.acompanhantes[i].parentesco = par;
     });
-    if (fixo && s.acompanhantes.length > need.length) s.acompanhantes.length = need.length;
+    if (s.acompanhantes.length > 1) s.acompanhantes.length = 1; // no máximo 1 acompanhante
 }
 const acompanhantesAtivos = () => (s.acomp_tipo && s.acomp_tipo !== 'desacompanhado') ? s.acompanhantes : [];
 function rotuloAutorizante(p, i) { return `Autorizante ${i + 1}${p.nome.trim() ? ' — ' + p.nome.trim() : ''}`; }
@@ -382,10 +384,10 @@ function stepAcompanhante() {
     <div class="field"><label>Como o menor realizará a viagem? *</label>
         <div class="radio-group">${ACOMPANHAMENTOS.map(([k, t]) => pill('f_acomp_tipo', k, s.acomp_tipo === k, t, 'acomp_tipo', true)).join('')}</div></div>`;
     if (s.acomp_tipo === 'outro') h += campo('Descreva como o menor viajará', 'acomp_desc', { ph: 'Ex.: acompanhado pela equipe de um evento' });
-    const fixo = ['pai', 'mae', 'ambos'].includes(s.acomp_tipo);
+    const fixo = ['pai', 'mae'].includes(s.acomp_tipo);
     acompanhantesAtivos().forEach((p, i) => {
         const base = `acompanhantes.${i}`;
-        h += `<div class="person-block"><h3><span>Acompanhante ${i + 1}${fixo ? ' — ' + esc(p.parentesco) : ''}</span>${(!fixo && i > 0) ? `<button type="button" class="btn-link" data-remover-acomp="${i}">Remover</button>` : ''}</h3>
+        h += `<div class="person-block"><h3><span>Acompanhante${fixo ? ' — ' + esc(p.parentesco) : ''}</span></h3>
         <div class="field"><label>Esta pessoa é um dos autorizantes?</label>
             <select data-p="${base}.ref" data-re="1"><option value="">Não — preencher os dados desta pessoa</option>${s.autorizantes.map((a, k) => `<option value="${a.uid}" ${p.ref === a.uid ? 'selected' : ''}>${esc(rotuloAutorizante(a, k))}</option>`).join('')}</select>
             <div class="hint">Se for a mesma pessoa, os dados dela não precisam ser digitados de novo.</div></div>`;
@@ -393,7 +395,6 @@ function stepAcompanhante() {
         if (!fixo) h += selectParentescoHtml(base, p);
         h += `</div>`;
     });
-    if (acompanhantesAtivos().length && !fixo) h += `<button type="button" class="btn-sec" id="btnAddAcomp">+ Adicionar outro acompanhante</button>`;
     if (s.acomp_tipo === 'desacompanhado') {
         if (!s.emergencia.length) s.emergencia.push({ nome: '', parentesco: '', tel_ddd: '', tel_num: '' });
         h += `<div class="sec-title">Contatos de emergência</div><div class="info-note">O menor viajará sem acompanhante: não é preciso informar um acompanhante, mas indique quem pode ser contatado durante a viagem.</div>`;
@@ -411,7 +412,6 @@ function stepAcompanhante() {
         if (s.rec_tem === 'Sim') {
             const acs = acompanhantesAtivos();
             if (acs.length) h += `<div class="field"><div class="radio-group">${pill('f_rec_modo', 'mesma', s.rec_modo === 'mesma', 'A mesma pessoa que acompanha o menor', 'rec_modo', true)}${pill('f_rec_modo', 'outra', s.rec_modo === 'outra', 'Outra pessoa', 'rec_modo', true)}</div></div>`;
-            if (acs.length > 1 && s.rec_modo === 'mesma') h += `<div class="field"><label>Qual acompanhante? *</label><select data-p="rec_ref"><option value="">Selecione</option>${acs.map((a, k) => `<option value="${a.uid}" ${s.rec_ref === a.uid ? 'selected' : ''}>Acompanhante ${k + 1}${a.nome.trim() ? ' — ' + esc(a.nome.trim()) : ''}</option>`).join('')}</select></div>`;
             if (!acs.length || s.rec_modo === 'outra') {
                 h += `<div class="person-block"><h3><span>Pessoa que receberá o menor</span></h3>
                 ${campo('Nome completo', 'rec.nome')}${campo('CPF ou documento de identificação', 'rec.doc', { obrig: false, hint: 'Quando disponível.' })}
@@ -446,7 +446,6 @@ function errosEtapa3() {
     if (!s.rec_tem) e.push('Informe se o menor será recebido por outra pessoa no destino');
     else if (s.rec_tem === 'Sim') {
         if (acs.length && !s.rec_modo) e.push('Recebimento: escolha "a mesma pessoa que acompanha" ou "outra pessoa"');
-        if (acs.length > 1 && s.rec_modo === 'mesma' && !s.rec_ref) e.push('Recebimento: escolha qual acompanhante receberá o menor');
         if (!acs.length || s.rec_modo === 'outra') {
             const r = s.rec;
             if (!r.nome.trim()) e.push('Recebimento: nome da pessoa');
@@ -565,7 +564,7 @@ function linhasResumo() {
     });
     if (s.acomp_tipo === 'desacompanhado') s.emergencia.forEach((c, i) => linhasAc.push([`Contato de emergência ${i + 1}`, `${c.nome}${c.parentesco ? ' (' + c.parentesco + ')' : ''} — ${window.Telefone.formatar(c, 'tel')}`]));
     if (s.rec_tem === 'Sim') {
-        if (ac.length && s.rec_modo === 'mesma') { const a = ac.find(x => x.uid === s.rec_ref) || ac[0]; linhasAc.push(['Recebido no destino por', `${(a.ref ? (s.autorizantes.find(x => x.uid === a.ref) || a) : a).nome} (acompanhante)`]); }
+        if (ac.length && s.rec_modo === 'mesma') { const a = ac[0]; linhasAc.push(['Recebido no destino por', `${(a.ref ? (s.autorizantes.find(x => x.uid === a.ref) || a) : a).nome} (acompanhante)`]); }
         else linhasAc.push(['Recebido no destino por', `${s.rec.nome} — ${s.rec.parentesco}${s.rec.parentesco_desc ? ' (' + s.rec.parentesco_desc + ')' : ''}, ${window.Telefone.formatar(s.rec, 'tel')}, ${s.rec.cidade}/${s.rec.uf}`]);
     } else linhasAc.push(['Recebido por outra pessoa no destino', 'Não']);
     L.push(['Acompanhante', 2, linhasAc]);
@@ -694,11 +693,9 @@ document.addEventListener('click', (ev) => {
     if (!t) return;
     const d = t.dataset || {};
     if (d.removerAut !== undefined) { if (confirm('Remover este autorizante?')) { s.autorizantes.splice(Number(d.removerAut), 1); render(); } return; }
-    if (t.id === 'btnAddAut') { s.autorizantes.push(novaPessoa('aut')); render(); return; }
+    if (t.id === 'btnAddAut') { if (s.autorizantes.length < MAX_AUTORIZANTES) s.autorizantes.push(novaPessoa('aut')); render(); return; }
     if (d.removerDoc !== undefined) { s.docs.splice(Number(d.removerDoc), 1); render(); return; }
     if (t.id === 'btnAddDoc') { s.docs.push({ uid: novoUid('doc'), tipo: 'Outro documento', numero: '', descricao: '', ativo: true }); render(); return; }
-    if (d.removerAcomp !== undefined) { if (confirm('Remover este acompanhante?')) { s.acompanhantes.splice(Number(d.removerAcomp), 1); render(); } return; }
-    if (t.id === 'btnAddAcomp') { s.acompanhantes.push(novoAcomp('')); render(); return; }
     if (d.removerEmerg !== undefined) { s.emergencia.splice(Number(d.removerEmerg), 1); render(); return; }
     if (t.id === 'btnAddEmerg') { s.emergencia.push({ nome: '', parentesco: '', tel_ddd: '', tel_num: '' }); render(); return; }
     if (d.goto !== undefined) { stepIndex = Number(d.goto); render(); window.scrollTo(0, 0); return; }
@@ -730,6 +727,10 @@ function limparRascunho() { try { localStorage.removeItem(RASCUNHO_KEY); } catch
 function aplicarEstado(salvo, salvoNac) {
     Object.keys(s).forEach(k => delete s[k]);
     Object.assign(s, salvo);
+    // limites do modelo: no máximo 2 autorizantes e 1 acompanhante (rascunhos/registros antigos)
+    if (s.autorizantes && s.autorizantes.length > MAX_AUTORIZANTES) s.autorizantes.length = MAX_AUTORIZANTES;
+    if (s.acompanhantes && s.acompanhantes.length > 1) s.acompanhantes.length = 1;
+    if (s.acomp_tipo === 'ambos') s.acomp_tipo = '';
     Object.keys(nac).forEach(k => delete nac[k]);
     Object.assign(nac, salvoNac || {});
 }
@@ -762,7 +763,7 @@ function montarRegistro() {
     const acs = acompanhantesAtivos();
     let recebedor = null;
     if (s.rec_tem === 'Sim') {
-        if (acs.length && s.rec_modo === 'mesma') { const a = acs.find(x => x.uid === s.rec_ref) || acs[0]; recebedor = { mesma_pessoa_do_acompanhante: acs.indexOf(a) + 1 }; }
+        if (acs.length && s.rec_modo === 'mesma') { recebedor = { mesma_pessoa_do_acompanhante: 1 }; }
         else recebedor = { nome: s.rec.nome.trim(), documento: s.rec.doc.trim() || null, telefone: window.Telefone.formatar(s.rec, 'tel'), cidade: s.rec.cidade.trim(), estado: s.rec.uf, parentesco: s.rec.parentesco, parentesco_descricao: s.rec.parentesco_desc || null, endereco: s.rec.endereco.trim() || null };
     }
     const docs = [];

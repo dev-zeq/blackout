@@ -486,7 +486,6 @@
         .av-doc .av-local { margin-top: 6px; }
         .av-doc .av-fecho { break-inside: avoid; page-break-inside: avoid; }
         .av-doc .av-assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; margin-top: 4px; }
-        .av-doc .av-assinaturas.av-ass3 { grid-template-columns: 1fr 1fr 1fr; gap: 0 18px; }
         .av-doc .av-ass { font-size: 9pt; line-height: 1.25; padding-top: 22px; break-inside: avoid; page-break-inside: avoid; }
         .av-doc .av-ass .av-linha { border-top: 0.7pt solid #000; margin-bottom: 2px; }
         .av-doc .av-ass span { font-size: 8.5pt; }
@@ -8690,7 +8689,7 @@
                 + linha('Naturalidade', m.naturalidade ? (m.naturalidade.uf ? `${m.naturalidade.cidade}/${m.naturalidade.uf}` : `${m.naturalidade.pais}${m.naturalidade.cidade ? ' — ' + m.naturalidade.cidade : ''}`) : '')
                 + (m.documentos || []).map(x => linha(x.descricao || x.tipo, procAutMask(x.numero, x.tipo === 'CPF' ? 'cpf' : ''))).join(''));
             const ac = e.acompanhamento || {};
-            const tiposAc = { pai: 'Acompanhado pelo pai', mae: 'Acompanhado pela mãe', ambos: 'Acompanhado por ambos os pais', familiar: 'Acompanhado por outro familiar', amigo: 'Acompanhado por amigo da família', desacompanhado: 'Viajando desacompanhado', outro: 'Outro' };
+            const tiposAc = { pai: 'Acompanhado pelo pai', mae: 'Acompanhado pela mãe', familiar: 'Acompanhado por outro familiar', amigo: 'Acompanhado por amigo da família', desacompanhado: 'Viajando desacompanhado', outro: 'Outro' };
             h += sec('Acompanhamento', linha('Como viaja', (tiposAc[ac.tipo] || ac.tipo) + (ac.descricao ? ' — ' + ac.descricao : '')));
             (ac.acompanhantes || []).forEach((p, i) => { h += sec(`Acompanhante ${i + 1} — ${escapeHtml(p.parentesco || '')}${p.parentesco_descricao ? ' (' + escapeHtml(p.parentesco_descricao) + ')' : ''}`, (p.mesma_pessoa_do_autorizante ? linha('Mesma pessoa que', `Autorizante ${p.mesma_pessoa_do_autorizante}`) : '') + pessoa(p)); });
             (ac.contatos_emergencia || []).forEach((c, i) => { h += sec(`Contato de emergência ${i + 1}`, linha('Nome', c.nome) + linha('Parentesco', c.parentesco) + linha('Telefone', c.telefone)); });
@@ -9350,8 +9349,9 @@
         }
         function montarAutorizacaoViagem(d) {
             const e = (d.dados && d.dados.especifico) || {};
-            const auts = e.autorizantes || [], m = e.menor || {}, ac = e.acompanhamento || {}, v = e.viagem || {}, t = e.transporte || {}, va = e.validade || {};
-            const acs = ac.tipo === 'desacompanhado' ? [] : (ac.acompanhantes || []);
+            const auts = (e.autorizantes || []).slice(0, 2), m = e.menor || {}, ac = e.acompanhamento || {}, v = e.viagem || {}, t = e.transporte || {}, va = e.validade || {};
+            // modelo: no máximo 2 autorizantes e 1 acompanhante
+            const acs = ac.tipo === 'desacompanhado' ? [] : (ac.acompanhantes || []).slice(0, 1);
             const fem = m.genero === 'Feminino', masc = m.genero === 'Masculino';
             const oMenor = fem ? 'a menor' : masc ? 'o menor' : 'o(a) menor';
             const nascido = fem ? 'nascida' : masc ? 'nascido' : 'nascido(a)';
@@ -9394,20 +9394,15 @@
             const usando = avTextoTransporte(t) ? `, utilizando ${avTextoTransporte(t)}` : '';
             let fraseAc;
             if (acs.length) {
-                const um = acs.length === 1;
-                const lista = acs.map(p => um
-                    ? `${titleCase(p.nome || '')}${p.cpf ? ', CPF ' + p.cpf : ''}${avParentesco(p) ? ', com quem possui relação de ' + avParentesco(p) : ''}`
-                    : `${titleCase(p.nome || '')} (${[p.cpf ? 'CPF ' + p.cpf : '', avParentesco(p) ? 'relação: ' + avParentesco(p) : ''].filter(Boolean).join('; ')})`);
-                fraseAc = `, ${fem ? 'acompanhada' : masc ? 'acompanhado' : 'acompanhado(a)'} por ${avJuntar(lista)}`;
+                const p = acs[0];
+                fraseAc = `, ${fem ? 'acompanhada' : masc ? 'acompanhado' : 'acompanhado(a)'} por ${titleCase(p.nome || '')}${p.cpf ? ', CPF ' + p.cpf : ''}${avParentesco(p) ? ', com quem possui relação de ' + avParentesco(p) : ''}`;
             } else fraseAc = `. ${fem ? 'A menor viajará desacompanhada' : masc ? 'O menor viajará desacompanhado' : 'O(A) menor viajará desacompanhado(a)'}`;
             h += `<h2>Autorização</h2><p>${escapeHtml(`${sujeito} ${oMenor} ${titleCase(m.nome || '')}, ${nascido} em ${avData(m.data_nascimento)}, a realizar a viagem nacional ${trecho}${periodo}${usando}${fraseAc}.`)}</p>`;
             // 5. Responsabilidade
-            const nA = acs.length;
-            if (nA) {
-                const o = nA > 1 ? 'os acompanhantes' : 'o acompanhante', fica = nA > 1 ? 'ficam' : 'fica', pode = nA > 1 ? 'poderão' : 'poderá';
+            if (acs.length) {
                 h += `<h2>Responsabilidade e cuidados com o menor</h2>
-                <p>Durante o período autorizado, ${o} ${fica} responsáve${nA > 1 ? 'is' : 'l'} por zelar pela segurança, integridade física, bem-estar e cuidados cotidianos do menor, acompanhando-o durante o trajeto e adotando as providências necessárias para sua proteção.</p>
-                <p>${o.charAt(0).toUpperCase() + o.slice(1)} ${pode} prestar informações sobre o menor, contatar os pais ou responsáveis legais e buscar atendimento médico ou hospitalar quando necessário, especialmente em situações de urgência ou emergência, observadas as normas aplicáveis e os protocolos da instituição de saúde.</p>
+                <p>Durante o período autorizado, o acompanhante fica responsável por zelar pela segurança, integridade física, bem-estar e cuidados cotidianos do menor, acompanhando-o durante o trajeto e adotando as providências necessárias para sua proteção.</p>
+                <p>O acompanhante poderá prestar informações sobre o menor, contatar os pais ou responsáveis legais e buscar atendimento médico ou hospitalar quando necessário, especialmente em situações de urgência ou emergência, observadas as normas aplicáveis e os protocolos da instituição de saúde.</p>
                 <p>Sempre que possível, os pais ou responsáveis legais deverão ser comunicados sobre ocorrências relevantes. Esta autorização não transfere a guarda legal do menor, não substitui os consentimentos exigidos para procedimentos médicos específicos e não concede poderes gerais para praticar atos jurídicos, financeiros ou outros atos em nome dos pais ou responsáveis.</p>`;
             } else {
                 h += `<h2>Responsabilidade e cuidados com o menor</h2>
@@ -9435,7 +9430,7 @@
             h += `<h2>Transporte e validade</h2><div class="av-grid">${linhas.join('')}</div>`;
             // 7. Local, data e assinaturas
             const local = (auts[0] && auts[0].cidade) ? `${auts[0].cidade}${auts[0].estado ? '/' + auts[0].estado : ''}` : '________________';
-            h += `<div class="av-fecho"><p class="av-local">${escapeHtml(local)}, ____ de __________________ de ______.</p><div class="av-assinaturas${auts.length + acs.filter(p => !p.mesma_pessoa_do_autorizante).length > 4 ? ' av-ass3' : ''}">`;
+            h += `<div class="av-fecho"><p class="av-local">${escapeHtml(local)}, ____ de __________________ de ______.</p><div class="av-assinaturas">`;
             const idxAcAut = new Set(acs.filter(p => p.mesma_pessoa_do_autorizante).map(p => p.mesma_pessoa_do_autorizante));
             auts.forEach((a, i) => { h += `<div class="av-ass"><div class="av-linha"></div>${escapeHtml(titleCase(a.nome || ''))}<br>CPF ${escapeHtml(a.cpf || '—')}<br><span>${escapeHtml(avCondicao(a).charAt(0).toUpperCase() + avCondicao(a).slice(1))} — autorizante${idxAcAut.has(i + 1) ? ' e acompanhante, ciente das responsabilidades' : ''}</span></div>`; });
             acs.filter(p => !p.mesma_pessoa_do_autorizante).forEach(p => { h += `<div class="av-ass"><div class="av-linha"></div>${escapeHtml(titleCase(p.nome || ''))}<br>CPF ${escapeHtml(p.cpf || '—')}<br><span>Acompanhante — ciente das responsabilidades</span></div>`; });

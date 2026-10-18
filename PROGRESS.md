@@ -4020,3 +4020,7 @@ Documento gerado a partir de `dados.especifico` (ver seção anterior), botão *
 ### Testes (Playwright + PDF real pelo caminho de impressão do painel)
 6 cenários (incl. 3 autorizantes + 2 acompanhantes, desacompanhado, guardião, veículo de terceiros, múltiplas viagens): PDF A4 de **1 página** em 5; o caso extremo (5 assinaturas) fica em 2 páginas, com local/data + assinaturas juntos na 2ª (sem cortar nada). Aviso não aparece no PDF; Edge Function de IA não chamada (0). Texto principal conferido nos PDFs.
 **Falta:** revisão jurídica do texto, migration do tipo no banco (seção anterior) e teste ao vivo.
+
+
+### Limite de pessoas (2026-10-18, pedido do usuário)
+Máximo de **2 autorizantes e 1 acompanhante**: formulário só oferece 1 ou 2 autorizantes (botão de adicionar some ao chegar em 2), sem "adicionar acompanhante"/remover, e a opção "Acompanhado por ambos os pais" foi **retirada** (exigiria 2 acompanhantes; o pai/mãe que acompanha e também autoriza continua possível, reaproveitando os dados). Rascunhos/registros antigos acima do limite são truncados ao abrir. O modelo do documento foi simplificado para singular (1 acompanhante), sem a grade de 3 colunas de assinatura: todos os cenários de teste cabem em **1 página A4**.
