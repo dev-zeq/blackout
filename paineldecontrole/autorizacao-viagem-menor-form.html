@@ -69,6 +69,7 @@
     .date-row { display: flex; gap: 8px; }
     .date-row input { min-width: 0; text-align: center; flex: 1; }
     .date-row input.ano { flex: 1.6; }
+    .date-row select { flex: 1; min-width: 0; }
     .row2 { display: flex; gap: 10px; } .row2 > .field { flex: 1; min-width: 0; }
     .btn-sec { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
     .btn-sec:hover { border-color: var(--accent); color: var(--accent-bright); }
@@ -234,11 +235,11 @@ function nascRecalcular(o) {
     const iso = (d.length === 2 && m.length === 2 && a.length === 4) ? `${a}-${m}-${d}` : '';
     o.nasc = (iso && dataValida(iso)) ? iso : '';
 }
-function nascErro(o) { // mensagem clara ou '' quando a data é válida
+function nascErro(o, lista) { // mensagem clara ou '' quando a data é válida (lista=true: campos de seleção)
     nascPartes(o);
     const d = o.nasc_d || '', m = o.nasc_m || '', a = o.nasc_a || '';
     if (!d && !m && !a) return 'Informe a data de nascimento.';
-    if (d.length !== 2 || m.length !== 2 || a.length !== 4) return 'Data incompleta: use dia com 2 dígitos, mês com 2 dígitos e ano com 4 dígitos (DD/MM/AAAA).';
+    if (d.length !== 2 || m.length !== 2 || a.length !== 4) return lista ? 'Data incompleta: selecione o dia, o mês e o ano.' : 'Data incompleta: use dia com 2 dígitos, mês com 2 dígitos e ano com 4 dígitos (DD/MM/AAAA).';
     if (!dataValida(`${a}-${m}-${d}`)) return 'Essa data não existe no calendário. Confira dia, mês e ano.';
     if (Number(a) < 1900) return 'Ano inválido. Confira o ano de nascimento.';
     if (`${a}-${m}-${d}` > hojeISO()) return 'A data de nascimento não pode ser futura.';
@@ -252,6 +253,31 @@ function campoNasc(label, path) {
     const inp = (parte, ph, max, cls) => `<input type="text" inputmode="numeric" autocomplete="off" maxlength="${max}" id="${id}_${parte}" data-nasc="${path}|${parte}" class="${cls || ''}" value="${esc(o['nasc_' + parte[0]] || '')}" placeholder="${ph}" aria-label="${label} — ${ph}">`;
     return `<div class="field"><label for="${id}_dia">${esc(label)} *</label>
         <div class="date-row">${inp('dia', 'DD', 2)}${inp('mes', 'MM', 2)}${inp('ano', 'AAAA', 4, 'ano')}</div>
+        <div class="hint" id="${id}_msg" style="color:var(--danger)">${esc(ini)}</div></div>`;
+}
+// Data de nascimento do MENOR em 3 listas (Dia 1–31 / Mês por extenso / Ano em ordem decrescente), no mesmo
+// padrão de seleção do currículo (.date-row com <select>). Usa os mesmos pedaços (nasc_d/nasc_m/nasc_a) e o
+// mesmo formato interno (obj.nasc = AAAA-MM-DD) dos campos numéricos dos autorizantes.
+const MESES_NASC = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const diasNoMes = (m, a) => (m && a) ? new Date(Number(a), Number(m), 0).getDate() : 31; // considera ano bissexto
+function nascDiaOpts(o) {
+    const max = diasNoMes(o.nasc_m, o.nasc_a);
+    let h = '<option value="">Dia</option>';
+    for (let d = 1; d <= 31; d++) { const dd = String(d).padStart(2, '0'); h += `<option value="${dd}" ${dd === o.nasc_d ? 'selected' : ''} ${d > max ? 'disabled' : ''}>${d}</option>`; }
+    return h;
+}
+function campoNascSelect(label, path) {
+    const o = nascPartes(getPath(s, path.replace(/\.nasc$/, '')));
+    // valores digitados em outro formato (ex.: "6") não existem nas listas
+    if (o.nasc_d && o.nasc_d.length !== 2) o.nasc_d = ''; if (o.nasc_m && o.nasc_m.length !== 2) o.nasc_m = '';
+    const id = 'f_' + path.replace(/\W/g, '_');
+    const anoAtual = new Date().getFullYear();
+    const anos = []; for (let y = anoAtual; y >= anoAtual - 18; y--) anos.push(String(y));
+    if (o.nasc_a && !anos.includes(o.nasc_a)) { anos.push(o.nasc_a); anos.sort((a, b) => b - a); } // preserva ano salvo fora da faixa
+    const sel = (parte, opts) => `<select id="${id}_${parte}" data-nasc="${path}|${parte}" aria-label="${esc(label)} — ${parte}">${opts}</select>`;
+    const ini = (o.nasc_d && o.nasc_m && o.nasc_a) ? nascErro(o, true) : '';
+    return `<div class="field"><label for="${id}_dia">${esc(label)} *</label>
+        <div class="date-row">${sel('dia', nascDiaOpts(o))}${sel('mes', '<option value="">Mês</option>' + MESES_NASC.map((m, i) => { const mm = String(i + 1).padStart(2, '0'); return `<option value="${mm}" ${mm === o.nasc_m ? 'selected' : ''}>${m}</option>`; }).join(''))}${sel('ano', '<option value="">Ano</option>' + anos.map(y => `<option value="${y}" ${y === o.nasc_a ? 'selected' : ''}>${y}</option>`).join(''))}</div>
         <div class="hint" id="${id}_msg" style="color:var(--danger)">${esc(ini)}</div></div>`;
 }
 const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -485,7 +511,7 @@ function stepMenor() {
         : `${campo('País', 'menor.nat_pais')}${campo('Cidade', 'menor.nat_cidade', { obrig: false })}`}
     <div class="field"><label>Gênero <span style="font-weight:400;color:var(--text-faint)">(opcional)</span></label>
         <div class="radio-group">${['Masculino', 'Feminino', 'Prefiro não informar'].map(g => pill('f_menor_genero', g, m.genero === g, g, 'menor.genero')).join('')}</div></div>
-    ${campoNasc('Data de nascimento', 'menor.nasc')}
+    ${campoNascSelect('Data de nascimento', 'menor.nasc')}
     <div class="field"><label>Idade (calculada automaticamente)</label><input type="text" id="f_menor_idade" readonly value="${idade === null || idade < 0 ? '' : idade + (idade === 1 ? ' ano' : ' anos')}" placeholder="Preencha a data de nascimento"></div>
     <div class="sec-title">Documentos pessoais do menor</div>
     <div class="field"><label>Qual documento de identificação o menor possui? *</label>
@@ -501,7 +527,7 @@ function errosEtapa2() {
     if (!nacFinal('menor')) e.push('Menor: nacionalidade');
     if (m.nat_tipo === 'Brasil') { if (!m.nat_cidade.trim() || !m.nat_uf) e.push('Menor: naturalidade (cidade e UF)'); }
     else if (!m.nat_pais.trim()) e.push('Menor: país de nascimento');
-    { const en = nascErro(m); if (en) e.push('Menor: ' + en.replace(/\.$/, ''));
+    { const en = nascErro(m, true); if (en) e.push('Menor: ' + en.replace(/\.$/, ''));
       else if (idadeEm(m.nasc, hojeISO()) >= 18) e.push('Menor: esta autorização é só para menores de 18 anos'); }
     docsSync(); e.push(...errosDocs());
     const cpfsAut = s.autorizantes.map(p => soDigitos(p.cpf)).filter(Boolean);
@@ -804,7 +830,22 @@ function nascAtualizarMsg(path) {
     if (el && o) el.textContent = (o.nasc_d || o.nasc_m || o.nasc_a) ? nascErro(o) : '';
 }
 // só números; dia/mês até 2 dígitos, ano até 4; pula pro próximo campo ao completar
+function nascSelecionar(t) { // listas Dia/Mês/Ano (menor)
+    const [path, parte] = t.dataset.nasc.split('|');
+    const o = nascPartes(getPath(s, path.replace(/\.nasc$/, '')));
+    o['nasc_' + parte[0]] = t.value;
+    nascRecalcular(o);
+    if (parte !== 'dia') { // mês/ano mudam os dias existentes (31/02 não existe; 29/02 só em ano bissexto)
+        const dia = document.getElementById('f_' + path.replace(/\W/g, '_') + '_dia');
+        if (dia) dia.innerHTML = nascDiaOpts(o);
+    }
+    if (path === 'menor.nasc') atualizarIdade();
+    const msg = document.getElementById('f_' + path.replace(/\W/g, '_') + '_msg');
+    if (msg) msg.textContent = (o.nasc_d && o.nasc_m && o.nasc_a) ? nascErro(o, true) : '';
+    if (stepIndex === 4) refrescarResumo();
+}
 function nascDigitar(t) {
+    if (t.tagName === 'SELECT') { nascSelecionar(t); return; }
     const [path, parte] = t.dataset.nasc.split('|');
     const max = parte === 'ano' ? 4 : 2;
     const v = t.value.replace(/\D/g, '').slice(0, max);
@@ -818,7 +859,7 @@ function nascDigitar(t) {
     if (msg && msg.textContent) nascAtualizarMsg(path); // se já está mostrando erro, atualiza ao digitar
     if (stepIndex === 4) refrescarResumo();
 }
-document.addEventListener('focusout', (ev) => { const t = ev.target; if (t.dataset && t.dataset.nasc) nascAtualizarMsg(t.dataset.nasc.split('|')[0]); });
+document.addEventListener('focusout', (ev) => { const t = ev.target; if (t.dataset && t.dataset.nasc && t.tagName !== 'SELECT') nascAtualizarMsg(t.dataset.nasc.split('|')[0]); });
 const RE_END = /^(.+)\.(cid_sel|cidade_outra|bai_sel|bairro_outro|uf_sel)$/;
 function aposAlterarEndereco(path) {
     const m = RE_END.exec(path); if (!m) return;
@@ -837,6 +878,7 @@ document.addEventListener('input', (ev) => {
 });
 document.addEventListener('change', (ev) => {
     const t = ev.target;
+    if (t.dataset && t.dataset.nasc && t.tagName === 'SELECT') { nascSelecionar(t); return; }
     if (t.dataset && t.dataset.p) {
         if (t.type === 'radio') { if (!t.checked) return; setPath(s, t.dataset.p, t.value); }
         else { setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p); if (t.dataset.p.startsWith('docs.')) docsSync(); }

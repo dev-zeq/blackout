@@ -4071,3 +4071,10 @@ Ordem da etapa 2: nome → nacionalidade → naturalidade → gênero → nascim
 
 ## Estado de publicação (2026-10-18) — PR #18 mesclado em `main`
 Publicados: texto introdutório da etapa 1 (nacional/internacional), data de nascimento em 3 campos, CPF obrigatório/RG só número/sem CEP/endereço padrão (autorizantes), documentos do menor em blocos por tipo e CPF do menor sem bloqueio (só aviso). Pendências inalteradas: migration do tipo `AUTORIZACAO_VIAGEM_MENOR` no banco (necessária para enviar), revisão jurídica dos textos e teste ao vivo. Inconsistência conhecida: introdução fala em viagem internacional, mas etapa 4/destino/documento ainda são só nacionais.
+
+
+## Autorização de Viagem — data de nascimento do MENOR em listas de seleção (2026-10-18)
+Só a data de nascimento do **menor** (etapa 2) passou a usar **três listas lado a lado** (`.date-row` com `<select>`, mesmo padrão do currículo): **Dia** 1–31, **Mês** por extenso (Janeiro–Dezembro) e **Ano** em ordem decrescente (ano atual até 18 anos atrás — faixa adequada a menor de 18; um ano salvo fora da faixa é mantido). Os campos de data de nascimento dos autorizantes/acompanhante (etapa 1/3) continuam como estavam (3 campos numéricos).
+**Validação:** os dias que não existem ficam **desabilitados** conforme mês e ano (fev/abr/jun/set/nov, e 29/02 só em ano bissexto); se uma troca de mês/ano deixa o dia inválido, aparece a mensagem "Essa data não existe no calendário" e a data não é considerada válida; data futura bloqueada; data incompleta pede "selecione o dia, o mês e o ano". **Idade** recalculada a cada mudança de dia, mês ou ano; menor de 18 continua exigido. Valores preservados ao avançar/voltar, em rascunho e na edição (registros antigos com data ISO reabrem nas listas).
+**Formato interno inalterado** (`AAAA-MM-DD`); prévia/documento mostram `DD/MM/AAAA`.
+**Testes (Playwright):** conteúdo das listas, 29/02 em 2016 (ok) e 2015 (inexistente), 31/04, futura, incompleta, idade a cada alteração, preservação ao voltar, estado antigo, 360 px sem estouro; bateria completa (fluxo, combinações, documentos, CPF, endereço, painel, PDFs) sem regressão.
