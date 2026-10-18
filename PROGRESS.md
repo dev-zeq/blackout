@@ -4035,3 +4035,10 @@ Publicados juntos: renomeação "Declarações", tile e módulo "Procurações e
 ## Autorização de Viagem — texto introdutório da etapa 1 (2026-10-18)
 Só o texto do aviso no topo da etapa 1 (`autorizacao-viagem-menor-form.html`) foi trocado: agora diz que o formulário prepara autorizações de viagem nacionais **ou internacionais**, que as exigências variam (destino, idade, acompanhantes, situação dos responsáveis) e que não afirma suficiência. Campos, validações, layout e demais etapas inalterados.
 **Atenção:** o aviso da etapa 4 ("Viagem nacional… para viagens ao exterior este formulário não se aplica") e os campos de destino (cidade + UF) **não** foram alterados, por estarem fora do pedido — ficam inconsistentes com a nova introdução até decidirmos como tratar viagem internacional (país de destino, documentos etc.).
+
+
+## Autorização de Viagem — data de nascimento em 3 campos (2026-10-18)
+Todos os campos de **data de nascimento** do formulário (autorizantes, menor, acompanhante; o recebedor no destino não tem esse campo) agora são **Dia / Mês / Ano** lado a lado (`DD`/`MM`/`AAAA`), na mesma classe `.date-row` do currículo. Diferença deliberada em relação ao currículo: lá são `<select>`; aqui são **campos numéricos** porque o pedido exigia só dígitos com limite de 2/2/4 — o currículo não foi tocado.
+**Regras:** só números (letras/barras são ignoradas), maxlength 2/2/4, pula pro próximo campo ao completar; data incompleta, inexistente (ex.: 31/02), ano < 1900 ou futura → mensagem clara abaixo do campo (ao sair do campo) e no bloqueio do "Avançar"; valores preservados ao voltar/avançar e em rascunho/edição (registros antigos só com data ISO reabrem preenchidos).
+**Formato interno inalterado:** `data_nascimento` continua `AAAA-MM-DD` em `dados.*`; documento e conferência mostram `DD/MM/AAAA`.
+**Testes (Playwright):** digitação com lixo/máscara, 31/02, mês 13, ano incompleto, futura, válida; 360 px sem estouro; idade automática; preservação ao voltar; estado antigo (ISO); fluxo completo até o envio; os 5 cenários de combinações; PDFs em 1 página.

@@ -66,6 +66,9 @@
     .success-box p { color: var(--text-dim); font-size: 13.5px; }
     .person-block { border: 1px solid var(--border); border-radius: 16px; padding: 16px 14px 4px; margin-bottom: 16px; background: rgba(255,255,255,0.015); }
     .person-block h3 { font-size: 13.5px; margin: 0 0 14px; color: var(--accent-bright); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .date-row { display: flex; gap: 8px; }
+    .date-row input { min-width: 0; text-align: center; flex: 1; }
+    .date-row input.ano { flex: 1.6; }
     .row2 { display: flex; gap: 10px; } .row2 > .field { flex: 1; min-width: 0; }
     .btn-sec { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
     .btn-sec:hover { border-color: var(--accent); color: var(--accent-bright); }
@@ -200,6 +203,41 @@ function campo(label, path, opts = {}) {
     }
     return `<div class="field"><label for="${idc}">${esc(label)}${marc}</label>${ctl}${opts.hint ? `<div class="hint">${esc(opts.hint)}</div>` : ''}</div>`;
 }
+// Data de nascimento em 3 campos (Dia / Mês / Ano), no mesmo formato visual do currículo
+// (.date-row). Os pedaços digitados ficam em obj.nasc_d / nasc_m / nasc_a (preservados ao
+// voltar/avançar) e obj.nasc guarda a data ISO (AAAA-MM-DD) só quando completa e existente —
+// é o formato interno de sempre (dados.*.data_nascimento).
+function nascPartes(o) {
+    if (o.nasc_d === undefined && o.nasc_m === undefined && o.nasc_a === undefined) {
+        const [a, m, d] = (o.nasc || '').split('-'); o.nasc_d = d || ''; o.nasc_m = m || ''; o.nasc_a = a || '';
+    }
+    return o;
+}
+function nascRecalcular(o) {
+    const d = o.nasc_d || '', m = o.nasc_m || '', a = o.nasc_a || '';
+    const iso = (d.length === 2 && m.length === 2 && a.length === 4) ? `${a}-${m}-${d}` : '';
+    o.nasc = (iso && dataValida(iso)) ? iso : '';
+}
+function nascErro(o) { // mensagem clara ou '' quando a data é válida
+    nascPartes(o);
+    const d = o.nasc_d || '', m = o.nasc_m || '', a = o.nasc_a || '';
+    if (!d && !m && !a) return 'Informe a data de nascimento.';
+    if (d.length !== 2 || m.length !== 2 || a.length !== 4) return 'Data incompleta: use dia com 2 dígitos, mês com 2 dígitos e ano com 4 dígitos (DD/MM/AAAA).';
+    if (!dataValida(`${a}-${m}-${d}`)) return 'Essa data não existe no calendário. Confira dia, mês e ano.';
+    if (Number(a) < 1900) return 'Ano inválido. Confira o ano de nascimento.';
+    if (`${a}-${m}-${d}` > hojeISO()) return 'A data de nascimento não pode ser futura.';
+    return '';
+}
+function campoNasc(label, path) {
+    const base = path.replace(/\.nasc$/, '');
+    const o = nascPartes(getPath(s, base));
+    const id = 'f_' + path.replace(/\W/g, '_');
+    const ini = (o.nasc_d || o.nasc_m || o.nasc_a) ? nascErro(o) : '';
+    const inp = (parte, ph, max, cls) => `<input type="text" inputmode="numeric" autocomplete="off" maxlength="${max}" id="${id}_${parte}" data-nasc="${path}|${parte}" class="${cls || ''}" value="${esc(o['nasc_' + parte[0]] || '')}" placeholder="${ph}" aria-label="${label} — ${ph}">`;
+    return `<div class="field"><label for="${id}_dia">${esc(label)} *</label>
+        <div class="date-row">${inp('dia', 'DD', 2)}${inp('mes', 'MM', 2)}${inp('ano', 'AAAA', 4, 'ano')}</div>
+        <div class="hint" id="${id}_msg" style="color:var(--danger)">${esc(ini)}</div></div>`;
+}
 const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 function dataValida(iso) { return /^\d{4}-\d{2}-\d{2}$/.test(iso || '') && !isNaN(new Date(iso + 'T00:00:00').getTime()) && new Date(iso + 'T00:00:00').toISOString().slice(0, 10) === iso; }
 function idadeEm(nascISO, refISO) {
@@ -228,7 +266,7 @@ function blocoPessoa(p, base, cfg) {
     h += window.Nacionalidade.campoHtml(nac, u + '_nacionalidade');
     if (cfg.estadoCivil) h += campo('Estado civil', `${base}.estado_civil`, { select: ESTADOS_CIVIS });
     if (cfg.profissao) h += campo('Profissão', `${base}.profissao`, { obrig: false });
-    h += campo('Data de nascimento', `${base}.nasc`, { type: 'date' });
+    h += campoNasc('Data de nascimento', `${base}.nasc`);
     h += campo('CPF', `${base}.cpf`, { ph: '000.000.000-00', obrig: cfg.cpfObrig !== false, hint: cfg.hintDoc });
     h += `<div class="row2">${campo(cfg.rgLabel || 'Documento de identidade (nº)', `${base}.rg_num`, { obrig: cfg.rgObrig === true })}${campo('Órgão emissor', `${base}.rg_org`, { obrig: false, ph: 'SSP' })}</div>`;
     h += campo('UF do documento', `${base}.rg_uf`, { select: ESTADOS_BR, obrig: false });
@@ -252,12 +290,8 @@ function errosPessoa(p, rotulo, cfg) {
     if (!p.nome.trim()) r('nome completo');
     if (!nacFinal(p.uid)) r('nacionalidade');
     if (cfg.estadoCivil && !p.estado_civil) r('estado civil');
-    if (!dataValida(p.nasc)) r('data de nascimento válida');
-    else {
-        const idade = idadeEm(p.nasc, hojeISO());
-        if (idade < 0) r('data de nascimento no futuro');
-        else if (cfg.adulto && idade < 18) r('deve ter 18 anos ou mais');
-    }
+    { const en = nascErro(p); if (en) r(en.replace(/\.$/, '').replace(/^A data/, 'data').replace(/^Essa data/, 'data').replace(/^Data/, 'data').replace(/^Informe a data/, 'data').replace(/^Ano/, 'ano'));
+      else if (cfg.adulto && idadeEm(p.nasc, hojeISO()) < 18) r('deve ter 18 anos ou mais'); }
     if (p.cpf.trim() && !cpfOk(p.cpf)) r('CPF inválido');
     if (cfg.cpfObrig !== false && !p.cpf.trim() && !(p.rg_num || '').trim()) r('informe o CPF ou o documento de identidade');
     if (cfg.rgObrig && !(p.rg_num || '').trim()) r('documento de identidade (nº)');
@@ -317,7 +351,7 @@ function stepMenor() {
         : `${campo('País', 'menor.nat_pais')}${campo('Cidade', 'menor.nat_cidade', { obrig: false })}`}
     <div class="field"><label>Gênero <span style="font-weight:400;color:var(--text-faint)">(opcional)</span></label>
         <div class="radio-group">${['Masculino', 'Feminino', 'Prefiro não informar'].map(g => pill('f_menor_genero', g, m.genero === g, g, 'menor.genero')).join('')}</div></div>
-    ${campo('Data de nascimento', 'menor.nasc', { type: 'date' })}
+    ${campoNasc('Data de nascimento', 'menor.nasc')}
     <div class="field"><label>Idade (calculada automaticamente)</label><input type="text" id="f_menor_idade" readonly value="${idade === null || idade < 0 ? '' : idade + (idade === 1 ? ' ano' : ' anos')}" placeholder="Preencha a data de nascimento"></div>
     ${campo('CPF', 'menor.cpf', { ph: '000.000.000-00', obrig: false, hint: 'Só se o menor possuir. Não é necessário inventar número.' })}
     <div class="sec-title">Documentos do menor</div>
@@ -342,12 +376,8 @@ function errosEtapa2() {
     if (!nacFinal('menor')) e.push('Menor: nacionalidade');
     if (m.nat_tipo === 'Brasil') { if (!m.nat_cidade.trim() || !m.nat_uf) e.push('Menor: naturalidade (cidade e UF)'); }
     else if (!m.nat_pais.trim()) e.push('Menor: país de nascimento');
-    if (!dataValida(m.nasc)) e.push('Menor: data de nascimento válida');
-    else {
-        const idade = idadeEm(m.nasc, hojeISO());
-        if (idade < 0) e.push('Menor: data de nascimento no futuro');
-        else if (idade >= 18) e.push('Menor: esta autorização é só para menores de 18 anos');
-    }
+    { const en = nascErro(m); if (en) e.push('Menor: ' + en.replace(/\.$/, ''));
+      else if (idadeEm(m.nasc, hojeISO()) >= 18) e.push('Menor: esta autorização é só para menores de 18 anos'); }
     if (m.cpf.trim() && !cpfOk(m.cpf)) e.push('Menor: CPF inválido');
     const temDoc = soDigitos(m.cpf) || s.docs.some(d => d.ativo && (d.numero || '').trim());
     if (!temDoc) e.push('Menor: informe ao menos um documento de identificação com número');
@@ -649,8 +679,30 @@ function atualizarIdade() {
 }
 
 // ---------- Eventos (delegação: nada se perde ao redesenhar uma etapa) ----------
+function nascAtualizarMsg(path) {
+    const base = path.replace(/\.nasc$/, ''); const o = getPath(s, base);
+    const el = document.getElementById('f_' + path.replace(/\W/g, '_') + '_msg');
+    if (el && o) el.textContent = (o.nasc_d || o.nasc_m || o.nasc_a) ? nascErro(o) : '';
+}
+// só números; dia/mês até 2 dígitos, ano até 4; pula pro próximo campo ao completar
+function nascDigitar(t) {
+    const [path, parte] = t.dataset.nasc.split('|');
+    const max = parte === 'ano' ? 4 : 2;
+    const v = t.value.replace(/\D/g, '').slice(0, max);
+    if (v !== t.value) t.value = v;
+    const o = nascPartes(getPath(s, path.replace(/\.nasc$/, '')));
+    o['nasc_' + parte[0]] = v;
+    nascRecalcular(o);
+    if (path === 'menor.nasc') atualizarIdade();
+    if (v.length === max && parte !== 'ano') { const prox = document.getElementById(t.id.replace(/_(dia|mes)$/, parte === 'dia' ? '_mes' : '_ano')); if (prox && !prox.value) prox.focus(); }
+    const msg = document.getElementById('f_' + path.replace(/\W/g, '_') + '_msg');
+    if (msg && msg.textContent) nascAtualizarMsg(path); // se já está mostrando erro, atualiza ao digitar
+    if (stepIndex === 4) refrescarResumo();
+}
+document.addEventListener('focusout', (ev) => { const t = ev.target; if (t.dataset && t.dataset.nasc) nascAtualizarMsg(t.dataset.nasc.split('|')[0]); });
 document.addEventListener('input', (ev) => {
     const t = ev.target;
+    if (t.dataset && t.dataset.nasc) { nascDigitar(t); return; }
     if (t.dataset && t.dataset.p && t.type !== 'radio' && t.type !== 'checkbox') {
         setPath(s, t.dataset.p, t.value);
         if (t.dataset.p === 'menor.nasc') atualizarIdade();
