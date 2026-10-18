@@ -433,7 +433,7 @@ function docBlocoHtml(d, i) {
     let h = `<div class="person-block"><h3><span>Documento ${i + 1}${d.tipo ? ' — ' + esc(docRotulo(d)) : ''}</span><button type="button" class="btn-link" data-remover-doc="${i}">Remover</button></h3>
         <div class="field"><label>Tipo de documento *</label><select data-doc-tipo-sel="${i}"><option value="">Selecione o tipo</option>${TIPOS_DOC_MENOR.map(t => `<option value="${esc(t)}" ${d.tipo === t ? 'selected' : ''}>${esc(ROTULO_TIPO_DOC[t] || t)}</option>`).join('')}</select></div>`;
     switch (d.tipo) {
-        case 'CPF': h += campo('Número do CPF', `${b}.numero`, { ph: '000.000.000-00', id: `f_docs_${i}_numero_cpf` }); break;
+        case 'CPF': h += campo('Número do CPF', `${b}.numero`, { ph: '000.000.000-00', id: `f_docs_${i}_numero_cpf` }).replace(/<\/div>$/, `<div class="hint" id="f_docs_${i}_cpfaviso" style="color:#fbbf24">${esc(cpfAviso(d.numero))}</div></div>`); break;
         case 'RG ou CIN': h += campo('Número do documento', `${b}.numero`); break;
         case 'Certidão de nascimento': h += campo('Matrícula ou número da certidão', `${b}.numero`, { hint: 'Conforme o documento apresentado.' }) + campo('Dados adicionais', `${b}.compl`, { obrig: false, ph: 'Cartório, livro, folha, termo… (se constar)' }); break;
         case 'RNM/CRNM': h += campo('Número do documento', `${b}.numero`) + campo('Data de validade', `${b}.validade`, { type: 'date', obrig: false, hint: 'Se o documento tiver validade.' }); break;
@@ -452,7 +452,7 @@ function errosDocs() {
         const num = (d.numero || '').trim();
         if (d.tipo === 'Outro documento' && !(d.nome || '').trim()) r('informe o nome ou tipo do documento');
         if (!num) r('informe o número');
-        else if (d.tipo === 'CPF') { const dc = soDigitos(num); if (dc.length < 11) r('CPF incompleto (11 dígitos)'); else if (!cpfOk(num)) r('CPF inválido'); }
+        // CPF do menor: sem bloqueio por quantidade/dígitos verificadores (só aviso informativo — ver cpfAviso)
         if (d.tipo === 'Passaporte' && !(d.pais || '').trim()) r('informe o país emissor');
         if (d.validade && !dataValida(d.validade)) r('data de validade inválida');
     });
@@ -461,6 +461,15 @@ function errosDocs() {
     return e;
 }
 const docsInformados = () => s.docs.filter(d => d.tipo && (d.numero || '').trim());
+
+// Aviso informativo (NÃO impede avançar) sobre o CPF do menor: não confirma nem corrige o número.
+function cpfAviso(num) {
+    const dc = soDigitos(num);
+    if (!dc) return '';
+    if (dc.length < 11) return 'Aviso: o CPF informado tem menos de 11 dígitos. Você pode continuar, mas confira o número.';
+    if (!cpfOk(num)) return 'Aviso: o CPF informado não passa na verificação dos dígitos. Você pode continuar, mas confira o número.';
+    return '';
+}
 
 // ---------- ETAPA 2 — menor ----------
 function stepMenor() {
@@ -671,6 +680,7 @@ function calcularAlertas() {
     if (dataValida(v.saida) && dataValida(v.retorno) && dataValida(s.validade.inicio) && dataValida(s.validade.fim) && (s.validade.inicio > v.saida || s.validade.fim < v.retorno)) a.push('O período de validade não cobre todas as datas da viagem informada.');
     if (['Ônibus', 'Avião'].includes(s.transp.tipo)) a.push(`Transporte por ${s.transp.tipo === 'Avião' ? 'avião' : 'ônibus'}: verificar as exigências de documentos e de autorização da própria empresa de transporte.`);
     if (!docsInformados().length) a.push('Nenhum documento do menor informado.');
+    docsInformados().filter(d => d.tipo === 'CPF').forEach(d => { const av = cpfAviso(d.numero); if (av) a.push('CPF do menor: ' + av.replace(/^Aviso: o CPF informado /, 'o número informado ').replace(/ Você pode continuar, mas confira o número\./, ' Conferir o número antes de emitir.')); });
     docsInformados().forEach(d => { if (d.validade && dataValida(d.validade) && (d.validade < hojeISO() || (dataValida(v.retorno) && d.validade < v.retorno))) a.push(`${docRotulo(d)} do menor ${d.validade < hojeISO() ? 'está vencido' : 'vence antes do retorno da viagem'} (validade ${fmtData(d.validade)}).`); });
     s.autorizantes.forEach((p, i) => { if (!(p.rg_num || '').trim()) a.push(`Autorizante ${i + 1}: documento de identidade não informado (apenas CPF).`); });
     return a;
@@ -820,7 +830,7 @@ document.addEventListener('input', (ev) => {
     const t = ev.target;
     if (t.dataset && t.dataset.nasc) { nascDigitar(t); return; }
     if (t.dataset && t.dataset.p && t.type !== 'radio' && t.type !== 'checkbox') {
-        setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p); if (t.dataset.p.startsWith('docs.')) docsSync();
+        setPath(s, t.dataset.p, t.value); aposAlterarEndereco(t.dataset.p); if (t.dataset.p.startsWith('docs.')) { docsSync(); const mm = /^docs\.(\d+)\.numero$/.exec(t.dataset.p); if (mm) { const el = document.getElementById(`f_docs_${mm[1]}_cpfaviso`); if (el) el.textContent = cpfAviso(t.value); } }
         if (t.dataset.p === 'menor.nasc') atualizarIdade();
     }
     if (stepIndex === 4) refrescarResumo();
