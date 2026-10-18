@@ -3944,7 +3944,7 @@ Pedido: trocar o campo de texto de Nacionalidade (etapa 1 de 5) pelos mesmos bot
 
 **Arquivo:** só `paineldecontrole/declaracao-residencia-form.html` (mesma lógica do contrato: `nacionalidadeFinal()`, `nacionalidadeCampoHtml()`, `renderCondNacionalidade()`; estado `nacionalidade_outro`). O valor salvo continua sendo uma string simples em `dados.pessoa_a.nacionalidade` (ex. `Haitiano(a)` ou o texto digitado), então `index.html` (prévia/impressão/PDF, via `qualificar()`/`flexGenero()`) **não foi alterado**. Na edição, valor salvo fora da lista reabre como "Outra nacionalidade" + texto.
 
-**Fora do escopo (inalterado):** o campo de nacionalidade do locatário (etapa 2, `f_pd_nacionalidade`) segue como texto.
+**Locatário (etapa 2) — feito a pedido logo depois:** mesmos botões e campo "Informe a nacionalidade" para `pd_nacionalidade`; helpers parametrizados por prefixo (`''` declarante / `'pd_'` locatário). Mensagem de erro própria: "Informe a nacionalidade do locatário."
 
 ### Testes
 - Playwright (Supabase stubado): 4 opções → payload enviado com a nacionalidade certa; Outra abre o campo, vazio bloqueia ("Informe a nacionalidade."), trocar para outra opção remove o campo, voltar preserva o texto; edição reabre Haitiano(a) marcado e "Argentino(a)" como Outra + texto.
