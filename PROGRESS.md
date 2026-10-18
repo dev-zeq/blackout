@@ -3917,3 +3917,49 @@ Pedido: investigar por que, ao entrar num sub-painel (ex. Detran) vindo de outro
 2. Preview local (Playwright, bibliotecas externas trocadas por stubs locais — apagada depois do teste): reproduzido o bug relatado (Recibos → Detran pela barra) ANTES da correção não foi necessário reproduzir à parte — a causa já estava clara pela leitura do código; testada a correção percorrendo Recibos → Detran → Currículo → Prefeitura → Contratos → Financeiro → Boletos → Recibos, sempre pela barra de atalhos (pior caso: nunca passando pelo Menu Principal entre eles). Em cada parada, conferido via DOM que existe exatamente **1** `.view.active` e **1** `.topnav-row` visível — sem exceção nos 8 saltos testados.
 
 **Falta:** confirmação do usuário testando ao vivo no painel publicado.
+
+
+## Declarações e Procurações — máscara de CPF/CNPJ nos documentos e formulários (2026-10-18)
+
+Pedido: CPF (`000.000.000-00`) e CNPJ (`00.000.000/0000-00`) saíam sem pontuação em Declarações/Procurações quando o dado estava só com dígitos; Contratos já estavam certos e não podiam ser alterados.
+
+**Causa:** nenhum formulário de Declaração/Procuração mascarava o campo, e os layouts em `index.html` imprimiam `p.cpf`/`empresa_cnpj` do jeito que veio do banco. (Só o Orçamento de Prestação de Serviço já usava `formatarCNPJDoc()`.)
+
+### O que mudou
+- `paineldecontrole/index.html`: novo `formatarCPFDoc()` (mesma regra do `formatarCNPJDoc()`: só mascara com exatamente 11/14 dígitos, senão devolve o valor como veio) e `pessoaCpfFmt()` (cópia rasa com CPF formatado — não altera o dado salvo). Aplicados em: `qualificar()`, `assinatura()`, Trabalho (CNPJ da empresa e CPF do funcionário), Residência (CPF do locatário/coabitante), União Estável (via `qualificar`), Termo de Responsabilidade de Veículo (partes + testemunhas), Procuração Simples e Detran (outorgante/outorgado). `qualificarCV`, `qualificarTermo` e `blocoAssinaturasDuasColunas` (compartilhados com Contratos) **não foram alterados**; nenhum tipo de contrato foi tocado.
+- Formulários `declaracao-residencia`, `declaracao-trabalho`, `declaracao-uniao-estavel`, `procuracao-simples`, `procuracao-detran`, `termo-responsabilidade-veiculo`: bloco `<script>` no fim (idêntico nos 6) que mascara ao digitar e ao recuperar valor completo na edição (ids terminados em `cpf`/`cnpj`), não mexe em valor com dígitos a mais, e bloqueia o "Avançar" com aviso quando o campo preenchido tem quantidade errada de dígitos. Campo vazio continua valendo como antes (obrigatoriedade inalterada).
+- `declaracao-autonomo-form.html` é só redirecionamento (vai pro de Trabalho).
+
+### Testes (Node/Playwright)
+1. `node --check` do `<script type="module">` → OK.
+2. Renderização real dos `corpo()` extraídos do arquivo, para Autônomo, Trabalho (4 cenários), Residência (2), União Estável, Termo Veículo, Procuração Simples e Detran, com dados só dígitos, já formatados e inválidos: todo CPF/CNPJ de 11/14 dígitos sai mascarado, sem duplicar pontuação; inválidos saem como vieram.
+3. Playwright nos 6 formulários: digitar sem pontuação, digitar já formatado, CNPJ, valor recuperado, parcial (`123.456`), bloqueio do Avançar com 3 dígitos → todos OK, sem erro de JS.
+
+**Falta:** conferir ao vivo no painel publicado (visualização, impressão, PDF e edição de registros antigos).
+
+
+## Declaração de Residência — nacionalidade em botões na etapa 1 (2026-10-18)
+
+Pedido: trocar o campo de texto de Nacionalidade (etapa 1 de 5) pelos mesmos botões do `contrato-form.html` (Brasileiro(a), Venezuelano(a), Haitiano(a), Outra nacionalidade), com campo "Informe a nacionalidade" obrigatório ao escolher Outra.
+
+**Arquivo:** só `paineldecontrole/declaracao-residencia-form.html` (mesma lógica do contrato: `nacionalidadeFinal()`, `nacionalidadeCampoHtml()`, `renderCondNacionalidade()`; estado `nacionalidade_outro`). O valor salvo continua sendo uma string simples em `dados.pessoa_a.nacionalidade` (ex. `Haitiano(a)` ou o texto digitado), então `index.html` (prévia/impressão/PDF, via `qualificar()`/`flexGenero()`) **não foi alterado**. Na edição, valor salvo fora da lista reabre como "Outra nacionalidade" + texto.
+
+**Locatário (etapa 2) — feito a pedido logo depois:** mesmos botões e campo "Informe a nacionalidade" para `pd_nacionalidade`; helpers parametrizados por prefixo (`''` declarante / `'pd_'` locatário). Mensagem de erro própria: "Informe a nacionalidade do locatário."
+
+### Testes
+- Playwright (Supabase stubado): 4 opções → payload enviado com a nacionalidade certa; Outra abre o campo, vazio bloqueia ("Informe a nacionalidade."), trocar para outra opção remove o campo, voltar preserva o texto; edição reabre Haitiano(a) marcado e "Argentino(a)" como Outra + texto.
+- Renderização do `corpo()` real + PDF (Playwright/pdftotext): brasileiro, venezuelana, haitiano, argentino, colombiana — prévia e PDF idênticos e flexionados pelo gênero.
+- **Falta:** conferir ao vivo no painel publicado.
+
+
+## Nacionalidade em botões — padrão único para todos os formulários (2026-10-18)
+
+Pedido: todos os campos de nacionalidade dos formulários existentes viram botões (Brasileiro(a), Venezuelano(a), Haitiano(a), Outra nacionalidade → campo obrigatório "Informe a nacionalidade"), e os formulários novos devem seguir o mesmo padrão.
+
+**Solução compartilhada:** `paineldecontrole/assets/campo-nacionalidade.js` (`window.Nacionalidade`: `campoHtml`, `ler`, `final`, `validar`, `carregar`; troca de botão por delegação de eventos, sem bind). O cabeçalho do arquivo traz o passo a passo para formulário novo — **todo formulário novo com nacionalidade deve usar esse arquivo, não reimplementar**.
+
+**Migrados:** declaracao-residencia (declarante + locatário, os helpers locais foram removidos), declaracao-trabalho, declaracao-uniao-estavel (A e B), procuracao-simples (outorgante/outorgado), procuracao-detran, termo-responsabilidade-veiculo (proprietário/responsável). **Já eram botões, não alterados:** contrato-form (padrão de referência) e curriculo-form (usa "Outra Nacionalidade" com naturalidade própria). `declaracao-autonomo-form` é só redirecionamento. O formato salvo não mudou (string simples em `nacionalidade`), então `index.html` não foi tocado.
+
+### Testes (Playwright, Supabase stubado)
+Fluxo completo até o envio, escolhendo Brasileiro/Venezuelano/Haitiano/Outra ("Argentino(a)") em todas as pessoas: residência, união estável, procuração simples, procuração Detran e termo de veículo → payload correto. Trabalho: botões, campo some/aparece, bloqueio com campo vazio e reabertura na edição (Venezuelano marcado; texto livre reabre como Outra) OK; o envio completo do Trabalho não foi automatizado (etapas de dias/horários), mas o campo passa pela mesma função dos demais.
+**Falta:** conferir ao vivo no painel publicado.
