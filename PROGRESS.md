@@ -3963,3 +3963,70 @@ Pedido: todos os campos de nacionalidade dos formulários existentes viram botõ
 ### Testes (Playwright, Supabase stubado)
 Fluxo completo até o envio, escolhendo Brasileiro/Venezuelano/Haitiano/Outra ("Argentino(a)") em todas as pessoas: residência, união estável, procuração simples, procuração Detran e termo de veículo → payload correto. Trabalho: botões, campo some/aparece, bloqueio com campo vazio e reabertura na edição (Venezuelano marcado; texto livre reabre como Outra) OK; o envio completo do Trabalho não foi automatizado (etapas de dias/horários), mas o campo passa pela mesma função dos demais.
 **Falta:** conferir ao vivo no painel publicado.
+
+
+## Menu — "Declarações e Procurações" renomeado para "Declarações" (2026-10-18)
+
+Pedido: só nomenclatura visual. `paineldecontrole/index.html`, 4 textos: card do Menu Principal (`MENU_ITEMS`), título "Histórico de Declarações", `rotuloLista` (mensagens de arquivar/desarquivar) e tooltip do botão arquivar. A barra de atalhos já dizia "Declarações". Nada de rota/ID (`declProc`), módulo, Procurações, formulários, dados ou layout foi tocado — a aba "Procurações" dentro do módulo e os 7 tipos continuam iguais.
+
+### Testes (Playwright, painel com Supabase stubado)
+Menu mostra "Declarações" (e nenhum "Declarações e Procurações"); clique abre `viewDeclProc`; abas Declarações/Procurações presentes e a de Procurações lista Procuração Simples/Detran; barra de atalhos com 17 itens; sem erros de JS. Não rodou ao vivo.
+
+
+## Menu — novo tile "Procurações e Autorizações" (2026-10-18)
+
+Pedido: criar o campo, lado a lado com "Declarações", só como estrutura visual (sem formulário, link, tela, banco).
+
+**Arquivo:** só `paineldecontrole/index.html`. Novo item em `MENU_ITEMS` **sem `action`** (+ ícone `procuracao` no mesmo estilo) — o `renderMenu()` já desenha item sem ação como tile "Em breve" (opacidade reduzida, clique não faz nada): é o padrão nativo de placeholder do painel. **Para ativar no futuro:** acrescentar `action` nesse item (ex.: `{ type: 'view', view: '...' }`) e criar a view/formulários então. Não entrou na barra de atalhos (`QUICKNAV_ITEMS`) por não ter função ainda.
+
+**Ordem:** a grade tem 3 colunas (4 no desktop) e "Declarações" estava na 3ª coluna, então o novo tile cairia na linha de baixo. Para ficarem **na mesma linha** nas duas grades, "Tirar Fundo" e "Declarações" trocaram de lugar (só a ordem; nenhum tile alterado/renomeado/removido).
+
+### Testes (Playwright, painel com Supabase stubado)
+360, 420, 820 e 1280 px: os dois tiles na mesma linha, lado a lado, mesmo tamanho/borda, sem rolagem horizontal, sem erro de JS; clicar em "Procurações e Autorizações" não abre nada; "Declarações" continua abrindo `viewDeclProc` (barra de atalhos com 17 itens). Conferido em screenshot.
+
+
+## Procurações e Autorizações — formulário "Autorização de Viagem para Menor" (2026-10-18)
+
+**Escopo desta fase:** formulário de coleta + validação + lista/ficha no painel. **Não** gera o documento jurídico final (modelo a definir depois) e é só para viagem **nacional**.
+
+### ⚠️ Pendência de banco (obrigatória antes de usar em produção)
+A tabela `declaracoes_pendentes` tem a CHECK `declaracoes_pendentes_tipo_contrato_check` (ver seção dos contratos acima), que só aceita tipos conhecidos. O novo tipo `AUTORIZACAO_VIAGEM_MENOR` precisa ser incluído, senão o envio do formulário falha com "violates check constraint" (o formulário mostra a mensagem de erro amigável). Esta sessão **não tinha permissão** no Supabase para ler/alterar a constraint, então **não foi aplicada**. Passos: (1) conferir a definição atual: `select pg_get_constraintdef(oid) from pg_constraint where conname='declaracoes_pendentes_tipo_contrato_check';` (2) `drop constraint` + `add constraint` recriando com **todos os valores atuais + 'AUTORIZACAO_VIAGEM_MENOR'**.
+
+### Arquivos
+- `paineldecontrole/autorizacao-viagem-menor-form.html` (novo): 5 etapas — (1) autorizantes (1 a 5, pai/mãe/tutor/outro, CPF/CEP/telefone com máscara), (2) menor (idade automática, documentos múltiplos, naturalidade), (3) acompanhante (7 modos; acompanhante pode ser reaproveitado de um autorizante sem redigitar; desacompanhado → contatos de emergência; recebimento no destino), (4) origem/destino/datas + transporte condicional (ônibus/avião/veículo próprio/carona/outro), (5) validade (3 tipos, datas explícitas), confirmação registrada e conferência final com "Editar" por seção, pendências e avisos.
+- `assets/campo-telefone.js` (novo, reutilizável): DDD + número, mesmo comportamento do currículo (8/9 dígitos, "9" automático) + máscara. `assets/campo-documentos.js` (novo): máscaras CPF/CNPJ/CEP + `Documentos.cpfValido()` (dígitos verificadores). Reusa `assets/campo-nacionalidade.js`.
+- `paineldecontrole/index.html`: tile "Procurações e Autorizações" ativado (`action` → `viewProcAut`, badge de pendentes), view nova com link do formulário + lista (ficha com documentos **mascarados por padrão**, editar via iframe do protocolo padrão, marcar processada, excluir), `PROCAUT_TIPOS_TODOS` (exclui o tipo da lista/contagem de Contratos), atalho na barra, `openView/openSubPanel/goHome` atualizados. Declarações, Contratos e demais módulos não foram alterados.
+
+### Dados salvos (`declaracoes_pendentes`, `tipo_contrato='AUTORIZACAO_VIAGEM_MENOR'`)
+`dados.pessoa_a` = 1º autorizante, `dados.pessoa_b` = menor (para busca/lista), `dados.especifico` = tudo normalizado (autorizantes, menor, acompanhamento, viagem, transporte, validade, confirmação com data/hora, `alertas_conferencia`) + `form_state` (estado bruto, usado só para reabrir na edição). Rascunho ("Salvar rascunho neste aparelho"): só `localStorage` do aparelho, expira em 7 dias, apagado ao enviar.
+
+### Verificações (avisos que não bloqueiam; texto cauteloso, sem afirmar suficiência do documento)
+Menor de 16 (ECA art. 83), 16–17, 18+ na data da viagem, desacompanhado (+ sem recebedor), acompanhante sem vínculo familiar / parentesco a comprovar, só 1 autorizante, tutor/guardião (comprovar guarda), múltiplas viagens, validade > 2 anos, saída no passado, validade não cobrindo a viagem, empresa de transporte (ônibus/avião), documento do menor/autorizante ausente. Bloqueios: campos obrigatórios, CPF inválido (dígito verificador), telefone inválido, autorizante/acompanhante < 18, menor ≥ 18, retorno < saída, validade final < inicial, confirmação não marcada.
+
+### Testes (Playwright, Supabase simulado)
+Fluxo completo pela interface (digitando, máscaras, adicionar autorizante sem perder dados, documentos múltiplos, ambos os pais com 1 reaproveitado, validações por etapa, resumo com documentos ocultos/mostrados, rascunho, envio). 5 cenários de combinações (mãe+pai acompanha/ônibus; pai e mãe reaproveitados/avião/recebedor = acompanhante; mãe+guardião/amigo/veículo próprio de terceiro/recebedor outra pessoa/múltiplas viagens; desacompanhado/carona/menor estrangeiro com RNM+passaporte+outro doc; outro meio de transporte/primo): sem erros, round-trip de edição idêntico. Negativos (CPF inválido, telefone, menor 25 anos, retorno < saída). Painel: tile + badge, view, lista, ficha com máscara, iframe de edição, Contratos não lista o tipo, atalhos sem views duplicadas. **Falta:** aplicar a migration, testar ao vivo (envio real/edição) e revisão jurídica dos textos de aviso.
+
+
+## Autorização de Viagem para Menor — modelo do documento (2026-10-18)
+
+Documento gerado a partir de `dados.especifico` (ver seção anterior), botão **📄** em cada pedido da lista de "Procurações e Autorizações" → mesma tela de documento formatado das Declarações (Editar / Imprimir; PDF = "salvar como PDF" do diálogo de impressão).
+
+**`paineldecontrole/index.html`:** `montarAutorizacaoViagem(d)` + helpers `av*` (antes de `TIPOS`), `TIPOS.AUTORIZACAO_VIAGEM_MENOR` (`docLayout:'autviagem'`, `semRevisaoIA:true`), ramo novo em `montarContrato()`, classe `aut-viagem-print` em `imprimirDeclFormatada()`, CSS `.av-doc` (tela e `@media print`, `@page aut-viagem` 10×12 mm). **Sem revisão por IA** (`semRevisaoIA`): o texto do documento contém dados de menores e não é enviado à Edge Function `documento-revisao`. Nada dos outros tipos foi alterado (a revisão por IA e os layouts existentes seguem iguais para eles).
+**Formulário:** novo campo opcional "Profissão" do autorizante (entra na qualificação "se informada").
+
+**Conteúdo:** título + linha; qualificação de cada autorizante (nacionalidade/estado civil flexionados por pai/mãe, profissão, CPF, identidade, endereço, telefone, condição); dados do menor (só documentos informados); acompanhante(s) (ou "viajará desacompanhado" + contatos de emergência/recebedor, sem inventar acompanhante); texto principal adaptado (singular "Eu…autorizo" / plural "Nós…autorizamos"; "acompanhado por…" só se houver acompanhante; transporte descrito por tipo); responsabilidade (3 parágrafos do pedido; versão adaptada sem acompanhante); transporte e validade (única viagem cita o trajeto; múltiplas viagens usa redação própria); local/data em branco + uma linha de assinatura por autorizante e por acompanhante (acompanhante que também autoriza assina uma vez, "ciente das responsabilidades"; ≥5 assinaturas usam 3 colunas). Preto e branco, sem logo/rodapé.
+**Conferência (só na tela, não imprime):** caixa âmbar com os `alertas_conferencia` + aviso de que a minuta não garante embarque.
+
+### Testes (Playwright + PDF real pelo caminho de impressão do painel)
+6 cenários (incl. 3 autorizantes + 2 acompanhantes, desacompanhado, guardião, veículo de terceiros, múltiplas viagens): PDF A4 de **1 página** em 5; o caso extremo (5 assinaturas) fica em 2 páginas, com local/data + assinaturas juntos na 2ª (sem cortar nada). Aviso não aparece no PDF; Edge Function de IA não chamada (0). Texto principal conferido nos PDFs.
+**Falta:** revisão jurídica do texto, migration do tipo no banco (seção anterior) e teste ao vivo.
+
+
+### Limite de pessoas (2026-10-18, pedido do usuário)
+Máximo de **2 autorizantes e 1 acompanhante**: formulário só oferece 1 ou 2 autorizantes (botão de adicionar some ao chegar em 2), sem "adicionar acompanhante"/remover, e a opção "Acompanhado por ambos os pais" foi **retirada** (exigiria 2 acompanhantes; o pai/mãe que acompanha e também autoriza continua possível, reaproveitando os dados). Rascunhos/registros antigos acima do limite são truncados ao abrir. O modelo do documento foi simplificado para singular (1 acompanhante), sem a grade de 3 colunas de assinatura: todos os cenários de teste cabem em **1 página A4**.
+
+
+## Estado de publicação (2026-10-18) — PR #17 mesclado em `main`
+Publicados juntos: renomeação "Declarações", tile e módulo "Procurações e Autorizações", formulário **Autorização de Viagem para Menor** (máx. 2 autorizantes e 1 acompanhante) e o **modelo do documento**. Próximo passo é o teste ao vivo; alterações pedidas depois entram como novos commits.
+**Antes de testar o envio:** aplicar a migration da CHECK `declaracoes_pendentes_tipo_contrato_check` incluindo `AUTORIZACAO_VIAGEM_MENOR` (ver seção "Pendência de banco" acima) — sem isso o formulário mostra erro ao enviar.
+**Checklist do teste ao vivo:** (1) card "Procurações e Autorizações" ao lado de Declarações; (2) abrir o link do formulário e preencher as 5 etapas (máscaras, 1/2 autorizantes, acompanhante, desacompanhado); (3) "Salvar rascunho" e retomar; (4) enviar e ver o pedido na lista (badge); (5) 👁️ ficha (documentos mascarados), ✏️ editar, 📄 gerar documento, imprimir/salvar PDF em 1 página; (6) conferir que Declarações e Contratos seguem normais.
