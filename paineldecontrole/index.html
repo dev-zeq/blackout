@@ -2667,7 +2667,7 @@
                  contrato nem prestação de serviço. -->
             <div class="table-container" style="margin-top:16px;">
                 <div class="table-header">
-                    <h3>📑 Histórico de Declarações e Procurações</h3>
+                    <h3>📑 Histórico de Declarações</h3>
                     <span class="table-count" id="histDeclProcCount">0 registros</span>
                 </div>
                 <div class="hist-busca-bar">
@@ -4308,7 +4308,7 @@
             // handleMenuClick, que chama movFinTela() logo após openView('movfin').
             { icon: 'trocapix', label: 'Troca por Pix', action: { type: 'view', view: 'movfin', tela: 'troca-pix' }, desc: 'Abre direto o Envio de Pix (Movimentação Financeira): informe o valor e o sistema calcula a taxa e o total, com o cartão de pré-visualização para o cliente.' },
             { icon: 'curriculo', label: 'Currículo', action: { type: 'view', view: 'curriculo' }, badgeKey: 'curriculo' },
-            { icon: 'declaracao', label: 'Declarações e Procurações', action: { type: 'view', view: 'declProc' }, badgeKey: 'declProc' },
+            { icon: 'declaracao', label: 'Declarações', action: { type: 'view', view: 'declProc' }, badgeKey: 'declProc' },
             { icon: 'tirarfundo', label: 'Tirar Fundo', action: { type: 'link', url: 'https://www.remove.bg/pt-br' } },
             { icon: 'contratos', label: 'Contratos', action: { type: 'view', view: 'termos' }, badgeKey: 'termos' },
             // Novo módulo nativo (2026-08-26, pedido do usuário) — substitui o
@@ -8111,7 +8111,7 @@
         const histDeclProc = criarHistoricoDeclPend({
             prefix: 'histDeclProc',
             tipos: ['DECLARACAO_RESIDENCIA', 'DECLARACAO_AUTONOMO', 'DECLARACAO_TRABALHO', 'DECLARACAO_UNIAO_ESTAVEL', 'PROCURACAO_SIMPLES', 'PROCURACAO_DETRAN', 'TERMO_RESPONSABILIDADE_VEICULO'],
-            rotuloLista: 'Declarações e Procurações',
+            rotuloLista: 'Declarações',
             textoItem: 'documento',
             reloadPendentes: () => loadDeclProcPendentes(),
             camposBusca: (d) => {
@@ -8465,7 +8465,7 @@
                     </div>
                     <button class="btn-secondary" style="padding:6px 10px;" onclick="abrirDeclFormatado('${d.id}')" title="Formatar">📄</button>
                     <button class="btn-secondary" style="padding:6px 10px;" onclick="declProcMarcarProcessada('${d.id}')" title="Marcar como processada">✅</button>
-                    <button class="btn-secondary" style="padding:6px 10px;" onclick="histDeclProcArquivar('${d.id}')" title="Arquivar (vai para o Histórico de Declarações e Procurações)">📥</button>
+                    <button class="btn-secondary" style="padding:6px 10px;" onclick="histDeclProcArquivar('${d.id}')" title="Arquivar (vai para o Histórico de Declarações)">📥</button>
                     <button class="btn-delete" onclick="declProcExcluir('${d.id}')" title="Excluir">🗑️</button>
                 </div>`;
             }).join('');

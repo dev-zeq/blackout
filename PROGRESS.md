@@ -3963,3 +3963,11 @@ Pedido: todos os campos de nacionalidade dos formulários existentes viram botõ
 ### Testes (Playwright, Supabase stubado)
 Fluxo completo até o envio, escolhendo Brasileiro/Venezuelano/Haitiano/Outra ("Argentino(a)") em todas as pessoas: residência, união estável, procuração simples, procuração Detran e termo de veículo → payload correto. Trabalho: botões, campo some/aparece, bloqueio com campo vazio e reabertura na edição (Venezuelano marcado; texto livre reabre como Outra) OK; o envio completo do Trabalho não foi automatizado (etapas de dias/horários), mas o campo passa pela mesma função dos demais.
 **Falta:** conferir ao vivo no painel publicado.
+
+
+## Menu — "Declarações e Procurações" renomeado para "Declarações" (2026-10-18)
+
+Pedido: só nomenclatura visual. `paineldecontrole/index.html`, 4 textos: card do Menu Principal (`MENU_ITEMS`), título "Histórico de Declarações", `rotuloLista` (mensagens de arquivar/desarquivar) e tooltip do botão arquivar. A barra de atalhos já dizia "Declarações". Nada de rota/ID (`declProc`), módulo, Procurações, formulários, dados ou layout foi tocado — a aba "Procurações" dentro do módulo e os 7 tipos continuam iguais.
+
+### Testes (Playwright, painel com Supabase stubado)
+Menu mostra "Declarações" (e nenhum "Declarações e Procurações"); clique abre `viewDeclProc`; abas Declarações/Procurações presentes e a de Procurações lista Procuração Simples/Detran; barra de atalhos com 17 itens; sem erros de JS. Não rodou ao vivo.
