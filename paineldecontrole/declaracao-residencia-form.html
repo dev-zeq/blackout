@@ -88,6 +88,7 @@
     <div class="card" id="cardArea"></div>
 </div>
 
+<script src="assets/campo-nacionalidade.js"></script>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
@@ -115,32 +116,6 @@ function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 function pill(name, value, checked, label) {
     const id = name + '_' + value.replace(/\W/g, '');
     return `<label class="radio-pill"><input type="radio" name="${name}" id="${id}" value="${esc(value)}" ${checked ? 'checked' : ''}><span class="pill-label" for="${id}">${esc(label || value)}</span></label>`;
-}
-// Nacionalidade do declarante (etapa 1) — mesmo padrão do contrato-form.html:
-// 3 botões + "Outra nacionalidade", que abre o campo de texto obrigatório.
-const NACIONALIDADES_PADRAO = ['Brasileiro(a)', 'Venezuelano(a)', 'Haitiano(a)'];
-// pre = '' (declarante, etapa 1) ou 'pd_' (locatário, etapa 2); ids/estado derivados do prefixo.
-function nacionalidadeFinal(pre = '') { return s[pre + 'nacionalidade'] === 'Outra' ? (s[pre + 'nacionalidade_outro'] || '').trim() : s[pre + 'nacionalidade']; }
-function nacionalidadeCampoHtml(pre = '') {
-    const nome = `f_${pre}nacionalidade`;
-    return `<div class="field"><label>Nacionalidade *</label>
-        <div class="radio-group">
-            ${NACIONALIDADES_PADRAO.map(n => pill(nome, n, s[pre + 'nacionalidade'] === n)).join('')}
-            ${pill(nome, 'Outra', s[pre + 'nacionalidade'] === 'Outra', 'Outra nacionalidade')}
-        </div>
-    </div><div id="cond_${pre}nacionalidade"></div>`;
-}
-function renderCondNacionalidade(pre = '') {
-    const el = document.getElementById(`cond_${pre}nacionalidade`);
-    if (!el) return;
-    el.innerHTML = s[pre + 'nacionalidade'] === 'Outra' ? `<div class="field"><label>Informe a nacionalidade *</label><input type="text" id="f_${pre}nacionalidade_outro" value="${esc(s[pre + 'nacionalidade_outro'])}"></div>` : '';
-    const inp = document.getElementById(`f_${pre}nacionalidade_outro`);
-    if (inp) inp.addEventListener('input', () => { s[pre + 'nacionalidade_outro'] = inp.value; });
-}
-function nacionalidadeDeRegistro(pre, salva) {
-    if (!salva) { s[pre + 'nacionalidade'] = 'Brasileiro(a)'; s[pre + 'nacionalidade_outro'] = ''; }
-    else if (NACIONALIDADES_PADRAO.includes(salva)) { s[pre + 'nacionalidade'] = salva; s[pre + 'nacionalidade_outro'] = ''; }
-    else { s[pre + 'nacionalidade'] = 'Outra'; s[pre + 'nacionalidade_outro'] = salva; }
 }
 function estadoOptions(selected) {
     return ESTADOS_BR.map(u => `<option value="${u}" ${selected === u ? 'selected' : ''}>${u}</option>`).join('');
@@ -284,7 +259,7 @@ function stepDados() {
     <div class="field"><label>Estado civil *</label>
         <select id="f_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
-    ${nacionalidadeCampoHtml()}
+    ${Nacionalidade.campoHtml(s, 'nacionalidade')}
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row">${stepIndex > 0 ? '<button class="btn btn-back" onclick="window.__goBack()">Voltar</button>' : ''}<button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -316,7 +291,7 @@ function stepLocatario() {
     <div class="field"><label>Estado civil *</label>
         <select id="f_pd_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.pd_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
-    ${nacionalidadeCampoHtml('pd_')}
+    ${Nacionalidade.campoHtml(s, 'pd_nacionalidade')}
     <div id="errorMsg" class="error-msg"></div>
     <div class="nav-row"><button class="btn btn-back" onclick="window.__goBack()">Voltar</button><button class="btn btn-next" onclick="window.__goNext()">Avançar</button></div>`;
 }
@@ -356,12 +331,12 @@ function validateCurrentStep() {
     const fn = steps[stepIndex];
     if (fn === stepDados) {
         if (!s.nome || !s.cpf || !s.genero || !s.estado_civil || !s.nacionalidade) return 'Preencha todos os campos obrigatórios (*).';
-        if (!nacionalidadeFinal()) return 'Informe a nacionalidade.';
+        { const ne = Nacionalidade.validar(s, 'nacionalidade'); if (ne) return ne; }
         return null;
     }
     if (fn === stepLocatario) {
         if (!s.pd_nome || !s.pd_cpf || !s.pd_genero || !s.pd_estado_civil || !s.pd_nacionalidade) return 'Preencha todos os campos obrigatórios (*) do locatário.';
-        if (!nacionalidadeFinal('pd_')) return 'Informe a nacionalidade do locatário.';
+        { const ne = Nacionalidade.validar(s, 'pd_nacionalidade'); if (ne) return ne; }
         return null;
     }
     if (fn === stepOndeMora) {
@@ -379,15 +354,13 @@ function saveCurrentStep() {
     if (fn === stepDados) {
         s.nome = val('f_nome'); s.cpf = val('f_cpf');
         s.genero = checkedVal('f_genero'); s.estado_civil = val('f_estado_civil');
-        s.nacionalidade = checkedVal('f_nacionalidade');
-        s.nacionalidade_outro = s.nacionalidade === 'Outra' ? val('f_nacionalidade_outro') : '';
+        Nacionalidade.ler(s, 'nacionalidade');
         return;
     }
     if (fn === stepLocatario) {
         s.pd_nome = val('f_pd_nome'); s.pd_cpf = val('f_pd_cpf');
         s.pd_genero = checkedVal('f_pd_genero'); s.pd_estado_civil = val('f_pd_estado_civil');
-        s.pd_nacionalidade = checkedVal('f_pd_nacionalidade');
-        s.pd_nacionalidade_outro = s.pd_nacionalidade === 'Outra' ? val('f_pd_nacionalidade_outro') : '';
+        Nacionalidade.ler(s, 'pd_nacionalidade');
         return;
     }
     if (fn === stepOndeMora) {
@@ -404,10 +377,6 @@ function saveCurrentStep() {
 function bindStepEvents() {
     const selCidade = document.getElementById('f_cidade');
     if (selCidade) selCidade.addEventListener('change', () => { s.cidade = selCidade.value; s.bairro = ''; s.estado = estadoForcadoSC() ? 'SC' : ''; renderCondCidade(); renderCondEstado(); });
-    ['', 'pd_'].forEach(pre => {
-        document.querySelectorAll(`input[name="f_${pre}nacionalidade"]`).forEach(r => r.addEventListener('change', () => { s[pre + 'nacionalidade'] = r.value; renderCondNacionalidade(pre); }));
-        renderCondNacionalidade(pre);
-    });
     renderCondCidade();
     renderCondEstado();
     const btnSubmit = document.getElementById('btnSubmit');
@@ -422,7 +391,7 @@ async function submitForm() {
     const dados = {
         pessoa_a: {
             nome: s.nome, cpf: s.cpf, genero: s.genero,
-            estado_civil: s.estado_civil, nacionalidade: nacionalidadeFinal(),
+            estado_civil: s.estado_civil, nacionalidade: Nacionalidade.final(s, 'nacionalidade'),
             endereco: enderecoFinal(), rua: s.rua || null, complemento: s.complemento || null,
             bairro: bairroFinal(), cidade: cidadeFinal(), estado: estadoFinal(),
         },
@@ -435,7 +404,7 @@ async function submitForm() {
     if (s.declaracao_para === 'OUTRA') {
         dados.pessoa_b = {
             nome: s.pd_nome, cpf: s.pd_cpf, genero: s.pd_genero || null,
-            estado_civil: s.pd_estado_civil || null, nacionalidade: nacionalidadeFinal('pd_') || null,
+            estado_civil: s.pd_estado_civil || null, nacionalidade: Nacionalidade.final(s, 'pd_nacionalidade') || null,
         };
     }
 
@@ -529,7 +498,7 @@ function carregarParaEdicao(row) {
     const especifico = dados.especifico || {};
     s.nome = a.nome || ''; s.cpf = a.cpf || ''; s.genero = a.genero || '';
     s.estado_civil = a.estado_civil || '';
-    nacionalidadeDeRegistro('', a.nacionalidade);
+    Nacionalidade.carregar(s, 'nacionalidade', a.nacionalidade);
     carregarEnderecoSolto(a.rua, a.numero, a.complemento, a.endereco);
     carregarCidadeBairro(a.cidade, a.bairro);
     s.estado = a.estado || '';
@@ -539,7 +508,7 @@ function carregarParaEdicao(row) {
         const b = dados.pessoa_b;
         s.pd_nome = b.nome || ''; s.pd_cpf = b.cpf || '';
         s.pd_genero = b.genero || ''; s.pd_estado_civil = b.estado_civil || '';
-        nacionalidadeDeRegistro('pd_', b.nacionalidade);
+        Nacionalidade.carregar(s, 'pd_nacionalidade', b.nacionalidade);
     }
 }
 

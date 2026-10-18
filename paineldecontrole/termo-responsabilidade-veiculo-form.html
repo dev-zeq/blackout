@@ -138,6 +138,7 @@
 <input type="file" id="docInputGaleria" accept="image/*" style="display:none">
 <div id="docOverlay" class="doc-overlay" style="display:none"></div>
 
+<script src="assets/campo-nacionalidade.js"></script>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
@@ -146,11 +147,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const s = {
     // Proprietário
-    a_nome: '', a_cpf: '', a_rg: '', a_genero: '', a_estado_civil: '', a_nacionalidade: 'Brasileiro(a)', a_profissao: '',
+    a_nome: '', a_cpf: '', a_rg: '', a_genero: '', a_estado_civil: '', a_nacionalidade: 'Brasileiro(a)', a_nacionalidade_outro: '', a_profissao: '',
     a_rua: '', a_complemento: '', a_bairro: '', a_cidade: '', a_cidade_outra: '', a_bairro_outro: '', a_estado: '',
     // Responsável (condutor temporário / novo usuário)
     mesmo_responsavel: 'Sim',
-    b_nome: '', b_cpf: '', b_rg: '', b_genero: '', b_estado_civil: '', b_nacionalidade: 'Brasileiro(a)', b_profissao: '',
+    b_nome: '', b_cpf: '', b_rg: '', b_genero: '', b_estado_civil: '', b_nacionalidade: 'Brasileiro(a)', b_nacionalidade_outro: '', b_profissao: '',
     b_rua: '', b_complemento: '', b_bairro: '', b_cidade: '', b_cidade_outra: '', b_bairro_outro: '', b_estado: '',
     // Veículo
     tipo_veiculo: 'Automóvel', v_fabricante: '', v_modelo: '', v_ano: '', v_placa: '', v_cor: '', v_chassi: '', v_renavam: '',
@@ -295,7 +296,7 @@ function stepProprietarioDados() {
     <div class="field"><label>Gênero *</label>
         <div class="radio-group">${pill('f_a_genero', 'Masculino', s.a_genero === 'Masculino')}${pill('f_a_genero', 'Feminino', s.a_genero === 'Feminino')}</div>
     </div>
-    <div class="field"><label>Nacionalidade *</label><input type="text" id="f_a_nacionalidade" value="${esc(s.a_nacionalidade)}"></div>
+    ${Nacionalidade.campoHtml(s, 'a_nacionalidade')}
     <div class="field"><label>Estado civil *</label>
         <select id="f_a_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.a_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
@@ -338,7 +339,7 @@ function responsavelDadosHtml() {
     <div class="field"><label>Gênero *</label>
         <div class="radio-group">${pill('f_b_genero', 'Masculino', s.b_genero === 'Masculino')}${pill('f_b_genero', 'Feminino', s.b_genero === 'Feminino')}</div>
     </div>
-    <div class="field"><label>Nacionalidade *</label><input type="text" id="f_b_nacionalidade" value="${esc(s.b_nacionalidade)}"></div>
+    ${Nacionalidade.campoHtml(s, 'b_nacionalidade')}
     <div class="field"><label>Estado civil *</label>
         <select id="f_b_estado_civil"><option value="">Selecione</option>${['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(o => `<option value="${o}" ${s.b_estado_civil === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
     </div>
@@ -557,6 +558,7 @@ function validateCurrentStep() {
     switch (stepIndex) {
         case 0:
             if (!s.a_nome || !s.a_cpf || !s.a_rg || !s.a_genero || !s.a_nacionalidade || !s.a_estado_civil || !s.a_profissao) return 'Preencha todos os campos obrigatórios (*).';
+            { const ne = Nacionalidade.validar(s, 'a_nacionalidade'); if (ne) return ne; }
             return null;
         case 1:
             if (!s.a_rua || !cidadeFinal('a') || !bairroFinal('a') || !estadoFinal('a')) return 'Preencha todos os campos obrigatórios (*).';
@@ -564,6 +566,7 @@ function validateCurrentStep() {
         case 2:
             if (s.mesmo_responsavel === 'Não') {
                 if (!s.b_nome || !s.b_cpf || !s.b_rg || !s.b_genero || !s.b_nacionalidade || !s.b_estado_civil || !s.b_profissao) return 'Preencha todos os campos obrigatórios (*) do responsável.';
+                { const ne = Nacionalidade.validar(s, 'b_nacionalidade'); if (ne) return ne; }
                 if (!s.b_rua || !cidadeFinal('b') || !bairroFinal('b') || !estadoFinal('b')) return 'Preencha todos os campos obrigatórios (*) do endereço do responsável.';
             } else if (!s.mesmo_responsavel) {
                 return 'Selecione se o responsável é o próprio proprietário.';
@@ -579,7 +582,7 @@ function saveCurrentStep() {
     switch (stepIndex) {
         case 0:
             s.a_nome = val('f_a_nome'); s.a_cpf = val('f_a_cpf'); s.a_rg = val('f_a_rg');
-            s.a_genero = checkedVal('f_a_genero'); s.a_nacionalidade = val('f_a_nacionalidade');
+            s.a_genero = checkedVal('f_a_genero'); Nacionalidade.ler(s, 'a_nacionalidade');
             s.a_estado_civil = val('f_a_estado_civil'); s.a_profissao = val('f_a_profissao');
             break;
         case 1:
@@ -591,7 +594,7 @@ function saveCurrentStep() {
             s.mesmo_responsavel = checkedVal('f_mesmo_responsavel');
             if (s.mesmo_responsavel === 'Não') {
                 s.b_nome = val('f_b_nome'); s.b_cpf = val('f_b_cpf'); s.b_rg = val('f_b_rg');
-                s.b_genero = checkedVal('f_b_genero'); s.b_nacionalidade = val('f_b_nacionalidade');
+                s.b_genero = checkedVal('f_b_genero'); Nacionalidade.ler(s, 'b_nacionalidade');
                 s.b_estado_civil = val('f_b_estado_civil'); s.b_profissao = val('f_b_profissao');
                 s.b_rua = val('f_b_rua'); s.b_complemento = val('f_b_complemento');
                 s.b_cidade = val('f_b_cidade');
@@ -643,7 +646,7 @@ function bindResponsavelEvents() {
 function montarPessoa(p) {
     return {
         nome: s[p + '_nome'], cpf: s[p + '_cpf'], rg: s[p + '_rg'] || null, genero: s[p + '_genero'],
-        estado_civil: s[p + '_estado_civil'], nacionalidade: s[p + '_nacionalidade'], profissao: s[p + '_profissao'] || null,
+        estado_civil: s[p + '_estado_civil'], nacionalidade: Nacionalidade.final(s, p + '_nacionalidade'), profissao: s[p + '_profissao'] || null,
         endereco: enderecoFinal(p), rua: s[p + '_rua'] || null, complemento: s[p + '_complemento'] || null,
         bairro: bairroFinal(p), cidade: cidadeFinal(p), estado: estadoFinal(p),
     };
@@ -729,7 +732,7 @@ function carregarPessoaEdicao(p, pessoa) {
     if (!pessoa) return;
     s[p + '_nome'] = pessoa.nome || ''; s[p + '_cpf'] = pessoa.cpf || ''; s[p + '_rg'] = pessoa.rg || '';
     s[p + '_genero'] = pessoa.genero || ''; s[p + '_estado_civil'] = pessoa.estado_civil || '';
-    s[p + '_nacionalidade'] = pessoa.nacionalidade || 'Brasileiro(a)'; s[p + '_profissao'] = pessoa.profissao || '';
+    Nacionalidade.carregar(s, p + '_nacionalidade', pessoa.nacionalidade); s[p + '_profissao'] = pessoa.profissao || '';
     carregarEnderecoSolto(p, pessoa.rua, pessoa.numero, pessoa.complemento, pessoa.endereco);
     carregarCidadeBairro(p, pessoa.cidade, pessoa.bairro);
     s[p + '_estado'] = pessoa.estado || '';

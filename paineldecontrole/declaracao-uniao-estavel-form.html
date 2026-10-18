@@ -88,6 +88,7 @@
     <div class="card" id="cardArea"></div>
 </div>
 
+<script src="assets/campo-nacionalidade.js"></script>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://kihnavaovspdjnegcraj.supabase.co';
@@ -95,9 +96,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_h5AITv-_Fjmnq-xC6UC8xg_8CSMLoZK';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const s = {
-    a_nome: '', a_cpf: '', a_rg: '', a_genero: '', a_nacionalidade: 'Brasileiro(a)', a_profissao: '',
+    a_nome: '', a_cpf: '', a_rg: '', a_genero: '', a_nacionalidade: 'Brasileiro(a)', a_nacionalidade_outro: '', a_profissao: '',
     a_mae: '', a_pai: '',
-    b_nome: '', b_cpf: '', b_rg: '', b_genero: '', b_nacionalidade: 'Brasileiro(a)', b_profissao: '',
+    b_nome: '', b_cpf: '', b_rg: '', b_genero: '', b_nacionalidade: 'Brasileiro(a)', b_nacionalidade_outro: '', b_profissao: '',
     b_mae: '', b_pai: '',
     rua: '', complemento: '', bairro: '', cidade: '', cidade_outra: '', bairro_outro: '', estado: '',
     tempo_uniao: '',
@@ -237,7 +238,7 @@ function stepPessoaA() {
     <div class="field"><label>Gênero *</label>
         <div class="radio-group">${pill('f_a_genero', 'Masculino', s.a_genero === 'Masculino')}${pill('f_a_genero', 'Feminino', s.a_genero === 'Feminino')}</div>
     </div>
-    <div class="field"><label>Nacionalidade *</label><input type="text" id="f_a_nacionalidade" value="${esc(s.a_nacionalidade)}"></div>
+    ${Nacionalidade.campoHtml(s, 'a_nacionalidade')}
     <div class="field"><label>Profissão</label><input type="text" id="f_a_profissao" value="${esc(s.a_profissao)}"></div>
     <div class="field"><label>Nome da mãe *</label><input type="text" id="f_a_mae" value="${esc(s.a_mae)}"></div>
     <div class="field"><label>Nome do pai</label><input type="text" id="f_a_pai" value="${esc(s.a_pai)}"></div>
@@ -255,7 +256,7 @@ function stepPessoaB() {
     <div class="field"><label>Gênero *</label>
         <div class="radio-group">${pill('f_b_genero', 'Masculino', s.b_genero === 'Masculino')}${pill('f_b_genero', 'Feminino', s.b_genero === 'Feminino')}</div>
     </div>
-    <div class="field"><label>Nacionalidade *</label><input type="text" id="f_b_nacionalidade" value="${esc(s.b_nacionalidade)}"></div>
+    ${Nacionalidade.campoHtml(s, 'b_nacionalidade')}
     <div class="field"><label>Profissão</label><input type="text" id="f_b_profissao" value="${esc(s.b_profissao)}"></div>
     <div class="field"><label>Nome da mãe *</label><input type="text" id="f_b_mae" value="${esc(s.b_mae)}"></div>
     <div class="field"><label>Nome do pai</label><input type="text" id="f_b_pai" value="${esc(s.b_pai)}"></div>
@@ -297,9 +298,11 @@ function validateCurrentStep() {
     switch (stepIndex) {
         case 0:
             if (!s.a_nome || !s.a_cpf || !s.a_genero || !s.a_nacionalidade || !s.a_mae) return 'Preencha todos os campos obrigatórios (*).';
+            { const ne = Nacionalidade.validar(s, 'a_nacionalidade'); if (ne) return ne; }
             return null;
         case 1:
             if (!s.b_nome || !s.b_cpf || !s.b_genero || !s.b_nacionalidade || !s.b_mae) return 'Preencha todos os campos obrigatórios (*).';
+            { const ne = Nacionalidade.validar(s, 'b_nacionalidade'); if (ne) return ne; }
             return null;
         case 2:
             if (!s.tempo_uniao || !s.rua || !cidadeFinal() || !bairroFinal() || !estadoFinal()) return 'Preencha todos os campos obrigatórios (*).';
@@ -311,12 +314,12 @@ function saveCurrentStep() {
     switch (stepIndex) {
         case 0:
             s.a_nome = val('f_a_nome'); s.a_cpf = val('f_a_cpf'); s.a_rg = val('f_a_rg');
-            s.a_genero = checkedVal('f_a_genero'); s.a_nacionalidade = val('f_a_nacionalidade');
+            s.a_genero = checkedVal('f_a_genero'); Nacionalidade.ler(s, 'a_nacionalidade');
             s.a_profissao = val('f_a_profissao'); s.a_mae = val('f_a_mae'); s.a_pai = val('f_a_pai');
             break;
         case 1:
             s.b_nome = val('f_b_nome'); s.b_cpf = val('f_b_cpf'); s.b_rg = val('f_b_rg');
-            s.b_genero = checkedVal('f_b_genero'); s.b_nacionalidade = val('f_b_nacionalidade');
+            s.b_genero = checkedVal('f_b_genero'); Nacionalidade.ler(s, 'b_nacionalidade');
             s.b_profissao = val('f_b_profissao'); s.b_mae = val('f_b_mae'); s.b_pai = val('f_b_pai');
             break;
         case 2:
@@ -346,13 +349,13 @@ async function submitForm() {
         dados: {
             pessoa_a: {
                 nome: s.a_nome, cpf: s.a_cpf, rg: s.a_rg || null, genero: s.a_genero,
-                nacionalidade: s.a_nacionalidade, profissao: s.a_profissao || null,
+                nacionalidade: Nacionalidade.final(s, 'a_nacionalidade'), profissao: s.a_profissao || null,
                 endereco: enderecoFinal(), rua: s.rua || null, complemento: s.complemento || null,
                 bairro: bairroFinal(), cidade: cidadeFinal(), estado: estadoFinal(),
             },
             pessoa_b: {
                 nome: s.b_nome, cpf: s.b_cpf, rg: s.b_rg || null, genero: s.b_genero,
-                nacionalidade: s.b_nacionalidade, profissao: s.b_profissao || null,
+                nacionalidade: Nacionalidade.final(s, 'b_nacionalidade'), profissao: s.b_profissao || null,
                 endereco: enderecoFinal(), rua: s.rua || null, complemento: s.complemento || null,
                 bairro: bairroFinal(), cidade: cidadeFinal(), estado: estadoFinal(),
             },
@@ -442,9 +445,9 @@ function carregarParaEdicao(row) {
     const dados = row.dados || {};
     const a = dados.pessoa_a || {}, b = dados.pessoa_b || {}, e = dados.especifico || {};
     s.a_nome = a.nome || ''; s.a_cpf = a.cpf || ''; s.a_rg = a.rg || ''; s.a_genero = a.genero || '';
-    s.a_nacionalidade = a.nacionalidade || 'Brasileiro(a)'; s.a_profissao = a.profissao || '';
+    Nacionalidade.carregar(s, 'a_nacionalidade', a.nacionalidade); s.a_profissao = a.profissao || '';
     s.b_nome = b.nome || ''; s.b_cpf = b.cpf || ''; s.b_rg = b.rg || ''; s.b_genero = b.genero || '';
-    s.b_nacionalidade = b.nacionalidade || 'Brasileiro(a)'; s.b_profissao = b.profissao || '';
+    Nacionalidade.carregar(s, 'b_nacionalidade', b.nacionalidade); s.b_profissao = b.profissao || '';
     s.tempo_uniao = e.tempo_uniao || '';
     s.a_mae = e.filiacao_mae_a || ''; s.a_pai = e.filiacao_pai_a || '';
     s.b_mae = e.filiacao_mae_b || ''; s.b_pai = e.filiacao_pai_b || '';
